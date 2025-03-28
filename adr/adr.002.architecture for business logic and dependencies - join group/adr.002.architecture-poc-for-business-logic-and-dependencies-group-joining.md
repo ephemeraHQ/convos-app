@@ -13,8 +13,8 @@ AGREED
 
 ## Context
 
-During our team offsite in UNDISCLOSED LOCATION from 
-**September 
+During our team offsite in UNDISCLOSED LOCATION from
+**September
 23rd to 27th, 2024**, we discussed opportunities to improve our application's architecture. Michael, a new team member, brings experience in implementing patterns that increase testability and separate business logic from UI, enhancing code robustness. He also introduced a pattern for controlling dependencies and side effects in applications.
 
 Given the potential benefits, the mobile team **verbally agreed** that this was a good use of our time. However, since the proof of concept is estimated to take **2-4 weeks**, Naomi and Michael felt it was important to document the deliverables, provide a high-level overview of the pattern, and discuss alternatives, despite prior agreements on the approach during the offsite.
@@ -153,7 +153,6 @@ We chose this option because it offers a balance between improving our architect
 - [XState Documentation](https://xstate.js.org/docs/)
 - [Michael's Demo of Dependency Pattern](https://github.com/ephemeraHQ/mobile-architecture-patterns-demo/tree/main/Dependencies)
 - [Michael's Demo of React Native Business Logic](https://github.com/ephemeraHQ/mobile-architecture-patterns-demo/tree/main/toyExample)
-- [GitHub Commit Related to Work Began on September 26](https://github.com/ephemeraHQ/converse-app/commit/f57e515ae9c9a6afcf43f70cdb290310a9be2edd)
 
 ## Notes on Inconsistencies
 

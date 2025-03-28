@@ -3,8 +3,8 @@ import { Linking } from "react-native"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { useAppState } from "@/stores/use-app-state-store"
 import { logger } from "@/utils/logger"
-import { parseURL } from "./link-parser"
 import { useConversationDeepLinkHandler } from "./conversation-navigator"
+import { parseURL } from "./link-parser"
 
 /**
  * Component that handles deep links for the app
@@ -17,27 +17,32 @@ export function DeepLinkHandler() {
   /**
    * Handle a URL by parsing it and routing to the appropriate handler
    */
-  const handleUrl = useCallback(async (url: string) => {
-    logger.info(`Handling deep link URL: ${url}`)
-    
-    const { segments, params } = parseURL(url)
-    
-    // Handle different types of deep links based on the URL pattern
-    if (segments[0] === "conversation" && segments[1]) {
-      // Pattern: converse://conversation/{inboxId}
-      const inboxId = segments[1] as IXmtpInboxId
-      const composerTextPrefill = params.composerTextPrefill
-      
-      logger.info(`Deep link matches conversation pattern, inboxId: ${inboxId}${
-        composerTextPrefill ? `, composerTextPrefill: ${composerTextPrefill}` : ''
-      }`)
-      
-      // Use the conversation deep link handler
-      await handleConversationDeepLink(inboxId, composerTextPrefill)
-    } else {
-      logger.info(`Unhandled deep link pattern: ${segments.join('/')}`)
-    }
-  }, [handleConversationDeepLink])
+  const handleUrl = useCallback(
+    async (url: string) => {
+      logger.info(`Handling deep link URL: ${url}`)
+
+      const { segments, params } = parseURL(url)
+
+      // Handle different types of deep links based on the URL pattern
+      if (segments[0] === "conversation" && segments[1]) {
+        // Pattern: convos://conversation/{inboxId}
+        const inboxId = segments[1] as IXmtpInboxId
+        const composerTextPrefill = params.composerTextPrefill
+
+        logger.info(
+          `Deep link matches conversation pattern, inboxId: ${inboxId}${
+            composerTextPrefill ? `, composerTextPrefill: ${composerTextPrefill}` : ""
+          }`,
+        )
+
+        // Use the conversation deep link handler
+        await handleConversationDeepLink(inboxId, composerTextPrefill)
+      } else {
+        logger.info(`Unhandled deep link pattern: ${segments.join("/")}`)
+      }
+    },
+    [handleConversationDeepLink],
+  )
 
   // Handle initial URL when the app is first launched
   useEffect(() => {

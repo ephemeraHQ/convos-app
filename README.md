@@ -1,4 +1,4 @@
-# Converse
+# Convos
 
 ## Setup
 
@@ -45,7 +45,9 @@ bundle install
 iOS:
 
 ```sh
-yarn ios
+yarn ios  # For iOS simulator
+# OR
+yarn ios:device  # For physical iOS device
 ```
 
 Android:
@@ -56,34 +58,25 @@ yarn android
 
 After the initial build, you can simply use `yarn start` to launch the Expo server for subsequent runs.
 
-## Manual start
-
-### Install iOS dependencies
-
-```sh
-npx pod-install
-```
-
-### Build the iOS app
-
-- Open `ios/Converse.xcworkspace` in Xcode
-- Select the `Converse` target
-- Select target iOS device
-- Click the play/build button to build and install the app
-
-### Build the Android app
-
-- Open Android Studio
-- Press the top right gradle icon to sync gradle
-- Click the play/build button to build and install the app
-
-#### Forward backend port
-
-If running the backend locally, run `yarn android:reverse`
-
 ### Running the app
 
-Once the app builds it will open the Expo App and ask what server and port you are targeting. If none are found, you probably need to start the expo server.
+Once the app builds, the Expo development server will start and you'll be able to run the app on your chosen device/simulator. If you encounter any issues, try:
+
+```sh
+# For iOS build issues
+yarn ios:clean
+
+# For Android build issues
+yarn android:clean
+```
+
+#### Forward backend port (Android only)
+
+If running the backend locally with Android, run:
+
+```sh
+yarn android:reverse
+```
 
 ### Start Expo server
 
