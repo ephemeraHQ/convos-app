@@ -26,6 +26,7 @@ export const ConversationComposerAttachmentPreview = memo(
     const handleAttachmentClosed = useCallback(
       (mediaURI: string) => {
         store.getState().removeComposerMediaPreview(mediaURI)
+        store.getState().removeComposerUploadedAttachment(mediaURI)
       },
       [store],
     )

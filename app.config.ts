@@ -80,7 +80,6 @@ export default () => {
   const iosGoogleServicesFile = process.env.GOOGLE_SERVICES_IOS
   const androidGoogleServicesFile = process.env.GOOGLE_SERVICES_ANDROID
 
-  // Add "as CustomExpoConfig" here to type the entire config object
   return {
     name: config.appName,
     scheme: config.scheme,
@@ -92,7 +91,7 @@ export default () => {
     version: version,
     assetBundlePatterns: ["**/*"],
     runtimeVersion: {
-      policy: "nativeVersion",
+      policy: "appVersion",
     },
     updates: {
       url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",

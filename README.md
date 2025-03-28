@@ -4,13 +4,7 @@
 
 ### Environment
 
-First, create a `.env.local` file based on the provided `.env.example`:
-
-```sh
-cp .env.example .env.local
-```
-
-Then, run one of the following commands to set up your environment variables:
+Run one of the following commands to set up your environment variables:
 
 ```sh
 # For development environment
@@ -23,7 +17,7 @@ yarn env:pull:preview
 yarn env:pull:prod
 ```
 
-This will create the appropriate `.env.local` file with environment variables configured in expo.dev. Note that you'll need to have an Expo project set up since we use their EAS service to pull environment variables.
+This will create the appropriate `.env` file with environment variables configured in expo.dev. Note that you'll need to have an Expo project set up since we use their EAS service to pull environment variables.
 
 ### Install JS/React Native dependencies
 

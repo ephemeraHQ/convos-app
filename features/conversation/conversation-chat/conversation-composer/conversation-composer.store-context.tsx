@@ -41,6 +41,7 @@ type IConversationComposerActions = {
     attachment: IUploadedRemoteAttachment
   }) => void
   updateMediaPreviewStatus: (mediaURI: string, status: IComposerMediaPreviewStatus) => void
+  removeComposerUploadedAttachment: (mediaURI: string) => void
 }
 
 type IConversationComposerStoreState = IConversationComposerState & IConversationComposerActions
@@ -117,6 +118,12 @@ const createConversationComposerStore = (
             set((state) => ({
               composerMediaPreviews: state.composerMediaPreviews.map((preview) =>
                 preview?.mediaURI === mediaURI ? { ...preview, status } : preview,
+              ),
+            })),
+          removeComposerUploadedAttachment: (mediaURI) =>
+            set((state) => ({
+              composerUploadedAttachments: state.composerUploadedAttachments.filter(
+                (attachment) => attachment.url !== mediaURI,
               ),
             })),
         }),

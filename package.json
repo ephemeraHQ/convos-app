@@ -1,6 +1,6 @@
 {
   "name": "convos",
-  "version": "2.2.72",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "android": "expo run:android",
@@ -9,9 +9,9 @@
     "android:reverse": "adb reverse tcp:8081 tcp:8081 && adb reverse tcp:9875 tcp:9875",
     "android:sendApk": "./scripts/android/send-apk.sh",
     "clean:ios": "rm -rf ios",
-    "env:pull:dev": "npx eas-cli env:pull --environment=development",
-    "env:pull:preview": "npx eas-cli env:pull --environment=preview",
-    "env:pull:prod": "npx eas-cli env:pull --environment=production",
+    "env:pull:dev": "npx eas-cli env:pull --environment=development --path=.env",
+    "env:pull:preview": "npx eas-cli env:pull --environment=preview --path=.env",
+    "env:pull:prod": "npx eas-cli env:pull --environment=production --path=.env",
     "postinstall": "patch-package && husky install && cross-os postinstall",
     "ios": "expo run:ios",
     "ios:clean": "yarn clean:ios && yarn ios",

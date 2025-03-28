@@ -24,6 +24,9 @@ build-*.apk
 .expo/
 expo-env.d.ts
 
+# EAS
+.eas/
+
 # iOS
 /ios/
 *.jks
@@ -32,6 +35,7 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 *.orig.*
+*.ipa
 
 # Android
 /android/
@@ -44,7 +48,4 @@ expo-env.d.ts
 .specstory/
 
 # Google Services
-google-services/android/google-services-android-*.json
-google-services/ios/google-services-ios-*.plist
-!google-services/android/google-services-android-example.json
-!google-services/ios/google-services-ios-example.plist
+google-services/
