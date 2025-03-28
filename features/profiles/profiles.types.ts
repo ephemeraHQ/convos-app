@@ -23,8 +23,9 @@ export const ConvosProfileSchema = z.object({
   description: z
     .string()
     .max(500, { message: "Description cannot exceed 500 characters" })
-    .nullable(),
-  avatar: z.string().url({ message: "Avatar must be a valid URL" }).nullable(),
+    .nullable()
+    .optional(),
+  avatar: z.string().url({ message: "Avatar must be a valid URL" }).nullable().optional(),
   xmtpId: z.custom<IXmtpInboxId>(),
   privyAddress: z.custom<IEthereumAddress>(), // TODO: Maybe this should be changed to simply ethAddress? Let's check thing again once we add multi identity support
 })

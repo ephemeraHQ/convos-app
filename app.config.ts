@@ -11,11 +11,9 @@ type EnvironmentConfig = {
   ios: {
     bundleIdentifier: string
     associatedDomains: string[]
-    googleServicesFile: string
   }
   android: {
     package: string
-    googleServicesFile: string
   }
 }
 
@@ -36,14 +34,14 @@ const settings: Record<Environment, EnvironmentConfig> = {
     scheme: "convos-dev",
     ios: {
       bundleIdentifier: "com.convos.dev",
-      associatedDomains: ["applinks:dev.convos.org", "webcredentials:dev.convos.org"],
-      googleServicesFile: "./google-services/ios/development.plist",
+      // For now use preview domain for dev
+      associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
     },
     android: {
       package: "com.convos.dev",
-      googleServicesFile: "./google-services/android/development.json",
     },
-    webDomain: "dev.convos.org",
+    // For now use preview domain for dev
+    webDomain: "preview.convos.org",
     appName: "Convos Dev",
     icon: "./assets/icon-preview.png",
   },
@@ -52,11 +50,9 @@ const settings: Record<Environment, EnvironmentConfig> = {
     ios: {
       bundleIdentifier: "com.convos.preview",
       associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
-      googleServicesFile: "./google-services/ios/preview.plist",
     },
     android: {
       package: "com.convos.preview",
-      googleServicesFile: "./google-services/android/preview.json",
     },
     webDomain: "preview.convos.org",
     appName: "Convos Preview",
@@ -67,11 +63,9 @@ const settings: Record<Environment, EnvironmentConfig> = {
     ios: {
       bundleIdentifier: "com.convos.prod",
       associatedDomains: ["applinks:convos.org", "webcredentials:convos.org"],
-      googleServicesFile: "./google-services/ios/production.plist",
     },
     android: {
       package: "com.convos.prod",
-      googleServicesFile: "./google-services/android/production.json",
     },
     webDomain: "convos.org",
     appName: "Convos",
@@ -82,6 +76,9 @@ const settings: Record<Environment, EnvironmentConfig> = {
 export default () => {
   const expoEnv = (process.env.EXPO_ENV || "development") as Environment
   const config = settings[expoEnv]
+
+  const iosGoogleServicesFile = process.env.GOOGLE_SERVICES_IOS
+  const androidGoogleServicesFile = process.env.GOOGLE_SERVICES_ANDROID
 
   // Add "as CustomExpoConfig" here to type the entire config object
   return {
@@ -95,7 +92,7 @@ export default () => {
     version: version,
     assetBundlePatterns: ["**/*"],
     runtimeVersion: {
-      policy: "appVersion",
+      policy: "nativeVersion",
     },
     updates: {
       url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
@@ -111,7 +108,7 @@ export default () => {
       bundleIdentifier: config.ios.bundleIdentifier,
       supportsTablet: true,
       associatedDomains: config.ios.associatedDomains,
-      googleServicesFile: config.ios.googleServicesFile,
+      googleServicesFile: iosGoogleServicesFile,
       config: {
         usesNonExemptEncryption: false,
       },
@@ -140,7 +137,7 @@ export default () => {
     },
     android: {
       package: config.android.package,
-      googleServicesFile: config.android.googleServicesFile,
+      googleServicesFile: androidGoogleServicesFile,
       intentFilters: [
         {
           action: "VIEW",

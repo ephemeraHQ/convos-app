@@ -12,7 +12,7 @@ type IAuthOnboardingState = {
   name: string
   username: string
   nameValidationError: string
-  avatar: string
+  avatar: string | null
   isAvatarUploading: boolean
 }
 
@@ -42,7 +42,7 @@ const initialState: IAuthOnboardingState = {
   name: "",
   username: "",
   nameValidationError: "",
-  avatar: "",
+  avatar: null,
   isAvatarUploading: false,
 }
 

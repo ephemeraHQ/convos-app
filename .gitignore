@@ -42,3 +42,9 @@ expo-env.d.ts
 
 # Cursor
 .specstory/
+
+# Google Services
+google-services/android/google-services-android-*.json
+google-services/ios/google-services-ios-*.plist
+!google-services/android/google-services-android-example.json
+!google-services/ios/google-services-ios-example.plist

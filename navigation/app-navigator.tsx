@@ -16,6 +16,8 @@ import { ConversationScreen } from "@/features/conversation/conversation-chat/co
 import { ConversationListScreen } from "@/features/conversation/conversation-list/conversation-list.screen"
 import { ConversationRequestsListScreen } from "@/features/conversation/conversation-requests-list/conversation-requests-list.screen"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
+// import { ShareProfileNav, ShareProfileScreenConfig } from "../screens/ShareProfileNav"
+import { getStateFromPath } from "@/features/deep-linking/navigation-handlers"
 import { AddGroupMembersScreen } from "@/features/groups/screens/add-group-members.screen"
 import { EditGroupScreen } from "@/features/groups/screens/edit-group.screen"
 import { GroupDetailsScreen } from "@/features/groups/screens/group-details.screen"
@@ -30,10 +32,7 @@ import { ShareProfileScreen } from "@/screens/ShareProfile"
 import { WebviewPreview } from "@/screens/WebviewPreview"
 import { useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
-import { useUpdateSentryUser } from "@/utils/sentry/sentry-identity"
 import { hideSplashScreen } from "@/utils/splash/splash"
-// import { ShareProfileNav, ShareProfileScreenConfig } from "../screens/ShareProfileNav"
-import { getStateFromPath } from "@/features/deep-linking/navigation-handlers"
 
 const prefix = Linking.createURL("/")
 const schemes = [prefix, ...config.app.universalLinks]
@@ -100,7 +99,6 @@ export function AppNavigator() {
   const { themeScheme, navigationTheme, setThemeContextOverride, ThemeProvider } =
     useThemeProvider()
 
-  useUpdateSentryUser()
   useIsCurrentVersionEnough()
   useRefreshJwtAxiosInterceptor()
   useSignoutIfNoPrivyUser()

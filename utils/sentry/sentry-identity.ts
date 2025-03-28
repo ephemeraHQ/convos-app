@@ -1,78 +1,134 @@
 import * as Sentry from "@sentry/react-native"
 import { useEffect } from "react"
-import { useCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
+import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import {
   getCurrentUserQueryData,
   getCurrentUserQueryOptions,
 } from "@/features/current-user/current-user.query"
 import { getProfileQueryConfig, getProfileQueryData } from "@/features/profiles/profiles.query"
+import type { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { sentryLogger } from "@/utils/logger"
 import { isEqual } from "@/utils/objects"
 import { createQueryObserverWithPreviousData } from "@/utils/react-query/react-query.helpers"
 
 export function useUpdateSentryUser() {
-  const currentSender = useCurrentSender()
-
   useEffect(() => {
-    if (!currentSender) {
-      return
+    // Function to check conditions and setup tracking
+    const checkAndSetupTracking = () => {
+      const authStatus = useAuthenticationStore.getState().status
+      const currentSender = useMultiInboxStore.getState().currentSender
+
+      if (authStatus === "signedIn" && currentSender) {
+        setupSentryIdentityTracking(currentSender.inboxId)
+      } else {
+        cleanupSentryIdentityTracking()
+      }
     }
 
-    // Track user changes with createQueryObserverWithPreviousData
-    const { unsubscribe: unsubscribeFromUserQueryObserver } = createQueryObserverWithPreviousData({
-      queryOptions: getCurrentUserQueryOptions({ caller: "useUpdateSentryUser" }),
+    // Subscribe to auth changes
+    const unsubscribeAuth = useAuthenticationStore.subscribe(
+      (state) => state.status,
+      () => checkAndSetupTracking(),
+    )
+
+    // Subscribe to multi-inbox changes
+    const unsubscribeMultiInbox = useMultiInboxStore.subscribe(
+      (state) => state.currentSender,
+      () => checkAndSetupTracking(),
+    )
+
+    // Initial setup
+    checkAndSetupTracking()
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribeAuth()
+      unsubscribeMultiInbox()
+      cleanupSentryIdentityTracking()
+    }
+  }, []) // No dependencies needed since we're using store subscriptions
+}
+
+let unsubscribeFromUserQueryObserver: (() => void) | undefined
+let unsubscribeFromProfileQueryObserver: (() => void) | undefined
+
+function setupSentryIdentityTracking(inboxId: IXmtpInboxId) {
+  // Clean up any existing subscriptions
+  if (unsubscribeFromUserQueryObserver) {
+    unsubscribeFromUserQueryObserver()
+  }
+  if (unsubscribeFromProfileQueryObserver) {
+    unsubscribeFromProfileQueryObserver()
+  }
+
+  // Track user changes with createQueryObserverWithPreviousData
+  const { unsubscribe: newUnsubscribeFromUserQueryObserver } = createQueryObserverWithPreviousData({
+    queryOptions: getCurrentUserQueryOptions({ caller: "setupSentryIdentityTracking" }),
+    observerCallbackFn: (result) => {
+      if (isEqual(result.data, result.previousData)) {
+        return
+      }
+
+      updateSentryIdentity(inboxId)
+    },
+  })
+
+  unsubscribeFromUserQueryObserver = newUnsubscribeFromUserQueryObserver
+
+  // Track profile changes with createQueryObserverWithPreviousData
+  const { unsubscribe: newUnsubscribeFromProfileQueryObserver } =
+    createQueryObserverWithPreviousData({
+      queryOptions: getProfileQueryConfig({
+        xmtpId: inboxId,
+        caller: "setupSentryIdentityTracking",
+      }),
       observerCallbackFn: (result) => {
         if (isEqual(result.data, result.previousData)) {
           return
         }
 
-        updateSentryIdentity()
+        updateSentryIdentity(inboxId)
       },
     })
 
-    // Track profile changes with createQueryObserverWithPreviousData
-    const { unsubscribe: unsubscribeFromProfileQueryObserver } =
-      createQueryObserverWithPreviousData({
-        queryOptions: getProfileQueryConfig({
-          xmtpId: currentSender.inboxId,
-          caller: "useUpdateSentryUser",
-        }),
-        observerCallbackFn: (result) => {
-          if (isEqual(result.data, result.previousData)) {
-            return
-          }
+  unsubscribeFromProfileQueryObserver = newUnsubscribeFromProfileQueryObserver
 
-          updateSentryIdentity()
-        },
-      })
+  // Initial identity update if data is available
+  updateSentryIdentity(inboxId)
+}
 
-    // Function to update Sentry user identity with latest data
-    const updateSentryIdentity = () => {
-      const currentUser = getCurrentUserQueryData()
+function cleanupSentryIdentityTracking() {
+  if (unsubscribeFromUserQueryObserver) {
+    unsubscribeFromUserQueryObserver()
+    unsubscribeFromUserQueryObserver = undefined
+  }
+  if (unsubscribeFromProfileQueryObserver) {
+    unsubscribeFromProfileQueryObserver()
+    unsubscribeFromProfileQueryObserver = undefined
+  }
 
-      if (!currentUser?.id) {
-        return
-      }
+  // Clear Sentry user data
+  Sentry.setUser(null)
+}
 
-      const currentProfile = getProfileQueryData({
-        xmtpId: currentSender.inboxId,
-      })
+// Function to update Sentry user identity with latest data
+function updateSentryIdentity(inboxId: IXmtpInboxId) {
+  const currentUser = getCurrentUserQueryData()
 
-      sentryIdentifyUser({
-        userId: currentUser.id,
-        username: currentProfile?.username,
-        privyUserId: currentProfile?.privyAddress,
-      })
-    }
+  if (!currentUser?.id) {
+    return
+  }
 
-    // Initial identity update if data is available
-    updateSentryIdentity()
+  const currentProfile = getProfileQueryData({
+    xmtpId: inboxId,
+  })
 
-    return () => {
-      unsubscribeFromUserQueryObserver()
-      unsubscribeFromProfileQueryObserver()
-    }
-  }, [currentSender])
+  sentryIdentifyUser({
+    userId: currentUser.id,
+    username: currentProfile?.username,
+    privyUserId: currentProfile?.privyAddress,
+  })
 }
 
 export function sentryIdentifyUser(args: {
