@@ -1,0 +1,27 @@
+name: Validate Code Quality (No checks)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "**"
+      - "!**/*.ts"
+      - "!**/*.tsx"
+      - "!package.json"
+
+jobs:
+  tsc:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Nothing to typecheck"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Nothing to lint"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Nothing to test"

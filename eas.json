@@ -1,0 +1,53 @@
+{
+  "cli": {
+    "version": ">=15.0.12",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "_shared": {
+      "autoIncrement": true,
+      "node": "20.18.0",
+      "resourceClass": "large"
+    },
+    "development": {
+      "extends": "_shared",
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "environment": "development"
+    },
+    "preview": {
+      "extends": "_shared",
+      "channel": "preview",
+      "environment": "preview"
+    },
+    "production": {
+      "extends": "_shared",
+      "channel": "production",
+      "environment": "production",
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "preview": {
+      "android": {
+        "track": "internal"
+      },
+      "ios": {
+        "ascAppId": "6743806056",
+        "appleTeamId": "FY4NZR34Z3"
+      }
+    },
+    "production": {
+      "android": {
+        "track": "internal"
+      },
+      "ios": {
+        // "ascAppId": "1658819514", // TODO: Replace with the new app ID
+        "appleTeamId": "FY4NZR34Z3"
+      }
+    }
+  }
+}

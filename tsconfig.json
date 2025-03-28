@@ -1,0 +1,42 @@
+{
+  "extends": "expo/tsconfig.base",
+
+  "compilerOptions": {
+    "module": "ESNext",
+    "strict": true,
+    // https://docs.privy.io/guide/expo/setup/passkey#_1-set-up-your-build-configuration
+    "moduleResolution": "Bundler",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true,
+    "types": ["node", "jest"],
+    "typeRoots": ["./node_modules/@types", "./types"],
+    // Allow accessing process.env
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@components/*": ["./components/*"],
+      "@config": ["./config"],
+      "@config/*": ["./config/*"],
+      "@containers/*": ["./containers/*"],
+      "@data/*": ["./data/*"],
+      "@hooks/*": ["./hooks/*"],
+      "@i18n/*": ["./i18n/*"],
+      "@i18n": ["./i18n/index"],
+      "@queries/*": ["./queries/*"],
+      "@screens/*": ["./screens/*"],
+      "@styles/*": ["./styles/*"],
+      "@utils/*": ["./utils/*"],
+      "@theme/*": ["./theme/*"],
+      "@assets/*": ["./assets/*"],
+      "@design-system/*": ["./design-system/*"],
+      "@navigation/*": ["./navigation/*"],
+      "@features/*": ["./features/*"],
+      "@shared/*": ["./features/shared/*"],
+      "@search/*": ["./features/search/*"]
+    },
+    "extendedDiagnostics": true
+  },
+  "exclude": ["./vendor/**/*", "./node_modules/**/*", "./dist/**/*"]
+}

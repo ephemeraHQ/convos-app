@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Development
+.env*
+.vscode
+/.idea
+npm-debug.*
+.reassure
+
+# Build outputs
+dist/
+builds/
+build-*.apk
+
+# Expo
+.expo/
+expo-env.d.ts
+
+# iOS
+/ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Android
+/android/
+
+# System files
+.DS_Store
+*.log
+
+# Cursor
+.specstory/
