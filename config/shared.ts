@@ -3,12 +3,13 @@ import { Platform } from "react-native"
 import { IExpoAppConfigExtra } from "@/app.config"
 import { IConfig, ILoggerColorScheme } from "@/config/config.types"
 import { IXmtpEnv } from "@/features/xmtp/xmtp.types"
+import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
+import logger from "@/utils/logger"
 
 function maybeReplaceLocalhost(uri: string) {
   try {
     if (uri?.includes("localhost")) {
-      console.debug("Trying to replace localhost with device-accessible IP")
-
       // Try Expo host info first
       const hostIp = Constants.expoConfig?.hostUri?.split(":")[0]
 
@@ -18,12 +19,17 @@ function maybeReplaceLocalhost(uri: string) {
 
       const newUri = uri.replace("localhost", hostIp)
 
-      console.debug(`New uri: ${newUri}`)
+      logger.debug(`Replaced ${uri} with device-accessible IP: ${newUri}`)
 
       return newUri
     }
   } catch (error) {
-    console.error("Error replacing localhost with device-accessible IP", error)
+    captureError(
+      new GenericError({
+        error,
+        additionalMessage: "Failed to replace localhost with device-accessible IP",
+      }),
+    )
   }
 
   return uri
