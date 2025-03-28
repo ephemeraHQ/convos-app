@@ -95,9 +95,9 @@ jobs:
         run: |
           eas build --platform ios --profile production --non-interactive --auto-submit --environment=production
 
-      - name: Resolve Sentry Issues
-        run: |
-          eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-react-native --org convos'
+      # - name: Resolve Sentry Issues
+      #   run: |
+      #     eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-react-native --org convos'
 
   android-build:
     needs: [check-changes]
@@ -137,9 +137,9 @@ jobs:
         run: |
           eas build --platform android --profile production --non-interactive --auto-submit --environment=production
 
-      - name: Resolve Sentry Issues
-        run: |
-          eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-react-native --org convos'
+      # - name: Resolve Sentry Issues
+      #   run: |
+      #     eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-react-native --org convos'
 
   ota-update:
     needs: [check-changes]
@@ -183,6 +183,6 @@ jobs:
         run: |
           eas env:exec --environment production 'npx sentry-expo-upload-sourcemaps dist'
 
-      - name: Resolve Sentry Issues
-        run: |
-          eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-react-native --org convos'
+      # - name: Resolve Sentry Issues
+      #   run: |
+      #     eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-react-native --org convos'

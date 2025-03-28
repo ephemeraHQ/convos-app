@@ -1,3 +1,4 @@
+import path from "path"
 import { ExpoConfig } from "expo/config"
 import { version } from "./package.json"
 
@@ -77,8 +78,14 @@ export default () => {
   const expoEnv = (process.env.EXPO_ENV || "development") as Environment
   const config = settings[expoEnv]
 
-  const iosGoogleServicesFile = process.env.GOOGLE_SERVICES_IOS
-  const androidGoogleServicesFile = process.env.GOOGLE_SERVICES_ANDROID
+  const iosGoogleServicesFile =
+    process.env.GOOGLE_SERVICES_IOS ??
+    path.resolve(__dirname, "google-services/google-services-ios.plist")
+  const androidGoogleServicesFile =
+    process.env.GOOGLE_SERVICES_ANDROID ??
+    path.resolve(__dirname, "google-services/google-services-android.json")
+
+  console.log("androidGoogleServicesFile:", androidGoogleServicesFile)
 
   return {
     name: config.appName,
