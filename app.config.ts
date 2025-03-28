@@ -114,6 +114,8 @@ export default () => {
   const expoEnv = (process.env.EXPO_ENV || "development") as Environment
   const config = settings[expoEnv]
 
+  console.log("process.env.GOOGLE_SERVICES_IOS:", process.env.GOOGLE_SERVICES_IOS)
+
   const iosGoogleServicesFile =
     process.env.GOOGLE_SERVICES_IOS ?? `${process.env.PWD}/.eas/.env/GOOGLE_SERVICES_IOS`
   const androidGoogleServicesFile =
