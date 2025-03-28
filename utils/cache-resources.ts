@@ -7,12 +7,16 @@ import logger from "./logger"
 // Define the assets to cache
 const imagesToCache = [
   // Splash screens
-  require("@assets/splash.png"),
-  require("@assets/splash-dark.png"),
+  require("@assets/splash-icon-light.png"),
+  require("@assets/splash-icon-dark.png"),
 
   // Icons
-  require("@assets/icon.png"),
-  require("@assets/icon-preview.png"),
+  require("@assets/icon-light.png"),
+  require("@assets/icon-dark.png"),
+  require("@assets/icon-tinted.png"),
+  require("@assets/adaptive-icon.png"),
+
+  // Web3 images
   require("@assets/images/web3/base.png"),
   require("@assets/images/web3/ens.png"),
   require("@assets/images/web3/farcaster.png"),

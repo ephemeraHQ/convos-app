@@ -1,0 +1,6 @@
+# Standard ignores
+node_modules/
+.git/
+.expo/
+web-build/
+dist/ 

@@ -1,6 +1,7 @@
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import { Platform } from "react-native"
+import { config } from "@/config"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   messageContentIsMultiRemoteAttachment,
@@ -28,11 +29,6 @@ import { ensureMessageContentStringValue } from "../conversation/conversation-li
 export async function registerPushNotifications() {
   const errors: NotificationError[] = []
 
-  const [deviceToken, expoToken] = await Promise.all([
-    getDevicePushNotificationsToken(),
-    getExpoPushNotificationsToken(),
-  ])
-
   try {
     const result = await requestNotificationsPermissions()
 
@@ -58,6 +54,11 @@ export async function registerPushNotifications() {
       })
     }
 
+    const [deviceToken, expoToken] = await Promise.all([
+      getDevicePushNotificationsToken(),
+      getExpoPushNotificationsToken(),
+    ])
+
     await updateDevice({
       userId: currentUser.id,
       deviceId: currentDevice.id,
@@ -80,6 +81,7 @@ export async function registerPushNotifications() {
     const installationId = await ensureXmtpInstallationQueryData({
       inboxId: currentSender.inboxId,
     })
+    const deviceToken = await getDevicePushNotificationsToken()
 
     await registerNotificationInstallation({
       installationId,
@@ -117,7 +119,9 @@ export async function getExpoPushNotificationsToken() {
       throw new Error("Notifications permissions not granted")
     }
 
-    const data = await Notifications.getExpoPushTokenAsync()
+    const data = await Notifications.getExpoPushTokenAsync({
+      projectId: config.expo.projectId,
+    })
 
     return data.data as string
   } catch (error) {

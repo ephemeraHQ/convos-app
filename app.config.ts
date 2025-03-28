@@ -12,9 +12,18 @@ type EnvironmentConfig = {
   ios: {
     bundleIdentifier: string
     associatedDomains: string[]
+    icon?: {
+      dark: string
+      light: string
+      tinted: string
+    }
   }
   android: {
     package: string
+    adaptiveIcon: {
+      foregroundImage: string
+      backgroundColor: string
+    }
   }
 }
 
@@ -37,40 +46,67 @@ const settings: Record<Environment, EnvironmentConfig> = {
       bundleIdentifier: "com.convos.dev",
       // For now use preview domain for dev
       associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
+      icon: {
+        dark: "./assets/icon-dark.png",
+        light: "./assets/icon-light.png",
+        tinted: "./assets/icon-tinted.png",
+      },
     },
     android: {
       package: "com.convos.dev",
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#FFFFFF",
+      },
     },
     // For now use preview domain for dev
     webDomain: "preview.convos.org",
     appName: "Convos Dev",
-    icon: "./assets/icon-preview.png",
+    icon: "./assets/icon-light.png",
   },
   preview: {
     scheme: "convos-preview",
     ios: {
       bundleIdentifier: "com.convos.preview",
       associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
+      icon: {
+        dark: "./assets/icon-dark.png",
+        light: "./assets/icon-light.png",
+        tinted: "./assets/icon-tinted.png",
+      },
     },
     android: {
       package: "com.convos.preview",
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#FFFFFF",
+      },
     },
     webDomain: "preview.convos.org",
     appName: "Convos Preview",
-    icon: "./assets/icon-preview.png",
+    icon: "./assets/icon-light.png",
   },
   production: {
     scheme: "convos",
     ios: {
       bundleIdentifier: "com.convos.prod",
       associatedDomains: ["applinks:convos.org", "webcredentials:convos.org"],
+      icon: {
+        dark: "./assets/icon-dark.png",
+        light: "./assets/icon-light.png",
+        tinted: "./assets/icon-tinted.png",
+      },
     },
     android: {
       package: "com.convos.prod",
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#FFFFFF",
+      },
     },
     webDomain: "convos.org",
     appName: "Convos",
-    icon: "./assets/icon.png",
+    icon: "./assets/icon-light.png",
   },
 }
 
@@ -79,13 +115,9 @@ export default () => {
   const config = settings[expoEnv]
 
   const iosGoogleServicesFile =
-    process.env.GOOGLE_SERVICES_IOS ??
-    path.resolve(__dirname, "google-services/google-services-ios.plist")
+    process.env.GOOGLE_SERVICES_IOS ?? `${process.env.PWD}/.eas/.env/GOOGLE_SERVICES_IOS`
   const androidGoogleServicesFile =
-    process.env.GOOGLE_SERVICES_ANDROID ??
-    path.resolve(__dirname, "google-services/google-services-android.json")
-
-  console.log("androidGoogleServicesFile:", androidGoogleServicesFile)
+    process.env.GOOGLE_SERVICES_ANDROID ?? `${process.env.PWD}/.eas/.env/GOOGLE_SERVICES_ANDROID`
 
   return {
     name: config.appName,
@@ -115,6 +147,7 @@ export default () => {
       supportsTablet: true,
       associatedDomains: config.ios.associatedDomains,
       googleServicesFile: iosGoogleServicesFile,
+      icon: config.ios.icon,
       config: {
         usesNonExemptEncryption: false,
       },
@@ -183,6 +216,10 @@ export default () => {
           ],
         },
       ],
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#FFFFFF",
+      },
     },
     plugins: [
       [
@@ -299,12 +336,13 @@ export default () => {
       [
         "expo-splash-screen",
         {
-          image: "./assets/splash.png",
-          backgroundColor: "#ffffff",
+          image: "./assets/splash-icon-light.png",
+          backgroundColor: "#FFFFFF",
           dark: {
-            image: "./assets/splash-dark.png",
+            image: "./assets/splash-icon-dark.png",
             backgroundColor: "#000000",
           },
+          imageWidth: 200,
         },
       ],
       [

@@ -60,6 +60,9 @@ export const shared = {
     apiUrl: maybeReplaceLocalhost(process.env.EXPO_PUBLIC_CONVOS_API_URI),
     webDomain: appConfigExtra.webDomain,
   },
+  expo: {
+    projectId: appConfigExtra.eas.projectId,
+  },
   firebase: {
     appCheckDebugToken:
       Platform.OS === "android"

@@ -16,6 +16,9 @@ export type IConfig = {
     apiUrl: string
     webDomain: string
   }
+  expo: {
+    projectId: string
+  }
   firebase: {
     appCheckDebugToken: string
   }
