@@ -169,8 +169,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          # token: ${{ secrets.PAT_GITHUB }}
+        # with:
+        # token: ${{ secrets.PAT_GITHUB }}
 
       - name: Setup node
         uses: actions/setup-node@v4
