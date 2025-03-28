@@ -119,6 +119,9 @@ export default () => {
   const androidGoogleServicesFile =
     process.env.GOOGLE_SERVICES_ANDROID ?? `${process.env.PWD}/.eas/.env/GOOGLE_SERVICES_ANDROID`
 
+  console.log("iosGoogleServicesFile:", iosGoogleServicesFile)
+  console.log("androidGoogleServicesFile:", androidGoogleServicesFile)
+
   return {
     name: config.appName,
     scheme: config.scheme,
