@@ -1,4 +1,3 @@
-import path from "path"
 import { ExpoConfig } from "expo/config"
 import { version } from "./package.json"
 
@@ -12,6 +11,7 @@ type EnvironmentConfig = {
   ios: {
     bundleIdentifier: string
     associatedDomains: string[]
+    googleServicesFile: string
     icon?: {
       dark: string
       light: string
@@ -20,6 +20,7 @@ type EnvironmentConfig = {
   }
   android: {
     package: string
+    googleServicesFile: string
     adaptiveIcon: {
       foregroundImage: string
       backgroundColor: string
@@ -46,6 +47,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
       bundleIdentifier: "com.convos.dev",
       // For now use preview domain for dev
       associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
+      googleServicesFile: "./google-services/google-services-ios-dev.plist",
       icon: {
         dark: "./assets/icon-dark.png",
         light: "./assets/icon-light.png",
@@ -54,6 +56,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     },
     android: {
       package: "com.convos.dev",
+      googleServicesFile: "./google-services/google-services-android-dev.json",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#FFFFFF",
@@ -69,6 +72,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     ios: {
       bundleIdentifier: "com.convos.preview",
       associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
+      googleServicesFile: "./google-services/google-services-ios-preview.plist",
       icon: {
         dark: "./assets/icon-dark.png",
         light: "./assets/icon-light.png",
@@ -77,6 +81,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     },
     android: {
       package: "com.convos.preview",
+      googleServicesFile: "./google-services/google-services-android-preview.json",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#FFFFFF",
@@ -91,6 +96,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     ios: {
       bundleIdentifier: "com.convos.prod",
       associatedDomains: ["applinks:convos.org", "webcredentials:convos.org"],
+      googleServicesFile: "./google-services/google-services-ios-prod.plist",
       icon: {
         dark: "./assets/icon-dark.png",
         light: "./assets/icon-light.png",
@@ -99,6 +105,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     },
     android: {
       package: "com.convos.prod",
+      googleServicesFile: "./google-services/google-services-android-prod.json",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#FFFFFF",
@@ -113,16 +120,6 @@ const settings: Record<Environment, EnvironmentConfig> = {
 export default () => {
   const expoEnv = (process.env.EXPO_ENV || "development") as Environment
   const config = settings[expoEnv]
-
-  console.log("process.env.GOOGLE_SERVICES_IOS:", process.env.GOOGLE_SERVICES_IOS)
-
-  const iosGoogleServicesFile =
-    process.env.GOOGLE_SERVICES_IOS ?? `${process.env.PWD}/.eas/.env/GOOGLE_SERVICES_IOS`
-  const androidGoogleServicesFile =
-    process.env.GOOGLE_SERVICES_ANDROID ?? `${process.env.PWD}/.eas/.env/GOOGLE_SERVICES_ANDROID`
-
-  console.log("iosGoogleServicesFile:", iosGoogleServicesFile)
-  console.log("androidGoogleServicesFile:", androidGoogleServicesFile)
 
   return {
     name: config.appName,
@@ -151,7 +148,7 @@ export default () => {
       bundleIdentifier: config.ios.bundleIdentifier,
       supportsTablet: true,
       associatedDomains: config.ios.associatedDomains,
-      googleServicesFile: iosGoogleServicesFile,
+      googleServicesFile: config.ios.googleServicesFile,
       icon: config.ios.icon,
       config: {
         usesNonExemptEncryption: false,
@@ -181,7 +178,7 @@ export default () => {
     },
     android: {
       package: config.android.package,
-      googleServicesFile: androidGoogleServicesFile,
+      googleServicesFile: config.android.googleServicesFile,
       intentFilters: [
         {
           action: "VIEW",
