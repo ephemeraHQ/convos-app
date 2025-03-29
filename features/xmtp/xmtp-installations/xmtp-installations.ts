@@ -1,6 +1,6 @@
 import { getInboxState, signWithInstallationKey } from "@xmtp/react-native-sdk"
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
-import { logErrorIfXmtpRequestTookTooLong } from "@/features/xmtp/xmtp.helpers"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpClientWithCodecs, IXmtpInboxId, IXmtpSigner } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
 import { awaitableAlert } from "@/utils/alert"
@@ -64,14 +64,9 @@ export async function signWithXmtpInstallationId(args: {
   try {
     const installationId = await ensureXmtpInstallationQueryData({ inboxId: clientInboxId })
 
-    const startTime = Date.now()
-    const signature = await signWithInstallationKey(installationId, message)
-    const endTime = Date.now()
-
-    logErrorIfXmtpRequestTookTooLong({
-      durationMs: endTime - startTime,
-      xmtpFunctionName: `signWithInstallationKey`,
-    })
+    const signature = await wrapXmtpCallWithDuration("signWithInstallationKey", () =>
+      signWithInstallationKey(installationId, message),
+    )
 
     return signature
   } catch (error) {

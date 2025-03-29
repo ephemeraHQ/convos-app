@@ -1,7 +1,6 @@
-import { config } from "@/config"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConsentState, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
 
 type IGetXmtpConversationsArgs = {
@@ -101,40 +100,26 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
     limit = 9999, // All of them by default
   } = args
 
-  const startTime = Date.now()
-
   try {
     const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
-    const conversations = await client.conversations.list(
-      {
-        isActive: true,
-        addedByInboxId: true,
-        name: true,
-        imageUrl: true,
-        consentState: true,
-        lastMessage: true,
-        description: true,
-      },
-      limit,
-      consentStates,
+    const conversations = await wrapXmtpCallWithDuration("listConversations", () =>
+      client.conversations.list(
+        {
+          isActive: true,
+          addedByInboxId: true,
+          name: true,
+          imageUrl: true,
+          consentState: true,
+          lastMessage: true,
+          description: true,
+        },
+        limit,
+        consentStates,
+      ),
     )
-
-    const duration = Date.now() - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Getting conversations took ${duration}ms for inbox: ${clientInboxId}, consentStates: ${consentStates?.join(
-              ", ",
-            )} and limit: ${limit}`,
-          ),
-        }),
-      )
-    }
 
     return conversations
   } catch (error) {

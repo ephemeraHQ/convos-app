@@ -1,6 +1,78 @@
 import { useNavigation } from "@react-navigation/native"
-import { useLayoutEffect } from "react"
+import { memo, useLayoutEffect } from "react"
+import { useShallow } from "zustand/react/shallow"
 import { Header, HeaderProps } from "@/design-system/Header/Header"
+import { HeaderAction } from "@/design-system/Header/HeaderAction"
+import { HStack } from "@/design-system/HStack"
+import { Loader } from "@/design-system/loader"
+import { Pressable } from "@/design-system/Pressable"
+import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
+import { useRouter } from "@/navigation/use-navigation"
+import { useAppTheme } from "@/theme/use-app-theme"
+
+// Internal component to handle rendering based on loading state
+const HeaderRenderer = memo(function HeaderRenderer(props: { headerProps: HeaderProps }) {
+  const { headerProps } = props
+  const { theme } = useAppTheme()
+  const router = useRouter()
+
+  // Subscribe to the store here
+  const isXmtpLoading = useXmtpActivityStore(
+    useShallow((state) => Object.keys(state.activeOperations).length > 0),
+  )
+
+  // Calculate final props based on loading state
+  const finalHeaderProps: HeaderProps = { ...headerProps }
+  const LoaderComponent = (
+    <Pressable onPress={() => router.navigate("XmtpActivity")}>
+      <Loader size="sm" />
+    </Pressable>
+  )
+
+  const hasOriginalRightAction =
+    headerProps.RightActionComponent ||
+    headerProps.rightIcon ||
+    headerProps.rightText ||
+    headerProps.rightTx
+
+  if (isXmtpLoading) {
+    if (hasOriginalRightAction) {
+      const OriginalRightAction = headerProps.RightActionComponent ? (
+        headerProps.RightActionComponent
+      ) : (
+        <HeaderAction
+          tx={headerProps.rightTx}
+          text={headerProps.rightText}
+          icon={headerProps.rightIcon}
+          iconColor={headerProps.rightIconColor}
+          onPress={headerProps.onRightPress}
+          txOptions={headerProps.rightTxOptions}
+          backgroundColor={headerProps.backgroundColor}
+        />
+      )
+
+      finalHeaderProps.RightActionComponent = (
+        <HStack style={{ alignItems: "center", gap: theme.spacing.sm }}>
+          {LoaderComponent}
+          {OriginalRightAction}
+        </HStack>
+      )
+      finalHeaderProps.rightTx = undefined
+      finalHeaderProps.rightText = undefined
+      finalHeaderProps.rightIcon = undefined
+      finalHeaderProps.onRightPress = undefined
+    } else {
+      finalHeaderProps.RightActionComponent = LoaderComponent
+      finalHeaderProps.rightTx = undefined
+      finalHeaderProps.rightText = undefined
+      finalHeaderProps.rightIcon = undefined
+      finalHeaderProps.onRightPress = undefined
+    }
+  }
+
+  // Render the actual Header with the final props
+  return <Header {...finalHeaderProps} />
+})
 
 /**
  * A hook that can be used to easily set the Header of a react-navigation screen from within the screen's component.
@@ -19,14 +91,15 @@ export function useHeader(
 ) {
   const navigation = useNavigation()
 
-  // To avoid a visible header jump when navigating between screens, we use
-  // `useLayoutEffect`, which will apply the settings before the screen renders.
+  // No store subscription here anymore
+
   useLayoutEffect(() => {
+    // The effect now only depends on the original deps, navigation, and headerProps
     navigation.setOptions({
       headerShown: true,
-      header: () => <Header {...headerProps} />,
+      // Use the internal HeaderRenderer component
+      header: () => <HeaderRenderer headerProps={headerProps} />,
     })
-    // intentionally created API to have user set when they want to update the header via `deps`
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, navigation])
+  }, [...deps, navigation, headerProps]) // Dependencies ensure header updates if original props change
 }

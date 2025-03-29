@@ -25,6 +25,7 @@ import { GroupMembersListScreen } from "@/features/groups/screens/group-members-
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { ProfileImportInfoScreen } from "@/features/profiles/profile-import-info.screen"
 import { ProfileScreen } from "@/features/profiles/profile.screen"
+import { XmtpActivityScreen } from "@/features/xmtp/xmtp-activity.screen"
 import { translate } from "@/i18n"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { navigationRef } from "@/navigation/navigation.utils"
@@ -202,14 +203,7 @@ const AppStacks = memo(function AppStacks() {
           />
           <AppNativeStack.Screen name="Blocked" component={BlockedConversationsScreen} />
           <AppNativeStack.Screen name="ChatsRequests" component={ConversationRequestsListScreen} />
-          <AppNativeStack.Screen
-            options={{
-              title: "",
-              headerTitle: translate("chat"),
-            }}
-            name="Conversation"
-            component={ConversationScreen}
-          />
+          <AppNativeStack.Screen name="Conversation" component={ConversationScreen} />
           <AppNativeStack.Screen
             options={{ presentation: "modal" }}
             name="ShareProfile"
@@ -222,12 +216,13 @@ const AppStacks = memo(function AppStacks() {
           />
           <AppNativeStack.Screen name="Profile" component={ProfileScreen} />
           <AppNativeStack.Screen name="GroupDetails" component={GroupDetailsScreen} />
+          <AppNativeStack.Screen name="AddGroupMembers" component={AddGroupMembersScreen} />
           <AppNativeStack.Screen
             options={{
-              title: translate("add_members"),
+              presentation: "modal",
             }}
-            name="AddGroupMembers"
-            component={AddGroupMembersScreen}
+            name="XmtpActivity"
+            component={XmtpActivityScreen}
           />
           <AppNativeStack.Screen
             options={{
@@ -236,13 +231,7 @@ const AppStacks = memo(function AppStacks() {
             name="EditGroup"
             component={EditGroupScreen}
           />
-          <AppNativeStack.Screen
-            options={{
-              title: translate("group_members"),
-            }}
-            name="GroupMembersList"
-            component={GroupMembersListScreen}
-          />
+          <AppNativeStack.Screen name="GroupMembersList" component={GroupMembersListScreen} />
           <AppNativeStack.Screen
             name="ProfileImportInfo"
             component={ProfileImportInfoScreen}

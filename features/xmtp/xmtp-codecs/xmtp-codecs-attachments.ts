@@ -1,12 +1,10 @@
-import { InboxId, RemoteAttachmentMetadata } from "@xmtp/react-native-sdk"
+import { RemoteAttachmentMetadata } from "@xmtp/react-native-sdk"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
 import { calculateFileDigest, fileExists } from "@/utils/file-system/file-system"
-import { tryCatchWithDuration } from "@/utils/try-catch"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
-import { XMTP_MAX_MS_UNTIL_LOG_ERROR } from "../xmtp-logs"
 
 export const MAX_AUTOMATIC_DOWNLOAD_ATTACHMENT_SIZE = 10000000 // 10MB
 
@@ -21,39 +19,21 @@ export const encryptAttachment = async (args: {
     inboxId: clientInboxId,
   })
 
-  const encryptResult = await tryCatchWithDuration(
-    client.encryptAttachment({
-      fileUri,
-      mimeType,
-    }),
+  const encryptedAttachment = await wrapXmtpCallWithDuration("encryptAttachment", () =>
+    client.encryptAttachment({ fileUri, mimeType }),
   )
 
-  if (encryptResult.durationMs > XMTP_MAX_MS_UNTIL_LOG_ERROR) {
-    captureError(
-      new XMTPError({
-        error: new Error(`Encrypting attachment took ${encryptResult.durationMs}ms`),
-      }),
-    )
-  }
-
-  if (encryptResult.error) {
-    throw new XMTPError({
-      error: encryptResult.error,
-      additionalMessage: "Failed to encrypt attachment",
-    })
-  }
-
   // Calculate and verify content digest
-  const digest = await calculateFileDigest(encryptResult.data.encryptedLocalFileUri)
+  const digest = await calculateFileDigest(encryptedAttachment.encryptedLocalFileUri)
 
-  if (digest !== encryptResult.data.metadata.contentDigest) {
+  if (digest !== encryptedAttachment.metadata.contentDigest) {
     throw new XMTPError({
       error: new Error("Content digest mismatch"),
       additionalMessage: "The encrypted file appears to be corrupted or modified",
     })
   }
 
-  return encryptResult.data
+  return encryptedAttachment
 }
 
 export const decryptAttachment = async (args: {
@@ -86,27 +66,9 @@ export const decryptAttachment = async (args: {
     })
   }
 
-  const decryptResult = await tryCatchWithDuration(
-    client.decryptAttachment({
-      encryptedLocalFileUri,
-      metadata,
-    }),
+  const decryptedAttachment = await wrapXmtpCallWithDuration("decryptAttachment", () =>
+    client.decryptAttachment({ encryptedLocalFileUri, metadata }),
   )
 
-  if (decryptResult.durationMs > XMTP_MAX_MS_UNTIL_LOG_ERROR) {
-    captureError(
-      new XMTPError({
-        error: new Error(`Decoding attachment took ${decryptResult.durationMs}ms`),
-      }),
-    )
-  }
-
-  if (decryptResult.error) {
-    throw new XMTPError({
-      error: decryptResult.error,
-      additionalMessage: "Failed to decode attachment",
-    })
-  }
-
-  return decryptResult.data
+  return decryptedAttachment
 }

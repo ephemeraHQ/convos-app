@@ -6,6 +6,7 @@ import {
   PressableProps as RNPressableProps,
 } from "react-native"
 import Animated from "react-native-reanimated"
+import { useAppTheme } from "@/theme/use-app-theme"
 
 export type IPressableProps = RNPressableProps & {
   withHaptics?: boolean
@@ -14,6 +15,8 @@ export type IPressableProps = RNPressableProps & {
 
 export const Pressable = memo(function Pressable(props: IPressableProps) {
   const { withHaptics, onPress: onPressProps, preventDoubleTap = false, ...rest } = props
+
+  const { theme } = useAppTheme()
 
   const isDisabled = useRef(false)
 
@@ -41,7 +44,14 @@ export const Pressable = memo(function Pressable(props: IPressableProps) {
     [withHaptics, onPressProps, preventDoubleTap],
   )
 
-  return <RNPressable onPress={onPress} {...rest} />
+  return (
+    <RNPressable
+      // By default we love a bigger hit area
+      hitSlop={theme.spacing.sm}
+      onPress={onPress}
+      {...rest}
+    />
+  )
 })
 
 export const AnimatedPressable = Animated.createAnimatedComponent(Pressable)

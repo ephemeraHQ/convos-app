@@ -37,7 +37,7 @@ export type NavigationParamList = {
   EditGroup: {
     xmtpConversationId: IXmtpConversationId
   }
-
+  XmtpActivity: undefined
   NewGroupSummary: undefined
   ShareProfile: undefined
   Profile: {

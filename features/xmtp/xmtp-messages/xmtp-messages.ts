@@ -1,5 +1,4 @@
 import { conversationMessages, findMessage, processMessage } from "@xmtp/react-native-sdk"
-import { config } from "@/config"
 import {
   ISupportedXmtpCodecs,
   isXmtpGroupUpdatedContentType,
@@ -12,8 +11,7 @@ import {
   isXmtpTextContentType,
 } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
-import { logErrorIfXmtpRequestTookTooLong } from "@/features/xmtp/xmtp.helpers"
-import { captureError } from "@/utils/capture-error"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import {
   IXmtpConversationId,
@@ -58,24 +56,9 @@ export async function getXmtpConversationMessages(args: {
       inboxId: clientInboxId,
     })
 
-    const beforeMs = new Date().getTime()
-    const messages = await conversationMessages<ISupportedXmtpCodecs>(
-      installationId,
-      conversationId,
-      limit,
+    const messages = await wrapXmtpCallWithDuration("conversationMessages", () =>
+      conversationMessages<ISupportedXmtpCodecs>(installationId, conversationId, limit),
     )
-    const afterMs = new Date().getTime()
-
-    const timeDiffMs = afterMs - beforeMs
-    if (timeDiffMs > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Fetching conversation messages took ${timeDiffMs}ms for conversationId ${conversationId}`,
-          ),
-        }),
-      )
-    }
 
     return messages.filter((message) => {
       // Shouldn't need this but just to make sure
@@ -111,14 +94,9 @@ export async function getXmtpConversationMessage(args: {
       inboxId: clientInboxId,
     })
 
-    const beforeMs = new Date().getTime()
-    const message = await findMessage(installationId, messageId)
-    const afterMs = new Date().getTime()
-
-    logErrorIfXmtpRequestTookTooLong({
-      durationMs: afterMs - beforeMs,
-      xmtpFunctionName: `findMessage`,
-    })
+    const message = await wrapXmtpCallWithDuration("findMessage", () =>
+      findMessage(installationId, messageId),
+    )
 
     return message
   } catch (error) {
@@ -141,18 +119,9 @@ export async function decryptXmtpMessage(args: {
       inboxId: clientInboxId,
     })
 
-    const beforeMs = new Date().getTime()
-    const message = await processMessage(installationId, xmtpConversationId, encryptedMessage)
-    const afterMs = new Date().getTime()
-
-    const timeDiffMs = afterMs - beforeMs
-    if (timeDiffMs > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(`Decrypting message took ${timeDiffMs}ms`),
-        }),
-      )
-    }
+    const message = await wrapXmtpCallWithDuration("processMessage", () =>
+      processMessage(installationId, xmtpConversationId, encryptedMessage),
+    )
 
     return message
   } catch (error) {

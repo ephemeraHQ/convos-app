@@ -5,7 +5,6 @@ import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen
 import { useHeaderHeight } from "@/design-system/Header/Header.utils"
 import { translate } from "@/i18n"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { debugBorder } from "@/utils/debug-style"
 import { HStack } from "../HStack"
 import { ITextProps, Text } from "../Text"
 import { ITouchableOpacityProps } from "../TouchableOpacity"

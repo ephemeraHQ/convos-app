@@ -27,8 +27,6 @@ import { ensureMessageContentStringValue } from "../conversation/conversation-li
 
 // Full flow
 export async function registerPushNotifications() {
-  const errors: NotificationError[] = []
-
   try {
     const result = await requestNotificationsPermissions()
 
@@ -67,44 +65,29 @@ export async function registerPushNotifications() {
         pushToken: deviceToken,
       },
     })
-  } catch (error) {
-    errors.push(
-      new NotificationError({
-        error,
-        additionalMessage: "Error updating device with push tokens",
-      }),
-    )
-  }
 
-  try {
     const currentSender = getSafeCurrentSender()
     const installationId = await ensureXmtpInstallationQueryData({
       inboxId: currentSender.inboxId,
     })
-    const deviceToken = await getDevicePushNotificationsToken()
+    // Re-fetch the device token here, as it might have been updated or the previous call might be outside this scope's assurance
+    // Alternatively, we could pass it down, but fetching again is simple.
+    const freshDeviceToken = await getDevicePushNotificationsToken()
 
     await registerNotificationInstallation({
       installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           case: "apnsDeviceToken",
-          value: deviceToken,
+          value: freshDeviceToken,
         },
       },
     })
   } catch (error) {
-    errors.push(
-      new NotificationError({
-        error,
-        additionalMessage: "Error registering notification installation",
-      }),
-    )
-  }
-
-  if (errors.length > 0) {
+    // Catch any error from the steps above and wrap it
     throw new NotificationError({
-      error: errors,
-      additionalMessage: "Errors occurred while registering push notifications",
+      error,
+      additionalMessage: "Failed to register push notifications",
     })
   }
 }

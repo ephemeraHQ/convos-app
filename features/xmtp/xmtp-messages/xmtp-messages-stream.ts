@@ -1,5 +1,6 @@
 import { IXmtpDecodedMessage, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { xmtpLogger } from "@utils/logger"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
@@ -16,6 +17,7 @@ export const streamAllMessages = async (args: {
   xmtpLogger.debug(`Streaming messages for ${inboxId}`)
 
   try {
+    // Not wrapping the stream initiation itself as it's long-running
     await client.conversations.streamAllMessages(onNewMessage)
   } catch (error) {
     throw new XMTPError({
@@ -33,7 +35,10 @@ export const stopStreamingAllMessage = async (args: { inboxId: IXmtpInboxId }) =
       inboxId,
     })
 
-    await client.conversations.cancelStreamAllMessages()
+    await wrapXmtpCallWithDuration("cancelStreamAllMessages", async () => {
+      await client.conversations.cancelStreamAllMessages()
+      return Promise.resolve()
+    })
 
     xmtpLogger.debug(`Stopped streaming messages for ${inboxId}`)
   } catch (error) {

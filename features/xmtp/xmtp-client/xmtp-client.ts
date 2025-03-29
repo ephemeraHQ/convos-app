@@ -9,11 +9,10 @@ import {
 } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key"
 import { ISupportedXmtpCodecs, supportedXmtpCodecs } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { xmtpIdentityIsEthereumAddress } from "@/features/xmtp/xmtp-identifier/xmtp-identifier"
-import { captureError } from "@/utils/capture-error"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress, lowercaseEthAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger"
-import { tryCatchWithDuration } from "@/utils/try-catch"
 
 // A simple map to store XMTP clients by inboxId
 const xmtpClientsMap = new Map<IXmtpInboxId, IXmtpClientWithCodecs>()
@@ -78,7 +77,7 @@ export async function createXmtpClient(args: { inboxSigner: IXmtpSigner }) {
   })
 
   xmtpLogger.debug(`Creating XMTP client instance...`)
-  const { data, error, durationMs } = await tryCatchWithDuration(
+  const xmtpClientResult = await wrapXmtpCallWithDuration("createXmtpClient", () =>
     XmtpClient.create<ISupportedXmtpCodecs>(inboxSigner, {
       env: config.xmtp.env,
       dbEncryptionKey,
@@ -89,30 +88,16 @@ export async function createXmtpClient(args: { inboxSigner: IXmtpSigner }) {
     }),
   )
 
-  if (error) {
-    throw new XMTPError({
-      error,
-      additionalMessage: "Failed to create XMTP client instance",
-    })
-  }
-
-  if (durationMs > config.xmtp.maxMsUntilLogError) {
-    captureError(
-      new XMTPError({
-        error: new Error(`Creating XMTP client took ${durationMs}ms`),
-      }),
-    )
-  }
-
-  const xmtpClient = data as IXmtpClientWithCodecs
+  // Explicitly cast the result to the expected type
+  const typedClient = xmtpClientResult as IXmtpClientWithCodecs
 
   xmtpLogger.debug(`Created XMTP client instance`)
 
-  // Store in map
-  const inboxId = xmtpClient.inboxId as IXmtpInboxId
-  xmtpClientsMap.set(inboxId, xmtpClient)
+  // Store in map using the typed client
+  const inboxId = typedClient.inboxId
+  xmtpClientsMap.set(inboxId, typedClient)
 
-  return xmtpClient
+  return typedClient // Return the correctly typed client
 }
 
 /**
@@ -134,35 +119,24 @@ async function buildXmtpClientInstance(args: {
     // Create a new build promise
     const buildPromise = (async () => {
       try {
-        const startTime = Date.now()
-
         const dbEncryptionKey = await getOrCreateXmtpDbEncryptionKey({
           ethAddress: lowercaseEthAddress(ethereumAddress),
         })
 
-        const client = await XmtpClient.build<ISupportedXmtpCodecs>(
-          new PublicIdentity(ethereumAddress, "ETHEREUM"),
-          {
-            env: config.xmtp.env,
-            codecs: supportedXmtpCodecs,
-            dbEncryptionKey,
-            ...(config.xmtp.env === "local" && {
-              customLocalUrl: getXmtpLocalUrl(),
-            }),
-          },
-          inboxId,
+        const client = await wrapXmtpCallWithDuration("buildXmtpClient", () =>
+          XmtpClient.build<ISupportedXmtpCodecs>(
+            new PublicIdentity(ethereumAddress, "ETHEREUM"),
+            {
+              env: config.xmtp.env,
+              codecs: supportedXmtpCodecs,
+              dbEncryptionKey,
+              ...(config.xmtp.env === "local" && {
+                customLocalUrl: getXmtpLocalUrl(),
+              }),
+            },
+            inboxId,
+          ),
         )
-
-        const duration = Date.now() - startTime
-        if (duration > config.xmtp.maxMsUntilLogError) {
-          captureError(
-            new XMTPError({
-              error: new Error(
-                `Building XMTP client took ${duration}ms for address: ${ethereumAddress}`,
-              ),
-            }),
-          )
-        }
 
         return client as IXmtpClientWithCodecs
       } finally {

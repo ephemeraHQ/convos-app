@@ -8,9 +8,8 @@ import {
   IXmtpInboxId,
 } from "@features/xmtp/xmtp.types"
 import { ConversationVersion, findConversation, sendMessage } from "@xmtp/react-native-sdk"
-import { config } from "@/config"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
-import { captureError } from "@/utils/capture-error"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 
 export async function getXmtpConversation(args: {
@@ -24,21 +23,9 @@ export async function getXmtpConversation(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    const conversation = await findConversation(client, conversationId)
-    const endTime = Date.now()
-
-    const duration = endTime - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Getting conversation took ${duration}ms for conversation: ${conversationId}`,
-          ),
-        }),
-      )
-    }
+    const conversation = await wrapXmtpCallWithDuration("findConversation", () =>
+      findConversation(client, conversationId),
+    )
 
     return conversation
   } catch (error) {
@@ -61,20 +48,9 @@ export async function sendXmtpConversationMessage(args: {
   })
 
   try {
-    const startTime = Date.now()
-    const result = await sendMessage(client.installationId, conversationId, content)
-    const endTime = Date.now()
-
-    const duration = endTime - startTime
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Sending message took ${duration}ms for conversation: ${conversationId}`,
-          ),
-        }),
-      )
-    }
+    const result = await wrapXmtpCallWithDuration("sendMessage", () =>
+      sendMessage(client.installationId, conversationId, content),
+    )
 
     return result
   } catch (error) {

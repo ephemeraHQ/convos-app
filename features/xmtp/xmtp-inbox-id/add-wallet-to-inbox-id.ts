@@ -1,6 +1,5 @@
 import { IXmtpInboxId, IXmtpSigner } from "@features/xmtp/xmtp.types"
-import { config } from "@/config"
-import { captureError } from "@/utils/capture-error"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { xmtpLogger } from "@/utils/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
@@ -23,19 +22,9 @@ export async function addWalletToInboxId(args: {
       inboxId,
     })
 
-    const beforeMs = new Date().getTime()
-    await client.addAccount(wallet, allowReassignInboxId)
-
-    const afterMs = new Date().getTime()
-    const timeDiffMs = afterMs - beforeMs
-
-    if (timeDiffMs > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(`Adding wallet to inbox ID took ${timeDiffMs}ms for inboxId ${inboxId}`),
-        }),
-      )
-    }
+    await wrapXmtpCallWithDuration("addAccount", () =>
+      client.addAccount(wallet, allowReassignInboxId),
+    )
 
     return client
   } catch (error) {

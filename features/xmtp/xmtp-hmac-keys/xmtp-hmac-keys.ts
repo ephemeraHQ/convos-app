@@ -1,10 +1,9 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { getHmacKeys } from "@xmtp/react-native-sdk"
-import { config } from "@/config"
 import { IHmacKey } from "@/features/notifications/notifications.api"
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
-import { captureError } from "@/utils/capture-error"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import logger from "@/utils/logger"
 
@@ -22,35 +21,18 @@ export async function getXmtpConversationHmacKeys(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    // logger.debug("[getXmtpConversationHmacKeys] Getting installation ID", {
-    //   clientInboxId,
-    //   conversationId,
-    // })
-
     // First get the client installation ID
     const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
-    // logger.debug("[getXmtpConversationHmacKeys] Getting HMAC keys", { installationId })
-
     // Get all HMAC keys
-    const startMs = Date.now()
-    const hmacKeysResponse = await getHmacKeys(installationId)
-    const endMs = Date.now()
-    const durationMs = endMs - startMs
-
-    if (durationMs > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(`Getting HMAC keys took ${durationMs}ms`),
-        }),
-      )
-    }
-
-    // logger.debug("[getXmtpConversationHmacKeys] Getting conversation", { conversationId })
+    const hmacKeysResponse = await wrapXmtpCallWithDuration("getHmacKeys", () =>
+      getHmacKeys(installationId),
+    )
 
     // Get the conversation topic
+    // Note: getXmtpConversation already uses the wrapper internally
     const conversation = await getXmtpConversation({
       clientInboxId,
       conversationId,
@@ -63,12 +45,6 @@ export async function getXmtpConversationHmacKeys(args: {
     // Extract the keys for the specific conversation topic
     const conversationTopic = conversation.topic
     const topicHmacKeys = hmacKeysResponse.hmacKeys[conversationTopic]
-
-    // logger.debug("[getXmtpConversationHmacKeys] Converting HMAC keys", {
-    //   conversationTopic,
-    //   hasKeys: !!topicHmacKeys,
-    //   keyCount: topicHmacKeys?.values?.length ?? 0,
-    // })
 
     // Convert HMAC keys to the format expected by the backend
     const hmacKeysArray: IHmacKey[] = []
@@ -115,7 +91,9 @@ export async function getXmtpWelcomeTopicHmacKeys(args: { clientInboxId: IXmtpIn
     logger.debug("[getXmtpWelcomeTopicHmacKeys] Getting HMAC keys", { installationId })
 
     // Get all HMAC keys
-    const hmacKeysResponse = await getHmacKeys(installationId)
+    const hmacKeysResponse = await wrapXmtpCallWithDuration("getHmacKeys (welcome)", () =>
+      getHmacKeys(installationId),
+    )
 
     // Get the welcome topic
     // Format is typically: /xmtp/mls/1/w-${installationId}/proto

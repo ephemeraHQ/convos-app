@@ -1,5 +1,6 @@
 import { IXmtpConversationWithCodecs, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { xmtpLogger } from "@utils/logger"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export async function streamConversations(args: {
@@ -24,7 +25,10 @@ export async function stopStreamingConversations(args: { inboxId: IXmtpInboxId }
     inboxId,
   })
 
-  await client.conversations.cancelStream()
+  await wrapXmtpCallWithDuration("cancelConversationStream", async () => {
+    await client.conversations.cancelStream()
+    return Promise.resolve()
+  })
 
   xmtpLogger.debug(`Stopped streaming conversations for ${inboxId}`)
 }

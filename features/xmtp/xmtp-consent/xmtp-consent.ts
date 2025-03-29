@@ -1,7 +1,6 @@
 import { IXmtpConsentState, IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { config } from "@/config"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
-import { captureError } from "@/utils/capture-error"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 
@@ -19,14 +18,11 @@ export async function xmtpInboxIdCanMessageEthAddress(args: {
     throw new Error("Client not found")
   }
 
-  const canMessage = await client.canMessage([
-    {
-      kind: "ETHEREUM",
-      identifier: ethAddress,
-    },
-  ])
+  const canMessageResult = await wrapXmtpCallWithDuration("canMessage", () =>
+    client.canMessage([{ kind: "ETHEREUM", identifier: ethAddress }]),
+  )
 
-  return canMessage[ethAddress.toLowerCase()]
+  return canMessageResult[ethAddress.toLowerCase()]
 }
 
 // export const updateConsentForAddressesForAccount = async (args: {
@@ -76,18 +72,7 @@ export const syncXmtpConsent = async (inboxId: IXmtpInboxId) => {
     inboxId,
   })
   try {
-    const start = new Date().getTime()
-    await client.preferences.syncConsent()
-    const end = new Date().getTime()
-
-    if (end - start > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(`Synced consent in ${(end - start) / 1000} sec`),
-          additionalMessage: "[XMTP Preferences] Slow consent sync",
-        }),
-      )
-    }
+    await wrapXmtpCallWithDuration("syncConsent", () => client.preferences.syncConsent())
   } catch (error) {
     throw new XMTPError({
       error,
@@ -107,11 +92,13 @@ export async function setXmtpConsentStateForInboxId(args: {
       inboxId: peerInboxId,
     })
 
-    await client.preferences.setConsentState({
-      value: peerInboxId,
-      entryType: "inbox_id",
-      state: consent,
-    })
+    await wrapXmtpCallWithDuration("setConsentState", () =>
+      client.preferences.setConsentState({
+        value: peerInboxId,
+        entryType: "inbox_id",
+        state: consent,
+      }),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -135,23 +122,12 @@ export const updateXmtpConsentForGroupsForInbox = async (args: {
       throw new Error("Client not found")
     }
 
-    const start = new Date().getTime()
-
     for (const groupId of groupIds) {
-      await client.preferences.setConsentState({
-        value: groupId,
-        entryType: "conversation_id",
-        state: consent,
-      })
-    }
-
-    const end = new Date().getTime()
-
-    if (end - start > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(`Consented to groups in ${(end - start) / 1000} sec`),
-          additionalMessage: "[XMTP Preferences] Slow consent sync",
+      await wrapXmtpCallWithDuration("setConsentState (group)", () =>
+        client.preferences.setConsentState({
+          value: groupId,
+          entryType: "conversation_id",
+          state: consent,
         }),
       )
     }

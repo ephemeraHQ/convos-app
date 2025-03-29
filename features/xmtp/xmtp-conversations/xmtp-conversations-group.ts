@@ -11,8 +11,7 @@ import {
   updateGroupName,
 } from "@xmtp/react-native-sdk"
 import { PermissionPolicySet } from "@xmtp/react-native-sdk/build/lib/types/PermissionPolicySet"
-import { config } from "@/config"
-import { captureError } from "@/utils/capture-error"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
@@ -45,27 +44,17 @@ export async function createXmtpGroup(args: {
       groupDescription,
     } = args
 
-    const startTime = Date.now()
-
     const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
-    const group = await client.conversations.newGroupCustomPermissions(
-      inboxIds,
-      permissionPolicySet,
-      {
+    const group = await wrapXmtpCallWithDuration("newGroupCustomPermissions", () =>
+      client.conversations.newGroupCustomPermissions(inboxIds, permissionPolicySet, {
         name: groupName,
         imageUrl: groupPhoto,
         description: groupDescription,
-      },
+      }),
     )
-
-    const duration = Date.now() - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Creating group took ${duration}ms`))
-    }
 
     return group
   } catch (error) {
@@ -88,13 +77,9 @@ export async function addXmtpGroupMembers(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await addGroupMembers(client.installationId, groupId, inboxIds)
-    const duration = Date.now() - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Adding group members took ${duration}ms`))
-    }
+    await wrapXmtpCallWithDuration("addGroupMembers", () =>
+      addGroupMembers(client.installationId, groupId, inboxIds),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -115,13 +100,9 @@ export async function removeXmtpGroupMembers(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await removeGroupMembers(client.installationId, groupId, inboxIds)
-    const duration = Date.now() - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Removing group members took ${duration}ms`))
-    }
+    await wrapXmtpCallWithDuration("removeGroupMembers", () =>
+      removeGroupMembers(client.installationId, groupId, inboxIds),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -141,18 +122,14 @@ export async function updateXmtpGroupDescription(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await updateGroupDescription(
-      client.installationId,
-      xmtpConversationId,
-      // @ts-ignore because we can actually pass undefined
-      description,
+    await wrapXmtpCallWithDuration("updateGroupDescription", () =>
+      updateGroupDescription(
+        client.installationId,
+        xmtpConversationId,
+        // @ts-ignore because we can actually pass undefined
+        description,
+      ),
     )
-    const duration = Date.now() - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Updating group description took ${duration}ms`))
-    }
   } catch (error) {
     throw new XMTPError({
       error,
@@ -173,18 +150,14 @@ export async function updateXmtpGroupImage(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await updateGroupImageUrl(
-      client.installationId,
-      xmtpConversationId,
-      // @ts-ignore because we can actually pass undefined
-      imageUrl,
+    await wrapXmtpCallWithDuration("updateGroupImageUrl", () =>
+      updateGroupImageUrl(
+        client.installationId,
+        xmtpConversationId,
+        // @ts-ignore because we can actually pass undefined
+        imageUrl,
+      ),
     )
-    const duration = Date.now() - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Updating group image took ${duration}ms`))
-    }
   } catch (error) {
     throw new XMTPError({
       error,
@@ -205,18 +178,14 @@ export async function updateXmtpGroupName(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await updateGroupName(
-      client.installationId,
-      xmtpConversationId,
-      // @ts-ignore because we can actually pass undefined
-      name,
+    await wrapXmtpCallWithDuration("updateGroupName", () =>
+      updateGroupName(
+        client.installationId,
+        xmtpConversationId,
+        // @ts-ignore because we can actually pass undefined
+        name,
+      ),
     )
-    const duration = Date.now() - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Updating group name took ${duration}ms`))
-    }
   } catch (error) {
     throw new XMTPError({
       error,
@@ -237,15 +206,9 @@ export async function removeAdminFromXmtpGroup(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await removeAdmin(client.installationId, groupId, adminInboxId)
-    const endTime = Date.now()
-
-    const duration = endTime - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Removing admin from group took ${duration}ms`))
-    }
+    await wrapXmtpCallWithDuration("removeAdmin", () =>
+      removeAdmin(client.installationId, groupId, adminInboxId),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -266,15 +229,9 @@ export async function removeSuperAdminFromXmtpGroup(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await removeSuperAdmin(client.installationId, groupId, superAdminInboxId)
-    const endTime = Date.now()
-
-    const duration = endTime - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Removing super admin from group took ${duration}ms`))
-    }
+    await wrapXmtpCallWithDuration("removeSuperAdmin", () =>
+      removeSuperAdmin(client.installationId, groupId, superAdminInboxId),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -295,15 +252,9 @@ export async function addAdminToXmtpGroup(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await addAdmin(client.installationId, groupId, adminInboxId)
-    const endTime = Date.now()
-
-    const duration = endTime - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Adding admin to group took ${duration}ms`))
-    }
+    await wrapXmtpCallWithDuration("addAdmin", () =>
+      addAdmin(client.installationId, groupId, adminInboxId),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -324,15 +275,9 @@ export async function addSuperAdminToXmtpGroup(args: {
       inboxId: clientInboxId,
     })
 
-    const startTime = Date.now()
-    await addSuperAdmin(client.installationId, groupId, superAdminInboxId)
-    const endTime = Date.now()
-
-    const duration = endTime - startTime
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(new Error(`Adding super admin to group took ${duration}ms`))
-    }
+    await wrapXmtpCallWithDuration("addSuperAdmin", () =>
+      addSuperAdmin(client.installationId, groupId, superAdminInboxId),
+    )
   } catch (error) {
     throw new XMTPError({
       error,

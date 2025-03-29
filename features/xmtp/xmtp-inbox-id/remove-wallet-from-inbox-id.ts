@@ -1,7 +1,6 @@
 import { PublicIdentity } from "@xmtp/react-native-sdk"
-import { config } from "@/config"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpInboxId, IXmtpSigner } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
 import { xmtpLogger } from "@/utils/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
@@ -22,21 +21,9 @@ export async function removeWalletFromInboxId(args: {
       inboxId,
     })
 
-    const beforeMs = new Date().getTime()
-    await client.removeAccount(signer, new PublicIdentity(ethAddressToRemove, "ETHEREUM"))
-    const afterMs = new Date().getTime()
-
-    const timeDiffMs = afterMs - beforeMs
-
-    if (timeDiffMs > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Removing wallet address ${ethAddressToRemove} from inbox ID ${inboxId} took ${timeDiffMs}ms`,
-          ),
-        }),
-      )
-    }
+    await wrapXmtpCallWithDuration("removeAccount", () =>
+      client.removeAccount(signer, new PublicIdentity(ethAddressToRemove, "ETHEREUM")),
+    )
 
     return client
   } catch (error) {

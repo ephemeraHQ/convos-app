@@ -1,8 +1,7 @@
 import { ConsentState, syncAllConversations, syncConversation } from "@xmtp/react-native-sdk"
-import { config } from "@/config"
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
@@ -17,20 +16,9 @@ export async function syncOneXmtpConversation(args: {
   })
 
   try {
-    const beforeSync = new Date().getTime()
-    await syncConversation(client.installationId, conversationId)
-    const afterSync = new Date().getTime()
-
-    const timeDiff = afterSync - beforeSync
-    if (timeDiff > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Syncing conversation took ${timeDiff}ms for conversationId ${conversationId}`,
-          ),
-        }),
-      )
-    }
+    await wrapXmtpCallWithDuration("syncConversation", () =>
+      syncConversation(client.installationId, conversationId),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -50,21 +38,9 @@ export async function syncAllXmtpConversations(args: {
       inboxId: clientInboxId,
     })
 
-    const start = new Date().getTime()
-    await syncAllConversations(installationId, consentStates)
-    const end = new Date().getTime()
-
-    const duration = end - start
-
-    if (duration > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Syncing conversations (${consentStates.join(", ")}) from network took ${duration}ms for inbox ${clientInboxId}`,
-          ),
-        }),
-      )
-    }
+    await wrapXmtpCallWithDuration("syncAllConversations", () =>
+      syncAllConversations(installationId, consentStates),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
