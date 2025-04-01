@@ -1,11 +1,6 @@
 import { useMemo } from "react"
 import {
   isGroupUpdatedMessage,
-  isMultiRemoteAttachmentMessage,
-  isRemoteAttachmentMessage,
-  isReplyMessage,
-  isStaticAttachmentMessage,
-  isTextMessage,
   messageContentIsGroupUpdated,
   messageContentIsMultiRemoteAttachment,
   messageContentIsReaction,
@@ -21,7 +16,52 @@ import {
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { IConversationMessage } from "../../conversation-chat/conversation-message/conversation-message.types"
+import {
+  IConversationMessage,
+  IConversationMessageContent,
+} from "../../conversation-chat/conversation-message/conversation-message.types"
+
+export function getMessageContentUniqueStringValue(args: {
+  messageContent: IConversationMessageContent
+}): string {
+  const { messageContent } = args
+
+  if (messageContentIsText(messageContent)) {
+    return messageContent.text
+  }
+
+  if (messageContentIsReaction(messageContent)) {
+    return `${messageContent.action}-${messageContent.content}`
+  }
+
+  if (messageContentIsGroupUpdated(messageContent)) {
+    // Join field names with commas to create a summary of what changed
+    return `${messageContent.initiatedByInboxId}-${messageContent.metadataFieldsChanged
+      .map((field) => `${field.fieldName}-${field.newValue}-${field.oldValue}`)
+      .join(", ")}-${messageContent.membersAdded.length}-${messageContent.membersRemoved.length}`
+  }
+
+  if (messageContentIsRemoteAttachment(messageContent)) {
+    return messageContent.url
+  }
+
+  if (messageContentIsStaticAttachment(messageContent)) {
+    return messageContent.data.slice(0, 10)
+  }
+
+  if (messageContentIsMultiRemoteAttachment(messageContent)) {
+    return messageContent.attachments.map((attachment) => attachment.url).join(", ")
+  }
+
+  if (messageContentIsReply(messageContent)) {
+    return `${messageContent.reference}-${getMessageContentUniqueStringValue({
+      messageContent: messageContent.content,
+    })}`
+  }
+
+  const _exhaustiveCheck: never = messageContent
+  return "Unknown message content type"
+}
 
 export function getMessageContentStringValue(args: {
   message: IConversationMessage
@@ -37,25 +77,6 @@ export function getMessageContentStringValue(args: {
   } = args
 
   const messageContent = message.content
-
-  // Handle message type checks if message is provided
-  if (message) {
-    if (isReplyMessage(message)) {
-      return "Replied to message"
-    }
-
-    if (
-      isStaticAttachmentMessage(message) ||
-      isRemoteAttachmentMessage(message) ||
-      isMultiRemoteAttachmentMessage(message)
-    ) {
-      return "Attachment"
-    }
-
-    if (isTextMessage(message)) {
-      return message.content.text
-    }
-  }
 
   // Process based on content type
   if (messageContentIsText(messageContent)) {

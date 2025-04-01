@@ -34,35 +34,12 @@ export const MemberListItem = memo(function MemberListItem(props: { memberInboxI
       return undefined
     }
 
-    // Get role and consent state labels
-    const roleLabel = getGroupMemberIsSuperAdmin({ member: groupMember })
+    // Only show admin status, not consent state
+    return getGroupMemberIsSuperAdmin({ member: groupMember })
       ? "Super Admin"
       : getGroupMemberIsAdmin({ member: groupMember })
         ? "Admin"
         : undefined
-
-    // Get consent state label if not allowed
-    const consentLabel = (() => {
-      // Don't show consent if they accepted
-      if (groupMember.consentState === "allowed") {
-        return undefined
-      }
-      switch (groupMember.consentState) {
-        case "unknown":
-          return "Invited"
-        case "denied":
-          return "Rejected"
-        default:
-          return undefined
-      }
-    })()
-
-    // Combine role and consent state
-    if (roleLabel && consentLabel) {
-      return `${roleLabel} (${consentLabel})`
-    }
-
-    return roleLabel || consentLabel
   }, [groupMember])
 
   return (

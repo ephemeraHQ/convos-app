@@ -54,6 +54,7 @@ export async function searchExistingGroupsByGroupMembers(args: {
 
             const socialProfiles = await ensureSocialProfilesForAddressQuery({
               ethAddress: profile.privyAddress,
+              caller: "SearchExistingGroupsByGroupMembers",
             })
 
             if (!socialProfiles) {

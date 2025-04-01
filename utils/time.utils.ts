@@ -17,6 +17,10 @@ const createSeconds = (seconds: number) => ({
   toMilliseconds: () => secondsToMilliseconds(seconds),
 })
 
+export const nowNano = () => {
+  return Date.now() * 1000000
+}
+
 // Re-export the functions we need
 // This gives us a central place to manage time utilities
 // and we can easily add our own helpers if needed

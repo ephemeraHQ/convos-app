@@ -1,8 +1,9 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
+import { useQuery } from "@tanstack/react-query"
 import { memo, useCallback } from "react"
 import { Chip, ChipText } from "@/design-system/chip"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
+import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
 import { useAddGroupMembersStore } from "@/features/groups/stores/add-group-members.store"
 import { SearchUsersResultsListItemUser } from "@/features/search-users/search-users-results-list-item-user"
 import { useRouteParams } from "@/navigation/use-navigation"
@@ -14,17 +15,22 @@ export const AddGroupMembersSearchUsersResultsListItemUser = memo(
     const { addSelectedInboxId } = useAddGroupMembersStore((state) => state.actions)
     const { xmtpConversationId } = useRouteParams<"AddGroupMembers">()
 
-    const { members } = useGroupMembers({
-      clientInboxId: getSafeCurrentSender().inboxId,
-      xmtpConversationId,
-      caller: "add-group-members",
+    const { data: isAlreadyAMember } = useQuery({
+      ...getGroupQueryOptions({
+        clientInboxId: getSafeCurrentSender().inboxId,
+        xmtpConversationId,
+        caller: "add-group-members",
+      }),
+      select: (group) => group?.members && group.members.byId[inboxId],
     })
 
     const handlePress = useCallback(() => {
-      addSelectedInboxId(inboxId)
-    }, [addSelectedInboxId, inboxId])
+      if (isAlreadyAMember) {
+        return
+      }
 
-    const isAlreadyAMember = members?.byId[inboxId]
+      addSelectedInboxId(inboxId)
+    }, [addSelectedInboxId, inboxId, isAlreadyAMember])
 
     return (
       <SearchUsersResultsListItemUser

@@ -1,6 +1,7 @@
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
-import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos"
+import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
+import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
@@ -27,6 +28,11 @@ async function getConversation(args: IGetConversationArgs) {
   if (!clientInboxId) {
     throw new Error("Inbox ID is required")
   }
+
+  // Let's make sure we have this query done otherwise it dones't make sense to do "syncOneXmtpConversation"
+  await ensureConversationSyncAllQuery({
+    clientInboxId,
+  })
 
   await syncOneXmtpConversation({
     clientInboxId,

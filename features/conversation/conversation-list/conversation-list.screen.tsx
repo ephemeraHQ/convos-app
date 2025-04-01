@@ -6,7 +6,7 @@ import { ContextMenuView } from "@/design-system/context-menu/context-menu"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { prefetchConversationMessages } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { prefetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ConversationListItemDm } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-dm"
 import { ConversationListItemGroup } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-group"
 import { ConversationListLoading } from "@/features/conversation/conversation-list/conversation-list-loading"
@@ -64,7 +64,7 @@ export function ConversationListScreen(props: IConversationListProps) {
         if (isTempConversation(conversationId)) {
           return
         }
-        prefetchConversationMessages({
+        prefetchConversationMessagesInfiniteQuery({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: conversationId,
           caller: "useConversationListConversations",

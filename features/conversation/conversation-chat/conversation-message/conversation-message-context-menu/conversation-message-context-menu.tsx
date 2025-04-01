@@ -18,7 +18,7 @@ import {
 import { useConversationMessageContextMenuStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.styles"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { getMessageFromConversationSafe } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-from-conversation"
-import { getConversationMessagesQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useReactOnMessage } from "@/features/conversation/conversation-chat/use-react-on-message.mutation"
 import { useRemoveReactionOnMessage } from "@/features/conversation/conversation-chat/use-remove-reaction-on-message.mutation"
@@ -63,7 +63,7 @@ const Content = memo(function Content(props: {
       clientInboxId: currentSender.inboxId,
     })
 
-    const messages = getConversationMessagesQueryData({
+    const messages = getAllConversationMessageInInfiniteQueryData({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
     })

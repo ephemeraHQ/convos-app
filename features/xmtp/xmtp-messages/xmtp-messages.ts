@@ -27,29 +27,32 @@ import {
   IXmtpMessageId,
 } from "../xmtp.types"
 
-function isSupportedXmtpMessage(message: IXmtpDecodedMessage) {
-  if (isXmtpReadReceiptContentType(message.contentTypeId)) {
-    return false
-  }
+// function isSupportedXmtpMessage(message: IXmtpDecodedMessage) {
+//   if (isXmtpReadReceiptContentType(message.contentTypeId)) {
+//     return false
+//   }
 
-  return true
-}
+//   return true
+// }
 
-function xmtpMessageGroupUpdatedContentIsEmpty(message: IXmtpDecodedGroupUpdatedMessage) {
-  const content = message.content()
-  return (
-    content.membersAdded.length === 0 &&
-    content.membersRemoved.length === 0 &&
-    content.metadataFieldsChanged.length === 0
-  )
-}
+// function xmtpMessageGroupUpdatedContentIsEmpty(message: IXmtpDecodedGroupUpdatedMessage) {
+//   const content = message.content()
+//   return (
+//     content.membersAdded.length === 0 &&
+//     content.membersRemoved.length === 0 &&
+//     content.metadataFieldsChanged.length === 0
+//   )
+// }
 
 export async function getXmtpConversationMessages(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
   limit?: number
+  afterNs?: number
+  beforeNs?: number
+  direction?: "next" | "prev"
 }) {
-  const { clientInboxId, conversationId, limit = 30 } = args
+  const { clientInboxId, conversationId, limit = 30, afterNs, beforeNs, direction = "next" } = args
 
   try {
     const installationId = await ensureXmtpInstallationQueryData({
@@ -57,25 +60,35 @@ export async function getXmtpConversationMessages(args: {
     })
 
     const messages = await wrapXmtpCallWithDuration("conversationMessages", () =>
-      conversationMessages<ISupportedXmtpCodecs>(installationId, conversationId, limit),
+      conversationMessages<ISupportedXmtpCodecs>(
+        installationId,
+        conversationId,
+        limit,
+        beforeNs,
+        afterNs,
+        direction === "next" ? "DESCENDING" : "ASCENDING",
+      ),
     )
 
-    return messages.filter((message) => {
-      // Shouldn't need this but just to make sure
-      if (!isSupportedXmtpMessage(message)) {
-        return false
-      }
+    return messages
+    // Don't filter here because otherwise it seems to glitch with the cursor logic
+    // XMTP should not contain errors here anyway
+    // .filter((message) => {
+    //   // Shouldn't need this but just to make sure
+    //   if (!isSupportedXmtpMessage(message)) {
+    //     return false
+    //   }
 
-      // For some reason, XMTP returns group updated messages with empty content...
-      if (
-        isXmtpGroupUpdatedContentType(message.contentTypeId) &&
-        xmtpMessageGroupUpdatedContentIsEmpty(message as IXmtpDecodedGroupUpdatedMessage)
-      ) {
-        return false
-      }
+    //   // For some reason, XMTP returns group updated messages with empty content...
+    //   if (
+    //     isXmtpGroupUpdatedContentType(message.contentTypeId) &&
+    //     xmtpMessageGroupUpdatedContentIsEmpty(message as IXmtpDecodedGroupUpdatedMessage)
+    //   ) {
+    //     return false
+    //   }
 
-      return true
-    })
+    //   return true
+    // })
   } catch (error) {
     throw new XMTPError({
       error,

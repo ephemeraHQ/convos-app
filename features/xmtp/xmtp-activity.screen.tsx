@@ -25,15 +25,27 @@ export const XmtpActivityScreen = memo(function XmtpActivityScreen() {
   const operationsArray = useMemo(() => Object.values(activeOperations), [activeOperations])
 
   return (
-    <Screen>
+    <Screen contentContainerStyle={{ flex: 1 }}>
       {operationsArray.length === 0 ? (
         <VStack style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Text color="secondary">No active XMTP operations.</Text>
+          <Text color="secondary">No active XMTP queries</Text>
         </VStack>
       ) : (
         <FlatList
           data={operationsArray}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={() => (
+            <VStack
+              style={{
+                paddingHorizontal: theme.spacing.sm,
+              }}
+            >
+              <Text preset="small" color="secondary">
+                List of active XMTP queries. This is useful to understand why sometimes the app can
+                be slow or miss some data.
+              </Text>
+            </VStack>
+          )}
           renderItem={({ item }: { item: IXmtpOperation }) => (
             <ListItem
               title={item.name}

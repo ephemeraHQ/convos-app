@@ -1,5 +1,8 @@
-import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { addMessageToConversationMessagesQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import {
+  isAnActualMessage,
+  isGroupUpdatedMessage,
+} from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { updateConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
@@ -43,8 +46,6 @@ async function handleNewMessage(args: {
 
   streamLogger.debug(`New message:`, message)
 
-  const messageWasSentByCurrentUser = message.senderInboxId === clientInboxId
-
   if (isGroupUpdatedMessage(message)) {
     try {
       handleNewGroupUpdatedMessage({
@@ -59,9 +60,15 @@ async function handleNewMessage(args: {
   }
 
   try {
-    // Because we handle the message sent by current user with optimistic update, we don't need to update the query cache
-    if (!messageWasSentByCurrentUser) {
-      addMessageToConversationMessagesQueryData({
+    const messageSentByCurrentUser = message.senderInboxId === clientInboxId
+
+    if (
+      // Because we handle the message sent by current user with optimistic update, we don't need to update the query cache
+      !messageSentByCurrentUser &&
+      // Message like group update can be "sent" by current user but it's not a message handled in sendMessage
+      isAnActualMessage(message)
+    ) {
+      addMessageToConversationMessagesInfiniteQueryData({
         clientInboxId,
         xmtpConversationId: message.xmtpConversationId,
         message,
@@ -71,14 +78,18 @@ async function handleNewMessage(args: {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))
   }
 
+  // Update the conversation query data
   try {
-    updateConversationQueryData({
-      clientInboxId,
-      xmtpConversationId: message.xmtpConversationId,
-      conversationUpdate: {
-        lastMessage: message,
-      },
-    })
+    // We don't want group update message as last message
+    if (!isGroupUpdatedMessage(message)) {
+      updateConversationQueryData({
+        clientInboxId,
+        xmtpConversationId: message.xmtpConversationId,
+        conversationUpdate: {
+          lastMessage: message,
+        },
+      })
+    }
   } catch (error) {
     captureError(
       new StreamError({ error, additionalMessage: "Error updating conversation query data" }),
@@ -101,6 +112,7 @@ function handleNewGroupUpdatedMessage(args: {
 }) {
   const { inboxId, message } = args
 
+  // Add new members
   for (const member of message.content.membersAdded) {
     addGroupMemberToGroupQueryData({
       clientInboxId: inboxId,
@@ -113,6 +125,7 @@ function handleNewGroupUpdatedMessage(args: {
     }).catch(captureError)
   }
 
+  // Remove members
   for (const member of message.content.membersRemoved) {
     removeGroupMemberToGroupQuery({
       clientInboxId: inboxId,
@@ -144,6 +157,5 @@ function handleNewGroupUpdatedMessage(args: {
         })
       }
     })
-    return
   }
 }

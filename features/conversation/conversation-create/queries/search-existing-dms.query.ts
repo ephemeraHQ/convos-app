@@ -60,6 +60,7 @@ async function searchExistingDms(args: { searchQuery: string; inboxId: IXmtpInbo
 
         const socialProfiles = await ensureSocialProfilesForAddressQuery({
           ethAddress: profile.privyAddress,
+          caller: "SearchExistingDms",
         })
 
         const hasSocialProfileMatch = doesSocialProfilesMatchTextQuery({

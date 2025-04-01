@@ -4,11 +4,10 @@ import { messageContentIsReply } from "@/features/conversation/conversation-chat
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { getMessageWithType } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-with-type"
 import {
-  addMessageToConversationMessagesQueryData,
-  getConversationMessagesQueryOptions,
-  IMessageAccumulator,
-  invalidateConversationMessagesQuery,
-  removeMessageToConversationMessagesQueryData,
+  addMessageToConversationMessagesInfiniteQueryData,
+  invalidateConversationMessagesInfiniteMessagesQuery,
+  removeMessageFromConversationMessagesInfiniteQueryData,
+  replaceMessageInConversationMessagesInfiniteQueryData,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   getConversationQueryData,
@@ -20,13 +19,11 @@ import {
   sendXmtpConversationMessage,
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
-import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { getTodayNs } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { getRandomId } from "@/utils/general"
-import { reactQueryClient } from "@/utils/react-query/react-query.client"
-import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import {
   IConversationMessage,
   IConversationMessageContent,
@@ -138,7 +135,7 @@ export function useSendMessage() {
 
         optimisticMessages.push(optimisticMessage)
 
-        addMessageToConversationMessagesQueryData({
+        addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId,
           message: optimisticMessage,
@@ -180,7 +177,7 @@ export function useSendMessage() {
           .slice(0, result.sentMessages.length)
           .forEach((tmpXmtpMessageId, index) => {
             try {
-              replaceOptimisticMessageWithReal({
+              replaceMessageInConversationMessagesInfiniteQueryData({
                 tmpXmtpMessageId,
                 xmtpConversationId: variables.xmtpConversationId,
                 clientInboxId: currentSender.inboxId,
@@ -199,7 +196,7 @@ export function useSendMessage() {
 
         // If any replacement failed, invalidate the conversation messages query
         if (hasError) {
-          invalidateConversationMessagesQuery({
+          invalidateConversationMessagesInfiniteMessagesQuery({
             clientInboxId: currentSender.inboxId,
             xmtpConversationId: variables.xmtpConversationId,
           })
@@ -215,7 +212,7 @@ export function useSendMessage() {
 
       // Remove all optimistic messages
       for (const tmpMessageId of context.tmpXmtpMessageIds) {
-        removeMessageToConversationMessagesQueryData({
+        removeMessageFromConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: variables.xmtpConversationId,
           messageId: tmpMessageId,
@@ -234,56 +231,4 @@ export function useSendMessage() {
       }
     },
   })
-}
-
-function replaceOptimisticMessageWithReal(args: {
-  tmpXmtpMessageId: IXmtpMessageId
-  xmtpConversationId: IXmtpConversationId
-  clientInboxId: IXmtpInboxId
-  realMessage: IConversationMessage
-}) {
-  const { tmpXmtpMessageId, xmtpConversationId, clientInboxId, realMessage } = args
-
-  const existingMessages = reactQueryClient.getQueryData(
-    getConversationMessagesQueryOptions({
-      clientInboxId,
-      xmtpConversationId,
-    }).queryKey,
-  )
-
-  if (!existingMessages) {
-    return
-  }
-
-  // Find the index of the temporary message
-  const tempOptimisticMessageIndex = existingMessages.ids.indexOf(tmpXmtpMessageId)
-
-  if (tempOptimisticMessageIndex === -1) {
-    throw new Error("[replaceOptimisticMessageWithReal] Temp message not found")
-  }
-
-  // Create new ids array with the real message id replacing the temp id
-  const newIds = [...existingMessages.ids]
-  newIds[tempOptimisticMessageIndex] = realMessage.xmtpId
-
-  // Add new message first, then spread existing byId
-  const newById: IMessageAccumulator["byId"] = {
-    [realMessage.xmtpId]: updateObjectAndMethods(realMessage, {
-      xmtpId: realMessage.xmtpId,
-    }),
-    ...existingMessages.byId,
-  }
-  // Remove the temporary message entry
-  delete newById[tmpXmtpMessageId as IXmtpMessageId]
-
-  const updatedState = {
-    ...existingMessages,
-    ids: newIds,
-    byId: newById,
-  }
-
-  return reactQueryClient.setQueryData(
-    getConversationMessagesQueryOptions({ clientInboxId, xmtpConversationId }).queryKey,
-    updatedState,
-  )
 }

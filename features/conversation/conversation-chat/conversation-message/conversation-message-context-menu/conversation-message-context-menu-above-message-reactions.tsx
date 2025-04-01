@@ -1,5 +1,4 @@
 import { Text } from "@design-system/Text"
-import { favoritedEmojis } from "@utils/emojis/favoritedEmojis"
 import React, { memo, useCallback, useMemo } from "react"
 import { EntryAnimationsValues, withSpring } from "react-native-reanimated"
 import { HStack } from "@/design-system/HStack"
@@ -12,6 +11,7 @@ import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils
 import { getReactionContent } from "@/features/xmtp/xmtp-codecs/xmtp-codecs-reaction"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { favoritedEmojis } from "@/utils/emojis/favorited-emojis"
 import { IConversationMessageReactionContent } from "../conversation-message.types"
 import { useConversationMessageById } from "../use-conversation-message-by-id"
 import { MESSAGE_CONTEXT_MENU_ABOVE_MESSAGE_REACTIONS_HEIGHT } from "./conversation-message-context-menu.constants"

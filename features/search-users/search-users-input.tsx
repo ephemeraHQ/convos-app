@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useRef } from "react"
+import React, { memo, useCallback, useImperativeHandle, useRef } from "react"
 import {
   NativeSyntheticEvent,
   TextInput as RNTextInput,
@@ -36,7 +36,7 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
   } = props
 
   const styles = useSearchUsersInputStyles()
-  const inputRef = useRef<RNTextInput | null>(null)
+  const localInputRef = useRef<RNTextInput | null>(null)
   const textInputValueRef = useRef(defaultSearchTextValue)
 
   const selectedChipInboxId = useSearchUsersInputStore((state) => state.selectedChipInboxId)
@@ -71,6 +71,7 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
   const handleChangeText = useCallback(
     (text: string) => {
       onSearchTextChange(text)
+      textInputValueRef.current = text
     },
     [onSearchTextChange],
   )
@@ -78,6 +79,17 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
   const handlePressOnTextInput = useCallback(() => {
     useSearchUsersInputStore.getState().actions.setSelectedChipInboxId(null)
   }, [])
+
+  useImperativeHandle(inputRefProp, () => {
+    return {
+      ...(localInputRef.current || {}),
+      // Override the clear method to update our textInputValueRef
+      clear: () => {
+        localInputRef.current?.clear()
+        textInputValueRef.current = ""
+      },
+    } as RNTextInput
+  })
 
   return (
     <VStack style={styles.$container}>
@@ -92,12 +104,7 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
           <TextInput
             onPress={handlePressOnTextInput}
             autoFocus
-            ref={(el) => {
-              inputRef.current = el
-              if (inputRefProp) {
-                inputRefProp.current = el
-              }
-            }}
+            ref={localInputRef}
             style={styles.$input}
             defaultValue={defaultSearchTextValue}
             onChangeText={handleChangeText}

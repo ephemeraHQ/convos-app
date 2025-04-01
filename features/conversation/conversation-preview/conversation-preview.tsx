@@ -1,5 +1,5 @@
 import React, { memo } from "react"
-import { FlatList } from "react-native"
+import { FlatList, Platform } from "react-native"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
@@ -13,13 +13,12 @@ import { ConversationMessageReactions } from "@/features/conversation/conversati
 import { ConversationMessageTimestamp } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-timestamp"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
-import { useConversationMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { useMergedConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ConversationStoreProvider } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { $globalStyles } from "@/theme/styles"
 import { useMessageHasReactions } from "../conversation-chat/conversation-message/hooks/use-message-has-reactions"
-import { conversationMessagesListDefaultProps } from "../conversation-chat/conversation-messages"
 
 type ConversationPreviewProps = {
   xmtpConversationId: IXmtpConversationId
@@ -28,11 +27,12 @@ type ConversationPreviewProps = {
 export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewProps) => {
   const currentSender = getSafeCurrentSender()
 
-  const { data: messages, isLoading: isLoadingMessages } = useConversationMessagesQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-    caller: "Conversation Preview",
-  })
+  const { data: messages, isLoading: isLoadingMessages } =
+    useMergedConversationMessagesInfiniteQuery({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Preview",
+    })
 
   const { data: conversation, isLoading: isLoadingConversation } = useConversationQuery({
     clientInboxId: currentSender.inboxId,
@@ -62,7 +62,12 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
           <ConversationStoreProvider xmtpConversationId={xmtpConversationId}>
             {/* Using basic Flatlist instead of the Animated one to try to fix the context menu crashes https://github.com/dominicstop/react-native-ios-context-menu/issues/70 */}
             <FlatList
-              {...conversationMessagesListDefaultProps}
+              style={$globalStyles.flex1}
+              inverted={true}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
+              keyExtractor={keyExtractor}
               // 15 is enough
               data={Object.values(messages?.byId ?? {}).slice(0, 15)}
               renderItem={({ item, index }) => {
@@ -84,6 +89,10 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
       )}
     </VStack>
   )
+}
+
+function keyExtractor(message: IConversationMessage) {
+  return message.xmtpId
 }
 
 const MessageWrapper = memo(function MessageWrapper({

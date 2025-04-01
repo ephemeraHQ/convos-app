@@ -5084,13 +5084,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@legendapp/list@npm:^1.0.0-beta.15":
-  version: 1.0.0-beta.24
-  resolution: "@legendapp/list@npm:1.0.0-beta.24"
+"@legendapp/list@npm:^1.0.0-beta.26":
+  version: 1.0.0-beta.26
+  resolution: "@legendapp/list@npm:1.0.0-beta.26"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10c0/34cec669c70631dde69d659c7e5cf7f930418394cbd120ce4e27df41819615507fc48825f18d8e520b35f760bf96788bb016ed550c2f2cf80222036183eaa65a
+  checksum: 10c0/94df9f30b4fd43660e6c3bc9ae36d0610e7f43f36bf05c7183af83a57b1d6dcdf4dec8fffd1aeaa2e6308b842820097583f72c50a5a9a56b86bc1554916aeb50
   languageName: node
   linkType: hard
 
@@ -10660,7 +10660,7 @@ __metadata:
     "@expo/vector-icons": "npm:^14.0.3"
     "@gorhom/bottom-sheet": "npm:5.0.6"
     "@ianvs/prettier-plugin-sort-imports": "npm:^4.4.1"
-    "@legendapp/list": "npm:^1.0.0-beta.15"
+    "@legendapp/list": "npm:^1.0.0-beta.26"
     "@privy-io/expo": "npm:^0.49.0"
     "@privy-io/expo-native-extensions": "npm:^0.0.4"
     "@react-native-async-storage/async-storage": "npm:1.23.1"

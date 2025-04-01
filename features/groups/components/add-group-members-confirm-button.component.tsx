@@ -9,6 +9,7 @@ import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { useAddGroupMembersMutation } from "@/features/groups/mutations/add-group-members.mutation"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
 import { useAddGroupMembersStore } from "@/features/groups/stores/add-group-members.store"
+import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { useRouteParams, useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
@@ -30,6 +31,10 @@ export const AddGroupMembersConfirmButton = memo(function AddGroupMembersConfirm
     xmtpConversationId,
   })
 
+  const selectedInboxIdsDisplayData = usePreferredDisplayInfoBatch({
+    xmtpInboxIds: selectedInboxIds,
+  })
+
   const handlePress = useCallback(async () => {
     try {
       if (!group) {
@@ -37,9 +42,10 @@ export const AddGroupMembersConfirmButton = memo(function AddGroupMembersConfirm
       }
 
       showSnackbar({
-        message: `Added ${selectedInboxIds.length} ${
-          selectedInboxIds.length === 1 ? "member" : "members"
-        }`,
+        message:
+          selectedInboxIds.length > 2
+            ? `Added ${selectedInboxIds.length} members`
+            : `Added ${selectedInboxIdsDisplayData.map((d) => d.displayName).join(", ")}`,
       })
 
       router.goBack()
@@ -53,7 +59,7 @@ export const AddGroupMembersConfirmButton = memo(function AddGroupMembersConfirm
         new GenericError({ error, additionalMessage: "Failed to add group members" }),
       )
     }
-  }, [selectedInboxIds, addGroupMembers, group, router])
+  }, [selectedInboxIds, addGroupMembers, group, router, selectedInboxIdsDisplayData])
 
   const as = useAnimatedStyle(() => {
     return {
@@ -80,7 +86,9 @@ export const AddGroupMembersConfirmButton = memo(function AddGroupMembersConfirm
         as,
       ]}
     >
-      <Button onPress={handlePress}>{`Invite ${selectedInboxIds.length}`}</Button>
+      <Button onPress={handlePress}>
+        {`Invite ${selectedInboxIds.length > 2 ? selectedInboxIds.length : selectedInboxIdsDisplayData.map((d) => d.displayName).join(", ")}`}
+      </Button>
     </AnimatedVStack>
   )
 })

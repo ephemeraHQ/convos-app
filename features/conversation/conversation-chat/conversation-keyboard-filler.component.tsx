@@ -1,6 +1,6 @@
 import { AnimatedVStack } from "@design-system/VStack"
 import { memo, useEffect, useRef } from "react"
-import { Keyboard, TextInput } from "react-native"
+import { TextInput } from "react-native"
 import { useAnimatedStyle } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useConversationMessageContextMenuEmojiPickerStore } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu-emoji-picker/conversation-message-context-menu-emoji-picker.store"
@@ -35,7 +35,6 @@ export const ConversationKeyboardFiller = memo(function ConversationKeyboardFill
     if (messageContextMenuData) {
       // Store keyboard state when emoji picker opens
       if (isKeyboardShown) {
-        Keyboard.dismiss()
         wasKeyboardOpenRef.current = true
       }
     }

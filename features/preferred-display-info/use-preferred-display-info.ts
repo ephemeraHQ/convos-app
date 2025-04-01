@@ -81,6 +81,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
   const { data: socialProfilesForEthAddress, isLoading: isLoadingSocialProfilesForEthAddress } =
     useSocialProfilesForAddressQuery({
       ethAddress,
+      caller: "usePreferredDisplayInfo",
     })
 
   const socialProfiles = mergeArraysObjects({
@@ -222,7 +223,12 @@ export async function ensurePreferredDisplayInfo(args: PreferredDisplayInfoArgs)
     inboxId &&
     (await ensureProfileQueryData({ xmtpId: inboxId, caller: "ensurePreferredDisplayInfo" }))
 
-  const socialProfiles = ethAddress && (await ensureSocialProfilesForAddressQuery({ ethAddress }))
+  const socialProfiles =
+    ethAddress &&
+    (await ensureSocialProfilesForAddressQuery({
+      ethAddress,
+      caller: "ensurePreferredDisplayInfo",
+    }))
 
   const displayName = getPreferredDisplayName({
     profile,

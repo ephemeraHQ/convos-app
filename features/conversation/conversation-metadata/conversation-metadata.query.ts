@@ -27,16 +27,6 @@ export function getConversationMetadataQueryOptions({ xmtpConversationId, client
     }),
     queryFn: () => getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }),
     enabled,
-    // Retry only for specific types of errors, not for 404 which is handled by our API layer
-    retry: (failureCount, error) => {
-      // Don't retry 404 errors as they're handled by getConversationMetadata
-      if (error instanceof AxiosError && error.response?.status === 404) {
-        return false
-      }
-
-      // Retry other errors up to 3 times
-      return failureCount < 3
-    },
   })
 }
 

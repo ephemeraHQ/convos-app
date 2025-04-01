@@ -198,7 +198,7 @@ jobs:
 
       - name: Upload Sourcemaps to Sentry
         run: |
-          eas env:exec --environment preview -- npx sentry-expo-upload-sourcemaps dist
+          eas env:exec --environment preview -- 'npx sentry-expo-upload-sourcemaps dist'
 
       # - name: Resolve Sentry Issues
       #   run: |

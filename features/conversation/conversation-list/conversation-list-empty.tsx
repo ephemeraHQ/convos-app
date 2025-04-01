@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import React, { memo, useMemo } from "react"
 import { LinearGradient } from "@/design-system/linear-gradient"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { ConversationListItem } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
@@ -41,17 +41,30 @@ export const ConversationListEmpty = memo(function ConversationListEmpty() {
       <AnimatedVStack entering={theme.animation.reanimatedFadeInSpring}>
         {/* 10 to fill up the screen */}
         {new Array(10).fill(null).map((_, index) => (
-          <ConversationListItem
-            key={index}
-            avatarComponent={
-              <ConversationListItemAvatarSkeleton
-                color={theme.colors.fill.minimal}
-                size={theme.avatarSize.lg}
-              />
-            }
-          />
+          <ConversationListEmptySkeleton key={index} index={index} />
         ))}
       </AnimatedVStack>
     </VStack>
   )
+})
+
+export const ConversationListEmptySkeleton = memo(function ConversationListEmptySkeleton({
+  index,
+}: {
+  index: number
+}) {
+  const { theme } = useAppTheme()
+
+  const AvatarComponent = useMemo(() => {
+    return (
+      <ConversationListItemAvatarSkeleton
+        color={theme.colors.fill.minimal}
+        size={theme.avatarSize.lg}
+      />
+    )
+  }, [theme])
+
+  return null
+
+  return <ConversationListItem key={index} avatarComponent={AvatarComponent} />
 })

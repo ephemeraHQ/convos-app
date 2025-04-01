@@ -9,6 +9,7 @@ import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
 import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
 import { GroupDetailsListItem } from "@/features/groups/ui/group-details.ui"
+import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -29,8 +30,7 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
   })
 
   const sortedMembers = useMemo(() => {
-    return Object.values(members?.byId || {})
-    // return sortGroupMembersByAdminStatus(, currentSenderEthAddress)
+    return sortGroupMembers(Object.values(members?.byId || {}))
   }, [members])
 
   const handleAddMembersPress = useCallback(() => {
@@ -44,7 +44,6 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
   // For demo purposes, we'll show a limited number of members
   const visibleMembers = sortedMembers.slice(0, 6)
   const hasMoreMembers = sortedMembers.length > visibleMembers.length
-  const remainingMembersCount = sortedMembers.length - visibleMembers.length
 
   return (
     <VStack
@@ -84,7 +83,7 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
         {hasMoreMembers && (
           <Pressable onPress={handleSeeAllPress} hitSlop={theme.spacing.sm}>
             <GroupDetailsListItem
-              title={`See all ${remainingMembersCount}`}
+              title={`See all ${sortedMembers.length}`}
               end={<ListItemEndRightChevron />}
             />
           </Pressable>

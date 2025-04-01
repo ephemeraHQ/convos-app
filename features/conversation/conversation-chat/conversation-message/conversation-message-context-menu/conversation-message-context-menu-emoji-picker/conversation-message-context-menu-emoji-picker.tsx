@@ -5,8 +5,6 @@ import { Text } from "@design-system/Text"
 import { TextField } from "@design-system/TextField/TextField"
 import { VStack } from "@design-system/VStack"
 import { translate } from "@i18n"
-import { ICategorizedEmojisRecord, IEmoji } from "@utils/emojis/emoji-types"
-import { emojis } from "@utils/emojis/emojis"
 import { memo, useCallback, useRef, useState } from "react"
 import { TextInput, TextStyle, ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -15,33 +13,46 @@ import { messageContextMenuEmojiPickerBottomSheetRef } from "@/features/conversa
 import { useConversationMessageContextMenuEmojiPickerStore } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu-emoji-picker/conversation-message-context-menu-emoji-picker.store"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { emojiTrie } from "@/utils/emojis/emoji-trie"
+import { ICategorizedEmojisRecord, IEmoji } from "@/utils/emojis/emoji.types"
+import { emojis } from "@/utils/emojis/emojis.data"
 
+// Flatten all emoji categories into a single array
 const flatEmojis = emojis.flatMap((category) => category.data)
 
-const categorizedEmojis: ICategorizedEmojisRecord[] = []
-emojis.forEach((category, index) => {
-  for (let i = 0; i < category.data.length; i += 6) {
-    const slicedEmojis = category.data.slice(i, i + 6).map((emoji) => emoji)
-    categorizedEmojis.push({
-      id: category.title + index,
-      category: category.title,
-      emojis: slicedEmojis,
-    })
-  }
-})
+// Group emojis into rows of 6 for display
+const EMOJIS_PER_ROW = 6
 
-const sliceEmojis = (emojis: IEmoji[]) => {
-  const slicedEmojis: ICategorizedEmojisRecord[] = []
-  for (let i = 0; i < emojis.length; i += 6) {
-    const sliced = emojis.slice(i, i + 6).map((emoji) => emoji)
-    slicedEmojis.push({
-      id: emojis[i].emoji,
-      category: emojis[i].emoji,
-      emojis: sliced,
+function sliceEmojis(emojis: IEmoji[]): ICategorizedEmojisRecord[] {
+  const records: ICategorizedEmojisRecord[] = []
+
+  for (let i = 0; i < emojis.length; i += EMOJIS_PER_ROW) {
+    const rowEmojis = emojis.slice(i, i + EMOJIS_PER_ROW)
+    const firstEmoji = rowEmojis[0]
+
+    records.push({
+      id: firstEmoji.emoji,
+      category: firstEmoji.emoji,
+      emojis: rowEmojis,
     })
   }
-  return slicedEmojis
+
+  return records
 }
+
+// Create categorized emoji records preserving category info
+const categorizedEmojis: ICategorizedEmojisRecord[] = emojis.flatMap((category, index) => {
+  const records: ICategorizedEmojisRecord[] = []
+
+  for (let i = 0; i < category.data.length; i += EMOJIS_PER_ROW) {
+    records.push({
+      id: `${category.title}-${index}-${i}`,
+      category: category.title,
+      emojis: category.data.slice(i, i + EMOJIS_PER_ROW),
+    })
+  }
+
+  return records
+})
 
 const defaultEmojis = sliceEmojis(flatEmojis)
 
@@ -71,24 +82,23 @@ export const MessageContextMenuEmojiPicker = memo(function MessageContextMenuEmo
   )
 
   const onTextInputChange = useCallback((value: string) => {
-    if (value.trim() === "") {
-      // Reset immediately when input is cleared
+    const trimmedValue = value.trim()
+
+    if (trimmedValue === "") {
       setFilteredReactions(defaultEmojis)
       setHasInput(false)
-    } else {
-      const emojiSet = new Set()
-      const emojis = emojiTrie.findAllWithPrefix(value)
-      const dedupedEmojis = emojis.filter((emoji) => {
-        if (emojiSet.has(emoji.emoji)) {
-          return false
-        }
-        emojiSet.add(emoji.emoji)
-        return true
-      })
-      const sliced = sliceEmojis(dedupedEmojis)
-      setFilteredReactions(sliced)
-      setHasInput(true)
+      return
     }
+
+    // Find matching emojis and remove duplicates
+    const emojis = emojiTrie.findAllContaining(trimmedValue)
+    const uniqueEmojis = Array.from(new Set(emojis.map((emoji) => emoji.emoji)))
+      .map((emoji) => emojis.find((e) => e.emoji === emoji))
+      .filter(Boolean)
+
+    const slicedEmojis = sliceEmojis(uniqueEmojis)
+    setFilteredReactions(slicedEmojis)
+    setHasInput(true)
   }, [])
 
   const handleChange = useCallback((index: number) => {
@@ -105,7 +115,7 @@ export const MessageContextMenuEmojiPicker = memo(function MessageContextMenuEmo
       onChange={handleChange}
       ref={messageContextMenuEmojiPickerBottomSheetRef}
       topInset={insets.top}
-      snapPoints={["50%", "100%"]}
+      snapPoints={["100%"]}
     >
       <BottomSheetContentContainer>
         <BottomSheetHeader title={translate("choose_a_reaction")} hasClose />

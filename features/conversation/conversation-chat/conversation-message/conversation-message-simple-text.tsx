@@ -29,7 +29,9 @@ export const MessageSimpleText = memo(function MessageSimpleText(props: {
           alignItems: fromMe ? "flex-end" : "flex-start",
         }}
       >
-        <Text style={textSizeStyles["5xl"]}>{message.content.text}</Text>
+        <ConversationMessageGestures>
+          <Text style={textSizeStyles["5xl"]}>{message.content.text}</Text>
+        </ConversationMessageGestures>
       </VStack>
     )
   }

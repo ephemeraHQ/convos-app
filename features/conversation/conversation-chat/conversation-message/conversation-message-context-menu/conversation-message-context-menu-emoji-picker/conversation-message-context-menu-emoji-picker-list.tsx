@@ -1,12 +1,12 @@
 import { BottomSheetFlashList } from "@design-system/BottomSheet/BottomSheetFlashList"
 import { BottomSheetFlatList } from "@design-system/BottomSheet/BottomSheetFlatList"
 import { ListRenderItem as FlashListRenderItem } from "@shopify/flash-list"
-import { ICategorizedEmojisRecord } from "@utils/emojis/emoji-types"
 import React, { FC, useCallback, useEffect } from "react"
 import { ListRenderItem, Platform, StyleSheet, useWindowDimensions, View } from "react-native"
 import { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { AnimatedVStack } from "@/design-system/VStack"
+import { ICategorizedEmojisRecord } from "@/utils/emojis/emoji.types"
 import { EmojiRow } from "./conversation-message-context-menu-emoji-picker-row"
 
 type EmojiRowListProps = {

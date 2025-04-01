@@ -1,36 +1,57 @@
 import React, { memo, useEffect } from "react"
 import { Center } from "@/design-system/Center"
-import { AnimatedHStack, IAnimatedHStackProps } from "@/design-system/HStack"
+import { HStack, IAnimatedHStackProps } from "@/design-system/HStack"
 import { Icon } from "@/design-system/Icon/Icon"
+import { IIconProps } from "@/design-system/Icon/Icon.types"
+import { Loader } from "@/design-system/loader"
 import { AnimatedText } from "@/design-system/Text"
+import { useIsLatestMessageByCurrentUser } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-message-is-latest-sent-by-current-user"
+import { useConversationMessageById } from "@/features/conversation/conversation-chat/conversation-message/use-conversation-message-by-id"
+import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { usePrevious } from "@/hooks/use-previous-value"
 import { translate } from "@/i18n"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { debugBorder } from "@/utils/debug-style"
 import { Haptics } from "@/utils/haptics"
-import { IConversationMessageStatus } from "../conversation-message.types"
 
 type IConversationMessageStatusProps = {
-  status: IConversationMessageStatus
+  messageId: IXmtpMessageId
 }
 
 export const ConversationMessageStatus = memo(function ConversationMessageStatus({
-  status,
+  messageId,
 }: IConversationMessageStatusProps) {
-  const previousStatus = usePrevious(status)
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+
+  const isLatestMessageByCurrentUser = useIsLatestMessageByCurrentUser(messageId)
+
+  const { message } = useConversationMessageById({
+    messageId,
+    xmtpConversationId,
+  })
+
+  const previousStatus = usePrevious(message?.status)
 
   useEffect(() => {
     // Haptic when message is sent
-    if (previousStatus === "sending" && status === "sent") {
+    if (previousStatus === "sending" && message?.status === "sent") {
       Haptics.softImpactAsync()
     }
-  }, [status, previousStatus])
+  }, [previousStatus, message?.status])
 
-  if (status === "sending") {
+  if (!message) {
+    return null
+  }
+
+  if (!isLatestMessageByCurrentUser) {
+    return null
+  }
+
+  if (message.status === "sending") {
     return <SendingStatus />
   }
 
-  if (status === "sent") {
+  if (message.status === "sent") {
     return <SentStatus animateEntering={previousStatus === "sending"} />
   }
 
@@ -43,9 +64,9 @@ const StatusContainer = memo(function StatusContainer(props: IAnimatedHStackProp
   const { theme } = useAppTheme()
 
   return (
-    <AnimatedHStack
+    <HStack
       // {...debugBorder()}
-      entering={theme.animation.reanimatedFadeInSpring}
+      // entering={theme.animation.reanimatedFadeInSpring}
       style={[
         {
           alignItems: "center",
@@ -58,7 +79,7 @@ const StatusContainer = memo(function StatusContainer(props: IAnimatedHStackProp
       {...rest}
     >
       {children}
-    </AnimatedHStack>
+    </HStack>
   )
 })
 
@@ -91,8 +112,10 @@ const StatusIconContainer = memo(function StatusIconContainer({
 const SendingStatus = memo(function SendingStatus() {
   return (
     <StatusContainer>
-      <StatusText text=" " />
-      <StatusIconContainer />
+      <StatusText text="Sending" />
+      <StatusIconContainer>
+        <Loader size="xxs" />
+      </StatusIconContainer>
     </StatusContainer>
   )
 })
@@ -103,12 +126,17 @@ const SentStatus = memo(function SentStatus({ animateEntering }: { animateEnteri
   return (
     <StatusContainer
       // 300 delay for better UX so that the message entering animation finishes before showing the sent status
-      entering={animateEntering ? theme.animation.reanimatedFadeInSpring.delay(300) : undefined}
+      entering={animateEntering ? theme.animation.reanimatedFadeInSpring.delay(1000) : undefined}
     >
       <StatusText text={translate("message_status.sent")} />
       <StatusIconContainer>
-        <Icon icon="checkmark" size={theme.iconSize.xs} color={theme.colors.text.secondary} />
+        <StatusIcon icon="checkmark" />
       </StatusIconContainer>
     </StatusContainer>
   )
+})
+
+const StatusIcon = memo(function StatusIcon(props: IIconProps) {
+  const { theme } = useAppTheme()
+  return <Icon size={theme.iconSize.xs} color={theme.colors.text.secondary} {...props} />
 })

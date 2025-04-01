@@ -35,6 +35,7 @@ export const ConnectWalletChooseName = memo(function ConnectWalletChooseName(
   const { data: socialProfiles, isLoading: isLoadingSocialProfiles } =
     useSocialProfilesForAddressQuery({
       ethAddress,
+      caller: "ConnectWalletChooseName",
     })
 
   if (isLoadingSocialProfiles) {

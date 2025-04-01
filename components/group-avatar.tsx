@@ -1,3 +1,6 @@
+/**
+ * Note: Good for now but might want to refactor soon
+ */
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import React, { memo, useMemo } from "react"
 import { StyleProp, TextStyle, ViewStyle } from "react-native"
@@ -5,7 +8,6 @@ import { Center } from "@/design-system/Center"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { $globalStyles } from "@/theme/styles"
@@ -17,6 +19,7 @@ import { Avatar } from "./avatar"
 // Constants
 const MAIN_CIRCLE_RADIUS = 50
 const MAX_VISIBLE_MEMBERS = 4
+const MIN_SIZE_FOR_EXTRA_INDICATOR = 56 // Minimum size to show the extra members indicator (matches theme.avatarSize.lg)
 
 // Types
 type Position = {
@@ -178,6 +181,12 @@ const GroupAvatarUI = memo(function GroupAvatarUI(props: GroupAvatarUIProps) {
   const { size = theme.avatarSize.md, style, members = [] } = props
   const memberCount = members.length
 
+  // Show fewer members for small avatars
+  const shouldShowExtraIndicator = size >= MIN_SIZE_FOR_EXTRA_INDICATOR
+
+  // For small sizes, we show one more avatar instead of the indicator
+  const maxVisibleAvatars = shouldShowExtraIndicator ? MAX_VISIBLE_MEMBERS : MAX_VISIBLE_MEMBERS + 1
+
   // Calculate positions for avatars based on member count
   const positions = useMemo(
     () => calculatePositions(memberCount, MAIN_CIRCLE_RADIUS),
@@ -190,8 +199,8 @@ const GroupAvatarUI = memo(function GroupAvatarUI(props: GroupAvatarUIProps) {
         <VStack style={themed($background)} />
         <Center style={$content}>
           {positions.map((pos, index) => {
-            // Render member avatars (up to MAX_VISIBLE_MEMBERS)
-            if (index < MAX_VISIBLE_MEMBERS && index < memberCount) {
+            // Render member avatars (up to maxVisibleAvatars)
+            if (index < maxVisibleAvatars && index < memberCount) {
               return (
                 <Avatar
                   key={`avatar-${index}`}
@@ -208,12 +217,17 @@ const GroupAvatarUI = memo(function GroupAvatarUI(props: GroupAvatarUIProps) {
             }
 
             // Render "+N" indicator if there are more members than can be shown
-            if (index === MAX_VISIBLE_MEMBERS && memberCount > MAX_VISIBLE_MEMBERS) {
+            // Only show if the avatar is large enough
+            if (
+              index === MAX_VISIBLE_MEMBERS &&
+              memberCount > maxVisibleAvatars &&
+              shouldShowExtraIndicator
+            ) {
               return (
                 <ExtraMembersIndicator
                   key={`extra-${index}`}
                   pos={pos}
-                  extraMembersCount={memberCount - MAX_VISIBLE_MEMBERS}
+                  extraMembersCount={memberCount - maxVisibleAvatars}
                   size={size}
                 />
               )

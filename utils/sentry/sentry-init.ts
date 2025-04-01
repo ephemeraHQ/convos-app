@@ -2,7 +2,7 @@ import * as Sentry from "@sentry/react-native"
 import type { ErrorEvent, EventHint } from "@sentry/types"
 import * as Updates from "expo-updates"
 import { config } from "@/config"
-import { getEnv, isDev } from "@/utils/getEnv"
+import { getEnv } from "@/utils/getEnv"
 
 export function sentryInit() {
   Sentry.init({
@@ -11,18 +11,18 @@ export function sentryInit() {
     enabled: !__DEV__,
     environment: getEnv(),
 
+    // All of those slows the app by a lot, Let's keep them disabled for now
+
     // For now let's get all traces
-    tracesSampleRate: 1.0,
-
+    // tracesSampleRate: 1.0,
     // Add more context to your events
-    attachStacktrace: true,
-
+    // attachStacktrace: true,
     // Add experimental features if needed
-    _experiments: {
-      profilesSampleRate: isDev ? 1.0 : 0.1,
-      replaysSessionSampleRate: isDev ? 1.0 : 0.1,
-      replaysOnErrorSampleRate: 1.0,
-    },
+    // _experiments: {
+    //   profilesSampleRate: isDev ? 1.0 : 0.1,
+    //   replaysSessionSampleRate: isDev ? 1.0 : 0.1,
+    //   replaysOnErrorSampleRate: 1.0,
+    // },
 
     beforeSend: (event: ErrorEvent, hint: EventHint) => {
       event.tags = {

@@ -1,12 +1,8 @@
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { getMessageWithType } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-with-type"
-import {
-  addMessageToConversationMessagesQueryData,
-  setConversationMessagesQueryData,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
 import {
   addConversationToAllowedConsentConversationsQuery,
@@ -15,7 +11,7 @@ import {
 } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { IConversation, IConversationTopic } from "@/features/conversation/conversation.types"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos"
+import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { TEMP_CONVERSATION_PREFIX } from "@/features/conversation/utils/is-temp-conversation"
 import { setDmQueryData } from "@/features/dm/dm.query"
 import { IDm } from "@/features/dm/dm.types"
@@ -175,7 +171,7 @@ export function useCreateConversationAndSendFirstMessageMutation() {
 
       // Add all optimistic messages to the conversation
       for (const message of optimisticMessages) {
-        addMessageToConversationMessagesQueryData({
+        addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: tmpXmtpConversationId,
           message,
@@ -198,21 +194,13 @@ export function useCreateConversationAndSendFirstMessageMutation() {
       // Add the messages to the real conversation messages query
       // Set first because we want to already have the messages in the query
       if (result.sentXmtpMessageIds) {
-        setConversationMessagesQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: result.conversation.xmtpId,
-          data: {
-            ids: result.sentXmtpMessageIds,
-            byId: result.sentXmtpMessageIds.reduce(
-              (acc, messageId, index) => {
-                acc[messageId] = result.sentMessages[index]
-                return acc
-              },
-              {} as Record<IXmtpMessageId, IConversationMessage>,
-            ),
-            reactions: {},
-          },
-        })
+        for (const message of result.sentMessages) {
+          addMessageToConversationMessagesInfiniteQueryData({
+            clientInboxId: currentSender.inboxId,
+            xmtpConversationId: result.conversation.xmtpId,
+            message,
+          })
+        }
       }
 
       // Set the real conversation query data with the last message

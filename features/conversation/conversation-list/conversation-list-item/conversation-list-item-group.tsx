@@ -1,5 +1,5 @@
 import { getCompactRelativeTime } from "@utils/date"
-import { memo, useCallback } from "react"
+import { memo, useCallback, useMemo } from "react"
 import { GroupAvatar } from "@/components/group-avatar"
 import { ISwipeableRenderActionsArgs } from "@/components/swipeable"
 import { MIDDLE_DOT } from "@/design-system/middle-dot"
@@ -78,6 +78,10 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     xmtpConversationId,
   })
 
+  const AvatarComponent = useMemo(() => {
+    return <GroupAvatar size="lg" xmtpConversationId={xmtpConversationId} />
+  }, [xmtpConversationId])
+
   return (
     <ConversationListItemSwipeable
       renderRightActions={renderRightActions}
@@ -88,7 +92,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
       <ConversationListItem
         onPress={onPress}
         showError={false}
-        avatarComponent={<GroupAvatar size="lg" xmtpConversationId={xmtpConversationId} />}
+        avatarComponent={AvatarComponent}
         title={title}
         subtitle={subtitle}
         isUnread={isUnread}

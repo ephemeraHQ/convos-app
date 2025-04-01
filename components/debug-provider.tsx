@@ -51,10 +51,10 @@ export function DebugProvider(props: { children: React.ReactNode }) {
       clearTimeout(tapTimeoutRef.current)
     }
 
-    // Set new timeout to reset count after 500ms
+    // Set new timeout to reset count after 200ms
     tapTimeoutRef.current = setTimeout(() => {
       tapCountRef.current = 0
-    }, 300)
+    }, 200)
 
     // Show debug menu after 5 taps
     if (tapCountRef.current >= 5) {

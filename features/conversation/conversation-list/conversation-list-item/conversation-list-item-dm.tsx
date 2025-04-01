@@ -74,7 +74,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   )
 
   // Handlers
-  const onPress = useCallback(() => {
+  const handleOnPress = useCallback(() => {
     navigate("Conversation", { xmtpConversationId }).catch(captureError)
   }, [xmtpConversationId])
 
@@ -110,6 +110,10 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     [xmtpConversationId],
   )
 
+  const AvatarComponent = useMemo(() => {
+    return <Avatar sizeNumber={theme.avatarSize.lg} uri={avatarUrl} name={displayName} />
+  }, [avatarUrl, displayName, theme])
+
   return (
     <ConversationListItemSwipeable
       renderRightActions={renderRightActions}
@@ -119,11 +123,9 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
       leftActionsBackgroundColor={leftActionsBackgroundColor}
     >
       <ConversationListItem
-        onPress={onPress}
+        onPress={handleOnPress}
         showError={false}
-        avatarComponent={
-          <Avatar sizeNumber={theme.avatarSize.lg} uri={avatarUrl} name={displayName} />
-        }
+        avatarComponent={AvatarComponent}
         title={displayName}
         subtitle={subtitle}
         isUnread={isUnread}

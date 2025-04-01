@@ -22,7 +22,7 @@ import { translate } from "@/i18n"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
-import { GenericError } from "@/utils/error"
+import { GenericError, UserCancelledError } from "@/utils/error"
 import { useCurrentSender } from "../authentication/multi-inbox.store"
 
 export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
@@ -278,6 +278,9 @@ const EditableProfileContactCardAvatar = memo(function EditableProfileContactCar
         profileMeStore.getState().actions.setAvatarUri(url)
       }
     } catch (error) {
+      if (error instanceof UserCancelledError) {
+        return
+      }
       captureErrorWithToast(new GenericError({ error, additionalMessage: "Failed to add avatar" }))
     }
   }, [addPFP, profileMeStore])

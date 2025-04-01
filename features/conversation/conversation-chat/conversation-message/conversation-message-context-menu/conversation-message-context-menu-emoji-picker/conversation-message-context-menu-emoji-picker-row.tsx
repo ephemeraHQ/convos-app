@@ -1,6 +1,6 @@
-import { ICategorizedEmojisRecord, IEmoji } from "@utils/emojis/emoji-types"
 import { FC, memo, useMemo } from "react"
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native"
+import { ICategorizedEmojisRecord, IEmoji } from "@/utils/emojis/emoji.types"
 
 type EmojiRowProps = {
   item: ICategorizedEmojisRecord

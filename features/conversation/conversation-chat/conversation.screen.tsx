@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
-import React, { memo, useCallback, useEffect, useRef } from "react"
-import { TextInput as RNTextInput } from "react-native"
+import React, { memo } from "react"
+import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Center } from "@/design-system/Center"
@@ -14,16 +14,14 @@ import { ConversationMessageContextMenuStoreProvider } from "@/features/conversa
 import { MessageReactionsDrawer } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions/conversation-message-reaction-drawer/conversation-message-reaction-drawer"
 import { useConversationScreenHeader } from "@/features/conversation/conversation-chat/conversation.screen-header"
 import { ConversationCreateListResults } from "@/features/conversation/conversation-create/conversation-create-list-results"
+import { ConversationCreateSearchInput } from "@/features/conversation/conversation-create/conversation-create-search-input"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
-import { SearchUsersInput } from "@/features/search-users/search-users-input"
-import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { ConversationMessages } from "./conversation-messages"
 import {
   ConversationStoreProvider,
-  useConversationStore,
   useConversationStoreContext,
   useCurrentXmtpConversationIdSafe,
 } from "./conversation.store-context"
@@ -81,67 +79,19 @@ const Content = memo(function Content() {
   }
 
   return (
-    <>
+    <IsReadyWrapper>
       <VStack style={$globalStyles.flex1}>
-        {isCreatingNewConversation && <ConversationCreateSearchInputWrapper />}
+        {isCreatingNewConversation && <ConversationCreateSearchInput />}
 
         <VStack style={$globalStyles.flex1}>
           {isCreatingNewConversation && <ConversationCreateListResults />}
-          {conversation ? (
-            <ConversationMessages conversation={conversation} />
-          ) : (
-            <VStack style={$globalStyles.flex1} />
-          )}
+          {conversation ? <ConversationMessages /> : <VStack style={$globalStyles.flex1} />}
           <ConversationComposer />
           <ConversationKeyboardFiller />
         </VStack>
       </VStack>
       <ConversationMessageContextMenu />
       <MessageReactionsDrawer />
-    </>
-  )
-})
-
-const ConversationCreateSearchInputWrapper = memo(function ConversationCreateSearchInputWrapper() {
-  const inputRef = useRef<RNTextInput | null>(null)
-
-  const selectedSearchUserInboxIds = useConversationStoreContext(
-    (state) => state.searchSelectedUserInboxIds,
-  )
-  const conversationStore = useConversationStore()
-
-  const handleSearchTextChange = useCallback(
-    (text: string) => {
-      conversationStore.setState({ searchTextValue: text })
-    },
-    [conversationStore],
-  )
-
-  const handleSelectedInboxIdsChange = useCallback(
-    (inboxIds: IXmtpInboxId[]) => {
-      conversationStore.setState({ searchSelectedUserInboxIds: inboxIds })
-    },
-    [conversationStore],
-  )
-
-  //
-  useEffect(() => {
-    conversationStore.subscribe(
-      (state) => state.searchTextValue,
-      (searchTextValue) => {
-        if (searchTextValue === "") {
-          inputRef.current?.clear()
-        }
-      },
-    )
-  }, [conversationStore])
-
-  return (
-    <SearchUsersInput
-      inputRef={inputRef}
-      searchSelectedUserInboxIds={selectedSearchUserInboxIds}
-      onSearchTextChange={handleSearchTextChange}
-      onSelectedInboxIdsChange={handleSelectedInboxIdsChange}
-    />
+    </IsReadyWrapper>
   )
 })

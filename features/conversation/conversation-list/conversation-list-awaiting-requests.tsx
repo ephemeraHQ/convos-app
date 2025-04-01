@@ -4,7 +4,6 @@ import React, { memo, useCallback, useMemo } from "react"
 import { Center } from "@/design-system/Center"
 import { AnimatedHStack, HStack } from "@/design-system/HStack"
 import { Image } from "@/design-system/image"
-import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   ConversationListItem,
@@ -134,44 +133,45 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     )
   }, [isLoadingUknownConversations, numberOfRequestsLikelyNotSpam, theme])
 
-  return (
-    <AnimatedVStack
-      layout={theme.animation.reanimatedLayoutSpringTransition}
-      entering={theme.animation.reanimatedFadeInSpring}
-    >
-      <ConversationListItem
-        title={title}
-        subtitle={subtitle}
-        onPress={() => {
-          navigation.navigate("ChatsRequests")
+  const AvatarComponent = useMemo(() => {
+    return (
+      <Center
+        // {...debugBorder()}
+        style={{
+          width: theme.avatarSize.lg,
+          height: theme.avatarSize.lg,
+          backgroundColor: theme.colors.fill.tertiary,
+          borderRadius: 999,
         }}
-        isUnread={hasUnreadMessages}
-        avatarComponent={
-          <Center
-            // {...debugBorder()}
-            style={{
-              width: theme.avatarSize.lg,
-              height: theme.avatarSize.lg,
-              backgroundColor: theme.colors.fill.tertiary,
-              borderRadius: 999,
-            }}
-          >
-            {/* TODO: Add skia to make it better and add the little "shield" icon */}
-            <Image
-              source={
-                theme.isDark
-                  ? require("@/assets/icons/chat-bubble-dark.png")
-                  : require("@/assets/icons/chat-bubble-light.png")
-              }
-              style={{
-                width: theme.avatarSize.sm,
-                height: theme.avatarSize.sm,
-              }}
-              contentFit="contain"
-            />
-          </Center>
-        }
-      />
-    </AnimatedVStack>
+      >
+        {/* TODO: Add skia to make it better and add the little "shield" icon */}
+        <Image
+          source={
+            theme.isDark
+              ? require("@/assets/icons/chat-bubble-dark.png")
+              : require("@/assets/icons/chat-bubble-light.png")
+          }
+          style={{
+            width: theme.avatarSize.sm,
+            height: theme.avatarSize.sm,
+          }}
+          contentFit="contain"
+        />
+      </Center>
+    )
+  }, [theme])
+
+  const handleOnPress = useCallback(() => {
+    navigation.navigate("ChatsRequests")
+  }, [navigation])
+
+  return (
+    <ConversationListItem
+      title={title}
+      subtitle={subtitle}
+      onPress={handleOnPress}
+      isUnread={hasUnreadMessages}
+      avatarComponent={AvatarComponent}
+    />
   )
 })

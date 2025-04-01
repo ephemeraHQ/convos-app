@@ -1,5 +1,5 @@
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getConversationMessagesQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 
 export function getCurrentUserAlreadyReactedOnMessage(args: {
@@ -11,7 +11,7 @@ export function getCurrentUserAlreadyReactedOnMessage(args: {
 
   const currentSender = getSafeCurrentSender()
 
-  const messages = getConversationMessagesQueryData({
+  const messages = getAllConversationMessageInInfiniteQueryData({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
   })

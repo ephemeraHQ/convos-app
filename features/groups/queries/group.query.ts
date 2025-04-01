@@ -95,9 +95,14 @@ export async function addGroupMemberToGroupQueryData(args: IArgs & { member: IGr
         ...group.members,
         byId: {
           ...group.members.byId,
-          [member.inboxId]: member,
+          [member.inboxId]: {
+            ...group.members.byId[member.inboxId],
+            ...member,
+          },
         },
-        ids: [...group.members.ids, member.inboxId],
+        ids: group.members.ids.includes(member.inboxId)
+          ? group.members.ids
+          : [...group.members.ids, member.inboxId],
       },
     },
   })

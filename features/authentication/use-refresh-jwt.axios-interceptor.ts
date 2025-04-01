@@ -1,5 +1,5 @@
 import { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { getConvosAuthenticatedHeaders } from "@/features/authentication/authentication.headers"
 import { refreshAndGetNewJwtQuery } from "@/features/authentication/jwt.query"
 import { useLogout } from "@/features/authentication/use-logout"
@@ -7,11 +7,14 @@ import { captureError } from "@/utils/capture-error"
 import { ApiError } from "@/utils/convos-api/convos-api-error"
 import { apiLogger } from "@/utils/logger"
 import { convosApi } from "../../utils/convos-api/convos-api-instance"
-import { AuthenticationError, GenericError } from "../../utils/error"
+import { AuthenticationError } from "../../utils/error"
 
 /**
  * Hook that sets up an axios interceptor to refresh JWT tokens when requests fail with 401
  * Must be used high in the component tree to ensure proper authentication handling
+ *
+ * This interceptor is only applied to the convosApi instance (authenticated requests).
+ * The convosPublicApi instance does not use this interceptor.
  */
 export const useRefreshJwtAxiosInterceptor = () => {
   const { logout } = useLogout()

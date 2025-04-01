@@ -2,8 +2,8 @@ import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
-  addMessageToConversationMessagesQueryData,
-  refetchConversationMessagesQuery,
+  addMessageToConversationMessagesInfiniteQueryData,
+  invalidateConversationMessagesInfiniteMessagesQuery,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { getConversationForCurrentAccount } from "@/features/conversation/utils/get-conversation-for-current-account"
 import { sendXmtpConversationMessage } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
@@ -43,7 +43,7 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
 
       if (conversation) {
         // Add the reaction to the message
-        addMessageToConversationMessagesQueryData({
+        addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId,
           message: {
@@ -61,10 +61,9 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
     },
     onError: (error) => {
       const currentSender = getSafeCurrentSender()
-      refetchConversationMessagesQuery({
+      invalidateConversationMessagesInfiniteMessagesQuery({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId,
-        caller: "useReactOnMessage mutation onError",
       }).catch(captureErrorWithToast)
     },
   })

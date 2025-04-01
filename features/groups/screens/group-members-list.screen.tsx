@@ -7,6 +7,7 @@ import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
+import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
 import { useRouter } from "@/navigation/use-navigation"
@@ -64,8 +65,8 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
     <>
       <Screen contentContainerStyle={$globalStyles.flex1}>
         <FlashList
-          data={group?.members.ids}
-          renderItem={({ item }) => <MemberListItem memberInboxId={item} />}
+          data={sortGroupMembers(Object.values(group?.members.byId || {}))}
+          renderItem={({ item }) => <MemberListItem memberInboxId={item.inboxId} />}
           estimatedItemSize={60}
         />
       </Screen>

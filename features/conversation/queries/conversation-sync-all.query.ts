@@ -59,3 +59,7 @@ export function getConversationSyncAllQueryOptions(args: IArgs) {
 export async function refetchConversationSyncAllQuery(args: IArgs) {
   return reactQueryClient.fetchQuery(getConversationSyncAllQueryOptions(args))
 }
+
+export async function ensureConversationSyncAllQuery(args: IArgs) {
+  return reactQueryClient.fetchQuery(getConversationSyncAllQueryOptions(args))
+}

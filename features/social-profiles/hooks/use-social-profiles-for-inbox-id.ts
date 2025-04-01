@@ -26,6 +26,7 @@ export function useSocialProfilesForInboxId(args: { inboxId: IXmtpInboxId | unde
   const { data: socialProfiles, isLoading: isLoadingSocialProfiles } =
     useSocialProfilesForEthAddressQueries({
       ethAddresses: ethAddresses ?? [],
+      caller: "useSocialProfilesForInboxId",
     })
 
   return {
@@ -50,6 +51,7 @@ export async function getSocialProfilesForInboxId(args: { inboxId: IXmtpInboxId 
 
   const socialProfiles = await ensureSocialProfilesForAddressesQuery({
     ethAddresses: ethAddresses.map((ethAddress) => ethAddress),
+    caller: "getSocialProfilesForInboxId",
   })
 
   return socialProfiles

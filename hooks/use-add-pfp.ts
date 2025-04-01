@@ -11,6 +11,7 @@ import { useCallback, useState } from "react"
 import { showActionSheet } from "@/components/action-sheet"
 import { uploadFile } from "@/features/uploads/upload.api"
 import { captureError } from "@/utils/capture-error"
+import { UserCancelledError } from "@/utils/error"
 import { prefetchImageUrl } from "@/utils/image"
 import { logger } from "@/utils/logger"
 
@@ -116,7 +117,7 @@ export function useAddPfp() {
                   : await pickSingleMediaFromLibrary(options)
 
               if (!pickedAsset) {
-                reject(new Error("No image selected"))
+                reject(new UserCancelledError({ error: "No image selected" }))
                 return
               }
 
