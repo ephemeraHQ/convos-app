@@ -1,8 +1,9 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { QueryObserver, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
+import { Query, QueryObserver, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { refetchConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
+import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { Optional } from "@/types/general"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -39,6 +40,13 @@ export const getAllowedConsentConversationsQueryOptions = (
   return queryOptions({
     meta: {
       caller,
+      persist: (query: Query) => {
+        const conversationIds = query.state.data as IXmtpConversationId[] | undefined
+
+        if (!conversationIds) return true
+
+        return !conversationIds.some(isTempConversation)
+      },
     },
     queryKey: ["allowed-consent-conversations", clientInboxId],
     queryFn: enabled ? () => getAllowedConsentConversationsQueryFn({ clientInboxId }) : skipToken,
@@ -110,7 +118,7 @@ export function removeConversationFromAllowedConsentConversationsQuery(args: {
   )
 }
 
-const getAllowedConsentConversationsQueryFn = async (args: IArgs) => {
+async function getAllowedConsentConversationsQueryFn(args: IArgs) {
   const { clientInboxId } = args
 
   await refetchConversationSyncAllQuery({

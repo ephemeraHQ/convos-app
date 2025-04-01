@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { IConvosCurrentUserId } from "@/features/current-user/current-user.types"
+import { IConvosUserID } from "@/features/current-user/current-user.types"
 import { IDeviceId } from "@/features/devices/devices.types"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -35,7 +35,7 @@ export const fetchDeviceIdentities = async (args: { deviceId: IDeviceId }) => {
   return data
 }
 
-export const fetchUserIdentities = async (args: { userId: IConvosCurrentUserId }) => {
+export const fetchUserIdentities = async (args: { userId: IConvosUserID }) => {
   const { userId } = args
 
   const { data } = await convosApi.get<IDeviceIdentity[]>(`/api/v1/identities/user/${userId}`)

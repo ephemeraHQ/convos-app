@@ -16,6 +16,6 @@ export function getConversationPreviousMessage(args: {
     return undefined
   }
   const currentIndex = messages.ids.indexOf(messageId)
-  const previousMessageId = messages.ids[currentIndex - 1]
+  const previousMessageId = messages.ids[currentIndex + 1]
   return previousMessageId ? messages.byId[previousMessageId] : undefined
 }

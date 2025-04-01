@@ -4,8 +4,10 @@ import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { fetchCurrentUser } from "./current-user.api"
 import { IConvosCurrentUser } from "./current-user.types"
 
-export function getCurrentUserQueryOptions(args?: { caller?: string }) {
-  const { caller } = args ?? {}
+type ICurrentUserQueryArgs = {}
+
+export function getCurrentUserQueryOptions(args: ICurrentUserQueryArgs & { caller?: string }) {
+  const { caller } = args
 
   return queryOptions({
     meta: {
@@ -14,25 +16,28 @@ export function getCurrentUserQueryOptions(args?: { caller?: string }) {
     queryKey: getReactQueryKey({
       baseStr: "current-user",
     }),
-    queryFn: fetchCurrentUser,
+    queryFn: () => fetchCurrentUser(),
   })
 }
 
-export function setCurrentUserQueryData(args: { user: IConvosCurrentUser }) {
+export function setCurrentUserQueryData(
+  args: ICurrentUserQueryArgs & { user: IConvosCurrentUser },
+) {
   const { user } = args
-  return reactQueryClient.setQueryData(getCurrentUserQueryOptions().queryKey, user)
+  return reactQueryClient.setQueryData(getCurrentUserQueryOptions({}).queryKey, user)
 }
 
-export function invalidateCurrentUserQuery() {
+export function invalidateCurrentUserQuery(args: ICurrentUserQueryArgs) {
   return reactQueryClient.invalidateQueries({
-    queryKey: getCurrentUserQueryOptions().queryKey,
+    queryKey: getCurrentUserQueryOptions({}).queryKey,
   })
 }
 
-export function getCurrentUserQueryData() {
-  return reactQueryClient.getQueryData(getCurrentUserQueryOptions().queryKey)
+export function getCurrentUserQueryData(args: ICurrentUserQueryArgs) {
+  return reactQueryClient.getQueryData(getCurrentUserQueryOptions({}).queryKey)
 }
 
-export function ensureCurrentUserQueryData() {
-  return reactQueryClient.ensureQueryData(getCurrentUserQueryOptions())
+export function ensureCurrentUserQueryData(args: ICurrentUserQueryArgs & { caller: string }) {
+  const { caller } = args
+  return reactQueryClient.ensureQueryData(getCurrentUserQueryOptions({ caller }))
 }

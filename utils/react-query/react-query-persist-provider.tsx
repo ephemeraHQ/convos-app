@@ -27,7 +27,10 @@ export const ReactQueryPersistProvider = memo(function ReactQueryPersistProvider
             }
 
             const shouldHydrate =
-              query.meta?.persist !== false &&
+              (query.meta?.persist === undefined ||
+                (typeof query.meta.persist === "function"
+                  ? query.meta.persist(query)
+                  : query.meta.persist)) &&
               query.state.status !== "pending" &&
               query.state.fetchStatus !== "fetching"
 

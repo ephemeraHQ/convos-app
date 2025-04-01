@@ -4,6 +4,8 @@ import { FlatList, NativeScrollEvent, NativeSyntheticEvent, Platform } from "rea
 import { useAnimatedRef } from "react-native-reanimated"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useConversationComposerStore } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
+import { ConversationConsentPopupDm } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-dm"
+import { ConversationConsentPopupGroup } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-group"
 import { ConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message"
 import { ConversationMessageLayout } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-layout"
 import { ConversationMessageReactions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions/conversation-message-reactions"
@@ -17,6 +19,9 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { getMessageContentUniqueStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { useMarkConversationAsRead } from "@/features/conversation/hooks/use-mark-conversation-as-read"
+import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
+import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
+import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { window } from "@/theme/layout"
 import { $globalStyles } from "@/theme/styles"
@@ -78,8 +83,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
 
   // Safer to just mark as read every time messages change
   useEffect(() => {
+    if (isTempConversation(xmtpConversationId)) {
+      return
+    }
     markAsReadAsync().catch(captureError)
-  }, [messagesIds, markAsReadAsync])
+  }, [messagesIds, markAsReadAsync, xmtpConversationId])
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -149,6 +157,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
         messageId: item.xmtpId,
         xmtpConversationId,
       })
+
       return (
         <ConversationMessagesListItem
           message={item}
@@ -178,6 +187,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       alignItemsAtEnd
       maintainVisibleContentPosition
       initialScrollIndex={allMessagesReversed.length - 1}
+      // getEstimatedItemSize={} // Maybe try this to fix overlapping attachments messages
       keyExtractor={keyExtractor}
       waitForInitialLayout
       keyboardDismissMode="interactive"
@@ -186,6 +196,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
       style={$globalStyles.flex1}
       onScroll={handleScroll}
       scrollEventThrottle={200} // Adjust as needed for performance
+      ListEmptyComponent={ListEmptyComponent}
+      ListFooterComponent={ConsentPopup}
     />
   )
 })
@@ -277,6 +289,48 @@ const ConversationMessagesListItem = memo(
   },
 )
 
+const ListEmptyComponent = memo(function ListEmptyComponent() {
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+
+  const { data: conversation } = useConversationQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "Conversation Messages",
+  })
+
+  if (!conversation) {
+    return null
+  }
+
+  return isConversationDm(conversation) ? <DmConversationEmpty /> : <GroupConversationEmpty />
+})
+
+const ConsentPopup = memo(function ConsentPopup() {
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+
+  const { data: conversation } = useConversationQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "Conversation Messages",
+  })
+
+  if (!conversation) {
+    return null
+  }
+
+  if (isConversationAllowed(conversation)) {
+    return null
+  }
+
+  if (isConversationDm(conversation)) {
+    return <ConversationConsentPopupDm />
+  }
+
+  return <ConversationConsentPopupGroup />
+})
+
 const DmConversationEmpty = memo(function DmConversationEmpty() {
   // Will never really be empty anyway because to create the DM conversation the user has to send a first message
   return null
@@ -288,6 +342,11 @@ const GroupConversationEmpty = memo(() => {
 })
 
 const keyExtractor = (message: IConversationMessage) => {
+  // For some reason, when we pass [] to data of LegendList it still calls this function with undefined?!
+  if (!message) {
+    return ""
+  }
+
   const messageContentStr = getMessageContentUniqueStringValue({
     messageContent: message.content,
   })

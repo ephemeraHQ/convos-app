@@ -36,7 +36,7 @@ export const reactQueryClient = new QueryClient({
       // Wrap the error in ReactQueryError
       const wrappedError = new ReactQueryError({
         error,
-        additionalMessage: `Mutation failed: ${mutation.options.mutationKey ?? "unknown"}`,
+        additionalMessage: `Mutation failed`,
         extra,
       })
 

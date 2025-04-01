@@ -34,7 +34,7 @@ export async function registerPushNotifications() {
       throw new Error("Notifications permissions not granted")
     }
 
-    const currentUser = await ensureCurrentUserQueryData()
+    const currentUser = await ensureCurrentUserQueryData({ caller: "registerPushNotifications" })
 
     if (!currentUser) {
       throw new NotificationError({

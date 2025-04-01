@@ -24,7 +24,7 @@ export async function getConversationMetadata(args: IGetConversationMetadataArgs
   const { xmtpConversationId, clientInboxId } = args
 
   try {
-    const currentUser = await ensureCurrentUserQueryData()
+    const currentUser = await ensureCurrentUserQueryData({ caller: "getConversationMetadata" })
 
     if (!currentUser) {
       throw new Error("No current user found")
@@ -182,7 +182,7 @@ async function updateConversationMetadata(args: {
 }) {
   const { xmtpConversationId, clientInboxId, updates } = args
 
-  const currentUser = await ensureCurrentUserQueryData()
+  const currentUser = await ensureCurrentUserQueryData({ caller: "updateConversationMetadata" })
 
   if (!currentUser) {
     throw new Error("No current user found")

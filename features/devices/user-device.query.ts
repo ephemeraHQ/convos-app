@@ -3,11 +3,11 @@ import { getStoredDeviceId } from "@/features/devices/device.storage"
 import { IDevice, IDeviceId } from "@/features/devices/devices.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { IConvosCurrentUserId } from "../current-user/current-user.types"
+import { IConvosUserID } from "../current-user/current-user.types"
 import { fetchDevice } from "./devices.api"
 
 type IDeviceQueryArgs = {
-  userId: IConvosCurrentUserId
+  userId: IConvosUserID
   deviceId: IDeviceId
 }
 
@@ -25,8 +25,12 @@ export function getUserDeviceQueryOptions({ userId, deviceId }: IDeviceQueryArgs
   })
 }
 
-export async function ensureUserDeviceQueryData({ userId }: { userId: IConvosCurrentUserId }) {
-  const deviceId = await getStoredDeviceId()
+type IUserDeviceQueryArgs = {
+  userId: IConvosUserID
+}
+
+export async function ensureUserDeviceQueryData({ userId }: IUserDeviceQueryArgs) {
+  const deviceId = await getStoredDeviceId({ userId })
 
   if (!deviceId) {
     throw new Error("No deviceId found in storage")
@@ -35,7 +39,7 @@ export async function ensureUserDeviceQueryData({ userId }: { userId: IConvosCur
   return reactQueryClient.ensureQueryData(getUserDeviceQueryOptions({ userId, deviceId }))
 }
 
-export function setUserDeviceQueryData(args: { userId: IConvosCurrentUserId; device: IDevice }) {
+export function setUserDeviceQueryData(args: { userId: IConvosUserID; device: IDevice }) {
   const { userId, device } = args
   return reactQueryClient.setQueryData(
     getUserDeviceQueryOptions({ userId, deviceId: device.id }).queryKey,

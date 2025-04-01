@@ -1,6 +1,6 @@
 import React, { memo, useEffect } from "react"
 import { Center } from "@/design-system/Center"
-import { HStack, IAnimatedHStackProps } from "@/design-system/HStack"
+import { AnimatedHStack, IAnimatedHStackProps } from "@/design-system/HStack"
 import { Icon } from "@/design-system/Icon/Icon"
 import { IIconProps } from "@/design-system/Icon/Icon.types"
 import { Loader } from "@/design-system/loader"
@@ -64,9 +64,9 @@ const StatusContainer = memo(function StatusContainer(props: IAnimatedHStackProp
   const { theme } = useAppTheme()
 
   return (
-    <HStack
+    <AnimatedHStack
       // {...debugBorder()}
-      // entering={theme.animation.reanimatedFadeInSpring}
+      entering={theme.animation.reanimatedFadeInSpring}
       style={[
         {
           alignItems: "center",
@@ -79,7 +79,7 @@ const StatusContainer = memo(function StatusContainer(props: IAnimatedHStackProp
       {...rest}
     >
       {children}
-    </HStack>
+    </AnimatedHStack>
   )
 })
 

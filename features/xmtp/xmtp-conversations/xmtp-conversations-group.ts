@@ -114,7 +114,7 @@ export async function removeXmtpGroupMembers(args: {
 export async function updateXmtpGroupDescription(args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
-  description: string | undefined
+  description: string
 }) {
   const { clientInboxId, xmtpConversationId, description } = args
   try {
@@ -123,12 +123,7 @@ export async function updateXmtpGroupDescription(args: {
     })
 
     await wrapXmtpCallWithDuration("updateGroupDescription", () =>
-      updateGroupDescription(
-        client.installationId,
-        xmtpConversationId,
-        // @ts-ignore because we can actually pass undefined
-        description,
-      ),
+      updateGroupDescription(client.installationId, xmtpConversationId, description),
     )
   } catch (error) {
     throw new XMTPError({
@@ -141,7 +136,7 @@ export async function updateXmtpGroupDescription(args: {
 export async function updateXmtpGroupImage(args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
-  imageUrl: string | undefined
+  imageUrl: string
 }) {
   const { clientInboxId, xmtpConversationId, imageUrl } = args
 
@@ -151,12 +146,7 @@ export async function updateXmtpGroupImage(args: {
     })
 
     await wrapXmtpCallWithDuration("updateGroupImageUrl", () =>
-      updateGroupImageUrl(
-        client.installationId,
-        xmtpConversationId,
-        // @ts-ignore because we can actually pass undefined
-        imageUrl,
-      ),
+      updateGroupImageUrl(client.installationId, xmtpConversationId, imageUrl),
     )
   } catch (error) {
     throw new XMTPError({
@@ -169,7 +159,7 @@ export async function updateXmtpGroupImage(args: {
 export async function updateXmtpGroupName(args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
-  name: string | undefined
+  name: string
 }) {
   const { clientInboxId, xmtpConversationId, name } = args
 
@@ -179,12 +169,7 @@ export async function updateXmtpGroupName(args: {
     })
 
     await wrapXmtpCallWithDuration("updateGroupName", () =>
-      updateGroupName(
-        client.installationId,
-        xmtpConversationId,
-        // @ts-ignore because we can actually pass undefined
-        name,
-      ),
+      updateGroupName(client.installationId, xmtpConversationId, name),
     )
   } catch (error) {
     throw new XMTPError({

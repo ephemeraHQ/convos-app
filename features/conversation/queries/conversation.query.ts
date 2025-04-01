@@ -1,5 +1,5 @@
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
+import { Query, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
@@ -65,6 +65,13 @@ export function getConversationQueryOptions(
   return queryOptions({
     meta: {
       caller,
+      persist: (query: Query) => {
+        const conversation = query.state.data as IConversationQueryData | undefined
+        if (!conversation) {
+          return true
+        }
+        return !isTempConversation(conversation.xmtpId)
+      },
     },
     queryKey: ["conversation", clientInboxId, xmtpConversationId],
     queryFn: enabled ? () => getConversation({ clientInboxId, xmtpConversationId }) : skipToken,

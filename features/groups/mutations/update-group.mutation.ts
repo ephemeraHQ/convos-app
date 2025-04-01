@@ -32,29 +32,35 @@ export function useUpdateGroup(args: {
 
       const promises = []
 
-      promises.push(
-        updateXmtpGroupName({
-          clientInboxId,
-          xmtpConversationId: group.xmtpId,
-          name,
-        }),
-      )
+      if (name) {
+        promises.push(
+          updateXmtpGroupName({
+            clientInboxId,
+            xmtpConversationId: group.xmtpId,
+            name,
+          }),
+        )
+      }
 
-      promises.push(
-        updateXmtpGroupDescription({
-          clientInboxId,
-          xmtpConversationId: group.xmtpId,
-          description,
-        }),
-      )
+      if (description) {
+        promises.push(
+          updateXmtpGroupDescription({
+            clientInboxId,
+            xmtpConversationId: group.xmtpId,
+            description,
+          }),
+        )
+      }
 
-      promises.push(
-        updateXmtpGroupImage({
-          clientInboxId,
-          xmtpConversationId: group.xmtpId,
-          imageUrl,
-        }),
-      )
+      if (imageUrl) {
+        promises.push(
+          updateXmtpGroupImage({
+            clientInboxId,
+            xmtpConversationId: group.xmtpId,
+            imageUrl,
+          }),
+        )
+      }
 
       await Promise.all(promises)
     },
@@ -63,9 +69,9 @@ export function useUpdateGroup(args: {
       const previousGroup = getGroupQueryData({ clientInboxId, xmtpConversationId })
       const updates: Partial<IGroup> = {
         ...previousGroup,
-        name,
-        description,
-        imageUrl,
+        ...(name && { name }),
+        ...(description && { description }),
+        ...(imageUrl && { imageUrl }),
       }
 
       if (previousGroup) {

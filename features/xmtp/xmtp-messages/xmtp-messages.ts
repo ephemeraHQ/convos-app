@@ -35,14 +35,14 @@ import {
 //   return true
 // }
 
-// function xmtpMessageGroupUpdatedContentIsEmpty(message: IXmtpDecodedGroupUpdatedMessage) {
-//   const content = message.content()
-//   return (
-//     content.membersAdded.length === 0 &&
-//     content.membersRemoved.length === 0 &&
-//     content.metadataFieldsChanged.length === 0
-//   )
-// }
+function xmtpMessageGroupUpdatedContentIsEmpty(message: IXmtpDecodedGroupUpdatedMessage) {
+  const content = message.content()
+  return (
+    content.membersAdded.length === 0 &&
+    content.membersRemoved.length === 0 &&
+    content.metadataFieldsChanged.length === 0
+  )
+}
 
 export async function getXmtpConversationMessages(args: {
   clientInboxId: IXmtpInboxId
@@ -70,25 +70,22 @@ export async function getXmtpConversationMessages(args: {
       ),
     )
 
-    return messages
-    // Don't filter here because otherwise it seems to glitch with the cursor logic
-    // XMTP should not contain errors here anyway
-    // .filter((message) => {
-    //   // Shouldn't need this but just to make sure
-    //   if (!isSupportedXmtpMessage(message)) {
-    //     return false
-    //   }
+    return messages.filter((message) => {
+      // // Shouldn't need this but just to make sure
+      // if (!isSupportedXmtpMessage(message)) {
+      //   return false
+      // }
 
-    //   // For some reason, XMTP returns group updated messages with empty content...
-    //   if (
-    //     isXmtpGroupUpdatedContentType(message.contentTypeId) &&
-    //     xmtpMessageGroupUpdatedContentIsEmpty(message as IXmtpDecodedGroupUpdatedMessage)
-    //   ) {
-    //     return false
-    //   }
+      // For some reason, XMTP returns group updated messages with empty content...
+      if (
+        isXmtpGroupUpdatedContentType(message.contentTypeId) &&
+        xmtpMessageGroupUpdatedContentIsEmpty(message as IXmtpDecodedGroupUpdatedMessage)
+      ) {
+        return false
+      }
 
-    //   return true
-    // })
+      return true
+    })
   } catch (error) {
     throw new XMTPError({
       error,

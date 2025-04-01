@@ -6,6 +6,7 @@ import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { Alert, Platform } from "react-native"
+import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
 import { VStack } from "@/design-system/VStack"
 import { useLogout } from "@/features/authentication/use-logout"
@@ -17,14 +18,7 @@ import {
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
 import { useStreamingStore } from "@/features/streams/stream-store"
-import {
-  getPreviousXmtpLogFile,
-  getXmtpLogFile,
-  isXmtpLoggingActive,
-  rotateXmtpLoggingFile,
-  startXmtpLogging,
-  stopXmtpLogging,
-} from "@/features/xmtp/xmtp-logs"
+import { getXmtpLogs } from "@/features/xmtp/xmtp-logs"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { $globalStyles } from "@/theme/styles"
@@ -98,63 +92,58 @@ function useShowDebugMenu() {
         navigate("WebviewPreview", { uri: loggingFilePath })
       },
       "Display previous session logs": async () => {
-        const previousLoggingFile = await getPreviousSessionLoggingFile()
-        if (!previousLoggingFile) {
-          return Alert.alert("No previous session logging file found")
+        try {
+          const previousLoggingFile = await getPreviousSessionLoggingFile()
+          if (!previousLoggingFile) {
+            return Alert.alert("No previous session logging file found")
+          }
+          navigate("WebviewPreview", { uri: previousLoggingFile })
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error displaying previous session logs",
+            }),
+          )
         }
-        navigate("WebviewPreview", { uri: previousLoggingFile })
       },
       "Share previous session logs": async () => {
-        const previousLoggingFile = await getPreviousSessionLoggingFile()
-        if (!previousLoggingFile) {
-          return Alert.alert("No previous session logging file found")
+        try {
+          const previousLoggingFile = await getPreviousSessionLoggingFile()
+          if (!previousLoggingFile) {
+            return Alert.alert("No previous session logging file found")
+          }
+          shareContent({
+            title: "Convos previous logs",
+            url: `file://${previousLoggingFile}`,
+            type: "text/plain",
+          }).catch(captureError)
+        } catch (error) {
+          captureError(
+            new GenericError({ error, additionalMessage: "Error sharing previous session logs" }),
+          )
         }
-        shareContent({
-          title: "Convos previous logs",
-          url: `file://${previousLoggingFile}`,
-          type: "text/plain",
-        }).catch(captureError)
       },
       "-": () => Promise.resolve(), // Separator
-      [`${isXmtpLoggingActive() ? "Stop" : "Start"} recording XMTP logs`]: async () => {
-        if (isXmtpLoggingActive()) {
-          stopXmtpLogging()
-        } else {
-          await startXmtpLogging()
-        }
-      },
-      "Clear XMTP logs": async () => {
-        await rotateXmtpLoggingFile()
-      },
       "Share current XMTP logs": async () => {
-        const logFilePath = await getXmtpLogFile()
-        shareContent({
-          title: translate("debug.xmtp_log_session"),
-          url: `file://${logFilePath}`,
-          type: "text/plain",
-        }).catch(captureError)
+        try {
+          const logFilePath = await getXmtpLogs()
+          shareContent({
+            title: translate("debug.xmtp_log_session"),
+            url: `data:text/plain;charset=utf-8,${encodeURIComponent(logFilePath)}`,
+            type: "text/plain",
+          }).catch(captureError)
+        } catch (error) {
+          captureError(new GenericError({ error, additionalMessage: "Error sharing XMTP logs" }))
+        }
       },
       "Display current XMTP logs": async () => {
-        const logFilePath = await getXmtpLogFile()
-        navigate("WebviewPreview", { uri: logFilePath })
-      },
-      "Share previous XMTP logs": async () => {
-        const previousLogFile = await getPreviousXmtpLogFile()
-        if (!previousLogFile) {
-          return Alert.alert("No previous XMTP logging file found")
+        try {
+          const logFilePath = await getXmtpLogs()
+          navigate("WebviewPreview", { uri: logFilePath })
+        } catch (error) {
+          captureError(new GenericError({ error, additionalMessage: "Error displaying XMTP logs" }))
         }
-        shareContent({
-          title: translate("debug.xmtp_log_session"),
-          url: `file://${previousLogFile}`,
-          type: "text/plain",
-        }).catch(captureError)
-      },
-      "Display previous XMTP logs": async () => {
-        const previousLogFile = await getPreviousXmtpLogFile()
-        if (!previousLogFile) {
-          return Alert.alert("No previous XMTP logging file found")
-        }
-        navigate("WebviewPreview", { uri: previousLogFile })
       },
       Cancel: undefined,
     }
@@ -464,9 +453,18 @@ function useShowDebugMenu() {
         }
       },
       "Clear expo image cache": async () => {
-        await Image.clearDiskCache()
-        await Image.clearMemoryCache()
-        alert("Done!")
+        try {
+          await Image.clearDiskCache()
+          await Image.clearMemoryCache()
+          showSnackbar({
+            message: "Expo image cache cleared",
+          })
+        } catch (error) {
+          captureError(
+            new GenericError({ error, additionalMessage: "Error clearing expo image cache" }),
+          )
+          alert("Error clearing expo image cache")
+        }
       },
       "Show App Info": () => {
         const appVersion = Constants.expoConfig?.version

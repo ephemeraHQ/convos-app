@@ -85,7 +85,13 @@ const Content = memo(function Content() {
 
         <VStack style={$globalStyles.flex1}>
           {isCreatingNewConversation && <ConversationCreateListResults />}
-          {conversation ? <ConversationMessages /> : <VStack style={$globalStyles.flex1} />}
+          {conversation ? (
+            <VStack style={$globalStyles.flex1}>
+              <ConversationMessages />
+            </VStack>
+          ) : (
+            <VStack style={$globalStyles.flex1} />
+          )}
           <ConversationComposer />
           <ConversationKeyboardFiller />
         </VStack>

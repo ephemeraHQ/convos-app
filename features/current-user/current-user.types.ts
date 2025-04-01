@@ -1,9 +1,8 @@
 import { z } from "zod"
-import { deviceSchema } from "@/features/devices/devices.types"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { IEthereumAddress } from "@/utils/evm/address"
 
-export type IConvosCurrentUserId = string & { readonly __brand: unique symbol }
+export type IConvosUserID = string & { readonly __brand: unique symbol }
 
 export type IConvosCurrentUser = z.infer<typeof currentUserSchema>
 
@@ -14,7 +13,7 @@ export const identitySchema = z.object({
 })
 
 export const currentUserSchema = z.object({
-  id: z.custom<IConvosCurrentUserId>(),
+  id: z.custom<IConvosUserID>(),
   //   deviceId: deviceSchema.pick({
   //     id: true,
   //   }),

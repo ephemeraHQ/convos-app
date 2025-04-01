@@ -12,7 +12,7 @@ import {
   createUserMutation,
   ICreateUserMutationArgs,
 } from "@/features/current-user/create-user.mutation"
-import { IConvosCurrentUserId } from "@/features/current-user/current-user.types"
+import { IConvosUserID } from "@/features/current-user/current-user.types"
 import { getStoredDeviceId, storeDeviceId } from "@/features/devices/device.storage"
 import { createDevice, fetchDevice, IDeviceCreateInput } from "@/features/devices/devices.api"
 import { IDevice } from "@/features/devices/devices.types"
@@ -36,14 +36,15 @@ import { invalidateCurrentUserQuery } from "./current-user.query"
  * Handles the device registration and identity creation/linking flow
  */
 async function makeSureDeviceAndIdentitiesAreCreated(args: {
-  userId: IConvosCurrentUserId
+  userId: IConvosUserID
+  privyUserId: IPrivyUserId
   // privyAddress: IEthereumAddress
   // xmtpId: IXmtpInboxId
 }) {
-  const { userId } = args
+  const { userId, privyUserId } = args
 
   // 1. Check for existing deviceId in SecureStore
-  let deviceId = await getStoredDeviceId()
+  let deviceId = await getStoredDeviceId({ userId })
   let device: IDevice | null = null
 
   if (deviceId) {
@@ -79,7 +80,7 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
       })
       authLogger.debug("Created new device")
       setUserDeviceQueryData({ userId, device })
-      await storeDeviceId(device.id)
+      await storeDeviceId({ userId, deviceId: device.id })
       deviceId = device.id
     } catch (error) {
       throw new AuthenticationError({ error, additionalMessage: "Failed to create device" })
@@ -119,7 +120,9 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
   }
 
   // 5. Refresh current user data to include new device/identity
-  await invalidateCurrentUserQuery()
+  await invalidateCurrentUserQuery({
+    privyUserId,
+  })
 }
 
 async function startFlow(args: {
@@ -135,6 +138,7 @@ async function startFlow(args: {
     authLogger.debug("User exists, ensuring device and identities are created")
     return makeSureDeviceAndIdentitiesAreCreated({
       userId: currentUser.id,
+      privyUserId,
     })
   }
 
@@ -159,6 +163,7 @@ async function startFlow(args: {
 
     await makeSureDeviceAndIdentitiesAreCreated({
       userId: createdUser.id,
+      privyUserId,
     })
     return
   }

@@ -1,4 +1,4 @@
-import { MutationObserver, MutationOptions, QueryClient, useMutation } from "@tanstack/react-query"
+import { MutationObserver, MutationOptions, useMutation } from "@tanstack/react-query"
 import { setCurrentUserQueryData } from "@/features/current-user/current-user.query"
 import { storeDeviceId } from "@/features/devices/device.storage"
 import { setProfileQueryData } from "@/features/profiles/profiles.query"
@@ -51,7 +51,7 @@ export function getCreateUserMutationOptions(): MutationOptions<
     // },
 
     onSuccess: (data) => {
-      storeDeviceId(data.device.id).catch(captureError)
+      storeDeviceId({ userId: data.id, deviceId: data.device.id }).catch(captureError)
 
       setCurrentUserQueryData({
         user: {
