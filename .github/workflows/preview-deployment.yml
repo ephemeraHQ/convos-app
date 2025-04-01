@@ -107,7 +107,7 @@ jobs:
 
       - name: Build and submit to store
         run: |
-          eas env:exec --environment preview -- 'eas build --platform ios --profile preview --non-interactive --auto-submit'
+          eas build --platform ios --profile preview --non-interactive --auto-submit
 
       # - name: Resolve Sentry Issues
       #   run: |
@@ -152,7 +152,7 @@ jobs:
 
       - name: Build and submit to store
         run: |
-          eas env:exec --environment preview -- 'eas build --platform android --profile preview --non-interactive --auto-submit'
+          eas build --platform android --profile preview --non-interactive --auto-submit
 
       # - name: Resolve Sentry Issues
       #   run: |
