@@ -15,6 +15,7 @@ import { isConversationGroup } from "@/features/conversation/utils/is-conversati
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 import { chunk } from "@/utils/general"
 
 export const ConversationListPinnedConversations = memo(
@@ -95,7 +96,11 @@ const PinnedConversationWrapper = memo(function PinnedConversationWrapper(props:
 
   if (!conversation) {
     captureError(
-      new Error(`Couldn't find conversation ${xmtpConversationId} in PinnedConversationWrapper`),
+      new GenericError({
+        error: new Error(
+          `Couldn't find conversation ${xmtpConversationId} in PinnedConversationWrapper`,
+        ),
+      }),
     )
     return null
   }

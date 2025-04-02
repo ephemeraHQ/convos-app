@@ -1,9 +1,11 @@
 import type { IXmtpEnv } from "@/features/xmtp/xmtp.types"
+import { LogLevel } from "@/utils/logger/logger.types"
 
 export type ILoggerColorScheme = "light" | "dark"
 
 export type IConfig = {
   loggerColorScheme: ILoggerColorScheme
+  loggerLevel: LogLevel
   reactQueryPersistCacheIsEnabled: boolean
   debugMenu: boolean
   app: {

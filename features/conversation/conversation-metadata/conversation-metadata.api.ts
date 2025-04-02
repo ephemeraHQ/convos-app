@@ -4,6 +4,7 @@ import { ensureCurrentUserQueryData } from "@/features/current-user/current-user
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
+import { ValidationError } from "@/utils/error"
 
 const ConversationMetadataSchema = z.object({
   deleted: z.boolean().optional(),
@@ -46,9 +47,9 @@ export async function getConversationMetadata(args: IGetConversationMetadataArgs
 
     if (!parseResult.success) {
       captureError(
-        new Error(
-          `Failed to parse conversation metadata response: ${JSON.stringify(parseResult.error)} with data: ${JSON.stringify(data)}`,
-        ),
+        new ValidationError({
+          error: parseResult.error,
+        }),
       )
     }
 
@@ -199,9 +200,9 @@ async function updateConversationMetadata(args: {
 
   if (!parseResult.success) {
     captureError(
-      new Error(
-        `Failed to parse metadata update response: ${JSON.stringify(parseResult.error)} with data: ${JSON.stringify(data)}`,
-      ),
+      new ValidationError({
+        error: parseResult.error,
+      }),
     )
   }
 

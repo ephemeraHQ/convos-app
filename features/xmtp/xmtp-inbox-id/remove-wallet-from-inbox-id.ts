@@ -2,7 +2,7 @@ import { PublicIdentity } from "@xmtp/react-native-sdk"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpInboxId, IXmtpSigner } from "@/features/xmtp/xmtp.types"
 import { XMTPError } from "@/utils/error"
-import { xmtpLogger } from "@/utils/logger"
+import { xmtpLogger } from "@/utils/logger/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export async function removeWalletFromInboxId(args: {

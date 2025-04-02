@@ -8,7 +8,7 @@ import { ContextMenuView, IContextMenuViewProps } from "@/design-system/context-
 import { Pressable } from "@/design-system/Pressable"
 import { useConversationListPinnedConversationsStyles } from "@/features/conversation/conversation-list/conversation-list-pinned-conversations/conversation-list-pinned-conversations.styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import logger from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 
 type IConversationListPinnedConversationProps = {
   avatarComponent: React.ReactNode

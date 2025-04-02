@@ -7,7 +7,7 @@ import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { reactQueryMMKV } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
-import { authLogger } from "../../utils/logger"
+import { authLogger } from "../../utils/logger/logger"
 
 export const useLogout = () => {
   const { logout: privyLogout } = usePrivy()

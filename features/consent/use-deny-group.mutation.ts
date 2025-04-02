@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query"
-import { logger } from "@utils/logger"
 import {
   addConversationToAllowedConsentConversationsQuery,
   removeConversationFromAllowedConsentConversationsQuery,
@@ -10,6 +9,7 @@ import {
 } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { getGroupQueryData, setGroupQueryData } from "@/features/groups/queries/group.query"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { logger } from "@/utils/logger/logger"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { updateXmtpConsentForGroupsForInbox } from "../xmtp/xmtp-consent/xmtp-consent"
 

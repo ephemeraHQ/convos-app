@@ -1,6 +1,5 @@
 import { useNavigation } from "@react-navigation/native"
 import { memo, useLayoutEffect } from "react"
-import { useShallow } from "zustand/react/shallow"
 import { Header, HeaderProps } from "@/design-system/Header/Header"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { HStack } from "@/design-system/HStack"
@@ -16,9 +15,14 @@ const HeaderRenderer = memo(function HeaderRenderer(props: { headerProps: Header
   const { theme } = useAppTheme()
   const router = useRouter()
 
-  // Subscribe to the store here
-  const isXmtpLoading = useXmtpActivityStore(
-    useShallow((state) => Object.keys(state.activeOperations).length > 0),
+  // If we find at least one operation has been active for more than 3 seconds, we consider it loading
+  const showXmtpLoaderInHeader = useXmtpActivityStore((state) =>
+    Object.values(state.activeOperations).some((operation) => {
+      if (!operation.startTime) {
+        return false
+      }
+      return Date.now() - operation.startTime > 3000
+    }),
   )
 
   // Calculate final props based on loading state
@@ -35,7 +39,7 @@ const HeaderRenderer = memo(function HeaderRenderer(props: { headerProps: Header
     headerProps.rightText ||
     headerProps.rightTx
 
-  if (isXmtpLoading) {
+  if (showXmtpLoaderInHeader) {
     if (hasOriginalRightAction) {
       const OriginalRightAction = headerProps.RightActionComponent ? (
         headerProps.RightActionComponent

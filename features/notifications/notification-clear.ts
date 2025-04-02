@@ -6,7 +6,7 @@ import {
 } from "@/features/notifications/notification-assertions"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
-import { notificationsLogger } from "@/utils/logger"
+import { notificationsLogger } from "@/utils/logger/logger"
 
 export function clearAllNotifications() {
   notificationsLogger.debug("Clearing all notifications from notification center")

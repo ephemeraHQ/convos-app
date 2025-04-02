@@ -8,7 +8,7 @@ import {
   useSendMessage,
 } from "@/features/conversation/hooks/use-send-message.mutation"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { logJson } from "@/utils/logger"
+import { logJson } from "@/utils/logger/logger"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 import {
   IComposerMediaPreview,

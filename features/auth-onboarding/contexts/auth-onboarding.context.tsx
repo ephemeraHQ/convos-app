@@ -21,7 +21,7 @@ import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
-import { authLogger } from "@/utils/logger"
+import { authLogger } from "@/utils/logger/logger"
 import { tryCatch } from "@/utils/try-catch"
 
 type IAuthOnboardingContextType = {

@@ -7,7 +7,7 @@ import { isConversationAllowed } from "@/features/conversation/utils/is-conversa
 import { isConversationConsentUnknown } from "@/features/conversation/utils/is-conversation-consent-unknown"
 import { streamConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-stream"
 import { captureError } from "@/utils/capture-error"
-import { streamLogger } from "@/utils/logger"
+import { streamLogger } from "@/utils/logger/logger"
 import { IConversation } from "../conversation/conversation.types"
 
 export async function startConversationStreaming(args: { clientInboxId: IXmtpInboxId }) {

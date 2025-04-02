@@ -4,7 +4,7 @@ import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installati
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
-import { authLogger } from "@/utils/logger"
+import { authLogger } from "@/utils/logger/logger"
 
 export async function hydrateAuth() {
   authLogger.debug("Hydrating auth...")

@@ -5,7 +5,7 @@ import { refreshAndGetNewJwtQuery } from "@/features/authentication/jwt.query"
 import { useLogout } from "@/features/authentication/use-logout"
 import { captureError } from "@/utils/capture-error"
 import { ApiError } from "@/utils/convos-api/convos-api-error"
-import { apiLogger } from "@/utils/logger"
+import { apiLogger } from "@/utils/logger/logger"
 import { convosApi } from "../../utils/convos-api/convos-api-instance"
 import { AuthenticationError } from "../../utils/error"
 

@@ -120,6 +120,7 @@ export const MessageContextMenuEmojiPicker = memo(function MessageContextMenuEmo
       <BottomSheetContentContainer>
         <BottomSheetHeader title={translate("choose_a_reaction")} hasClose />
         <TextField
+          autoFocus
           ref={textInputRef}
           onChangeText={onTextInputChange}
           placeholder={translate("search_emojis")}

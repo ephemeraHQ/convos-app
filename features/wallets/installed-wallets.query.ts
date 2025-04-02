@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query"
 import * as Linking from "expo-linking"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import logger from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 import { ISupportedWallet, supportedWallets } from "./supported-wallets"
 
 export const useInstalledWalletsQuery = () => {

@@ -169,7 +169,11 @@ export function getMessageContentStringValue(args: {
     return "Replied to message"
   }
 
-  captureError(new Error("Unhandled message content type in getMessageContentStringValue"))
+  captureError(
+    new GenericError({
+      error: new Error("Unhandled message content type in getMessageContentStringValue"),
+    }),
+  )
   const _exhaustiveCheck: never = messageContent
   return "Unknown message type"
 }

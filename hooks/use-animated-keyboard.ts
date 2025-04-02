@@ -18,9 +18,12 @@ export function useAnimatedKeyboard() {
     return currentHeight
   })
 
+  const keyboardIsShownAV = useDerivedValue(() => progressAV.value === 1)
+
   return {
     keyboardHeightAV,
     progressAV,
+    keyboardIsShownAV,
     previousOpenKeyboardHeightAV,
   }
 }

@@ -3,9 +3,7 @@ import { Platform } from "react-native"
 import { IExpoAppConfigExtra } from "@/app.config"
 import { IConfig, ILoggerColorScheme } from "@/config/config.types"
 import { IXmtpEnv } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
-import { GenericError } from "@/utils/error"
-import logger from "@/utils/logger"
+import { LogLevel } from "@/utils/logger/logger.types"
 
 function maybeReplaceLocalhost(uri: string) {
   try {
@@ -19,17 +17,10 @@ function maybeReplaceLocalhost(uri: string) {
 
       const newUri = uri.replace("localhost", hostIp)
 
-      logger.debug(`Replaced ${uri} with device-accessible IP: ${newUri}`)
-
       return newUri
     }
   } catch (error) {
-    captureError(
-      new GenericError({
-        error,
-        additionalMessage: "Failed to replace localhost with device-accessible IP",
-      }),
-    )
+    console.error(error)
   }
 
   return uri
@@ -41,6 +32,7 @@ const appConfigExtra = Constants.expoConfig?.extra as IExpoAppConfigExtra
 export const shared = {
   debugMenu: true,
   loggerColorScheme: (process.env.EXPO_PUBLIC_LOGGER_COLOR_SCHEME as ILoggerColorScheme) || "light",
+  loggerLevel: (process.env.EXPO_PUBLIC_LOGGER_LEVEL as LogLevel) || "debug",
   reactQueryPersistCacheIsEnabled:
     process.env.EXPO_PUBLIC_ENABLE_REACT_QUERY_PERSIST_CACHE !== "false",
   app: {

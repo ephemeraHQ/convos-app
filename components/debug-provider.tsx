@@ -1,5 +1,4 @@
 import Clipboard from "@react-native-clipboard/clipboard"
-import { getPreviousSessionLoggingFile, loggingFilePath, rotateLoggingFile } from "@utils/logger"
 import Constants from "expo-constants"
 import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
@@ -18,13 +17,14 @@ import {
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
 import { useStreamingStore } from "@/features/streams/stream-store"
-import { getXmtpLogFile } from "@/features/xmtp/xmtp-logs"
+import { clearXmtpLogs, getXmtpLogFile } from "@/features/xmtp/xmtp-logs"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { $globalStyles } from "@/theme/styles"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { getEnv } from "@/utils/getEnv"
+import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { ObjectTyped } from "@/utils/object-typed"
 import { shareContent } from "@/utils/share"
 import { showActionSheet } from "./action-sheet"
@@ -80,51 +80,27 @@ function useShowDebugMenu() {
 
   const showLogsMenu = useCallback(() => {
     const logsMethods = {
-      "Start new log session": rotateLoggingFile,
-      "Share current session logs": async () => {
+      "Start new log session": () => {
+        clearLogFile().catch(captureError)
+      },
+      "Share current session logs": () => {
         shareContent({
           title: "Convos current logs",
-          url: `file://${loggingFilePath}`,
+          url: `file://${LOG_FILE_PATH}`,
           type: "text/plain",
         }).catch(captureError)
       },
       "Display current session logs": async () => {
-        navigate("WebviewPreview", { uri: loggingFilePath })
-      },
-      "Display previous session logs": async () => {
-        try {
-          const previousLoggingFile = await getPreviousSessionLoggingFile()
-          if (!previousLoggingFile) {
-            return Alert.alert("No previous session logging file found")
-          }
-          navigate("WebviewPreview", { uri: previousLoggingFile })
-        } catch (error) {
-          captureError(
-            new GenericError({
-              error,
-              additionalMessage: "Error displaying previous session logs",
-            }),
-          )
-        }
-      },
-      "Share previous session logs": async () => {
-        try {
-          const previousLoggingFile = await getPreviousSessionLoggingFile()
-          if (!previousLoggingFile) {
-            return Alert.alert("No previous session logging file found")
-          }
-          shareContent({
-            title: "Convos previous logs",
-            url: `file://${previousLoggingFile}`,
-            type: "text/plain",
-          }).catch(captureError)
-        } catch (error) {
-          captureError(
-            new GenericError({ error, additionalMessage: "Error sharing previous session logs" }),
-          )
-        }
+        navigate("WebviewPreview", { uri: LOG_FILE_PATH }).catch(captureError)
       },
       "-": () => Promise.resolve(), // Separator
+      "Clear XMTP logs": async () => {
+        try {
+          await clearXmtpLogs()
+        } catch (error) {
+          captureError(new GenericError({ error, additionalMessage: "Error clearing XMTP logs" }))
+        }
+      },
       "Share current XMTP logs": async () => {
         try {
           const logFilePath = await getXmtpLogFile()

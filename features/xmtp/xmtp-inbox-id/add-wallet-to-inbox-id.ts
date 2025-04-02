@@ -1,7 +1,7 @@
 import { IXmtpInboxId, IXmtpSigner } from "@features/xmtp/xmtp.types"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
-import { xmtpLogger } from "@/utils/logger"
+import { xmtpLogger } from "@/utils/logger/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export async function addWalletToInboxId(args: {

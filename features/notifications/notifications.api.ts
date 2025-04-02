@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
+import { ValidationError } from "@/utils/error"
 
 // Schemas for response validation
 const RegisterInstallationResponseSchema = z.object({
@@ -86,7 +87,7 @@ export const registerNotificationInstallation = async (args: IRegistrationReques
 
     const result = RegisterInstallationResponseSchema.safeParse(data)
     if (!result.success) {
-      captureError(result.error)
+      captureError(new ValidationError({ error: result.error }))
     }
 
     return data

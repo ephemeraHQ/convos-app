@@ -21,8 +21,8 @@ import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installati
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { getCurrentRoute } from "@/navigation/navigation.utils"
-import { NotificationError } from "@/utils/error"
-import { notificationsLogger } from "@/utils/logger"
+import { NotificationError, UserCancelledError } from "@/utils/error"
+import { notificationsLogger } from "@/utils/logger/logger"
 import { ensureMessageContentStringValue } from "../conversation/conversation-list/hooks/use-message-content-string-value"
 
 // Full flow
@@ -31,7 +31,7 @@ export async function registerPushNotifications() {
     const result = await requestNotificationsPermissions()
 
     if (!result.granted) {
-      throw new Error("Notifications permissions not granted")
+      throw new UserCancelledError({ error: "Notifications permissions not granted" })
     }
 
     const currentUser = await ensureCurrentUserQueryData({ caller: "registerPushNotifications" })

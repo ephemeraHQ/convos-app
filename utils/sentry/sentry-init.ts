@@ -10,19 +10,10 @@ export function sentryInit() {
     debug: false,
     enabled: !__DEV__,
     environment: getEnv(),
-
-    // All of those slows the app by a lot, Let's keep them disabled for now
-
-    // For now let's get all traces
-    // tracesSampleRate: 1.0,
-    // Add more context to your events
-    // attachStacktrace: true,
-    // Add experimental features if needed
-    // _experiments: {
-    //   profilesSampleRate: isDev ? 1.0 : 0.1,
-    //   replaysSessionSampleRate: isDev ? 1.0 : 0.1,
-    //   replaysOnErrorSampleRate: 1.0,
-    // },
+    // Add more context data to events (IP address, cookies, user, etc.)
+    sendDefaultPii: getEnv() !== "production",
+    // Attach stacktraces to all messages for more context
+    attachStacktrace: getEnv() !== "production",
 
     beforeSend: (event: ErrorEvent, hint: EventHint) => {
       event.tags = {

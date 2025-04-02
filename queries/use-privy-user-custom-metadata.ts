@@ -9,7 +9,7 @@
 // } from "@tanstack/react-query";
 // import { usePrivy } from "@privy-io/expo";
 // import { z } from "zod";
-// import logger from "@/utils/logger";
+// import { logger } from "@/utils/logger";
 // import { btoa } from "react-native-quick-base64";
 // import { config } from "@/config";
 // import { privyCustomMetadataQueryKey } from "@/queries/QueryKeys";

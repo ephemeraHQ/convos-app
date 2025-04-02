@@ -1,7 +1,7 @@
 import { getRandomBytesAsync } from "expo-crypto"
 import { XMTPError } from "@/utils/error"
 import { ILowercaseEthereumAddress } from "@/utils/evm/address"
-import { xmtpLogger } from "@/utils/logger"
+import { xmtpLogger } from "@/utils/logger/logger"
 import { secureStorage } from "@/utils/storage/secure-storage"
 
 const DB_ENCRYPTION_KEY_STORAGE_KEY_STRING = "LIBXMTP_DB_ENCRYPTION_KEY"

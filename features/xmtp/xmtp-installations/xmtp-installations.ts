@@ -5,7 +5,7 @@ import { IXmtpClientWithCodecs, IXmtpInboxId, IXmtpSigner } from "@/features/xmt
 import { translate } from "@/i18n"
 import { awaitableAlert } from "@/utils/alert"
 import { XMTPError } from "@/utils/error"
-import logger from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 
 export async function getOtherInstallations(args: { client: IXmtpClientWithCodecs }) {
   const { client } = args

@@ -13,7 +13,7 @@ import { uploadFile } from "@/features/uploads/upload.api"
 import { captureError } from "@/utils/capture-error"
 import { UserCancelledError } from "@/utils/error"
 import { prefetchImageUrl } from "@/utils/image"
-import { logger } from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 
 type ImageSource = "camera" | "library"
 

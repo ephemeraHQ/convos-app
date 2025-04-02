@@ -3,7 +3,7 @@ import { useEffect } from "react"
 import { AppState, AppStateStatus } from "react-native"
 import { create } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
-import { logger } from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 
 type State = {
   currentState: AppStateStatus

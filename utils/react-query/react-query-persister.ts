@@ -5,7 +5,7 @@ import {
 import { MMKV } from "react-native-mmkv"
 import { captureError } from "@/utils/capture-error"
 import { ReactQueryPersistError } from "@/utils/error"
-import { persistLogger } from "@/utils/logger"
+import { persistLogger } from "@/utils/logger/logger"
 
 export const reactQueryMMKV = new MMKV({ id: "convos-react-query-mmkv" })
 export const reactQueryPersister = createMMKVPersister(reactQueryMMKV)

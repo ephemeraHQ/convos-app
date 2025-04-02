@@ -2,7 +2,7 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { config } from "@/config"
 import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { XMTPError } from "@/utils/error"
-import { xmtpLogger } from "@/utils/logger"
+import { xmtpLogger } from "@/utils/logger/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export const streamXmtpConsent = async (args: { inboxId: IXmtpInboxId }) => {

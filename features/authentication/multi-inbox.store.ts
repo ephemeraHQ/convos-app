@@ -1,10 +1,10 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { logger } from "@utils/logger"
 import { create } from "zustand"
 import { createJSONStorage, persist, subscribeWithSelector } from "zustand/middleware"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
+import { logger } from "@/utils/logger/logger"
 import { zustandMMKVStorage } from "@/utils/zustand/zustand"
 
 export type CurrentSender = {

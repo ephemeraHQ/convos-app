@@ -81,17 +81,11 @@ export function ConversationListScreen(props: IConversationListProps) {
     }
   }, [refetchConversations])
 
-  // Better UX to at least show loading for 2 seconds
-  // Or don't show if loading is quick (< 500ms)
-  const isLoading = useMinimumLoadingTime({
-    isLoading: isLoadingConversations,
-    minTimeBeforeShowing: __DEV__ ? 0 : 500,
-    minimumLoadingDuration: __DEV__ ? 0 : 2000,
-  })
+  const isLoading = conversationsIds?.length === 0 && isLoadingConversations
 
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
-      {isLoading && conversationsIds?.length === 0 ? (
+      {isLoading ? (
         <ConversationListLoading />
       ) : (
         <ConversationList

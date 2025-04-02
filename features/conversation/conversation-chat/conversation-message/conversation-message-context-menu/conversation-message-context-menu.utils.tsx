@@ -13,6 +13,7 @@ import { getMessageContentStringValue } from "@/features/conversation/conversati
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
 import { captureErrorWithToast } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 
 export function useMessageContextMenuItems(args: {
   messageId: IXmtpMessageId
@@ -30,9 +31,12 @@ export function useMessageContextMenuItems(args: {
   const messageContextMenuStore = useConversationMessageContextMenuStore()
 
   if (!message) {
-    captureErrorWithToast(new Error("No message found in triggerMessageContextMenu"), {
-      message: "Couldn't find message",
-    })
+    captureErrorWithToast(
+      new GenericError({
+        error: new Error("No message found in triggerMessageContextMenu"),
+        additionalMessage: "Couldn't find message",
+      }),
+    )
     return []
   }
 

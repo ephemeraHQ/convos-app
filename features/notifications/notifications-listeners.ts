@@ -8,7 +8,7 @@ import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-convers
 import { navigate } from "@/navigation/navigation.utils"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
-import { notificationsLogger } from "@/utils/logger"
+import { notificationsLogger } from "@/utils/logger/logger"
 
 export function useNotificationListeners() {
   const foregroundNotificationListener = useRef<Notifications.Subscription>()

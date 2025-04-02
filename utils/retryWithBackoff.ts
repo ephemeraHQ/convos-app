@@ -1,4 +1,4 @@
-import logger from "./logger"
+import { logger } from "./logger/logger"
 import { wait } from "./wait"
 
 export const retryWithBackoff = async <T>({

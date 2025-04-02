@@ -3,6 +3,7 @@ import { useEffect } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { captureError } from "@/utils/capture-error"
+import { AuthenticationError } from "@/utils/error"
 
 export function useSignoutIfNoPrivyUser() {
   const { user: privyUser, isReady } = usePrivy()
@@ -14,7 +15,11 @@ export function useSignoutIfNoPrivyUser() {
 
       // This shouldn't happen normally
       if (currentSender) {
-        captureError(new Error("Privy user is not set but current sender was set"))
+        captureError(
+          new AuthenticationError({
+            error: new Error("Privy user is not set but current sender was set"),
+          }),
+        )
       }
 
       useAuthenticationStore.getState().actions.setStatus("signedOut")

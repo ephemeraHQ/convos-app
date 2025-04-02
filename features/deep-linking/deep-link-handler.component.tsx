@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react"
 import { Linking } from "react-native"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { useAppState } from "@/stores/use-app-state-store"
-import { logger } from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 import { useConversationDeepLinkHandler } from "./conversation-navigator"
 import { parseURL } from "./link-parser"
 

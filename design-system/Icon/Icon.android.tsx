@@ -1,7 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons"
-import { logger } from "@utils/logger"
 import { StyleProp, TextStyle } from "react-native"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { logger } from "@/utils/logger/logger"
 import { IIconName, IIconProps } from "./Icon.types"
 
 export const iconRegistry: Record<IIconName, keyof typeof MaterialIcons.glyphMap> = {

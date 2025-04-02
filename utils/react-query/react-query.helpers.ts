@@ -5,7 +5,7 @@ import {
   QueryOptions,
   UseQueryOptions,
 } from "@tanstack/react-query"
-import { queryLogger } from "@/utils/logger"
+import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "./react-query.client"
 
 /**

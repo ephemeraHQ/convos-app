@@ -5,7 +5,7 @@ import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { GenericError, XMTPError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
-import { xmtpLogger } from "@/utils/logger"
+import { xmtpLogger } from "@/utils/logger/logger"
 
 export async function getInboxIdFromEthAddress(args: {
   clientInboxId: IXmtpInboxId

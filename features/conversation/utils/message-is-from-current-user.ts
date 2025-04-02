@@ -1,6 +1,6 @@
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { isSameInboxId } from "@/features/xmtp/xmtp-inbox-id/xmtp-inbox-id.utils"
-import logger from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 import { IConversationMessage } from "../conversation-chat/conversation-message/conversation-message.types"
 
 type MessageFromCurrentUserPayload = {

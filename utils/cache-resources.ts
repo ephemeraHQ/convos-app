@@ -2,7 +2,7 @@ import { Asset } from "expo-asset"
 import * as Font from "expo-font"
 import * as SplashScreen from "expo-splash-screen"
 import { useCallback, useEffect, useState } from "react"
-import logger from "./logger"
+import { logger } from "./logger/logger"
 
 // Define the assets to cache
 const imagesToCache = [

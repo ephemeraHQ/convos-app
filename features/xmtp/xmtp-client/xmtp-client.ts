@@ -12,7 +12,7 @@ import { xmtpIdentityIsEthereumAddress } from "@/features/xmtp/xmtp-identifier/x
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress, lowercaseEthAddress } from "@/utils/evm/address"
-import { xmtpLogger } from "@/utils/logger"
+import { xmtpLogger } from "@/utils/logger/logger"
 
 // A simple map to store XMTP clients by inboxId
 const xmtpClientsMap = new Map<IXmtpInboxId, IXmtpClientWithCodecs>()

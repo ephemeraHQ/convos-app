@@ -21,45 +21,45 @@ export class BaseError extends Error {
   extra?: Record<string, unknown>
 
   constructor(prefix: string, args: BaseErrorArgs) {
-    const originalError = ensureError(args.error)
+    const { error, additionalMessage, extra } = args
 
-    const message = `${prefix}${args.additionalMessage ? `: ${args.additionalMessage}` : ""} - ${originalError.message}`
+    const ensuredError = ensureError(error)
 
-    super(message)
+    // [ErrorType]: additionalMessage. originalErrorMessage.
+    let message = ""
+    if (prefix) {
+      message = `${prefix} `
+    }
+    if (additionalMessage) {
+      message += `${additionalMessage}${additionalMessage.endsWith(".") ? "" : "."}`
+    }
+    const needsSpace = ensuredError.message.startsWith("[") || message.endsWith(".")
+    const needsPeriod = !ensuredError.message.endsWith(".")
+    message += `${needsSpace ? " " : ""}${ensuredError.message}${needsPeriod ? "." : ""}`
 
-    // Preserve the original error name
-    this.name = this.constructor.name
+    super(message, { cause: error })
 
-    // Preserve the original error
-    this.cause = args.error
+    const originalExtra = ensuredError instanceof BaseError ? ensuredError.extra : {}
 
-    // Merge extra data from original error (if it's a BaseError) with any new extra data
-    const originalExtra = args.error instanceof BaseError ? args.error.extra : {}
-    const hasExtraData = !isEmpty(originalExtra) || !isEmpty(args.extra)
-
-    if (hasExtraData) {
+    if (!isEmpty(originalExtra) || !isEmpty(extra)) {
       this.extra = {
         ...originalExtra,
-        ...args.extra,
+        ...extra,
       }
     }
   }
 
-  // /**
-  //  * Formats all error information (message, cause, and extra data) into a string
-  //  */
-  // formatError(): string {
-  //   let result = this.message
+  hasErrorType(errorType: Function): boolean {
+    if (this instanceof errorType) {
+      return true
+    }
 
-  //   if (this.extra && Object.keys(this.extra).length > 0) {
-  //     result += "\nExtra information:"
-  //     for (const [key, value] of Object.entries(this.extra)) {
-  //       result += `\n  ${key}: ${JSON.stringify(value)}`
-  //     }
-  //   }
+    if (this.cause instanceof BaseError) {
+      return this.cause.hasErrorType(errorType)
+    }
 
-  //   return result
-  // }
+    return this.cause instanceof errorType
+  }
 }
 
 export class UserCancelledError extends BaseError {

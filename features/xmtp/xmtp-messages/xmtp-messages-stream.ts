@@ -1,7 +1,7 @@
 import { IXmtpDecodedMessage, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { xmtpLogger } from "@utils/logger"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
+import { xmtpLogger } from "@/utils/logger/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export const streamAllMessages = async (args: {

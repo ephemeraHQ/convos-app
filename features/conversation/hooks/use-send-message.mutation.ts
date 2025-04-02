@@ -77,7 +77,11 @@ export async function sendMessage(args: ISendMessageParams) {
     }
 
     if (!sentXmtpMessageId) {
-      captureError(new Error(`Couldn't send message?`))
+      captureError(
+        new GenericError({
+          error: new Error(`Couldn't send message?`),
+        }),
+      )
       continue // Skip if we couldn't send this message
     }
 
@@ -88,7 +92,11 @@ export async function sendMessage(args: ISendMessageParams) {
 
     // Not supposed to happen but just in case
     if (!sentXmtpMessage) {
-      captureError(new Error(`Couldn't get the full xmtp message after sending`))
+      captureError(
+        new GenericError({
+          error: new Error(`Couldn't get the full xmtp message after sending`),
+        }),
+      )
       continue
     }
 

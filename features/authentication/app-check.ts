@@ -4,7 +4,7 @@ import { firebase } from "@react-native-firebase/app-check"
 import { config } from "@/config"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
-import { logger } from "../../utils/logger"
+import { logger } from "../../utils/logger/logger"
 
 const appCheck = firebase.appCheck()
 

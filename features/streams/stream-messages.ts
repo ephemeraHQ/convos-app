@@ -14,7 +14,7 @@ import { streamAllMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages-s
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { StreamError } from "@/utils/error"
-import { streamLogger } from "@/utils/logger"
+import { streamLogger } from "@/utils/logger/logger"
 import {
   IConversationMessage,
   IConversationMessageGroupUpdated,
@@ -141,7 +141,11 @@ function handleNewGroupUpdatedMessage(args: {
 
       // Validate that the field is supported
       if (!(fieldName in METADATA_FIELD_MAP)) {
-        captureError(new Error(`Unsupported metadata field name: ${fieldName}`))
+        captureError(
+          new StreamError({
+            error: new Error(`Unsupported metadata field name: ${fieldName}`),
+          }),
+        )
         return
       }
 

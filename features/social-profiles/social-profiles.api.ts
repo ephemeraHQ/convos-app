@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { captureError } from "@/utils/capture-error"
+import { ApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { IEthereumAddress } from "@/utils/evm/address"
 
@@ -69,7 +70,7 @@ export async function fetchSocialProfilesForAddress(args: { ethAddress: string }
   const response = SocialProfilesResponseSchema.safeParse(data)
 
   if (!response.success) {
-    captureError(new Error(`Invalid social profiles response: ${JSON.stringify(response.error)}`))
+    captureError(new ApiError({ error: response.error }))
   }
 
   return data.socialProfiles as ISocialProfile[]

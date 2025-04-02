@@ -2,6 +2,7 @@ import { z } from "zod"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
+import { ValidationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 
 // Schema for individual profile
@@ -29,7 +30,7 @@ export const searchProfiles = async ({ searchQuery }: { searchQuery: string }) =
   const result = SearchProfilesResponseSchema.safeParse(data)
 
   if (!result.success) {
-    captureError(result.error)
+    captureError(new ValidationError({ error: result.error }))
   }
 
   return data

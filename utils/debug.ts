@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { getRandomId } from "./general"
-import logger from "./logger"
+import { logger } from "./logger/logger"
 
 const timestamps: { [timestampId: string]: { start: number; last: number } } = {}
 

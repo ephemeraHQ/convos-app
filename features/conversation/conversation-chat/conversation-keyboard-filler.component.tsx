@@ -1,55 +1,38 @@
 import { AnimatedVStack } from "@design-system/VStack"
 import { memo, useEffect, useRef } from "react"
 import { TextInput } from "react-native"
-import { useAnimatedStyle } from "react-native-reanimated"
+import { useAnimatedStyle, useSharedValue } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useConversationMessageContextMenuEmojiPickerStore } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu-emoji-picker/conversation-message-context-menu-emoji-picker.store"
 import { useConversationMessageContextMenuStoreContext } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.store-context"
 import { useAnimatedKeyboard } from "@/hooks/use-animated-keyboard"
-import { useKeyboardIsShown } from "@/hooks/use-keyboard-is-shown"
 
 type IConversationKeyboardFillerProps = {}
 
 export const ConversationKeyboardFiller = memo(function ConversationKeyboardFiller(
   props: IConversationKeyboardFillerProps,
 ) {
-  const { keyboardHeightAV, progressAV, previousOpenKeyboardHeightAV } = useAnimatedKeyboard()
+  const { keyboardHeightAV, progressAV, previousOpenKeyboardHeightAV, keyboardIsShownAV } =
+    useAnimatedKeyboard()
   const insets = useSafeAreaInsets()
-  const wasKeyboardOpenRef = useRef(false)
   const textInputRef = useRef<TextInput>(null)
-  const isKeyboardShown = useKeyboardIsShown()
+
+  const keyboardWasShownBeforeWeShowMessageContextAV = useSharedValue(false)
 
   const messageContextMenuData = useConversationMessageContextMenuStoreContext(
     (state) => state.messageContextMenuData,
   )
 
-  const isEmojiPickerOpen = useConversationMessageContextMenuEmojiPickerStore(
-    (state) => state.isEmojiPickerOpen,
-  )
-
+  // We want to store if the keyboard was up when we focused on a message
   useEffect(() => {
-    if (!isEmojiPickerOpen) {
-      return
-    }
-
     if (messageContextMenuData) {
-      // Store keyboard state when emoji picker opens
-      if (isKeyboardShown) {
-        wasKeyboardOpenRef.current = true
-      }
+      keyboardWasShownBeforeWeShowMessageContextAV.value = keyboardIsShownAV.value
     }
-    // Context menu is hidden
-    else {
-      // Restore keyboard state when emoji picker closes
-      if (wasKeyboardOpenRef.current) {
-        textInputRef.current?.focus()
-        wasKeyboardOpenRef.current = false
-      }
-    }
-  }, [isEmojiPickerOpen, messageContextMenuData, isKeyboardShown])
+  }, [messageContextMenuData, keyboardIsShownAV, keyboardWasShownBeforeWeShowMessageContextAV])
 
   const fillerAnimatedStyle = useAnimatedStyle(() => {
-    if (messageContextMenuData) {
+    // If the keyboard was up when we focused on a message, we want to fill the space of the keyboard
+    // So that the messages don't jump
+    if (messageContextMenuData && keyboardWasShownBeforeWeShowMessageContextAV.value) {
       return {
         height: previousOpenKeyboardHeightAV.value - insets.bottom,
       }

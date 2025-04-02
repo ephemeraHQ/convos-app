@@ -1,11 +1,11 @@
 import { convosApi, convosPublicApi } from "@/utils/convos-api/convos-api-instance"
-import { apiLogger } from "@/utils/logger"
+import { apiLogger } from "@/utils/logger/logger"
 
 export function setupConvosApiDebugInterceptor() {
   // Debug interceptor for authenticated API
   convosApi.interceptors.request.use((config) => {
     apiLogger.debug(
-      `New API request. URL: ${config.url}, method: ${config.method}, body: ${JSON.stringify(
+      `New request. URL: ${config.url}, method: ${config.method}, body: ${JSON.stringify(
         config.data ?? "",
       )}, params: ${JSON.stringify(config.params ?? "")}`,
     )

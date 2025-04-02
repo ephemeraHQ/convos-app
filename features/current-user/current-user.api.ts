@@ -1,6 +1,7 @@
 import { currentUserSchema, IConvosCurrentUser } from "@/features/current-user/current-user.types"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
+import { ValidationError } from "@/utils/error"
 
 export async function fetchCurrentUser() {
   // Trying to get the device id for this specific device
@@ -23,7 +24,9 @@ export async function fetchCurrentUser() {
 
   if (!parseResult.success) {
     captureError(
-      new Error(`Failed to parse current user response: ${JSON.stringify(parseResult.error)}`),
+      new ValidationError({
+        error: parseResult.error,
+      }),
     )
   }
 

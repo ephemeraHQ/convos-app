@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications"
-import { notificationsLogger } from "@/utils/logger"
+import { notificationsLogger } from "@/utils/logger/logger"
 
 export function resetNotificationsBadgeCount() {
   notificationsLogger.debug("Resetting notifications badge count")

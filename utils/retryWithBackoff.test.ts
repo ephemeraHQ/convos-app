@@ -1,5 +1,5 @@
 // retryWithBackoff.test.ts
-import logger from "./logger"
+import { logger } from "./logger/logger"
 import { retryWithBackoff } from "./retryWithBackoff"
 import { wait } from "./wait"
 

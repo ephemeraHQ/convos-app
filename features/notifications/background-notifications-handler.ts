@@ -5,7 +5,7 @@ import { IExpoBackgroundNotificationData } from "@/features/notifications/notifi
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
-import { notificationsLogger } from "@/utils/logger"
+import { notificationsLogger } from "@/utils/logger/logger"
 import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
 
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND_NOTIFICATION_TASK"

@@ -24,11 +24,14 @@ export function sentryTrackError({ error, extras, tags }: ISentryTrackErrorArgs)
     Sentry.captureException(error)
   })
 }
+
 export type ISentryTrackErrorArgs = {
   error: Error
   tags?: Record<string, string>
   extras?: Record<string, unknown>
-} // Error patterns that should not be reported to Sentry
+}
+
+// Error patterns that should not be reported to Sentry
 export const errorsToFilterOut = [
   "Request failed with status code 401",
   "Request failed with status code 404",

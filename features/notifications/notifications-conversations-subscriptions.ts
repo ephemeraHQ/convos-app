@@ -12,7 +12,7 @@ import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installati
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
-import { notificationsLogger } from "@/utils/logger"
+import { notificationsLogger } from "@/utils/logger/logger"
 import { createQueryObserverWithPreviousData } from "@/utils/react-query/react-query.helpers"
 import {
   subscribeToNotificationTopicsWithMetadata,

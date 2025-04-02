@@ -11,7 +11,7 @@ import { ISwipeableRenderActionsArgs, Swipeable } from "@/components/swipeable"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
 import { useAppTheme } from "@/theme/use-app-theme"
-import logger from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 
 type IProps = {
   children: React.ReactNode

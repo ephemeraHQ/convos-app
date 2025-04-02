@@ -5,7 +5,7 @@ import { captureError } from "@/utils/capture-error"
 import { NavigationError } from "@/utils/error"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 import { config } from "../config"
-import logger from "../utils/logger"
+import { logger } from "../utils/logger/logger"
 import { NavigationParamList } from "./navigation.types"
 
 // https://reactnavigation.org/docs/navigating-without-navigation-prop/#usage

@@ -5,7 +5,7 @@ import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-con
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
-import logger from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 
 /**
  * Gets HMAC keys for a specific conversation

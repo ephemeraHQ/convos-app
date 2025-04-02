@@ -3,6 +3,7 @@ import { deviceSchema, IDevice } from "@/features/devices/devices.types"
 import { captureError } from "@/utils/capture-error"
 import { handleApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
+import { ValidationError } from "@/utils/error"
 
 /**
  * Fetches a single device by ID
@@ -15,7 +16,7 @@ export async function fetchDevice(args: { userId: string; deviceId: string }) {
 
     const result = deviceSchema.safeParse(data)
     if (!result.success) {
-      captureError(result.error)
+      captureError(new ValidationError({ error: result.error }))
     }
 
     return data
@@ -35,7 +36,7 @@ export async function fetchUserDevices(args: { userId: string }) {
 
     const result = z.array(deviceSchema).safeParse(data)
     if (!result.success) {
-      captureError(result.error)
+      captureError(new ValidationError({ error: result.error }))
     }
 
     return data
@@ -68,7 +69,7 @@ export async function createDevice(args: { userId: string; device: IDeviceCreate
 
     const result = deviceSchema.safeParse(data)
     if (!result.success) {
-      captureError(result.error)
+      captureError(new ValidationError({ error: result.error }))
     }
 
     return data
@@ -104,7 +105,7 @@ export async function updateDevice(args: {
 
     const result = deviceSchema.safeParse(data)
     if (!result.success) {
-      captureError(result.error)
+      captureError(new ValidationError({ error: result.error }))
     }
 
     return data

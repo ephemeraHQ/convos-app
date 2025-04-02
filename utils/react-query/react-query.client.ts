@@ -2,7 +2,7 @@ import { Mutation, MutationCache, QueryCache, QueryClient } from "@tanstack/reac
 import { AxiosError } from "axios"
 import { captureError } from "@/utils/capture-error"
 import { ReactQueryError } from "@/utils/error"
-import { queryLogger } from "@/utils/logger"
+import { queryLogger } from "@/utils/logger/logger"
 import { DEFAULT_GC_TIME, DEFAULT_STALE_TIME } from "./react-query.constants"
 
 export const reactQueryClient = new QueryClient({

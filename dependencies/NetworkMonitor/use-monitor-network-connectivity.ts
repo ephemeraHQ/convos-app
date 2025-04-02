@@ -1,6 +1,6 @@
 import NetInfo from "@react-native-community/netinfo"
-import { logger } from "@utils/logger"
 import { useEffect } from "react"
+import { logger } from "@/utils/logger/logger"
 import { config } from "../../config"
 import { useAppStore } from "../../stores/app-store"
 import { useSelect } from "../../stores/stores.utils"

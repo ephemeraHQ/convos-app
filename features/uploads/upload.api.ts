@@ -2,6 +2,7 @@ import RNFetchBlob from "rn-fetch-blob"
 import { z } from "zod"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
+import { ValidationError } from "@/utils/error"
 import { normalizeFilePath } from "@/utils/file-system/file-system"
 
 const PresignedUrlResponseSchema = z.object({
@@ -26,7 +27,7 @@ async function getPresignedUploadUrl(args: { contentType?: string }) {
   const result = PresignedUrlResponseSchema.safeParse(data)
 
   if (!result.success) {
-    captureError(result.error)
+    captureError(new ValidationError({ error: result.error }))
   }
 
   return data

@@ -6,7 +6,7 @@ import {
 } from "@/features/notifications/notification-assertions"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
-import { notificationsLogger } from "@/utils/logger"
+import { notificationsLogger } from "@/utils/logger/logger"
 import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
 
 // Track processed notification IDs to prevent duplicate handling

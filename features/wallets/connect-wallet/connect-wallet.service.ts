@@ -1,7 +1,7 @@
 import { createWallet as createWalletThirdweb } from "thirdweb/wallets"
 import { ISupportedWallet } from "@/features/wallets/supported-wallets"
 import { GenericError } from "@/utils/error"
-import logger from "@/utils/logger"
+import { logger } from "@/utils/logger/logger"
 import { thirdwebClient } from "@/utils/thirdweb"
 import { useConnectWalletStore } from "./connect-wallet.store"
 

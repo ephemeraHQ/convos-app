@@ -8,7 +8,7 @@ import {
 } from "@/features/current-user/current-user.query"
 import { getProfileQueryConfig, getProfileQueryData } from "@/features/profiles/profiles.query"
 import type { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { sentryLogger } from "@/utils/logger"
+import { sentryLogger } from "@/utils/logger/logger"
 import { isEqual } from "@/utils/objects"
 import { createQueryObserverWithPreviousData } from "@/utils/react-query/react-query.helpers"
 

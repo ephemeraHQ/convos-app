@@ -7,7 +7,7 @@ import { useDenyDmMutation } from "@/features/consent/use-deny-dm.mutation"
 import { useDmQuery } from "@/features/dm/dm.query"
 import { useRouter } from "@/navigation/use-navigation"
 import { captureErrorWithToast } from "@/utils/capture-error"
-import { ensureError } from "@/utils/error"
+import { GenericError } from "@/utils/error"
 import { useCurrentXmtpConversationIdSafe } from "../conversation.store-context"
 import {
   ConsentPopupButtonsContainer,
@@ -51,9 +51,9 @@ export function ConversationConsentPopupDm() {
             })
             navigation.pop()
           } catch (error) {
-            captureErrorWithToast(ensureError(error), {
-              message: `Error consenting`,
-            })
+            captureErrorWithToast(
+              new GenericError({ error, additionalMessage: "Error consenting" }),
+            )
           }
         }
       },
@@ -70,9 +70,7 @@ export function ConversationConsentPopupDm() {
         xmtpConversationId,
       })
     } catch (error) {
-      captureErrorWithToast(ensureError(error), {
-        message: `Error consenting`,
-      })
+      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error consenting" }))
     }
   }, [allowDmConsentAsync, dm, xmtpConversationId])
 

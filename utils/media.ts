@@ -3,7 +3,7 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator"
 import * as ImagePicker from "expo-image-picker"
 import { Alert, Image, Linking } from "react-native"
 import { Nullable } from "../types/general"
-import logger from "./logger"
+import { logger } from "./logger/logger"
 
 const imageMimeTypes = [
   "image/cgm",

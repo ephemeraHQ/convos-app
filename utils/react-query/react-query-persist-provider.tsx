@@ -1,7 +1,7 @@
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { memo } from "react"
 import { config } from "@/config"
-import { persistLogger } from "@/utils/logger"
+import { persistLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { DEFAULT_GC_TIME } from "@/utils/react-query/react-query.constants"
 import { reactQueryPersister } from "./react-query-persister"
