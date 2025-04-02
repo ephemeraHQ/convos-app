@@ -18,7 +18,7 @@ import {
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
 import { useStreamingStore } from "@/features/streams/stream-store"
-import { getXmtpLogs } from "@/features/xmtp/xmtp-logs"
+import { getXmtpLogFile } from "@/features/xmtp/xmtp-logs"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { $globalStyles } from "@/theme/styles"
@@ -127,10 +127,10 @@ function useShowDebugMenu() {
       "-": () => Promise.resolve(), // Separator
       "Share current XMTP logs": async () => {
         try {
-          const logFilePath = await getXmtpLogs()
+          const logFilePath = await getXmtpLogFile()
           shareContent({
             title: translate("debug.xmtp_log_session"),
-            url: `data:text/plain;charset=utf-8,${encodeURIComponent(logFilePath)}`,
+            url: `file://${logFilePath}`,
             type: "text/plain",
           }).catch(captureError)
         } catch (error) {
@@ -139,7 +139,7 @@ function useShowDebugMenu() {
       },
       "Display current XMTP logs": async () => {
         try {
-          const logFilePath = await getXmtpLogs()
+          const logFilePath = await getXmtpLogFile()
           navigate("WebviewPreview", { uri: logFilePath })
         } catch (error) {
           captureError(new GenericError({ error, additionalMessage: "Error displaying XMTP logs" }))

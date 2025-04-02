@@ -120,6 +120,8 @@ export async function removeGroupMemberToGroupQuery(args: IArgs & { memberInboxI
     throw new Error(`Couldn't remove member because the group doesn't exist`)
   }
 
+  const { [memberInboxId]: _, ...remainingMembers } = group.members.byId
+
   setGroupQueryData({
     clientInboxId,
     xmtpConversationId,
@@ -127,10 +129,8 @@ export async function removeGroupMemberToGroupQuery(args: IArgs & { memberInboxI
       ...group,
       members: {
         ...group.members,
-        byId: {
-          ...group.members.byId,
-          [memberInboxId]: undefined,
-        },
+        byId: remainingMembers,
+        ids: group.members.ids.filter((id) => id !== memberInboxId),
       },
     },
   })

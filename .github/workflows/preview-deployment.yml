@@ -111,7 +111,7 @@ jobs:
 
       # - name: Resolve Sentry Issues
       #   run: |
-      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-react-native --org convos'
+      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
 
   android-build:
     needs: [check-changes]
@@ -156,7 +156,7 @@ jobs:
 
       # - name: Resolve Sentry Issues
       #   run: |
-      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-react-native --org convos'
+      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
 
   ota-update:
     needs: [check-changes]
@@ -202,4 +202,4 @@ jobs:
 
       # - name: Resolve Sentry Issues
       #   run: |
-      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-react-native --org convos'
+      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'

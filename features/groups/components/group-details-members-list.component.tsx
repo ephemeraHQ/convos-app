@@ -30,7 +30,7 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
   })
 
   const sortedMembers = useMemo(() => {
-    return sortGroupMembers(Object.values(members?.byId || {}))
+    return sortGroupMembers(Object.values(members?.byId || {}).filter(Boolean))
   }, [members])
 
   const handleAddMembersPress = useCallback(() => {
