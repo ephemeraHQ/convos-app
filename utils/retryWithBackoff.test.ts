@@ -7,8 +7,13 @@ jest.mock("./wait", () => ({
   wait: jest.fn(() => Promise.resolve()),
 }))
 
-jest.mock("./logger", () => ({
-  warn: jest.fn(),
+jest.mock("./logger/logger", () => ({
+  logger: {
+    warn: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
+    error: jest.fn(),
+  },
 }))
 
 describe("retryWithBackoff", () => {
