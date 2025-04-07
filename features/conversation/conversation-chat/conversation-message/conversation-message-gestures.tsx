@@ -5,11 +5,15 @@ import {
   ConversationMessageGesturesDumb,
   IMessageGesturesOnLongPressArgs,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures.dumb"
-import { useConversationMessageContextStore } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import {
+  useConversationMessageContextSelector,
+  useConversationMessageStore,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { isMultiRemoteAttachmentMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { getMessageFromConversationSafe } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-from-conversation"
 import { useReactOnMessage } from "@/features/conversation/conversation-chat/use-react-on-message.mutation"
 import { useRemoveReactionOnMessage } from "@/features/conversation/conversation-chat/use-remove-reaction-on-message.mutation"
+import { useStableCallback } from "@/hooks/use-stable-callback"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { useCurrentXmtpConversationId } from "../conversation.store-context"
@@ -21,7 +25,7 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
 }) {
   const { contextMenuExtra, children } = props
   const messageContextMenuStore = useConversationMessageContextMenuStore()
-  const messageStore = useConversationMessageContextStore()
+  const messageStore = useConversationMessageStore()
   const xmtpConversationId = useCurrentXmtpConversationId()!
 
   const { reactOnMessage } = useReactOnMessage({
@@ -38,9 +42,9 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
         const messageId = messageStore.getState().xmtpMessageId
         const message = getMessageFromConversationSafe({
           messageId,
-          xmtpConversationId,
           clientInboxId: currentSender.inboxId,
         })
+        console.log("message:", message)
         messageContextMenuStore.getState().setMessageContextMenuData({
           messageId,
           itemRectX: e.pageX,
@@ -59,15 +63,20 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
         )
       }
     },
-    [messageContextMenuStore, messageStore, contextMenuExtra, xmtpConversationId],
+    [messageContextMenuStore, messageStore, contextMenuExtra],
   )
 
-  const handleTap = useCallback(() => {
-    const isShowingTime = !messageStore.getState().isShowingTime
-    messageStore.setState({
-      isShowingTime,
-    })
-  }, [messageStore])
+  const isShowingTime = useConversationMessageContextSelector((s) => s.isShowingTime)
+
+  const handleTap = useStableCallback(
+    ({ isShowingTime }) => {
+      messageStore.setState({
+        isShowingTime: !isShowingTime,
+      })
+    },
+    { isShowingTime },
+    [messageStore],
+  )
 
   const handleDoubleTap = useCallback(() => {
     const messageId = messageStore.getState().xmtpMessageId

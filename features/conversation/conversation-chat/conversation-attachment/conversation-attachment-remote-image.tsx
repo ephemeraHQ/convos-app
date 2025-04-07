@@ -1,7 +1,6 @@
 import { Icon } from "@design-system/Icon/Icon"
 import { PressableScale } from "@design-system/pressable-scale"
 import { Text } from "@design-system/Text"
-import { IVStackProps } from "@design-system/VStack"
 import { translate } from "@i18n"
 import prettyBytes from "pretty-bytes"
 import { memo } from "react"
@@ -11,13 +10,16 @@ import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { IConversationMessageRemoteAttachmentContent } from "../conversation-message/conversation-message.types"
 import { useRemoteAttachmentQuery } from "./conversation-attachment.query"
-import { ConversationMessageAttachmentContainer } from "./conversation-message-attachment-container"
+import {
+  ConversationMessageAttachmentContainer,
+  IConversationMessageAttachmentContainerProps,
+} from "./conversation-message-attachment-container"
 
 type IAttachmentRemoteImageProps = {
   xmtpMessageId: IXmtpMessageId
   remoteMessageContent: IConversationMessageRemoteAttachmentContent
   fitAspectRatio?: boolean
-  containerProps?: IVStackProps
+  containerProps?: IConversationMessageAttachmentContainerProps
 }
 
 export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(

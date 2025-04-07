@@ -3,7 +3,7 @@ import { Query, QueryObserver, queryOptions, skipToken, useQuery } from "@tansta
 import { refetchConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
-import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
+import { isTempConversation } from "@/features/conversation/utils/temp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { Optional } from "@/types/general"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"

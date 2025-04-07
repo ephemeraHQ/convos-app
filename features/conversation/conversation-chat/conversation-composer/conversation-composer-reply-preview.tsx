@@ -3,10 +3,9 @@ import { Icon } from "@design-system/Icon/Icon"
 import { IconButton } from "@design-system/IconButton/IconButton"
 import { Text } from "@design-system/Text"
 import { AnimatedVStack, VStack } from "@design-system/VStack"
-import { SICK_DAMPING, SICK_STIFFNESS } from "@theme/animations"
 import { Haptics } from "@utils/haptics"
-import { memo, useCallback, useEffect } from "react"
-import { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated"
+import { memo, useCallback, useEffect, useState } from "react"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { AttachmentRemoteImage } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-remote-image"
 import {
   isGroupUpdatedMessage,
@@ -27,18 +26,17 @@ import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { captureErrorWithToast } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
+import { ensureConversationMessageQueryData } from "../conversation-message/conversation-message.query"
 import {
   IConversationMessage,
   IConversationMessageRemoteAttachment,
   IConversationMessageReply,
   IConversationMessageStaticAttachment,
 } from "../conversation-message/conversation-message.types"
-import { useConversationMessageById } from "../conversation-message/use-conversation-message-by-id"
 import { useCurrentXmtpConversationId } from "../conversation.store-context"
-import {
-  useConversationComposerStore,
-  useConversationComposerStoreContext,
-} from "./conversation-composer.store-context"
+import { useConversationComposerStore } from "./conversation-composer.store-context"
 
 export const ConversationComposerReplyPreview = memo(function ReplyPreview() {
   const xmtpConversationId = useCurrentXmtpConversationId()
@@ -53,18 +51,42 @@ export const ConversationComposerReplyPreview = memo(function ReplyPreview() {
 const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversationId }) {
   const { xmtpConversationId } = props
 
-  const replyingToMessageId = useConversationComposerStoreContext(
-    (state) => state.replyingToMessageId,
-  )
-
   const { theme } = useAppTheme()
 
   const composerStore = useConversationComposerStore()
 
-  const { message: replyMessage } = useConversationMessageById({
-    messageId: replyingToMessageId!, // ! because we have enabled in the query
-    xmtpConversationId,
-  })
+  const [replyMessage, setReplyMessage] = useState<IConversationMessage | null>(null)
+
+  // Listen for when we have a replyMessageId in the composer store
+  useEffect(() => {
+    const sub = composerStore.subscribe(
+      (state) => state.replyingToMessageId,
+      async (replyingToMessageId) => {
+        if (!replyingToMessageId) {
+          setReplyMessage(null)
+          return
+        }
+
+        try {
+          const currentSender = getSafeCurrentSender()
+          const message = await ensureConversationMessageQueryData({
+            xmtpMessageId: replyingToMessageId,
+            clientInboxId: currentSender.inboxId,
+          })
+          Haptics.softImpactAsync()
+          setReplyMessage(message)
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+            }),
+          )
+        }
+      },
+    )
+
+    return sub
+  }, [composerStore, xmtpConversationId])
 
   const { displayName } = usePreferredDisplayInfo({
     inboxId: replyMessage?.senderInboxId,
@@ -78,44 +100,20 @@ const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversa
         : "Replying"
     : ""
 
-  const contentHeightAV = useSharedValue(0)
-
-  const containerAS = useAnimatedStyle(() => {
-    return {
-      height: withSpring(
-        replyingToMessageId && contentHeightAV.value !== 0 ? contentHeightAV.value : 0,
-        { damping: SICK_DAMPING, stiffness: SICK_STIFFNESS },
-      ),
-    }
-  }, [replyingToMessageId])
-
-  useEffect(() => {
-    if (replyingToMessageId) {
-      Haptics.softImpactAsync()
-    }
-  }, [replyingToMessageId])
-
   const handleDismiss = useCallback(() => {
     composerStore.getState().setReplyToMessageId(null)
   }, [composerStore])
 
   return (
     <AnimatedVStack
-      style={[
-        {
-          // ...debugBorder("red"),
-          overflow: "hidden",
-        },
-        containerAS,
-      ]}
+      style={{
+        overflow: "hidden",
+      }}
     >
       {!!replyMessage && (
         <AnimatedVStack
           entering={theme.animation.reanimatedFadeInSpring}
           exiting={theme.animation.reanimatedFadeOutSpring}
-          onLayout={(event) => {
-            contentHeightAV.value = event.nativeEvent.layout.height
-          }}
           style={{
             borderTopWidth: theme.borderWidth.xs,
             borderTopColor: theme.colors.border.subtle,

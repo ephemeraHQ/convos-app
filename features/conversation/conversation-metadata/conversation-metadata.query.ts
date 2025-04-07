@@ -2,7 +2,7 @@ import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.type
 import { queryOptions } from "@tanstack/react-query"
 import { AxiosError } from "axios"
 import { getConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
-import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
+import { isTempConversation } from "@/features/conversation/utils/temp-conversation"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
 

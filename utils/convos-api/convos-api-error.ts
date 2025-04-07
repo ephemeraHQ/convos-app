@@ -105,3 +105,10 @@ export function handleApiError(error: unknown): never {
 
   throw error
 }
+
+export function isConvosApi404Error(error: unknown): boolean {
+  if (error instanceof AxiosError) {
+    return error.response?.status === 404
+  }
+  return false
+}

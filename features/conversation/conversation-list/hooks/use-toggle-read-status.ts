@@ -4,8 +4,8 @@ import {
   useSafeCurrentSender,
 } from "@/features/authentication/multi-inbox.store"
 import { getConversationMetadataQueryData } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
-import { useMarkConversationAsRead } from "@/features/conversation/hooks/use-mark-conversation-as-read"
-import { useMarkConversationAsUnread } from "@/features/conversation/hooks/use-mark-conversation-as-unread"
+import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
+import { useMarkConversationAsUnreadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-unread"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -15,11 +15,13 @@ type UseToggleReadStatusProps = {
 }
 
 export const useToggleReadStatus = ({ xmtpConversationId }: UseToggleReadStatusProps) => {
-  const { markAsReadAsync } = useMarkConversationAsRead({
+  const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
     xmtpConversationId,
+    caller: "useToggleReadStatus",
   })
-  const { markAsUnreadAsync } = useMarkConversationAsUnread({
+  const { mutateAsync: markAsUnreadAsync } = useMarkConversationAsUnreadMutation({
     xmtpConversationId,
+    caller: "useToggleReadStatus",
   })
 
   const currentSender = useSafeCurrentSender()

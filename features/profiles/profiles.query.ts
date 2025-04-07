@@ -2,6 +2,7 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken, useQueries, useQuery } from "@tanstack/react-query"
 import { fetchProfile } from "@/features/profiles/profiles.api"
 import { Optional } from "@/types/general"
+import { isConvosApi404Error } from "@/utils/convos-api/convos-api-error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 
 type IProfileQueryData = Awaited<ReturnType<typeof fetchProfile>>
@@ -23,7 +24,19 @@ export const getProfileQueryConfig = (args: Optional<IArgsWithCaller, "caller">)
     },
     enabled,
     queryKey: ["profile", xmtpId],
-    queryFn: enabled ? () => fetchProfile({ xmtpId }) : skipToken,
+    queryFn: enabled
+      ? async () => {
+          try {
+            return await fetchProfile({ xmtpId })
+          } catch (error) {
+            // For now do this because if we chat with a bot for example, we'll never have a Convos profile
+            if (isConvosApi404Error(error)) {
+              return null
+            }
+            throw error
+          }
+        }
+      : skipToken,
   })
 }
 

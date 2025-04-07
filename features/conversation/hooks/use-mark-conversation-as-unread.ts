@@ -7,12 +7,18 @@ import {
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 
-export function useMarkConversationAsUnread(args: { xmtpConversationId: IXmtpConversationId }) {
-  const { xmtpConversationId } = args
+export function useMarkConversationAsUnreadMutation(args: {
+  xmtpConversationId: IXmtpConversationId
+  caller: string
+}) {
+  const { xmtpConversationId, caller } = args
 
   const currentSender = useSafeCurrentSender()
 
-  const { mutateAsync: markAsUnreadAsync } = useMutation({
+  return useMutation({
+    meta: {
+      caller,
+    },
     mutationFn: async () => {
       await markConversationMetadataAsUnread({
         clientInboxId: currentSender.inboxId,
@@ -45,8 +51,4 @@ export function useMarkConversationAsUnread(args: { xmtpConversationId: IXmtpCon
       }
     },
   })
-
-  return {
-    markAsUnreadAsync,
-  }
 }

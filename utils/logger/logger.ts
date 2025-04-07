@@ -63,8 +63,6 @@ const baseLogger = RNLogger.createLogger({
   printDate: false, // Not needed IMO, too verbose
   enabled: true,
   transport: transports,
-  async: true,
-  asyncFunc: InteractionManager.runAfterInteractions,
   transportOptions: {
     colors: activeColorScheme,
     fileName: LOG_FILE_NAME,

@@ -90,6 +90,7 @@ const SearchUsersResultsListItemUserDmWrapper = memo(
     const { data: dm, isLoading: isLoadingDm } = useDmQuery({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
+      caller: "SearchUsersResultsListItemUserDmWrapper",
     })
 
     const handlePress = useCallback(() => {

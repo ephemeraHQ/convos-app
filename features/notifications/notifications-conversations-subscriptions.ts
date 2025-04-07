@@ -4,7 +4,7 @@ import {
   getAllowedConsentConversationsQueryObserver,
 } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
+import { isTempConversation } from "@/features/conversation/utils/temp-conversation"
 import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { userHasGrantedNotificationsPermissions } from "@/features/notifications/notifications.service"
 import { getXmtpConversationHmacKeys } from "@/features/xmtp/xmtp-hmac-keys/xmtp-hmac-keys"

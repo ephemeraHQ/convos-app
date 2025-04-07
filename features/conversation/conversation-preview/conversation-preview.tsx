@@ -5,19 +5,22 @@ import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  getSafeCurrentSender,
+  useSafeCurrentSender,
+} from "@/features/authentication/multi-inbox.store"
 import { ConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message"
 import { ConversationMessageContextMenuStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.store-context"
 import { ConversationMessageLayout } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-layout"
 import { ConversationMessageReactions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions/conversation-message-reactions"
 import { ConversationMessageTimestamp } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-timestamp"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
-import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
-import { useMergedConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { useConversationMessagesInfiniteQueryAllMessageIds } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ConversationStoreProvider } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
-import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { $globalStyles } from "@/theme/styles"
+import { useConversationMessageQuery } from "../conversation-chat/conversation-message/conversation-message.query"
 import { useMessageHasReactions } from "../conversation-chat/conversation-message/hooks/use-message-has-reactions"
 
 type ConversationPreviewProps = {
@@ -27,8 +30,8 @@ type ConversationPreviewProps = {
 export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewProps) => {
   const currentSender = getSafeCurrentSender()
 
-  const { data: messages, isLoading: isLoadingMessages } =
-    useMergedConversationMessagesInfiniteQuery({
+  const { data: messageIds = [], isLoading: isLoadingMessages } =
+    useConversationMessagesInfiniteQueryAllMessageIds({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
       caller: "Conversation Preview",
@@ -52,7 +55,7 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
         <Center style={$globalStyles.flex1}>
           <Text>Conversation not found</Text>
         </Center>
-      ) : messages?.ids.length === 0 ? (
+      ) : messageIds?.length === 0 ? (
         <Center style={$globalStyles.flex1}>
           <EmptyState title="Empty conversation" description="This conversation has no messages" />
         </Center>
@@ -69,17 +72,17 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
               showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
               keyExtractor={keyExtractor}
               // 15 is enough
-              data={Object.values(messages?.byId ?? {}).slice(0, 15)}
+              data={messageIds?.slice(0, 15)}
               renderItem={({ item, index }) => {
                 const message = item
-                const previousMessage = messages?.byId[messages?.ids[index + 1]]
-                const nextMessage = messages?.byId[messages?.ids[index - 1]]
+                const previousMessage = messageIds[index + 1]
+                const nextMessage = messageIds[index - 1]
 
                 return (
                   <MessageWrapper
-                    message={message}
-                    previousMessage={previousMessage}
-                    nextMessage={nextMessage}
+                    messageId={message}
+                    previousMessageId={previousMessage}
+                    nextMessageId={nextMessage}
                   />
                 )
               }}
@@ -91,33 +94,54 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
   )
 }
 
-function keyExtractor(message: IConversationMessage) {
-  return message.xmtpId
+function keyExtractor(messageId: IXmtpMessageId) {
+  return messageId
 }
 
 const MessageWrapper = memo(function MessageWrapper({
-  message,
-  previousMessage,
-  nextMessage,
+  messageId,
+  previousMessageId,
+  nextMessageId,
 }: {
-  message: IConversationMessage
-  previousMessage: IConversationMessage | undefined
-  nextMessage: IConversationMessage | undefined
+  messageId: IXmtpMessageId
+  previousMessageId: IXmtpMessageId | undefined
+  nextMessageId: IXmtpMessageId | undefined
 }) {
+  const currentSender = useSafeCurrentSender()
+
   const hasReactions = useMessageHasReactions({
-    xmtpMessageId: message.xmtpId,
+    xmtpMessageId: messageId,
   })
+
+  const { data: message } = useConversationMessageQuery({
+    xmtpMessageId: messageId,
+    clientInboxId: currentSender.inboxId,
+  })
+
+  const { data: previousMessage } = useConversationMessageQuery({
+    xmtpMessageId: previousMessageId,
+    clientInboxId: currentSender.inboxId,
+  })
+
+  const { data: nextMessage } = useConversationMessageQuery({
+    xmtpMessageId: nextMessageId,
+    clientInboxId: currentSender.inboxId,
+  })
+
+  if (!message) {
+    return null
+  }
 
   return (
     <ConversationMessageContextStoreProvider
       message={message}
-      previousMessage={previousMessage}
-      nextMessage={nextMessage}
+      previousMessage={previousMessage ?? undefined}
+      nextMessage={nextMessage ?? undefined}
     >
       <VStack>
         <ConversationMessageTimestamp />
         <ConversationMessageLayout
-          message={<ConversationMessage message={message} />}
+          message={<ConversationMessage />}
           reactions={hasReactions && <ConversationMessageReactions />}
         />
       </VStack>

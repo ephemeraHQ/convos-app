@@ -9,7 +9,7 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-bubble"
 import { ConversationMessageGestures } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures"
 import { MessageText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text"
-import { useConversationMessageContextStoreContext } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useSelect } from "@/stores/stores.utils"
 import { IConversationMessageText } from "./conversation-message.types"
 
@@ -18,9 +18,7 @@ export const MessageSimpleText = memo(function MessageSimpleText(props: {
 }) {
   const { message } = props
 
-  const { hasNextMessageInSeries, fromMe } = useConversationMessageContextStoreContext(
-    useSelect(["hasNextMessageInSeries", "fromMe"]),
-  )
+  const { fromMe } = useConversationMessageContextSelector(useSelect(["fromMe"]))
 
   if (shouldRenderBigEmoji(message.content.text)) {
     return (
@@ -37,9 +35,9 @@ export const MessageSimpleText = memo(function MessageSimpleText(props: {
   }
 
   return (
-    <BubbleContainer fromMe={fromMe}>
+    <BubbleContainer>
       <ConversationMessageGestures>
-        <BubbleContentContainer fromMe={fromMe} hasNextMessageInSeries={hasNextMessageInSeries}>
+        <BubbleContentContainer>
           <MessageText inverted={fromMe}>{message.content.text}</MessageText>
         </BubbleContentContainer>
       </ConversationMessageGestures>

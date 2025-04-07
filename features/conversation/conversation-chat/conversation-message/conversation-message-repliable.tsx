@@ -9,28 +9,32 @@ import {
 } from "react-native-reanimated"
 import { ISwipeableRenderActionsArgs, Swipeable } from "@/components/swipeable"
 import { AnimatedVStack } from "@/design-system/VStack"
+import { useConversationComposerStore } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
+import { useConversationMessageStore } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { logger } from "@/utils/logger/logger"
 
 type IProps = {
   children: React.ReactNode
-  onReply: () => void
 }
 
 export const ConversationMessageRepliable = memo(function ConversationMessageRepliable({
   children,
-  onReply,
 }: IProps) {
   const { theme } = useAppTheme()
 
   const { messageContainerSidePadding } = useConversationMessageStyles()
 
+  const composerStore = useConversationComposerStore()
+  const conversationMessageStore = useConversationMessageStore()
+
   const handleLeftSwipe = useCallback(() => {
     logger.debug("[ConversationMessageRepliable] onLeftSwipe")
     Haptics.successNotificationAsync()
-    onReply()
-  }, [onReply])
+    const xmtpMessageId = conversationMessageStore.getState().message.xmtpId
+    composerStore.getState().setReplyToMessageId(xmtpMessageId)
+  }, [composerStore, conversationMessageStore])
 
   const renderLeftActions = useCallback(
     (args: ISwipeableRenderActionsArgs) => <SwipeReplyLeftAction {...args} />,

@@ -8,8 +8,9 @@ import {
   withSpring,
 } from "react-native-reanimated"
 import { AnimatedVStack } from "@/design-system/VStack"
-import { useConversationMessageContextStoreContext } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useSelect } from "@/stores/stores.utils"
 import { useAppTheme } from "@/theme/use-app-theme"
 
@@ -17,8 +18,8 @@ export const ConversationMessageHighlighted = memo(function ConversationMessageH
   children: React.ReactNode
 }) {
   const { children } = props
-  const { xmtpMessageId } = useConversationMessageContextStoreContext(useSelect(["xmtpMessageId"]))
-  const { animatedStyle } = useHighlightAnimation({ messageId: xmtpMessageId })
+  const { xmtpMessageId } = useConversationMessageContextSelector(useSelect(["xmtpMessageId"]))
+  const { animatedStyle } = useHighlightAnimation({ xmtpMessageId })
 
   return (
     <AnimatedVStack
@@ -35,11 +36,11 @@ export const ConversationMessageHighlighted = memo(function ConversationMessageH
 })
 
 type IUseHighlightAnimationArgs = {
-  messageId: string
+  xmtpMessageId: IXmtpMessageId
 }
 
 function useHighlightAnimation(args: IUseHighlightAnimationArgs) {
-  const { messageId } = args
+  const { xmtpMessageId } = args
   const { theme } = useAppTheme()
   const conversationStore = useConversationStore()
   const isHighlightedAV = useSharedValue(0)
@@ -58,7 +59,7 @@ function useHighlightAnimation(args: IUseHighlightAnimationArgs) {
           return
         }
 
-        if (messageId !== highlightedMessageId) {
+        if (xmtpMessageId !== highlightedMessageId) {
           return
         }
 
@@ -77,7 +78,7 @@ function useHighlightAnimation(args: IUseHighlightAnimationArgs) {
       },
     )
     return () => unsubscribe()
-  }, [conversationStore, isHighlightedAV, theme, messageId])
+  }, [conversationStore, isHighlightedAV, theme, xmtpMessageId])
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: interpolate(isHighlightedAV.value, [0, 1], [1, 0.5]),

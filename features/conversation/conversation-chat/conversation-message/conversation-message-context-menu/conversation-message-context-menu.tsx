@@ -59,24 +59,23 @@ const Content = memo(function Content(props: {
   const { message, previousMessage, nextMessage } = useMemo(() => {
     const message = getMessageFromConversationSafe({
       messageId,
-      xmtpConversationId,
       clientInboxId: currentSender.inboxId,
     })
 
-    const messages = getAllConversationMessageInInfiniteQueryData({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-    })
+    const messageIds =
+      getAllConversationMessageInInfiniteQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+      }) || []
 
-    const messageIndex = messages?.ids.findIndex((m) => m === messageId)
+    const messageIndex = messageIds.findIndex((m) => m === messageId)
 
-    const nextMessageId = messageIndex ? messages?.ids[messageIndex + 1] : undefined
-    const previousMessageId = messageIndex ? messages?.ids[messageIndex - 1] : undefined
+    const nextMessageId = messageIndex ? messageIds[messageIndex + 1] : undefined
+    const previousMessageId = messageIndex ? messageIds[messageIndex - 1] : undefined
 
     const nextMessage = nextMessageId
       ? getMessageFromConversationSafe({
           messageId: nextMessageId,
-          xmtpConversationId,
           clientInboxId: currentSender.inboxId,
         })
       : undefined
@@ -84,7 +83,6 @@ const Content = memo(function Content(props: {
     const previousMessage = previousMessageId
       ? getMessageFromConversationSafe({
           messageId: previousMessageId,
-          xmtpConversationId,
           clientInboxId: currentSender.inboxId,
         })
       : undefined
@@ -173,7 +171,6 @@ const Content = memo(function Content(props: {
                 hasReactions={hasReactions}
               >
                 <MessageContextMenuAboveMessageReactions
-                  xmtpConversationId={xmtpConversationId}
                   reactors={bySender ?? {}}
                   messageId={messageId}
                   onChooseMoreEmojis={handleChooseMoreEmojis}
@@ -195,7 +192,7 @@ const Content = memo(function Content(props: {
                   previousMessage={previousMessage}
                 >
                   {/* TODO: maybe make ConversationMessage more dumb to not need any context? */}
-                  <ConversationMessage message={message} />
+                  <ConversationMessage />
                 </ConversationMessageContextStoreProvider>
 
                 <MessageContextMenuItems

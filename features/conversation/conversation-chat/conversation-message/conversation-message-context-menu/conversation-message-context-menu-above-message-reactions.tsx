@@ -7,18 +7,16 @@ import { StaggeredAnimation } from "@/design-system/staggered-animation"
 import { TouchableOpacity } from "@/design-system/TouchableOpacity"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
+import { useMessageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
 import { getReactionContent } from "@/features/xmtp/xmtp-codecs/xmtp-codecs-reaction"
-import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { favoritedEmojis } from "@/utils/emojis/favorited-emojis"
 import { IConversationMessageReactionContent } from "../conversation-message.types"
-import { useConversationMessageById } from "../use-conversation-message-by-id"
 import { MESSAGE_CONTEXT_MENU_ABOVE_MESSAGE_REACTIONS_HEIGHT } from "./conversation-message-context-menu.constants"
 
 export const MessageContextMenuAboveMessageReactions = memo(
   function MessageContextMenuAboveMessageReactions({
-    xmtpConversationId,
     messageId,
     onChooseMoreEmojis,
     onSelectReaction,
@@ -26,7 +24,6 @@ export const MessageContextMenuAboveMessageReactions = memo(
     originY,
     reactors,
   }: {
-    xmtpConversationId: IXmtpConversationId
     messageId: IXmtpMessageId
     onChooseMoreEmojis: () => void
     onSelectReaction: (emoji: string) => void
@@ -40,16 +37,9 @@ export const MessageContextMenuAboveMessageReactions = memo(
 
     const currentUserInboxId = useSafeCurrentSender().inboxId
 
-    const { message } = useConversationMessageById({
-      messageId,
-      xmtpConversationId,
+    const { data: messageFromMe } = useMessageIsFromCurrentSenderInboxId({
+      xmtpMessageId: messageId,
     })
-
-    const messageFromMe =
-      message &&
-      messageIsFromCurrentSenderInboxId({
-        message,
-      })
 
     const currentUserEmojiSelectedMap = useMemo(() => {
       if (!currentUserInboxId || !reactors?.[currentUserInboxId]) {
@@ -119,7 +109,7 @@ export const MessageContextMenuAboveMessageReactions = memo(
               key={emoji}
               index={index}
               totalItems={favoritedEmojis.getEmojis().length}
-              isReverse={messageFromMe}
+              isReverse={!!messageFromMe}
               delayBetweenItems={20}
             >
               <Emoji

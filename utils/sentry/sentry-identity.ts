@@ -127,25 +127,26 @@ function updateSentryIdentity(inboxId: IXmtpInboxId) {
   sentryIdentifyUser({
     userId: currentUser.id,
     username: currentProfile?.username,
-    privyUserId: currentProfile?.privyAddress,
+    name: currentProfile?.name,
   })
 }
 
-export function sentryIdentifyUser(args: {
-  userId?: string
-  username?: string
-  privyUserId?: string
-}) {
+export function sentryIdentifyUser(args: { userId?: string; username?: string; name?: string }) {
   sentryLogger.debug("Identifying user", {
     userId: args.userId,
     username: args.username,
-    privyUserId: args.privyUserId,
+    name: args.name,
   })
 
   Sentry.setUser({
-    id: args.userId, // Main user ID
+    id: args.userId,
     username: args.username,
-    // Add custom attributes
-    privyUserId: args.privyUserId, // Custom attribute for Privy user ID
+    name: args.name,
+  })
+
+  Sentry.setContext("user", {
+    id: args.userId,
+    username: args.username,
+    name: args.name,
   })
 }

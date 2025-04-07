@@ -2,81 +2,49 @@
  * This store/context is to avoid prop drilling in message components.
  */
 
-import { IXmtpInboxId , IXmtpMessageId } from "@features/xmtp/xmtp.types"
+import { IXmtpInboxId, IXmtpMessageId } from "@features/xmtp/xmtp.types"
 import { createContext, memo, useContext, useEffect, useRef } from "react"
 import { createStore, useStore } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
 import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { hasNextMessageInSeries } from "@/features/conversation/utils/has-next-message-in-serie"
 import { hasPreviousMessageInSeries } from "@/features/conversation/utils/has-previous-message-in-serie"
 import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
-import { messageShouldShowDateChange } from "@/features/conversation/utils/message-should-show-date-change"
 import { convertNanosecondsToMilliseconds } from "@/utils/date"
+import { isDifferent } from "@/utils/objects"
 import { IConversationMessage } from "./conversation-message.types"
 
-type IMessageContextStoreProps = {
+type IConversationMessageContextStoreProps = {
   message: IConversationMessage
   previousMessage: IConversationMessage | undefined
   nextMessage: IConversationMessage | undefined
 }
 
-type IMessageContextStoreState = IMessageContextStoreProps & {
+type IConversationContextStoreState = {
+  message: IConversationMessage
+  previousMessage: IConversationMessage | undefined
+  nextMessage: IConversationMessage | undefined
   xmtpMessageId: IXmtpMessageId
-  hasNextMessageInSeries: boolean
   hasPreviousMessageInSeries: boolean
   fromMe: boolean
   sentAtMs: number
-  showDateChange: boolean
   senderInboxId: IXmtpInboxId
   isShowingTime: boolean
   isSystemMessage: boolean
 }
 
-type IMessageContextStoreProviderProps = React.PropsWithChildren<IMessageContextStoreProps>
-
-type IMessageContextStore = ReturnType<typeof createMessageContextStore>
-
-export const ConversationMessageContextStoreProvider = memo(
-  ({ children, ...props }: IMessageContextStoreProviderProps) => {
-    const storeRef = useRef<IMessageContextStore>()
-
-    if (!storeRef.current) {
-      storeRef.current = createMessageContextStore(props)
-    }
-
-    // Make sure to update the store if a props change
-    useEffect(() => {
-      storeRef.current?.setState({
-        ...getStoreStateBasedOnProps(props),
-      })
-    }, [props])
-
-    return (
-      <MessageContextStoreContext.Provider value={storeRef.current}>
-        {children}
-      </MessageContextStoreContext.Provider>
-    )
-  },
-)
-
-function getStoreStateBasedOnProps(props: IMessageContextStoreProps) {
+// Function to calculate derived state from props
+function getCalculatedState(
+  props: IConversationMessageContextStoreProps,
+): IConversationContextStoreState {
   return {
     ...props,
     xmtpMessageId: props.message.xmtpId,
-    hasNextMessageInSeries: hasNextMessageInSeries({
-      currentMessage: props.message,
-      nextMessage: props.nextMessage,
-    }),
     hasPreviousMessageInSeries: hasPreviousMessageInSeries({
       currentMessage: props.message,
       previousMessage: props.previousMessage,
     }),
     fromMe: messageIsFromCurrentSenderInboxId({
       message: props.message,
-    }),
-    showDateChange: messageShouldShowDateChange({
-      message: props.message,
-      previousMessage: props.previousMessage,
     }),
     sentAtMs: Math.floor(convertNanosecondsToMilliseconds(props.message.sentNs)),
     senderInboxId: props.message.senderInboxId,
@@ -85,24 +53,62 @@ function getStoreStateBasedOnProps(props: IMessageContextStoreProps) {
   }
 }
 
-const createMessageContextStore = (initProps: IMessageContextStoreProps) => {
-  return createStore<IMessageContextStoreState>()(
-    subscribeWithSelector((set) => getStoreStateBasedOnProps(initProps)),
+// Create a vanilla store for the message context
+const createMessageStore = (initProps: IConversationMessageContextStoreProps) => {
+  return createStore<IConversationContextStoreState>()(
+    subscribeWithSelector((set) => ({
+      ...getCalculatedState(initProps),
+    })),
   )
 }
 
-const MessageContextStoreContext = createContext<IMessageContextStore | null>(null)
+type MessageStore = ReturnType<typeof createMessageStore>
 
-export function useConversationMessageContextStoreContext<T>(
-  selector: (state: IMessageContextStoreState) => T,
-): T {
-  const store = useContext(MessageContextStoreContext)
+const MessageStoreContext = createContext<MessageStore | null>(null)
+
+export const ConversationMessageContextStoreProvider = memo(
+  ({ children, ...props }: React.PropsWithChildren<IConversationMessageContextStoreProps>) => {
+    const storeRef = useRef<MessageStore>()
+
+    // Create the store once
+    if (!storeRef.current) {
+      storeRef.current = createMessageStore(props)
+    }
+
+    // Update store state when props change
+    // Not happy with this solution because it means we'll first render with the old state...
+    useEffect(() => {
+      if (storeRef.current) {
+        const newState = getCalculatedState(props)
+        const currentState = storeRef.current.getState()
+        if (isDifferent(currentState, newState)) {
+          console.log("update")
+          // logJson("newState", newState)
+
+          storeRef.current.setState(newState)
+        }
+      }
+    }, [props])
+
+    return (
+      <MessageStoreContext.Provider value={storeRef.current}>
+        {children}
+      </MessageStoreContext.Provider>
+    )
+  },
+)
+
+// Hook to get the store instance
+export function useConversationMessageStore() {
+  const store = useContext(MessageStoreContext)
   if (!store) throw new Error("Missing ConversationMessageContextStore.Provider in the tree")
-  return useStore(store, selector)
+  return store
 }
 
-export function useConversationMessageContextStore() {
-  const store = useContext(MessageContextStoreContext)
-  if (!store) throw new Error(`Missing ConversationMessageContextStore.Provider in the tree`)
-  return store
+// Hook to subscribe to store state with a selector
+export function useConversationMessageContextSelector<T>(
+  selector: (state: IConversationContextStoreState) => T,
+): T {
+  const store = useConversationMessageStore()
+  return useStore(store, selector)
 }

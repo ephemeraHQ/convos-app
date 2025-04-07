@@ -28,6 +28,7 @@ export const ConversationListPinnedConversationDm = ({
   const { data: dm } = useDmQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
+    caller: "ConversationListPinnedConversationDm",
   })
 
   const { displayName, avatarUrl } = usePreferredDisplayInfo({

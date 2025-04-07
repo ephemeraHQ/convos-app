@@ -37,6 +37,40 @@ if (isValid) {
 }
 ```
 
+## Component Organization & Data Access
+
+- Keep related logic as close as possible to where it's being used.
+- Prefer getting data directly from stores/contexts over passing it through props.
+- Minimize component props - only pass what can't be accessed directly from a store/context.
+- Use boolean flags (hasX, isY) instead of passing components or complex objects through props.
+- When creating container components, prefer they access the store directly rather than receiving data through props.
+- Extract animation and complex logic into focused components that encapsulate their related behavior.
+- Prefer using useContextSelector or similar hooks to minimize re-renders by selecting only the needed data.
+- Avoid prop drilling - components should get their data as directly as possible from the appropriate store/context.
+
+```typescript
+// ❌ Bad: Passing data through props when it could be accessed from store
+function ParentComponent() {
+  const userData = useUserStore(state => state.userData)
+  return <UserProfile userData={userData} />
+}
+
+// ✅ Good: Component gets data directly from store
+function UserProfile() {
+  const userData = useUserStore(state => state.userData)
+  return <View>{/* render using userData */}</View>
+}
+
+// ❌ Bad: Passing complex objects/components as props
+<MessageContainer
+  reactions={<ReactionComponent />}
+  nextMessage={message}
+/>
+
+// ✅ Good: Passing boolean flags, accessing data from store
+<MessageContainer hasReactions={Boolean(reactions)} />
+```
+
 ## Code Comments
 
 - Keep comments minimal and focused on complex logic only.

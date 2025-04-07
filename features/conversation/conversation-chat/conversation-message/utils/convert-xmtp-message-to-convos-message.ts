@@ -19,6 +19,7 @@ import {
   getXmtpMessageIsTextMessage,
 } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpDecodedMessage, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { convertNanosecondsToMilliseconds } from "@/utils/date"
 import { convertXmtpReplyContentToConvosContent } from "./convert-xmtp-reply-content-to-convos-content"
 
 export function convertXmtpMessageToConvosMessage(
@@ -31,6 +32,7 @@ export function convertXmtpMessageToConvosMessage(
     status: getConvosMessageStatusForXmtpMessage(message),
     senderInboxId: message.senderInboxId as unknown as IXmtpInboxId,
     sentNs: message.sentNs,
+    sentMs: convertNanosecondsToMilliseconds(message.sentNs),
   } satisfies IConversationMessageBase
 
   // Handle fallback case

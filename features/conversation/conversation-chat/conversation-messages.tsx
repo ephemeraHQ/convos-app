@@ -3,7 +3,6 @@ import React, { memo, useCallback, useEffect, useMemo, useRef } from "react"
 import { FlatList, NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
 import { useAnimatedRef } from "react-native-reanimated"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useConversationComposerStore } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
 import { ConversationConsentPopupDm } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-dm"
 import { ConversationConsentPopupGroup } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-group"
 import { ConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message"
@@ -12,28 +11,23 @@ import { ConversationMessageReactions } from "@/features/conversation/conversati
 import { ConversationMessageRepliable } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-repliable"
 import { ConversationMessageStatus } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-status/conversation-message-status"
 import { ConversationMessageTimestamp } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-timestamp"
+import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
-import {
-  mergeInfiniteQueryPages,
-  useConversationMessagesInfiniteQuery,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { getMessageContentUniqueStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
-import { useMarkConversationAsRead } from "@/features/conversation/hooks/use-mark-conversation-as-read"
+import { useIsLatestMessageByCurrentUser } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-message-is-latest-sent-by-current-user"
+import { useConversationMessagesInfiniteQueryAllMessageIds } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { window } from "@/theme/layout"
 import { $globalStyles } from "@/theme/styles"
-import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
-import { convertNanosecondsToMilliseconds } from "@/utils/date"
-import { isTempConversation } from "../utils/is-temp-conversation"
+import { GenericError } from "@/utils/error"
+import { isTempConversation } from "../utils/temp-conversation"
 import { ConversationMessageHighlighted } from "./conversation-message/conversation-message-highlighted"
-import { IConversationMessage } from "./conversation-message/conversation-message.types"
 import { useMessageHasReactions } from "./conversation-message/hooks/use-message-has-reactions"
-import { getConversationNextMessage } from "./conversation-message/utils/get-conversation-next-message"
-import { getConversationPreviousMessage } from "./conversation-message/utils/get-conversation-previous-message"
 import {
   useConversationStore,
   useCurrentXmtpConversationIdSafe,
@@ -47,25 +41,27 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const conversationStore = useConversationStore()
 
   const {
-    data,
+    data: messageIds = [],
     isRefetching: isRefetchingMessages,
     refetch: refetchMessages,
     fetchNextPage,
     hasNextPage,
-  } = useConversationMessagesInfiniteQuery({
+  } = useConversationMessagesInfiniteQueryAllMessageIds({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "Conversation Messages",
   })
 
-  const { messagesById, messagesIds, allMessagesReversed } = useMemo(() => {
-    const mergedMessagesData = mergeInfiniteQueryPages(data)
-    return {
-      messagesById: mergedMessagesData.byId,
-      messagesIds: mergedMessagesData.ids,
-      allMessagesReversed: Object.values(mergedMessagesData.byId).reverse(),
+  const messageIdsReversed = useMemo(() => {
+    return [...messageIds].reverse()
+  }, [messageIds])
+
+  useEffect(() => {
+    // When unmounted, refetch messages to make sure the tmp messages are replaced
+    return () => {
+      refetchMessages().catch(captureError)
     }
-  }, [data])
+  }, [refetchMessages])
 
   // Refetch messages when we focus again
   useBetterFocusEffect(
@@ -77,9 +73,14 @@ export const ConversationMessages = memo(function ConversationMessages() {
     }, [refetchMessages, xmtpConversationId]),
   )
 
-  const { markAsReadAsync } = useMarkConversationAsRead({
+  const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
     xmtpConversationId,
+    caller: "Conversation Messages",
   })
+
+  const latestMessageId = useMemo(() => {
+    return messageIds[messageIds.length - 1]
+  }, [messageIds])
 
   // Safer to just mark as read every time messages change
   useEffect(() => {
@@ -87,7 +88,40 @@ export const ConversationMessages = memo(function ConversationMessages() {
       return
     }
     markAsReadAsync().catch(captureError)
-  }, [messagesIds, markAsReadAsync, xmtpConversationId])
+  }, [latestMessageId, markAsReadAsync, xmtpConversationId])
+
+  // Scroll to message when we select one in the store
+  useEffect(() => {
+    const unsub = conversationStore.subscribe(
+      (state) => state.scrollToXmtpMessageId,
+      (scrollToXmtpMessageId) => {
+        if (!scrollToXmtpMessageId) {
+          return
+        }
+
+        const index = messageIdsReversed.findIndex(
+          (messageId) => messageId === scrollToXmtpMessageId,
+        )
+        if (index === -1) {
+          return
+        }
+
+        scrollRef.current?.scrollToIndex({
+          index,
+          animated: true,
+          viewOffset: 100, // Random value just so that the message is not directly at the bottom
+        })
+
+        conversationStore.setState({
+          scrollToXmtpMessageId: undefined,
+        })
+      },
+    )
+
+    return () => {
+      unsub()
+    }
+  }, [conversationStore, messageIdsReversed, scrollRef])
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -114,55 +148,29 @@ export const ConversationMessages = memo(function ConversationMessages() {
     [fetchNextPage, hasNextPage, isRefetchingMessages],
   )
 
-  // Scroll to message when we select one in the store
-  useEffect(() => {
-    const unsub = conversationStore.subscribe(
-      (state) => state.scrollToXmtpMessageId,
-      (scrollToXmtpMessageId) => {
-        if (!scrollToXmtpMessageId) {
-          return
-        }
-
-        const index = allMessagesReversed.findIndex(
-          (message) => message.xmtpId === scrollToXmtpMessageId,
-        )
-        if (index === -1) {
-          return
-        }
-
-        scrollRef.current?.scrollToIndex({
-          index,
-          animated: true,
-          viewOffset: 100, // Random value just so that the message is not directly at the bottom
-        })
-
-        conversationStore.setState({
-          scrollToXmtpMessageId: undefined,
-        })
-      },
-    )
-
-    return () => {
-      unsub()
-    }
-  }, [conversationStore, allMessagesReversed, scrollRef])
-
   const renderItem = useCallback(
-    ({ item, index }: { item: IConversationMessage; index: number }) => {
-      const previousMessage = getConversationPreviousMessage({
-        messageId: item.xmtpId,
-        xmtpConversationId,
-      })
-      const nextMessage = getConversationNextMessage({
-        messageId: item.xmtpId,
-        xmtpConversationId,
-      })
+    ({ item, index }: { item: IXmtpMessageId; index: number }) => {
+      // const previousMessage = getConversationPreviousMessage({
+      //   messageId: item.xmtpId,
+      //   xmtpConversationId,
+      // })
+
+      // const nextMessage = getConversationNextMessage({
+      //   messageId: item.xmtpId,
+      //   xmtpConversationId,
+      // })
+
+      const previousXmtpMessageId = messageIdsReversed[index + 1]
+      const nextXmtpMessageId = messageIdsReversed[index - 1]
 
       return (
         <ConversationMessagesListItem
-          message={item}
-          previousMessage={previousMessage}
-          nextMessage={nextMessage}
+          // message={item}
+          xmtpMessageId={item}
+          previousXmtpMessageId={previousXmtpMessageId}
+          nextXmtpMessageId={nextXmtpMessageId}
+          // previousMessage={previousMessage}
+          // nextMessage={nextMessage}
           // animateEntering={
           //   index === 0 &&
           //   // Need this because otherwise because our optimistic updates, we first create a dummy message with a random id
@@ -174,19 +182,19 @@ export const ConversationMessages = memo(function ConversationMessages() {
         />
       )
     },
-    [xmtpConversationId],
+    [messageIdsReversed],
   )
 
   return (
     <LegendList
-      data={allMessagesReversed}
+      data={messageIdsReversed}
       renderItem={renderItem}
-      estimatedItemSize={40}
+      estimatedItemSize={60}
       recycleItems={true}
       maintainScrollAtEnd
       alignItemsAtEnd
       maintainVisibleContentPosition
-      initialScrollIndex={allMessagesReversed.length - 1}
+      initialScrollIndex={messageIdsReversed.length - 1}
       // getEstimatedItemSize={} // Maybe try this to fix overlapping attachments messages
       keyExtractor={keyExtractor}
       waitForInitialLayout
@@ -195,7 +203,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
       style={$globalStyles.flex1}
       onScroll={handleScroll}
-      scrollEventThrottle={200} // Adjust as needed for performance
+      scrollEventThrottle={200} // We don't need to throttle fast because we only use to know if we need to load more messages
       ListEmptyComponent={ListEmptyComponent}
       ListFooterComponent={ConsentPopup}
     />
@@ -204,42 +212,49 @@ export const ConversationMessages = memo(function ConversationMessages() {
 
 const ConversationMessagesListItem = memo(
   function ConversationMessagesListItem(props: {
-    message: IConversationMessage
-    previousMessage: IConversationMessage | undefined
-    nextMessage: IConversationMessage | undefined
+    xmtpMessageId: IXmtpMessageId
+    previousXmtpMessageId: IXmtpMessageId | undefined
+    nextXmtpMessageId: IXmtpMessageId | undefined
+    // message: IConversationMessage
+    // previousMessage: IConversationMessage | undefined
+    // nextMessage: IConversationMessage | undefined
     // animateEntering: boolean
   }) {
     const {
-      message,
-      previousMessage,
-      nextMessage,
+      xmtpMessageId,
+      previousXmtpMessageId,
+      nextXmtpMessageId,
+      // message,
+      // previousMessage,
+      // nextMessage,
       // animateEntering
     } = props
 
-    const { theme } = useAppTheme()
+    const currentSender = useSafeCurrentSender()
 
-    const composerStore = useConversationComposerStore()
-
-    const handleReply = useCallback(() => {
-      composerStore.getState().setReplyToMessageId(message.xmtpId)
-    }, [composerStore, message.xmtpId])
+    const { data: message } = useConversationMessageQuery({
+      xmtpMessageId,
+      clientInboxId: currentSender.inboxId,
+    })
 
     const messageHasReactions = useMessageHasReactions({
-      xmtpMessageId: message.xmtpId,
+      xmtpMessageId,
     })
+
+    const isLatestMessageByCurrentUser = useIsLatestMessageByCurrentUser(xmtpMessageId)
 
     const messageComponent = useMemo(
       () => (
         <ConversationMessageHighlighted>
-          <ConversationMessage message={message} />
+          <ConversationMessage />
         </ConversationMessageHighlighted>
       ),
-      [message],
+      [],
     )
 
     const statusComponent = useMemo(
-      () => <ConversationMessageStatus messageId={message.xmtpId} />,
-      [message.xmtpId],
+      () => (isLatestMessageByCurrentUser ? <ConversationMessageStatus /> : null),
+      [isLatestMessageByCurrentUser],
     )
 
     const reactionsComponent = useMemo(
@@ -247,11 +262,26 @@ const ConversationMessagesListItem = memo(
       [messageHasReactions],
     )
 
+    const { data: previousMessage } = useConversationMessageQuery({
+      xmtpMessageId: previousXmtpMessageId,
+      clientInboxId: currentSender.inboxId,
+    })
+
+    const { data: nextMessage } = useConversationMessageQuery({
+      xmtpMessageId: nextXmtpMessageId,
+      clientInboxId: currentSender.inboxId,
+    })
+
+    if (!message) {
+      captureError(new GenericError({ error: "Message not found, this shouldn't happen" }))
+      return null
+    }
+
     return (
       <ConversationMessageContextStoreProvider
         message={message}
-        previousMessage={previousMessage}
-        nextMessage={nextMessage}
+        previousMessage={previousMessage ?? undefined}
+        nextMessage={nextMessage ?? undefined}
       >
         {/* <ConditionalWrapper
           condition={animateEntering}
@@ -273,7 +303,7 @@ const ConversationMessagesListItem = memo(
           )}
         > */}
         <ConversationMessageTimestamp />
-        <ConversationMessageRepliable onReply={handleReply}>
+        <ConversationMessageRepliable>
           <ConversationMessageLayout
             message={messageComponent}
             reactions={reactionsComponent}
@@ -284,9 +314,12 @@ const ConversationMessagesListItem = memo(
       </ConversationMessageContextStoreProvider>
     )
   },
-  (prevProps, nextProps) => {
-    return prevProps.message.xmtpId === nextProps.message.xmtpId
-  },
+  // (prevProps, nextProps) => {
+  //   return prevProps.xmtpMessageId === nextProps.xmtpMessageId
+  //   // return nextProps.message.xmtpId === prevProps.message.xmtpId
+  //   // Make sure to not re-render when the message is the same
+  //   // return keyExtractor(prevProps.message) === keyExtractor(nextProps.message)
+  // },
 )
 
 const ListEmptyComponent = memo(function ListEmptyComponent() {
@@ -341,18 +374,19 @@ const GroupConversationEmpty = memo(() => {
   return null
 })
 
-const keyExtractor = (message: IConversationMessage) => {
-  // For some reason, when we pass [] to data of LegendList it still calls this function with undefined?!
-  if (!message) {
-    return ""
-  }
+const keyExtractor = (messageId: IXmtpMessageId) => {
+  return messageId
 
-  const messageContentStr = getMessageContentUniqueStringValue({
-    messageContent: message.content,
-  })
-  const messageSentMs = convertNanosecondsToMilliseconds(message.sentNs)
-  // We assume that the max time a message can take to be sent with XMTP is 2 seconds.
-  const roundedMs = Math.round(messageSentMs / 2000) * 2000
-  // Doing this so that when we replace the optimistic message with the real message, the key doesn't change
-  return `${messageContentStr}-${message.senderInboxId}-${roundedMs}`
+  // // For some reason, when we pass [] to data of LegendList it still calls this function with undefined?!
+  // if (!message) {
+  //   return ""
+  // }
+  // const messageContentStr = getMessageContentUniqueStringValue({
+  //   messageContent: message.content,
+  // })
+  // const messageSentMs = convertNanosecondsToMilliseconds(message.sentNs)
+  // // We assume that the max time a message can take to be sent with XMTP is 1 second.
+  // const roundedMs = Math.round(messageSentMs / 1000) * 1000
+  // // Doing this so that when we replace the optimistic message with the real message, the key doesn't change
+  // return `${messageContentStr}-${message.senderInboxId}-${roundedMs}`
 }

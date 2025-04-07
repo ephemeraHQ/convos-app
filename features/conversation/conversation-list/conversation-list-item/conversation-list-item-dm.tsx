@@ -41,6 +41,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   const { data: dm } = useDmQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
+    caller: "ConversationListItemDm",
   })
 
   const { displayName, avatarUrl } = usePreferredDisplayInfo({

@@ -5,6 +5,7 @@ import { ConversationMessageStaticAttachment } from "@/features/conversation/con
 import { ConversationMessageGroupUpdate } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-group-update"
 import { MessageReply } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reply"
 import { MessageSimpleText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-simple-text"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import {
   isGroupUpdatedMessage,
   isMultiRemoteAttachmentMessage,
@@ -15,12 +16,9 @@ import {
   isStaticAttachmentMessage,
   isTextMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { IConversationMessage } from "./conversation-message.types"
 
-export const ConversationMessage = memo(function ConversationMessage(props: {
-  message: IConversationMessage
-}) {
-  const { message } = props
+export const ConversationMessage = memo(function ConversationMessage() {
+  const message = useConversationMessageContextSelector((state) => state.message)
 
   if (isTextMessage(message)) {
     return <MessageSimpleText message={message} />

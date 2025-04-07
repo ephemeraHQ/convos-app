@@ -14,15 +14,20 @@ import {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { useConversationPreviousMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/get-conversation-previous-message"
+import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
+import { messageShouldShowDateChange } from "@/features/conversation/utils/message-should-show-date-change"
 import { useAppTheme } from "@/theme/use-app-theme"
 import {
-  useConversationMessageContextStore,
-  useConversationMessageContextStoreContext,
+  useConversationMessageContextSelector,
+  useConversationMessageStore,
 } from "./conversation-message.store-context"
 
 // Determines if we should show only time (for messages less than 24h old)
-function shouldShowOnlyTime(timestamp: number): boolean {
-  const messageDate = new Date(timestamp)
+function shouldShowOnlyTime(timestampMs: number): boolean {
+  const messageDate = new Date(timestampMs)
   const now = new Date()
 
   return isWithinInterval(messageDate, {
@@ -33,17 +38,17 @@ function shouldShowOnlyTime(timestamp: number): boolean {
 
 // For messages that can be tapped to show time
 const MessageTimestampVisible = memo(function MessageTimestamp({
-  timestamp,
+  timestampMs,
 }: {
-  timestamp: number
+  timestampMs: number
 }) {
   const { theme } = useAppTheme()
   const showTimeAV = useSharedValue(0)
-  const messageStore = useConversationMessageContextStore()
+  const messageStore = useConversationMessageStore()
 
-  const messageTime = getLocalizedTime(timestamp)
-  const showOnlyTime = shouldShowOnlyTime(timestamp)
-  const messageDate = showOnlyTime ? messageTime : getRelativeDate(timestamp)
+  const messageTime = getLocalizedTime(timestampMs)
+  const showOnlyTime = shouldShowOnlyTime(timestampMs)
+  const messageDate = showOnlyTime ? messageTime : getRelativeDate(timestampMs)
 
   useEffect(() => {
     const unsubscribe = messageStore.subscribe(
@@ -88,18 +93,18 @@ const MessageTimestampVisible = memo(function MessageTimestamp({
 
 // For standalone time that's initially hidden
 const MessageTimestampHidden = memo(function MessageTimestampHidden({
-  timestamp,
+  timestampMs,
 }: {
-  timestamp: number
+  timestampMs: number
 }) {
   const { themed, theme } = useAppTheme()
   const showTimeAV = useSharedValue(0)
-  const messageStore = useConversationMessageContextStore()
+  const messageStore = useConversationMessageStore()
 
-  const messageTime = getLocalizedTime(timestamp)
-  const messageDate = isToday(timestamp)
+  const messageTime = getLocalizedTime(timestampMs)
+  const messageDate = isToday(timestampMs)
     ? messageTime
-    : `${getRelativeDate(timestamp)} ${messageTime}`
+    : `${getRelativeDate(timestampMs)} ${messageTime}`
 
   useEffect(() => {
     const unsubscribe = messageStore.subscribe(
@@ -154,14 +159,39 @@ const MessageTimestampHidden = memo(function MessageTimestampHidden({
 })
 
 export const ConversationMessageTimestamp = memo(function ConversationMessageTimestamp() {
-  const [sentAtMs, showDateChange] = useConversationMessageContextStoreContext((s) => [
-    s.sentAtMs,
-    s.showDateChange,
-  ])
+  const xmtpMessageId = useConversationMessageContextSelector((s) => s.xmtpMessageId)
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
-  if (showDateChange) {
-    return <MessageTimestampVisible timestamp={sentAtMs} />
+  const currentSender = useSafeCurrentSender()
+
+  const { data: previousMessageId } = useConversationPreviousMessageId({
+    messageId: xmtpMessageId,
+    xmtpConversationId: xmtpConversationId,
+  })
+
+  const { data: message } = useConversationMessageQuery({
+    xmtpMessageId: xmtpMessageId,
+    clientInboxId: currentSender.inboxId,
+  })
+
+  const { data: previousMessage } = useConversationMessageQuery({
+    xmtpMessageId: previousMessageId,
+    clientInboxId: currentSender.inboxId,
+  })
+
+  if (!message) {
+    return null
   }
 
-  return <MessageTimestampHidden timestamp={sentAtMs} />
+  if (
+    previousMessage &&
+    messageShouldShowDateChange({
+      message,
+      previousMessage,
+    })
+  ) {
+    return <MessageTimestampVisible timestampMs={message.sentMs} />
+  }
+
+  return <MessageTimestampHidden timestampMs={message.sentMs} />
 })

@@ -9,6 +9,7 @@ import {
   messageContentIsStaticAttachment,
   messageContentIsText,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
 import {
   ensurePreferredDisplayInfo,
   usePreferredDisplayInfo,
@@ -64,19 +65,17 @@ export function getMessageContentUniqueStringValue(args: {
 }
 
 export function getMessageContentStringValue(args: {
-  message: IConversationMessage
-  initiatorDisplayName?: string
+  messageContent: IConversationMessageContent
+  initiatorDisplayName: string
   addedMemberDisplayInfos?: Array<{ displayName?: string }>
   removedMemberDisplayInfos?: Array<{ displayName?: string }>
-}) {
+}): string {
   const {
-    message,
-    initiatorDisplayName = "Someone",
+    messageContent,
+    initiatorDisplayName,
     addedMemberDisplayInfos = [],
     removedMemberDisplayInfos = [],
   } = args
-
-  const messageContent = message.content
 
   // Process based on content type
   if (messageContentIsText(messageContent)) {
@@ -87,7 +86,7 @@ export function getMessageContentStringValue(args: {
     messageContentIsRemoteAttachment(messageContent) ||
     messageContentIsStaticAttachment(messageContent)
   ) {
-    return "Attachment"
+    return `${initiatorDisplayName} sent an attachment`
   }
 
   if (messageContentIsReaction(messageContent)) {
@@ -162,11 +161,14 @@ export function getMessageContentStringValue(args: {
   }
 
   if (messageContentIsMultiRemoteAttachment(messageContent)) {
-    return "Attachment"
+    return `${initiatorDisplayName} sent an attachment`
   }
 
   if (messageContentIsReply(messageContent)) {
-    return "Replied to message"
+    return `${initiatorDisplayName} replied: ${getMessageContentStringValue({
+      messageContent: messageContent.content,
+      initiatorDisplayName,
+    })}`
   }
 
   captureError(
@@ -184,9 +186,11 @@ export async function ensureMessageContentStringValue(message: IConversationMess
     addedMemberDisplayInfos,
     removedMemberDisplayInfos,
   ] = await Promise.all([
-    ensurePreferredDisplayInfo({
-      inboxId: message.senderInboxId,
-    }),
+    messageIsFromCurrentSenderInboxId({ message })
+      ? { displayName: "You" }
+      : ensurePreferredDisplayInfo({
+          inboxId: message.senderInboxId,
+        }),
     isGroupUpdatedMessage(message)
       ? Promise.all(
           message.content.membersAdded.map((m) =>
@@ -208,7 +212,7 @@ export async function ensureMessageContentStringValue(message: IConversationMess
   ])
 
   return getMessageContentStringValue({
-    message,
+    messageContent: message.content,
     initiatorDisplayName,
     addedMemberDisplayInfos,
     removedMemberDisplayInfos,
@@ -251,8 +255,10 @@ export function useMessageContentStringValue(message: IConversationMessage | und
 
     try {
       return getMessageContentStringValue({
-        message,
-        initiatorDisplayName,
+        messageContent: message.content,
+        initiatorDisplayName: messageIsFromCurrentSenderInboxId({ message })
+          ? "You"
+          : initiatorDisplayName,
         addedMemberDisplayInfos,
         removedMemberDisplayInfos,
       })

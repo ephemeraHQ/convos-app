@@ -1,15 +1,14 @@
-import { HStack } from "@design-system/HStack"
+import { AnimatedHStack, HStack } from "@design-system/HStack"
 import { useMemo } from "react"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
+import { useHasNextMessageInSeries } from "@/features/conversation/utils/has-next-message-in-serie"
+import { useSelect } from "@/stores/stores.utils"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { debugBorder } from "@/utils/debug-style"
 
-export const BubbleContainer = ({
-  children,
-  fromMe,
-}: {
-  children: React.ReactNode
-  fromMe: boolean
-}) => {
+export const BubbleContainer = ({ children }: { children: React.ReactNode }) => {
+  const { fromMe } = useConversationMessageContextSelector(useSelect(["fromMe"]))
+
   return (
     <HStack
       // {...debugBorder()}
@@ -24,13 +23,22 @@ export const BubbleContainer = ({
 
 type IBubbleContentContainerProps = {
   children: React.ReactNode
-  fromMe: boolean
-  hasNextMessageInSeries: boolean
 }
 
 export const BubbleContentContainer = (args: IBubbleContentContainerProps) => {
-  const { children, fromMe, hasNextMessageInSeries } = args
+  const { children } = args
   const { theme } = useAppTheme()
+
+  const { fromMe } = useConversationMessageContextSelector(useSelect(["fromMe"]))
+
+  const xmtpMessageId = useConversationMessageContextSelector((state) => state.xmtpMessageId)
+
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+
+  const { data: hasNextMessageInSeries } = useHasNextMessageInSeries({
+    currentMessageId: xmtpMessageId,
+    xmtpConversationId,
+  })
 
   const bubbleStyle = useMemo(() => {
     const baseStyle = {
@@ -52,5 +60,5 @@ export const BubbleContentContainer = (args: IBubbleContentContainerProps) => {
     return baseStyle
   }, [fromMe, hasNextMessageInSeries, theme])
 
-  return <HStack style={bubbleStyle}>{children}</HStack>
+  return <AnimatedHStack style={bubbleStyle}>{children}</AnimatedHStack>
 }

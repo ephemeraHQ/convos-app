@@ -18,12 +18,16 @@ type MarkAsReadContext = {
 
 export function getMarkConversationAsReadMutationOptions(args: {
   xmtpConversationId: IXmtpConversationId
+  caller: string
 }): MutationOptions<void, Error, void, MarkAsReadContext> {
-  const { xmtpConversationId } = args
+  const { xmtpConversationId, caller } = args
 
   const currentSender = getSafeCurrentSender()
 
   return {
+    meta: {
+      caller,
+    },
     mutationKey: ["markConversationAsRead", xmtpConversationId],
     mutationFn: async () => {
       const readUntil = formatDateForApi(new Date())
@@ -64,12 +68,9 @@ export function getMarkConversationAsReadMutationOptions(args: {
   }
 }
 
-export function useMarkConversationAsRead(args: { xmtpConversationId: IXmtpConversationId }) {
-  const { mutateAsync: markAsReadAsync } = useMutation(
-    getMarkConversationAsReadMutationOptions(args),
-  )
-
-  return {
-    markAsReadAsync,
-  }
+export function useMarkConversationAsReadMutation(args: {
+  xmtpConversationId: IXmtpConversationId
+  caller: string
+}) {
+  return useMutation(getMarkConversationAsReadMutationOptions(args))
 }

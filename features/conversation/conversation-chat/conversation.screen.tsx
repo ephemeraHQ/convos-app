@@ -18,7 +18,6 @@ import { ConversationCreateSearchInput } from "@/features/conversation/conversat
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
-import { useAppTheme } from "@/theme/use-app-theme"
 import { ConversationMessages } from "./conversation-messages"
 import {
   ConversationStoreProvider,
@@ -54,8 +53,6 @@ export const ConversationScreen = memo(function ConversationScreen(
 })
 
 const Content = memo(function Content() {
-  const { theme } = useAppTheme()
-
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const isCreatingNewConversation = useConversationStoreContext(

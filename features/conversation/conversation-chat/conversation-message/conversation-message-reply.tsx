@@ -4,6 +4,7 @@ import { Text } from "@design-system/Text"
 import { VStack } from "@design-system/VStack"
 import { memo } from "react"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { AttachmentRemoteImage } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-remote-image"
 import {
   BubbleContainer,
@@ -11,7 +12,8 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-bubble"
 import { ConversationMessageGestures } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures"
 import { MessageText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text"
-import { useConversationMessageContextStoreContext } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import {
   isGroupUpdatedMessage,
   isMultiRemoteAttachmentMessage,
@@ -29,10 +31,7 @@ import {
   messageContentIsStaticAttachment,
   messageContentIsText,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import {
-  useConversationStore,
-  useCurrentXmtpConversationIdSafe,
-} from "@/features/conversation/conversation-chat/conversation.store-context"
+import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useSelect } from "@/stores/stores.utils"
@@ -42,7 +41,6 @@ import {
   IConversationMessageReply,
   IConversationMessageReplyContent,
 } from "./conversation-message.types"
-import { useConversationMessageById } from "./use-conversation-message-by-id"
 
 export const MessageReply = memo(function MessageReply(props: {
   message: IConversationMessageReply
@@ -50,10 +48,6 @@ export const MessageReply = memo(function MessageReply(props: {
   const { message } = props
 
   const { theme } = useAppTheme()
-
-  const { fromMe, hasNextMessageInSeries } = useConversationMessageContextStoreContext(
-    useSelect(["fromMe", "hasNextMessageInSeries"]),
-  )
 
   const replyMessageContent = message.content
 
@@ -69,9 +63,9 @@ export const MessageReply = memo(function MessageReply(props: {
   }
 
   return (
-    <BubbleContainer fromMe={fromMe}>
+    <BubbleContainer>
       <ConversationMessageGestures>
-        <BubbleContentContainer fromMe={fromMe} hasNextMessageInSeries={hasNextMessageInSeries}>
+        <BubbleContentContainer>
           <VStack
             style={{
               rowGap: theme.spacing.xxs,
@@ -87,12 +81,13 @@ export const MessageReply = memo(function MessageReply(props: {
   )
 })
 
+// The content sent with the referenced message
 const MessageReplyContent = memo(function MessageReplyContent(props: {
   replyMessageContent: IConversationMessageReplyContent
 }) {
   const { replyMessageContent } = props
   const { theme } = useAppTheme()
-  const { fromMe } = useConversationMessageContextStoreContext(useSelect(["fromMe"]))
+  const { fromMe } = useConversationMessageContextSelector(useSelect(["fromMe"]))
 
   if (messageContentIsRemoteAttachment(replyMessageContent.content)) {
     return (
@@ -151,6 +146,7 @@ const MessageReplyContent = memo(function MessageReplyContent(props: {
   return <Text inverted={fromMe}>Unknown message content</Text>
 })
 
+// The message that is being replied to
 const MessageReplyReference = memo(function MessageReplyReference(props: {
   referenceMessageId: IXmtpMessageId
 }) {
@@ -158,15 +154,15 @@ const MessageReplyReference = memo(function MessageReplyReference(props: {
 
   const { theme } = useAppTheme()
 
-  const { fromMe } = useConversationMessageContextStoreContext(useSelect(["fromMe"]))
+  const { fromMe } = useConversationMessageContextSelector(useSelect(["fromMe"]))
 
   const conversationStore = useConversationStore()
 
-  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+  const currentSender = useSafeCurrentSender()
 
-  const { message: referencedMessage } = useConversationMessageById({
-    messageId: referenceMessageId,
-    xmtpConversationId,
+  const { data: referencedMessage } = useConversationMessageQuery({
+    xmtpMessageId: referenceMessageId,
+    clientInboxId: currentSender.inboxId,
   })
 
   const { displayName } = usePreferredDisplayInfo({
@@ -224,7 +220,7 @@ const MessageReplyReferenceContent = memo(function ReplyMessageReferenceMessageC
 }) {
   const { replyMessage } = props
   const { theme } = useAppTheme()
-  const fromMe = useConversationMessageContextStoreContext((s) => s.fromMe)
+  const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
 
   const attachmentStyle = {
     height: theme.avatarSize.md,
@@ -246,7 +242,7 @@ const MessageReplyReferenceContent = memo(function ReplyMessageReferenceMessageC
       <AttachmentRemoteImage
         xmtpMessageId={replyMessage.xmtpId}
         remoteMessageContent={content}
-        containerProps={{ style: attachmentStyle }}
+        containerProps={{ style: attachmentStyle, inverted: fromMe }}
       />
     )
   }
@@ -356,7 +352,7 @@ const RenderNestedReplyContent = memo(function RenderNestedReplyContent(props: {
 }) {
   const { content } = props
   const { theme } = useAppTheme()
-  const fromMe = useConversationMessageContextStoreContext((s) => s.fromMe)
+  const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
 
   const nestedContent = content.content
 

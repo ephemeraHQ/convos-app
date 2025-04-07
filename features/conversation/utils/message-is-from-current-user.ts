@@ -1,5 +1,11 @@
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useQuery } from "@tanstack/react-query"
+import {
+  getSafeCurrentSender,
+  useSafeCurrentSender,
+} from "@/features/authentication/multi-inbox.store"
+import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { isSameInboxId } from "@/features/xmtp/xmtp-inbox-id/xmtp-inbox-id.utils"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { logger } from "@/utils/logger/logger"
 import { IConversationMessage } from "../conversation-chat/conversation-message/conversation-message.types"
 
@@ -22,4 +28,18 @@ export function messageIsFromCurrentSenderInboxId({ message }: MessageFromCurren
   }
 
   return isSameInboxId(messageSenderInboxId, currentInboxId)
+}
+
+export function useMessageIsFromCurrentSenderInboxId(args: { xmtpMessageId: IXmtpMessageId }) {
+  const { xmtpMessageId } = args
+
+  const currentSender = useSafeCurrentSender()
+
+  return useQuery({
+    ...getConversationMessageQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpMessageId,
+    }),
+    select: (message) => message && messageIsFromCurrentSenderInboxId({ message }),
+  })
 }

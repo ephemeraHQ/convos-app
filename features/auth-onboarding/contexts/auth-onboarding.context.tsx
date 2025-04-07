@@ -7,7 +7,7 @@ import {
   useLoginWithPasskey as usePrivyLoginWithPasskey,
   useSignupWithPasskey as usePrivySignupWithPasskey,
 } from "@privy-io/expo/passkey"
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react"
+import React, { createContext, useCallback, useContext, useEffect, useMemo } from "react"
 import { RELYING_PARTY } from "@/features/auth-onboarding/auth-onboarding.constants"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
@@ -18,6 +18,7 @@ import { createXmtpSignerFromSwc } from "@/features/wallets/utils/create-xmtp-si
 import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { useWaitUntil } from "@/hooks/use-wait-until"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -45,15 +46,9 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
   const { create: createEmbeddedWallet } = usePrivyEmbeddedEthereumWallet()
   const { loginWithPasskey: privyLoginWithPasskey } = usePrivyLoginWithPasskey()
   const { signupWithPasskey: privySignupWithPasskey } = usePrivySignupWithPasskey()
-  const { user } = usePrivy()
-
-  const clientRef = useRef(smartWalletClient)
+  const { user: privyUser, isReady: isPrivyReady } = usePrivy()
 
   const { logout } = useLogout()
-
-  useEffect(() => {
-    clientRef.current = smartWalletClient
-  }, [smartWalletClient])
 
   useEffect(() => {
     return () => {
@@ -62,19 +57,14 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     }
   }, [])
 
-  async function waitForSmartWalletClient(
-    // 200 attempts * 100ms = 20 seconds
-    maxAttempts = 200,
-  ) {
-    for (let i = 0; i < maxAttempts; i++) {
-      if (clientRef.current) {
-        return clientRef.current
-      }
-      // eslint-disable-next-line custom-plugin/require-promise-error-handling
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
-    throw new Error("Timeout waiting for smart wallet client")
-  }
+  const { waitUntil: waitUntilPrivyIsReady } = useWaitUntil({
+    thing: isPrivyReady,
+  })
+
+  const { waitUntil: waitUntilSmartWalletClientIsReady } = useWaitUntil({
+    thing: smartWalletClient,
+    timeoutMs: 20000, // Yes unfortunately, this can sometimes take a while... Need to investigate our RPC
+  })
 
   const login = useCallback(async () => {
     try {
@@ -82,6 +72,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
       // Step 1: Passkey login
       authLogger.debug(`[Passkey Login] Starting passkey authentication`)
+
+      await waitUntilPrivyIsReady()
 
       const { data: privyUser, error: passkeyLoginError } = await tryCatch(
         privyLoginWithPasskey({
@@ -99,7 +91,9 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
       // Step 2: Wallet
       authLogger.debug(`Waiting for smart wallet to be created`)
-      const { data: swcClient, error: swcError } = await tryCatch(waitForSmartWalletClient())
+      const { data: swcClient, error: swcError } = await tryCatch(
+        waitUntilSmartWalletClientIsReady(),
+      )
 
       if (swcError) {
         throw swcError
@@ -155,7 +149,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [privyLoginWithPasskey, logout])
+  }, [privyLoginWithPasskey, logout, waitUntilPrivyIsReady, waitUntilSmartWalletClientIsReady])
 
   const signup = useCallback(async () => {
     try {
@@ -163,6 +157,9 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
       // Step 1: Passkey signup
       authLogger.debug(`[Passkey Signup] Starting passkey registration`)
+
+      await waitUntilPrivyIsReady()
+
       const { data: user, error: signupError } = await tryCatch(
         privySignupWithPasskey({ relyingParty: RELYING_PARTY }),
       )
@@ -186,7 +183,9 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       }
 
       authLogger.debug(`Waiting for smart wallet to be created`)
-      const { data: swcClient, error: swcError } = await tryCatch(waitForSmartWalletClient())
+      const { data: swcClient, error: swcError } = await tryCatch(
+        waitUntilSmartWalletClientIsReady(),
+      )
 
       if (swcError) {
         throw swcError
@@ -238,9 +237,15 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedWallet, privySignupWithPasskey, logout])
+  }, [
+    createEmbeddedWallet,
+    privySignupWithPasskey,
+    logout,
+    waitUntilPrivyIsReady,
+    waitUntilSmartWalletClientIsReady,
+  ])
 
-  const value = useMemo(() => ({ login, signup, user }), [login, signup, user])
+  const value = useMemo(() => ({ login, signup, user: privyUser }), [login, signup, privyUser])
 
   return <AuthOnboardingContext.Provider value={value}>{children}</AuthOnboardingContext.Provider>
 }
