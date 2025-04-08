@@ -10,7 +10,6 @@ import { TextInput } from "@/design-system/text-input"
 import { useConversationComposerIsEnabled } from "@/features/conversation/conversation-chat/conversation-composer/hooks/use-conversation-composer-is-enabled"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { useConversationComposerStore } from "./conversation-composer.store-context"
-import { logger } from "@/utils/logger/logger"
 
 export const ConversationComposerTextInput = memo(function ConversationComposerTextInput(props: {
   onSubmitEditing: () => Promise<void>
@@ -23,14 +22,11 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const { theme } = useAppTheme()
 
   const store = useConversationComposerStore()
-  const inputValue = store.getState().inputValue
+  const inputDefaultValue = store.getState().inputValue
   const isEnabled = useConversationComposerIsEnabled()
-
-  logger.info(`ConversationComposerTextInput: inputValue=${inputValue}`)
 
   const handleChangeText = useCallback(
     (text: string) => {
-      logger.info(`ConversationComposerTextInput: handleChangeText text=${text}`)
       store.setState((state) => ({
         ...state,
         inputValue: text,
@@ -44,7 +40,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   // Doing this since we are using a uncontrolled component
   useEffect(() => {
     const unsubscribe = store.subscribe((state, prevState) => {
-      logger.info(`ConversationComposerTextInput: store subscription state=${state.inputValue} prevState=${prevState.inputValue}`)
       if (prevState.inputValue && !state.inputValue) {
         inputRef.current?.clear()
       }
@@ -55,12 +50,11 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
 
   // Handle prefill value changes
   useEffect(() => {
-    logger.info(`ConversationComposerTextInput: prefill effect inputValue=${inputValue} initialValueRef=${initialValueRef.current}`)
-    if (inputValue && !initialValueRef.current) {
-      initialValueRef.current = inputValue
-      inputRef.current?.setNativeProps({ text: inputValue })
+    if (inputDefaultValue && !initialValueRef.current) {
+      initialValueRef.current = inputDefaultValue
+      inputRef.current?.setNativeProps({ text: inputDefaultValue })
     }
-  }, [inputValue])
+  }, [inputDefaultValue])
 
   const handleSubmitEditing = useCallback(() => {
     onSubmitEditing()
@@ -96,7 +90,7 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
       onSubmitEditing={handleSubmitEditing}
       onChangeText={handleChangeText}
       multiline
-      defaultValue={inputValue}
+      defaultValue={inputDefaultValue}
       placeholder="Message"
       autoCorrect={true}
       placeholderTextColor={theme.colors.text.tertiary}
