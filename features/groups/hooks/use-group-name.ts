@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
 import { getPreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
@@ -31,19 +32,37 @@ export const useGroupName = (args: { xmtpConversationId: IXmtpConversationId }) 
       xmtpConversationId,
       caller: "useGroupName",
     }),
+    select: (data) => ({
+      name: data?.name,
+      memberIds: data?.members?.ids ?? [],
+    }),
   })
 
-  const preferredDisplayData = usePreferredDisplayInfoBatch({
-    xmtpInboxIds: group?.members?.ids ?? [],
+  const memberProfiles = usePreferredDisplayInfoBatch({
+    xmtpInboxIds: group?.memberIds ?? [],
   })
 
-  const memberPreferedDisplayNames = preferredDisplayData?.map(
-    (profile) => profile?.displayName || "",
-  )
+  // Create a fallback name based on member profiles
+  // This will only recalculate when memberProfiles actually changes
+  const fallbackGroupName = useMemo(() => {
+    if (!memberProfiles?.length) {
+      return ""
+    }
+
+    const displayNames = memberProfiles.map((profile) => profile?.displayName || "")
+    return getGroupNameForMemberNames({ names: displayNames })
+  }, [memberProfiles])
+
+  const isLoading = useMemo(() => {
+    return isLoadingGroup || memberProfiles.some((profile) => profile.isLoading)
+  }, [isLoadingGroup, memberProfiles])
+
+  // Simple selection between group name and fallback
+  const groupName = group?.name || fallbackGroupName
 
   return {
-    groupName: group?.name || getGroupNameForMemberNames({ names: memberPreferedDisplayNames }),
-    isLoading: isLoadingGroup || preferredDisplayData.some((profile) => profile.isLoading),
+    groupName,
+    isLoading,
   }
 }
 

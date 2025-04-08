@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { deviceSchema, IDevice } from "@/features/devices/devices.types"
 import { captureError } from "@/utils/capture-error"
-import { handleApiError } from "@/utils/convos-api/convos-api-error"
+import { ApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { ValidationError } from "@/utils/error"
 
@@ -21,7 +21,7 @@ export async function fetchDevice(args: { userId: string; deviceId: string }) {
 
     return data
   } catch (error) {
-    handleApiError(error)
+    throw new ApiError({ error })
   }
 }
 
@@ -41,7 +41,7 @@ export async function fetchUserDevices(args: { userId: string }) {
 
     return data
   } catch (error) {
-    handleApiError(error)
+    throw new ApiError({ error })
   }
 }
 
@@ -74,7 +74,7 @@ export async function createDevice(args: { userId: string; device: IDeviceCreate
 
     return data
   } catch (error) {
-    handleApiError(error)
+    throw new ApiError({ error })
   }
 }
 
@@ -110,6 +110,6 @@ export async function updateDevice(args: {
 
     return data
   } catch (error) {
-    handleApiError(error)
+    throw new ApiError({ error })
   }
 }

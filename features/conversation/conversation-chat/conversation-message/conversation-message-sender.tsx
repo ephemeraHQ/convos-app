@@ -14,15 +14,11 @@ export function ConversationMessageSender(args: IConversationMessageSenderProps)
 
   const { theme } = useAppTheme()
 
-  const { displayName, isLoading } = usePreferredDisplayInfo({
+  const { displayName } = usePreferredDisplayInfo({
     inboxId,
   })
 
   const router = useRouter()
-
-  if (isLoading) {
-    return null
-  }
 
   return (
     <Pressable
@@ -34,7 +30,9 @@ export function ConversationMessageSender(args: IConversationMessageSenderProps)
       }}
     >
       <Text preset="smaller" color="secondary">
-        {displayName}
+        {displayName ??
+          // Add empty space so that the component height doesn't
+          " "}
       </Text>
     </Pressable>
   )

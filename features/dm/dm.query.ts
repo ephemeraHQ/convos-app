@@ -12,18 +12,18 @@ type IDmQueryArgs = {
   xmtpConversationId: IXmtpConversationId
 }
 
-export function getDmQueryOptions(args: IDmQueryArgs) {
-  const { clientInboxId, xmtpConversationId } = args
+export function getDmQueryOptions(args: IDmQueryArgs & { caller?: string }) {
+  const { clientInboxId, xmtpConversationId, caller = "getDmQueryOptions" } = args
   return queryOptions({
     ...(getConversationQueryOptions({
       clientInboxId,
       xmtpConversationId,
-      caller: "getDmQueryOptions",
+      caller,
     }) as UseQueryOptions<IDm | null, Error, IDm | null, string[]>),
   })
 }
 
-export function useDmQuery(args: IDmQueryArgs) {
+export function useDmQuery(args: IDmQueryArgs & { caller: string }) {
   return useQuery({
     ...getDmQueryOptions(args),
   })

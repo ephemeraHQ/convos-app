@@ -50,8 +50,8 @@ export function DebugProvider(props: { children: React.ReactNode }) {
       tapCountRef.current = 0
     }, 200)
 
-    // Show debug menu after 5 taps
-    if (tapCountRef.current >= 5) {
+    // Show debug menu after 6 taps
+    if (tapCountRef.current >= 6) {
       showDebugMenu()
       tapCountRef.current = 0
     }

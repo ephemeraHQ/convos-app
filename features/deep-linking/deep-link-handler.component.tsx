@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react"
 import { Linking } from "react-native"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { useAppState } from "@/stores/use-app-state-store"
+import { useAppStateStore } from "@/stores/use-app-state-store"
 import { logger } from "@/utils/logger/logger"
 import { useConversationDeepLinkHandler } from "./conversation-navigator"
 import { parseURL } from "./link-parser"
@@ -11,7 +11,7 @@ import { parseURL } from "./link-parser"
  * This should be included at the app root to handle incoming links
  */
 export function DeepLinkHandler() {
-  const { currentState } = useAppState.getState()
+  const { currentState } = useAppStateStore.getState()
   const { handleConversationDeepLink } = useConversationDeepLinkHandler()
 
   /**

@@ -76,3 +76,48 @@ export function isEmpty(obj: unknown): boolean {
 
   return false
 }
+
+/**
+ * Deep merge two objects - inspired by TehShrike/deepmerge
+ */
+export function mergeObjDeep<T>(target: T, source: unknown): T {
+  // Return source when target is not an object
+  if (!target || typeof target !== "object") {
+    return source as T
+  }
+
+  // Return target if source is not an object
+  if (!source || typeof source !== "object") {
+    return target
+  }
+
+  const output = { ...target } as Record<string, unknown>
+  const sourceKeys = Object.keys(source as object)
+
+  for (const key of sourceKeys) {
+    const targetValue = (target as Record<string, unknown>)[key]
+    const sourceValue = (source as Record<string, unknown>)[key]
+
+    // Handle arrays specially
+    if (Array.isArray(targetValue) && Array.isArray(sourceValue)) {
+      output[key] = [...targetValue, ...sourceValue]
+      continue
+    }
+
+    // Recursive merge for objects that aren't arrays or null
+    if (
+      targetValue &&
+      sourceValue &&
+      typeof targetValue === "object" &&
+      typeof sourceValue === "object" &&
+      !Array.isArray(targetValue) &&
+      !Array.isArray(sourceValue)
+    ) {
+      output[key] = mergeObjDeep(targetValue, sourceValue)
+    } else if (sourceValue !== undefined) {
+      output[key] = sourceValue
+    }
+  }
+
+  return output as T
+}

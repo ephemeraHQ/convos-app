@@ -48,6 +48,10 @@ export async function searchExistingGroupsByGroupMembers(args: {
               caller: "SearchExistingGroupsByGroupMembers",
             })
 
+            if (!profile) {
+              return false
+            }
+
             if (matchSorter([profile.name, profile.username], searchQuery).length > 0) {
               return true
             }

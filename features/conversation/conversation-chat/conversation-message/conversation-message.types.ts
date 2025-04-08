@@ -21,6 +21,7 @@ export type IConversationMessageBase = {
   status: IConversationMessageStatus
   senderInboxId: IXmtpInboxId
   sentNs: number
+  sentMs: number
   xmtpId: IXmtpMessageId
   xmtpTopic: IXmtpConversationTopic
   xmtpConversationId: IXmtpConversationId

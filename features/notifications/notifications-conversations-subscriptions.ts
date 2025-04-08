@@ -4,7 +4,7 @@ import {
   getAllowedConsentConversationsQueryObserver,
 } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
+import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { userHasGrantedNotificationsPermissions } from "@/features/notifications/notifications.service"
 import { getXmtpConversationHmacKeys } from "@/features/xmtp/xmtp-hmac-keys/xmtp-hmac-keys"
@@ -19,25 +19,40 @@ import {
   unsubscribeFromNotificationTopics,
 } from "./notifications.api"
 
-export function setupConversationsNotificationsSubscriptions() {
-  // Set up subscription for notifications permissions changes
+// Global map to track observers by inbox ID
+const observersMap = new Map<
+  IXmtpInboxId,
+  ReturnType<typeof getAllowedConsentConversationsQueryObserver>
+>()
 
-  createQueryObserverWithPreviousData({
+// Global variable to track previous senders
+let previousSendersInboxIds: IXmtpInboxId[] = []
+
+// Store unsubscribe functions
+let notificationsPermissionsUnsubscribe: (() => void) | null = null
+let inboxStoreUnsubscribe: (() => void) | null = null
+
+export function setupConversationsNotificationsSubscriptions() {
+  // Clean up existing subscriptions first
+  cleanupSubscriptions()
+
+  // Set up subscription for notifications permissions changes
+  const permissionsObserver = createQueryObserverWithPreviousData({
     queryOptions: getNotificationsPermissionsQueryConfig(),
     observerCallbackFn: ({ data, previousData }) => {
       if (data !== previousData) {
-        // notificationsLogger.debug("Notification permissions query observer triggered")
         updateConversationSubscriptions()
       }
     },
   })
 
+  notificationsPermissionsUnsubscribe = permissionsObserver.unsubscribe
+
   // Set up subscription for multi-inbox store changes
-  useMultiInboxStore.subscribe(
+  inboxStoreUnsubscribe = useMultiInboxStore.subscribe(
     (state) => state.senders,
     (senders, previousSenders) => {
       if (senders.length !== previousSenders.length) {
-        // notificationsLogger.debug("Multi-inbox senders store subscription triggered")
         updateConversationSubscriptions()
       }
     },
@@ -47,14 +62,28 @@ export function setupConversationsNotificationsSubscriptions() {
   )
 }
 
-// Global map to track observers by inbox ID
-const observersMap = new Map<
-  IXmtpInboxId,
-  ReturnType<typeof getAllowedConsentConversationsQueryObserver>
->()
+function cleanupSubscriptions() {
+  // Unsubscribe from notifications permissions observer
+  if (notificationsPermissionsUnsubscribe) {
+    notificationsPermissionsUnsubscribe()
+    notificationsPermissionsUnsubscribe = null
+  }
 
-// Global variable to track previous senders
-let previousSendersInboxIds: IXmtpInboxId[] = []
+  // Unsubscribe from multi-inbox store
+  if (inboxStoreUnsubscribe) {
+    inboxStoreUnsubscribe()
+    inboxStoreUnsubscribe = null
+  }
+
+  // Clean up all conversation observers
+  observersMap.forEach((observer) => {
+    observer.destroy()
+  })
+  observersMap.clear()
+
+  // Reset previous senders
+  previousSendersInboxIds = []
+}
 
 async function updateConversationSubscriptions() {
   notificationsLogger.debug("Updating conversation subscriptions")
@@ -107,6 +136,13 @@ async function updateConversationSubscriptions() {
  * Sets up a query observer for a each client inbox ID
  */
 function setupObserverForInbox(clientInboxId: IXmtpInboxId) {
+  // Cleanup any existing observer for this inbox
+  const existingObserver = observersMap.get(clientInboxId)
+  if (existingObserver) {
+    existingObserver.destroy()
+    observersMap.delete(clientInboxId)
+  }
+
   // Store conversation IDs for comparison
   let previousConversationIds: IXmtpConversationId[] = []
 
@@ -119,7 +155,7 @@ function setupObserverForInbox(clientInboxId: IXmtpInboxId) {
       return
     }
 
-    const validConversationsIds = query.data.filter((id) => !isTempConversation(id))
+    const validConversationsIds = query.data.filter((id) => !isTmpConversation(id))
 
     // Find conversations to unsubscribe from
     const conversationsToUnsubscribe = previousConversationIds.filter(
@@ -150,10 +186,6 @@ function setupObserverForInbox(clientInboxId: IXmtpInboxId) {
     // Update previous conversation IDs for next comparison
     previousConversationIds = validConversationsIds
   })
-
-  notificationsLogger.debug(
-    `Successfully setup allowed consent conversations observer for inbox: ${clientInboxId}`,
-  )
 
   // Store the observer in our map for tracking
   observersMap.set(clientInboxId, observer)

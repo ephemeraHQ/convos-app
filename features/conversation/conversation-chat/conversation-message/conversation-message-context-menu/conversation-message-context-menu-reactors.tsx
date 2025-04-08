@@ -42,6 +42,10 @@ export const MessageContextMenuReactors: FC<MessageContextMenuReactorsProps> = (
     return Object.entries(reactionMap)
   }, [reactors])
 
+  if (listData.length === 0) {
+    return null
+  }
+
   return (
     <AnimatedCenter
       vertical

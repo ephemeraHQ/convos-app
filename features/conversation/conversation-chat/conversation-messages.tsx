@@ -1,39 +1,42 @@
-import { LegendList } from "@legendapp/list"
-import React, { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { FlashList } from "@shopify/flash-list"
+import React, { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
 import { FlatList, NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
-import { useAnimatedRef } from "react-native-reanimated"
+import { FadeInDown, useAnimatedRef } from "react-native-reanimated"
+import { ConditionalWrapper } from "@/components/conditional-wrapper"
+import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useConversationComposerStore } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
 import { ConversationConsentPopupDm } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-dm"
 import { ConversationConsentPopupGroup } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-group"
 import { ConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message"
+import { ConversationMessageHighlighted } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-highlighted"
 import { ConversationMessageLayout } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-layout"
 import { ConversationMessageReactions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions/conversation-message-reactions"
 import { ConversationMessageRepliable } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-repliable"
 import { ConversationMessageStatus } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-status/conversation-message-status"
 import { ConversationMessageTimestamp } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-timestamp"
-import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import {
-  mergeInfiniteQueryPages,
-  useConversationMessagesInfiniteQuery,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { getMessageContentUniqueStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
-import { useMarkConversationAsRead } from "@/features/conversation/hooks/use-mark-conversation-as-read"
+  getConversationMessageQueryData,
+  useConversationMessageQuery,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useMessageHasReactions } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-message-has-reactions"
+import {
+  isAttachmentsMessage,
+  isGroupUpdatedMessage,
+} from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { useConversationMessagesInfiniteQueryAllMessageIds } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
+import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { window } from "@/theme/layout"
-import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
-import { convertNanosecondsToMilliseconds } from "@/utils/date"
-import { isTempConversation } from "../utils/is-temp-conversation"
-import { ConversationMessageHighlighted } from "./conversation-message/conversation-message-highlighted"
-import { IConversationMessage } from "./conversation-message/conversation-message.types"
-import { useMessageHasReactions } from "./conversation-message/hooks/use-message-has-reactions"
-import { getConversationNextMessage } from "./conversation-message/utils/get-conversation-next-message"
-import { getConversationPreviousMessage } from "./conversation-message/utils/get-conversation-previous-message"
+import { GenericError } from "@/utils/error"
+import { logger } from "@/utils/logger/logger"
 import {
   useConversationStore,
   useCurrentXmtpConversationIdSafe,
@@ -45,74 +48,46 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const refreshingRef = useRef(false)
   const scrollRef = useAnimatedRef<FlatList>()
   const conversationStore = useConversationStore()
+  const hasPulledToRefreshRef = useRef(false)
 
   const {
-    data,
+    data: messageIds = [],
     isRefetching: isRefetchingMessages,
     refetch: refetchMessages,
     fetchNextPage,
     hasNextPage,
-  } = useConversationMessagesInfiniteQuery({
+  } = useConversationMessagesInfiniteQueryAllMessageIds({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "Conversation Messages",
   })
 
-  const { messagesById, messagesIds, allMessagesReversed } = useMemo(() => {
-    const mergedMessagesData = mergeInfiniteQueryPages(data)
-    return {
-      messagesById: mergedMessagesData.byId,
-      messagesIds: mergedMessagesData.ids,
-      allMessagesReversed: Object.values(mergedMessagesData.byId).reverse(),
-    }
-  }, [data])
+  const messageIdsReversed = useMemo(() => {
+    return [...messageIds].reverse()
+  }, [messageIds])
 
   // Refetch messages when we focus again
   useBetterFocusEffect(
     useCallback(() => {
-      if (isTempConversation(xmtpConversationId)) {
+      if (isTmpConversation(xmtpConversationId)) {
         return
       }
       refetchMessages().catch(captureError)
     }, [refetchMessages, xmtpConversationId]),
   )
 
-  const { markAsReadAsync } = useMarkConversationAsRead({
+  const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
     xmtpConversationId,
+    caller: "Conversation Messages",
   })
 
   // Safer to just mark as read every time messages change
   useEffect(() => {
-    if (isTempConversation(xmtpConversationId)) {
+    if (isTmpConversation(xmtpConversationId)) {
       return
     }
     markAsReadAsync().catch(captureError)
-  }, [messagesIds, markAsReadAsync, xmtpConversationId])
-
-  const handleScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      // If we're already fetching, don't trigger again
-      if (refreshingRef.current || isRefetchingMessages) {
-        return
-      }
-
-      const contentOffset = e.nativeEvent.contentOffset.y
-
-      // Calculate distance from top
-      const distanceFromTop = contentOffset
-
-      // If we're within threshold from the top, load more messages
-      if (distanceFromTop < window.height * 0.5 && hasNextPage) {
-        refreshingRef.current = true
-        fetchNextPage()
-          .catch(captureError)
-          .finally(() => {
-            refreshingRef.current = false
-          })
-      }
-    },
-    [fetchNextPage, hasNextPage, isRefetchingMessages],
-  )
+  }, [markAsReadAsync, xmtpConversationId])
 
   // Scroll to message when we select one in the store
   useEffect(() => {
@@ -123,8 +98,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
           return
         }
 
-        const index = allMessagesReversed.findIndex(
-          (message) => message.xmtpId === scrollToXmtpMessageId,
+        const index = messageIdsReversed.findIndex(
+          (messageId) => messageId === scrollToXmtpMessageId,
         )
         if (index === -1) {
           return
@@ -145,147 +120,278 @@ export const ConversationMessages = memo(function ConversationMessages() {
     return () => {
       unsub()
     }
-  }, [conversationStore, allMessagesReversed, scrollRef])
+  }, [conversationStore, messageIdsReversed, scrollRef])
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      // If we're already fetching, don't trigger again
+      if (refreshingRef.current || isRefetchingMessages) {
+        return
+      }
+
+      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
+      const contentOffsetY = contentOffset.y
+
+      // Since the list is inverted, when scrolling to the top (older messages),
+      // contentOffset.y gets closer to 0 or becomes positive
+      if (contentOffsetY < window.height * 0.2 && hasNextPage) {
+        // Load more older messages when reaching top area
+        refreshingRef.current = true
+        logger.debug("Fetching more messages (older)...")
+        fetchNextPage()
+          .then(() => {
+            logger.debug("Done fetching more messages")
+          })
+          .catch(captureError)
+          .finally(() => {
+            refreshingRef.current = false
+          })
+      }
+
+      // Reset the flag when user scrolls back up past the threshold
+      if (contentOffsetY >= 0) {
+        hasPulledToRefreshRef.current = false
+      }
+
+      // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
+      // Determine if we've scrolled past the bottom of the content
+      const isPastBottomThreshold =
+        contentOffsetY < 0 &&
+        Math.abs(contentOffsetY) > contentSize.height - layoutMeasurement.height + 50 // Added small buffer
+
+      if (isPastBottomThreshold && !hasPulledToRefreshRef.current) {
+        // Only refetch if we haven't already refreshed during this pull-down gesture
+        hasPulledToRefreshRef.current = true
+        refreshingRef.current = true
+        logger.debug("Refetching latest messages...")
+        refetchMessages()
+          .then(() => {
+            logger.debug("Done refetching latest messages")
+          })
+          .catch(captureError)
+          .finally(() => {
+            refreshingRef.current = false
+          })
+      }
+    },
+    [fetchNextPage, hasNextPage, isRefetchingMessages, refetchMessages],
+  )
+
+  const latestXmtpMessageIdFromCurrentSender = useMemo(() => {
+    return messageIds.find((xmtpMessageId) => {
+      const message = getConversationMessageQueryData({
+        xmtpMessageId,
+        clientInboxId: currentSender.inboxId,
+      })
+      return message?.senderInboxId === currentSender.inboxId
+    })
+  }, [messageIds, currentSender.inboxId])
 
   const renderItem = useCallback(
-    ({ item, index }: { item: IConversationMessage; index: number }) => {
-      const previousMessage = getConversationPreviousMessage({
-        messageId: item.xmtpId,
-        xmtpConversationId,
-      })
-      const nextMessage = getConversationNextMessage({
-        messageId: item.xmtpId,
-        xmtpConversationId,
-      })
+    ({ item, index }: { item: IXmtpMessageId; index: number }) => {
+      const previousXmtpMessageId = messageIdsReversed[index + 1]
+      const nextXmtpMessageId = messageIdsReversed[index - 1]
 
       return (
         <ConversationMessagesListItem
-          message={item}
-          previousMessage={previousMessage}
-          nextMessage={nextMessage}
-          // animateEntering={
-          //   index === 0 &&
-          //   // Need this because otherwise because our optimistic updates, we first create a dummy message with a random id
-          //   // and then replace it with the real message. But the replacment triggers a new element in the list because we use messageId as key extractor
-          //   // Maybe we can have a better solution in the future. Just okay for now until we either have better serialization
-          //   // or have better ways to handle optimistic updates.
-          //   item.status === "sending"
-          // }
+          xmtpMessageId={item}
+          isLatestXmtpMessageIdFromCurrentSender={latestXmtpMessageIdFromCurrentSender === item}
+          previousXmtpMessageId={previousXmtpMessageId}
+          nextXmtpMessageId={nextXmtpMessageId}
+          animateEntering={
+            index === 0 &&
+            getConversationMessageQueryData({
+              xmtpMessageId: item,
+              clientInboxId: currentSender.inboxId,
+            })?.status === "sending"
+          }
         />
       )
     },
-    [xmtpConversationId],
+    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIdsReversed],
+  )
+
+  const getItemType = useCallback(
+    (item: IXmtpMessageId) => {
+      const message = getConversationMessageQueryData({
+        xmtpMessageId: item,
+        clientInboxId: currentSender.inboxId,
+      })
+
+      if (!message) return "message"
+      if (message.senderInboxId === currentSender.inboxId) return "outgoing"
+      if (isAttachmentsMessage(message)) return "attachment"
+      if (isGroupUpdatedMessage(message)) return "groupUpdate"
+      return "incoming"
+    },
+    [currentSender.inboxId],
   )
 
   return (
-    <LegendList
-      data={allMessagesReversed}
+    <FlashList
+      data={messageIds}
       renderItem={renderItem}
-      estimatedItemSize={40}
-      recycleItems={true}
-      maintainScrollAtEnd
-      alignItemsAtEnd
-      maintainVisibleContentPosition
-      initialScrollIndex={allMessagesReversed.length - 1}
-      // getEstimatedItemSize={} // Maybe try this to fix overlapping attachments messages
+      estimatedItemSize={50} // Random value for now
+      inverted
+      initialScrollIndex={0}
       keyExtractor={keyExtractor}
-      waitForInitialLayout
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
-      style={$globalStyles.flex1}
       onScroll={handleScroll}
-      scrollEventThrottle={200} // Adjust as needed for performance
+      scrollEventThrottle={200} // We don't need to throttle fast because we only use to know if we need to load more messages
       ListEmptyComponent={ListEmptyComponent}
-      ListFooterComponent={ConsentPopup}
+      ListHeaderComponent={ConsentPopup}
+      getItemType={getItemType}
+      // extraData={latestXmtpMessageIdFromCurrentSender}
+
+      // LEGEND LIST PROPS
+      // initialScrollIndex={messageIdsReversed.length - 1}
+      // style={$globalStyles.flex1}
+      // recycleItems={true}
+      // maintainScrollAtEnd
+      // maintainScrollAtEndThreshold={1}
+      // alignItemsAtEnd
+      // maintainVisibleContentPosition
+      // getEstimatedItemSize={} // Maybe try this to fix overlapping attachments messages
+      // waitForInitialLayout={false}
     />
   )
 })
 
 const ConversationMessagesListItem = memo(
   function ConversationMessagesListItem(props: {
-    message: IConversationMessage
-    previousMessage: IConversationMessage | undefined
-    nextMessage: IConversationMessage | undefined
-    // animateEntering: boolean
+    xmtpMessageId: IXmtpMessageId
+    previousXmtpMessageId: IXmtpMessageId | undefined
+    nextXmtpMessageId: IXmtpMessageId | undefined
+    animateEntering: boolean
+    isLatestXmtpMessageIdFromCurrentSender: boolean
   }) {
     const {
-      message,
-      previousMessage,
-      nextMessage,
-      // animateEntering
+      xmtpMessageId,
+      previousXmtpMessageId,
+      nextXmtpMessageId,
+      animateEntering,
+      isLatestXmtpMessageIdFromCurrentSender,
     } = props
 
-    const { theme } = useAppTheme()
+    const currentSender = useSafeCurrentSender()
 
-    const composerStore = useConversationComposerStore()
-
-    const handleReply = useCallback(() => {
-      composerStore.getState().setReplyToMessageId(message.xmtpId)
-    }, [composerStore, message.xmtpId])
-
-    const messageHasReactions = useMessageHasReactions({
-      xmtpMessageId: message.xmtpId,
+    const { data: message } = useConversationMessageQuery({
+      xmtpMessageId,
+      clientInboxId: currentSender.inboxId,
+      caller: "ConversationMessagesListItem",
     })
 
     const messageComponent = useMemo(
       () => (
         <ConversationMessageHighlighted>
-          <ConversationMessage message={message} />
+          <ConversationMessage />
         </ConversationMessageHighlighted>
       ),
-      [message],
+      [],
     )
 
     const statusComponent = useMemo(
-      () => <ConversationMessageStatus messageId={message.xmtpId} />,
-      [message.xmtpId],
+      () => (isLatestXmtpMessageIdFromCurrentSender ? <ConversationMessageStatus /> : null),
+      [isLatestXmtpMessageIdFromCurrentSender],
     )
+
+    const { data: messageHasReactions } = useMessageHasReactions({
+      xmtpMessageId,
+    })
 
     const reactionsComponent = useMemo(
       () => (messageHasReactions ? <ConversationMessageReactions /> : null),
       [messageHasReactions],
     )
 
+    const { data: previousMessage } = useConversationMessageQuery({
+      xmtpMessageId: previousXmtpMessageId,
+      clientInboxId: currentSender.inboxId,
+      caller: "ConversationMessagesListItem",
+    })
+
+    const { data: nextMessage } = useConversationMessageQuery({
+      xmtpMessageId: nextXmtpMessageId,
+      clientInboxId: currentSender.inboxId,
+      caller: "ConversationMessagesListItem",
+    })
+
+    if (!message) {
+      captureError(new GenericError({ error: "Message not found, this shouldn't happen" }))
+      return null
+    }
+
     return (
       <ConversationMessageContextStoreProvider
         message={message}
-        previousMessage={previousMessage}
-        nextMessage={nextMessage}
+        previousMessage={previousMessage ?? undefined}
+        nextMessage={nextMessage ?? undefined}
       >
-        {/* <ConditionalWrapper
-          condition={animateEntering}
-          wrapper={(children) => (
-            <AnimatedVStack
-              entering={FadeInDown.springify()
-                .damping(theme.animation.spring.damping)
-                .stiffness(theme.animation.spring.stiffness)
-                .withInitialValues({
-                  transform: [
-                    {
-                      translateY: 60,
-                    },
-                  ],
-                })}
-            >
-              {children}
-            </AnimatedVStack>
-          )}
-        > */}
-        <ConversationMessageTimestamp />
-        <ConversationMessageRepliable onReply={handleReply}>
-          <ConversationMessageLayout
-            message={messageComponent}
-            reactions={reactionsComponent}
-            messageStatus={statusComponent}
-          />
-        </ConversationMessageRepliable>
-        {/* </ConditionalWrapper> */}
+        <ConversationNewMessageAnimationWrapper animateEntering={animateEntering}>
+          <ConversationMessageTimestamp />
+          <ConversationMessageRepliable>
+            <ConversationMessageLayout
+              messageComp={messageComponent}
+              reactionsComp={reactionsComponent}
+              messageStatusComp={statusComponent}
+            />
+          </ConversationMessageRepliable>
+        </ConversationNewMessageAnimationWrapper>
       </ConversationMessageContextStoreProvider>
     )
   },
   (prevProps, nextProps) => {
-    return prevProps.message.xmtpId === nextProps.message.xmtpId
+    const isSameMessageId = prevProps.xmtpMessageId === nextProps.xmtpMessageId
+    const isSamePreviousXmtpMessageId =
+      prevProps.previousXmtpMessageId === nextProps.previousXmtpMessageId
+    const isSameNextXmtpMessageId = prevProps.nextXmtpMessageId === nextProps.nextXmtpMessageId
+    const isSameLatestXmtpMessageIdFromCurrentSender =
+      prevProps.isLatestXmtpMessageIdFromCurrentSender ===
+      nextProps.isLatestXmtpMessageIdFromCurrentSender
+
+    return (
+      isSameMessageId &&
+      isSamePreviousXmtpMessageId &&
+      isSameNextXmtpMessageId &&
+      isSameLatestXmtpMessageIdFromCurrentSender
+    )
+  },
+)
+
+const ConversationNewMessageAnimationWrapper = memo(
+  function ConversationNewMessageAnimationWrapper(props: {
+    animateEntering: boolean
+    children: ReactNode
+  }) {
+    const { animateEntering, children } = props
+    const { theme } = useAppTheme()
+
+    const wrapper = useCallback(() => {
+      return (
+        <AnimatedVStack
+          entering={FadeInDown.springify()
+            .damping(theme.animation.spring.damping)
+            .stiffness(theme.animation.spring.stiffness)
+            .withInitialValues({
+              transform: [
+                {
+                  translateY: 60,
+                },
+              ],
+            })}
+        >
+          {children}
+        </AnimatedVStack>
+      )
+    }, [children, theme.animation.spring.damping, theme.animation.spring.stiffness])
+
+    return (
+      <ConditionalWrapper condition={animateEntering} wrapper={wrapper}>
+        {children}
+      </ConditionalWrapper>
+    )
   },
 )
 
@@ -341,18 +447,19 @@ const GroupConversationEmpty = memo(() => {
   return null
 })
 
-const keyExtractor = (message: IConversationMessage) => {
-  // For some reason, when we pass [] to data of LegendList it still calls this function with undefined?!
-  if (!message) {
-    return ""
-  }
+const keyExtractor = (messageId: IXmtpMessageId) => {
+  return messageId
 
-  const messageContentStr = getMessageContentUniqueStringValue({
-    messageContent: message.content,
-  })
-  const messageSentMs = convertNanosecondsToMilliseconds(message.sentNs)
-  // We assume that the max time a message can take to be sent with XMTP is 2 seconds.
-  const roundedMs = Math.round(messageSentMs / 2000) * 2000
-  // Doing this so that when we replace the optimistic message with the real message, the key doesn't change
-  return `${messageContentStr}-${message.senderInboxId}-${roundedMs}`
+  // // For some reason, when we pass [] to data of LegendList it still calls this function with undefined?!
+  // if (!message) {
+  //   return ""
+  // }
+  // const messageContentStr = getMessageContentUniqueStringValue({
+  //   messageContent: message.content,
+  // })
+  // const messageSentMs = convertNanosecondsToMilliseconds(message.sentNs)
+  // // We assume that the max time a message can take to be sent with XMTP is 1 second.
+  // const roundedMs = Math.round(messageSentMs / 1000) * 1000
+  // // Doing this so that when we replace the optimistic message with the real message, the key doesn't change
+  // return `${messageContentStr}-${message.senderInboxId}-${roundedMs}`
 }

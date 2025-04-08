@@ -4,11 +4,11 @@ import { IDropdownMenuCustomItemProps } from "@/design-system/dropdown-menu/drop
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useConversationComposerStore } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
 import { useConversationMessageContextMenuStore } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.store-context"
+import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   isRemoteAttachmentMessage,
   isStaticAttachmentMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { getMessageFromConversationSafe } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-from-conversation"
 import { getMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
@@ -19,16 +19,16 @@ export function useMessageContextMenuItems(args: {
   messageId: IXmtpMessageId
   xmtpConversationId: IXmtpConversationId
 }) {
-  const { messageId, xmtpConversationId } = args
+  const { messageId } = args
 
   const currentSender = useSafeCurrentSender()
-  const message = getMessageFromConversationSafe({
-    messageId,
-    xmtpConversationId,
-    clientInboxId: currentSender.inboxId,
-  })
   const composerStore = useConversationComposerStore()
   const messageContextMenuStore = useConversationMessageContextMenuStore()
+  const { data: message } = useConversationMessageQuery({
+    xmtpMessageId: messageId,
+    clientInboxId: currentSender.inboxId,
+    caller: "Conversation Message Context Menu",
+  })
 
   if (!message) {
     captureErrorWithToast(
@@ -59,7 +59,8 @@ export function useMessageContextMenuItems(args: {
       iconName: "doc.on.doc",
       onPress: () => {
         const messageStringContent = getMessageContentStringValue({
-          message,
+          messageContent: message.content,
+          initiatorDisplayName: "Someone",
         })
         if (!!messageStringContent) {
           Clipboard.setString(messageStringContent)

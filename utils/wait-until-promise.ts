@@ -1,30 +1,32 @@
 /**
  * Repeatedly calls a function until it returns true, then resolves the promise.
  * Checks every 100ms by default.
+ * Times out after 10 seconds by default.
  */
-export function waitUntilPromise(args: {
-  checkFn: () => boolean
+export function waitUntilPromise<T>(args: {
+  checkFn: () => T | Promise<T>
   intervalMs?: number
   timeoutMs?: number
-}): Promise<void> {
-  const { checkFn, intervalMs = 100, timeoutMs } = args
+}): Promise<T> {
+  const { checkFn, intervalMs = 100, timeoutMs = 10000 } = args
 
   return new Promise((resolve, reject) => {
     const startTime = Date.now()
     let timeoutId: NodeJS.Timeout | undefined
 
     const check = () => {
-      if (checkFn()) {
+      const result = checkFn()
+      if (result) {
         if (timeoutId) {
           clearTimeout(timeoutId)
         }
-        resolve()
+        resolve(result)
       } else {
         if (timeoutMs && Date.now() - startTime > timeoutMs) {
           if (timeoutId) {
             clearTimeout(timeoutId)
           }
-          reject(new Error("Wait until promise timed out"))
+          reject(new Error("Promise timed out, please try again"))
         } else {
           timeoutId = setTimeout(check, intervalMs)
         }

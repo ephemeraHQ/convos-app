@@ -25,6 +25,7 @@ export const useDeleteDm = ({
   const { data: dm } = useDmQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
+    caller: "useDeleteDm",
   })
 
   const { displayName } = usePreferredDisplayInfo({

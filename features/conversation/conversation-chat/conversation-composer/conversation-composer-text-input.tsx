@@ -7,7 +7,7 @@ import {
   TextInputKeyPressEventData,
 } from "react-native"
 import { TextInput } from "@/design-system/text-input"
-import { useConversationComposerIsEnabled } from "@/features/conversation/conversation-chat/conversation-composer/hooks/conversation-composer-is-enabled"
+import { useConversationComposerIsEnabled } from "@/features/conversation/conversation-chat/conversation-composer/hooks/use-conversation-composer-is-enabled"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { useConversationComposerStore } from "./conversation-composer.store-context"
 

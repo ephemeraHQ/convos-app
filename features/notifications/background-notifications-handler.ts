@@ -66,10 +66,10 @@ export async function registerBackgroundNotificationTask() {
       return
     }
 
-    await logRegisteredTasks()
-
-    // Doing this for now to prevent duplicate registrations since we're still testing this feature
-    await unregisterAllBackgroundTasks()
+    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK)) {
+      notificationsLogger.debug("Background notification task already registered")
+      return
+    }
 
     notificationsLogger.debug("Registering background notification task...")
     await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK)
@@ -79,70 +79,5 @@ export async function registerBackgroundNotificationTask() {
       error,
       additionalMessage: "Failed to register background notification task",
     })
-  }
-}
-
-// /**
-//  * Unregisters the background notification task
-//  * Use this to clean up the task or when you need to restart fresh
-//  */
-// async function unregisterBackgroundNotificationTask() {
-//   try {
-//     notificationsLogger.debug("Unregistering background notification task...")
-//     await Notifications.unregisterTaskAsync(BACKGROUND_NOTIFICATION_TASK)
-//     notificationsLogger.debug("Background notification task unregistered successfully")
-//   } catch (error) {
-//     captureError(
-//       new NotificationError({
-//         error,
-//         additionalMessage: "Failed to unregister background notification task",
-//       }),
-//     )
-//   }
-// }
-
-/**
- * Unregisters all tasks associated with the application
- * Use this to completely clean up and start fresh
- */
-async function unregisterAllBackgroundTasks() {
-  try {
-    notificationsLogger.debug("Unregistering all background tasks...")
-    await TaskManager.unregisterAllTasksAsync()
-    notificationsLogger.debug("All background tasks unregistered successfully")
-  } catch (error) {
-    captureError(
-      new NotificationError({
-        error,
-        additionalMessage: "Failed to unregister all background tasks",
-      }),
-    )
-  }
-}
-
-/**
- * Gets and logs information about all registered background tasks
- * Useful for debugging and monitoring task registration status
- */
-async function logRegisteredTasks() {
-  try {
-    notificationsLogger.debug("Fetching registered tasks...")
-    const tasks = await TaskManager.getRegisteredTasksAsync()
-    notificationsLogger.debug("Currently registered tasks:", {
-      count: tasks.length,
-      tasks: tasks.map((task) => ({
-        name: task.taskName,
-        type: task.taskType,
-      })),
-    })
-    return tasks
-  } catch (error) {
-    captureError(
-      new NotificationError({
-        error,
-        additionalMessage: "Failed to fetch registered tasks",
-      }),
-    )
-    return []
   }
 }

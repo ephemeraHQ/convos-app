@@ -1,5 +1,13 @@
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import {
+  getSafeCurrentSender,
+  useSafeCurrentSender,
+} from "@/features/authentication/multi-inbox.store"
+import { getConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import {
+  getAllConversationMessageInInfiniteQueryData,
+  getConversationMessagesInfiniteQueryOptions,
+} from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 
 export function getConversationPreviousMessage(args: {
@@ -7,15 +15,61 @@ export function getConversationPreviousMessage(args: {
   xmtpConversationId: IXmtpConversationId
 }) {
   const { messageId, xmtpConversationId } = args
+
   const currentSender = getSafeCurrentSender()
-  const messages = getAllConversationMessageInInfiniteQueryData({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-  })
-  if (!messages?.ids.includes(messageId)) {
+
+  const messageIds =
+    getAllConversationMessageInInfiniteQueryData({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+    }) || []
+
+  if (!messageIds.includes(messageId)) {
     return undefined
   }
-  const currentIndex = messages.ids.indexOf(messageId)
-  const previousMessageId = messages.ids[currentIndex + 1]
-  return previousMessageId ? messages.byId[previousMessageId] : undefined
+
+  const currentIndex = messageIds.indexOf(messageId)
+  const previousMessageId = messageIds[currentIndex + 1]
+
+  if (!previousMessageId) {
+    return null
+  }
+
+  return getConversationMessageQueryData({
+    clientInboxId: currentSender.inboxId,
+    xmtpMessageId: previousMessageId,
+  })
+}
+
+export function useConversationPreviousMessageId(args: {
+  messageId: IXmtpMessageId
+  xmtpConversationId: IXmtpConversationId
+  caller: string
+}) {
+  const { messageId, xmtpConversationId, caller } = args
+
+  const currentSender = useSafeCurrentSender()
+
+  return useInfiniteQuery({
+    ...getConversationMessagesInfiniteQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller,
+    }),
+    select: (data) => {
+      const allMessageIds = data?.pages.flatMap((page) => page.messageIds)
+
+      if (!allMessageIds) {
+        return undefined
+      }
+
+      const currentIndex = allMessageIds.findIndex((id) => id === messageId)
+
+      if (currentIndex === -1) {
+        return undefined
+      }
+
+      return allMessageIds[currentIndex + 1]
+    },
+  })
 }

@@ -19,12 +19,11 @@ import {
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
-import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
+import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useMinimumLoadingTime } from "@/hooks/use-minimum-loading-time"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -38,7 +37,9 @@ import { useConversationListConversations } from "./hooks/use-conversation-list-
 
 type IConversationListProps = NativeStackScreenProps<NavigationParamList, "Chats">
 
-export function ConversationListScreen(props: IConversationListProps) {
+export const ConversationListScreen = memo(function ConversationListScreen(
+  props: IConversationListProps,
+) {
   const currentSender = useSafeCurrentSender()
 
   const {
@@ -61,7 +62,7 @@ export function ConversationListScreen(props: IConversationListProps) {
   useEffect(() => {
     if (conversationsIds) {
       for (const conversationId of conversationsIds) {
-        if (isTempConversation(conversationId)) {
+        if (isTmpConversation(conversationId)) {
           return
         }
         prefetchConversationMessagesInfiniteQuery({
@@ -103,7 +104,7 @@ export function ConversationListScreen(props: IConversationListProps) {
       )}
     </Screen>
   )
-}
+})
 
 const ConversationListItem = memo(function ConversationListItem(props: {
   xmtpConversationId: IXmtpConversationId

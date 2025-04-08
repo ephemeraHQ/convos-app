@@ -25,7 +25,7 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
     // Check if key exists
     const existingKey = await secureStorage.getItem(DB_ENCRYPTION_KEY_STORAGE_KEY)
     if (existingKey) {
-      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress}`, existingKey)
+      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress}`)
       return new Uint8Array(Buffer.from(existingKey, "base64"))
     }
 
@@ -47,7 +47,7 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
     )
     const newKey = Buffer.from(await getRandomBytesAsync(32)).toString("base64")
     await secureStorage.setItem(DB_ENCRYPTION_KEY_STORAGE_KEY, newKey)
-    xmtpLogger.debug(`Created new DB encryption key for ${ethAddress}`, newKey)
+    xmtpLogger.debug(`Created new DB encryption key for ${ethAddress}`)
     return new Uint8Array(Buffer.from(newKey, "base64"))
   } catch (error) {
     throw new XMTPError({

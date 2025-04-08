@@ -51,6 +51,7 @@ export function useConversationRequestsListItem() {
           const spamScore = await getMessageSpamScore({
             message: lastMessage,
           })
+
           const isSpam = spamScore !== 0
           return isSpam
         } catch (error) {

@@ -11,14 +11,13 @@ import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
 import { $globalStyles } from "@/theme/styles"
-import { useThemeProvider } from "@/theme/use-app-theme"
 import { useCachedResources } from "@/utils/cache-resources"
 import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
 import { ReactQueryPersistProvider } from "@/utils/react-query/react-query-persist-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import "expo-dev-client"
-import React from "react"
+import React, { memo } from "react"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -30,6 +29,11 @@ import { registerBackgroundNotificationTask } from "./features/notifications/bac
 import { setupConversationsNotificationsSubscriptions } from "./features/notifications/notifications-conversations-subscriptions"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
+import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
+import { useSignoutIfNoPrivyUser } from "@/features/authentication/use-logout-if-no-privy-user"
+import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
+import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
+import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
@@ -63,8 +67,6 @@ export function App() {
   // Seems to be slowing the app. Need to investigate
   // useSyncQueries({ queryClient: reactQueryClient })
 
-  const { themeScheme, setThemeContextOverride, ThemeProvider } = useThemeProvider()
-
   return (
     <ReactQueryPersistProvider>
       <PrivyProvider
@@ -77,21 +79,20 @@ export function App() {
             <SafeAreaProvider>
               <KeyboardProvider>
                 <ActionSheetProvider>
-                  <ThemeProvider value={{ themeScheme, setThemeContextOverride }}>
-                    <GestureHandlerRootView style={$globalStyles.flex1}>
-                      <ConditionalWrapper
-                        condition={config.debugMenu}
-                        wrapper={(children) => <DebugProvider>{children}</DebugProvider>}
-                      >
-                        <BottomSheetModalProvider>
-                          <AppNavigator />
-                          {/* {__DEV__ && <DevToolsBubble />} */}
-                          <Snackbars />
-                          <ActionSheet />
-                        </BottomSheetModalProvider>
-                      </ConditionalWrapper>
-                    </GestureHandlerRootView>
-                  </ThemeProvider>
+                  <GestureHandlerRootView style={$globalStyles.flex1}>
+                    <ConditionalWrapper
+                      condition={config.debugMenu}
+                      wrapper={(children) => <DebugProvider>{children}</DebugProvider>}
+                    >
+                      <BottomSheetModalProvider>
+                        <AppNavigator />
+                        {/* {__DEV__ && <DevToolsBubble />} */}
+                        <Handlers />
+                        <Snackbars />
+                        <ActionSheet />
+                      </BottomSheetModalProvider>
+                    </ConditionalWrapper>
+                  </GestureHandlerRootView>
                 </ActionSheetProvider>
               </KeyboardProvider>
             </SafeAreaProvider>
@@ -101,3 +102,13 @@ export function App() {
     </ReactQueryPersistProvider>
   )
 }
+
+const Handlers = memo(function Handlers() {
+  useIsCurrentVersionEnough()
+  useRefreshJwtAxiosInterceptor()
+  useSignoutIfNoPrivyUser()
+  useCreateUserIfNoExist()
+  useNotificationListeners()
+
+  return null
+})

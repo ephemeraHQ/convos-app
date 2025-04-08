@@ -1,17 +1,20 @@
 import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  addMessageToConversationMessagesInfiniteQueryData,
-  invalidateConversationMessagesInfiniteMessagesQuery,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
+import { isTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/tmp-message"
+import { invalidateConversationMessagesInfiniteMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { getConversationForCurrentAccount } from "@/features/conversation/utils/get-conversation-for-current-account"
-import { sendXmtpConversationMessage } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import {
+  getXmtpConversationTopicFromXmtpId,
+  sendXmtpConversationMessage,
+} from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureErrorWithToast } from "@/utils/capture-error"
-import { getTodayNs } from "@/utils/date"
+import { getTodayMs, getTodayNs } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { Haptics } from "@/utils/haptics"
+import { getRealMessageIdForOptimisticMessageId } from "./conversation-message/conversation-message-optimistic-to-real"
 import { IConversationMessageReactionContent } from "./conversation-message/conversation-message.types"
 
 export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversationId }) {
@@ -43,19 +46,21 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
 
       if (conversation) {
         // Add the reaction to the message
-        addMessageToConversationMessagesInfiniteQueryData({
+        processReactionConversationMessages({
           clientInboxId: currentSender.inboxId,
-          xmtpConversationId,
-          message: {
-            xmtpId: "" as IXmtpMessageId,
-            xmtpConversationId,
-            type: "reaction",
-            sentNs: getTodayNs(),
-            status: "sent",
-            xmtpTopic: conversation.xmtpTopic,
-            senderInboxId: currentSender.inboxId,
-            content: variables.reaction,
-          },
+          reactionMessages: [
+            {
+              xmtpId: "" as IXmtpMessageId,
+              senderInboxId: currentSender.inboxId,
+              xmtpTopic: getXmtpConversationTopicFromXmtpId(xmtpConversationId),
+              type: "reaction",
+              sentNs: getTodayNs(),
+              sentMs: getTodayMs(),
+              status: "sent",
+              xmtpConversationId,
+              content: variables.reaction,
+            },
+          ],
         })
       }
     },
@@ -72,9 +77,18 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
     async (args: { messageId: IXmtpMessageId; emoji: string }) => {
       try {
         Haptics.softImpactAsync()
+
+        const messageId = isTmpMessageId(args.messageId)
+          ? getRealMessageIdForOptimisticMessageId(args.messageId)
+          : args.messageId
+
+        if (!messageId) {
+          throw new Error("Message not found when reacting on message")
+        }
+
         await reactOnMessageMutationAsync({
           reaction: {
-            reference: args.messageId as IXmtpMessageId,
+            reference: messageId,
             content: args.emoji,
             schema: "unicode",
             action: "added",

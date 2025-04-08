@@ -7,6 +7,14 @@ import { DEFAULT_GC_TIME, DEFAULT_STALE_TIME } from "./react-query.constants"
 
 export const reactQueryClient = new QueryClient({
   mutationCache: new MutationCache({
+    onSuccess: (data, variables, context, mutation) => {
+      queryLogger.debug(`Mutation success`, {
+        ...(mutation.options.meta?.caller ? { caller: mutation.options.meta.caller } : {}),
+        mutationKey: mutation.options.mutationKey,
+        data,
+        variables,
+      })
+    },
     onError: (
       error: Error,
       variables: unknown,

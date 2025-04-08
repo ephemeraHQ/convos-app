@@ -1,5 +1,5 @@
 import { FlashList, FlashListProps, ListRenderItem } from "@shopify/flash-list"
-import { useCallback, useRef } from "react"
+import { memo, useCallback, useRef } from "react"
 import { NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -16,7 +16,7 @@ type IConversationListProps = Omit<FlashListProps<IXmtpConversationId>, "data" |
   onRefetch?: () => Promise<void>
 }
 
-export function ConversationList(props: IConversationListProps) {
+export const ConversationList = memo(function ConversationList(props: IConversationListProps) {
   const { conversationsIds, renderConversation, onRefetch, ...rest } = props
 
   const { theme } = useAppTheme()
@@ -48,9 +48,11 @@ export function ConversationList(props: IConversationListProps) {
       {...rest}
     />
   )
-}
+})
 
-function DefaultConversationItem(props: { xmtpConversationId: IXmtpConversationId }) {
+const DefaultConversationItem = memo(function DefaultConversationItem(props: {
+  xmtpConversationId: IXmtpConversationId
+}) {
   const { xmtpConversationId } = props
 
   const currentSender = useSafeCurrentSender()
@@ -70,9 +72,9 @@ function DefaultConversationItem(props: { xmtpConversationId: IXmtpConversationI
   }
 
   return <ConversationListItemDm xmtpConversationId={xmtpConversationId} />
-}
+})
 
-function keyExtractor(id: IXmtpConversationId): string {
+function keyExtractor(id: IXmtpConversationId) {
   return id
 }
 

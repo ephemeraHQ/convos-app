@@ -38,6 +38,7 @@ export const TouchableOpacity = memo(function TouchableOpacity(props: ITouchable
       layout={theme.animation.reanimatedLayoutSpringTransition}
       onPress={onPress}
       activeOpacity={TOUCHABLE_OPACITY_ACTIVE_OPACITY}
+      hitSlop={theme.spacing.xs}
       {...rest}
     />
   )

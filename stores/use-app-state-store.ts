@@ -14,7 +14,7 @@ type Actions = {
   handleAppStateChange: (nextAppState: AppStateStatus) => void
 }
 
-export const useAppState = create<State & { actions: Actions }>()(
+export const useAppStateStore = create<State & { actions: Actions }>()(
   subscribeWithSelector((set) => ({
     currentState: AppState.currentState,
     previousState: null,
@@ -32,20 +32,17 @@ export const useAppState = create<State & { actions: Actions }>()(
 )
 
 // Just for debugging
-useAppState.subscribe(
+useAppStateStore.subscribe(
   (state) => state.currentState,
   (currentState, previousState) => {
-    logger.debug("App state changed", {
-      from: previousState,
-      to: currentState,
-    })
+    logger.debug(`App state changed from '${previousState}' to '${currentState}'`)
   },
 )
 
 // Update the new state
 AppState.addEventListener("change", (nextAppState) => {
   focusManager.setFocused(nextAppState === "active")
-  useAppState.getState().actions.handleAppStateChange(nextAppState)
+  useAppStateStore.getState().actions.handleAppStateChange(nextAppState)
 })
 
 type IAppStateHandlerSettings = {
@@ -60,7 +57,7 @@ export const useAppStateHandler = (settings?: IAppStateHandlerSettings) => {
   const { onChange, onForeground, onBackground, onInactive, deps = [] } = settings || {}
 
   useEffect(() => {
-    return useAppState.subscribe(
+    return useAppStateStore.subscribe(
       (state) => ({ current: state.currentState, previous: state.previousState }),
       (next, prev) => {
         if (next.current === "active" && prev?.current !== "active") {

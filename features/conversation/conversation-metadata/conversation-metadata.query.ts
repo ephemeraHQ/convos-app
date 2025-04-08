@@ -2,7 +2,7 @@ import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.type
 import { queryOptions } from "@tanstack/react-query"
 import { AxiosError } from "axios"
 import { getConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
-import { isTempConversation } from "@/features/conversation/utils/is-temp-conversation"
+import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
 
@@ -18,7 +18,7 @@ function getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }: I
 }
 
 export function getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }: IArgs) {
-  const enabled = !!xmtpConversationId && !isTempConversation(xmtpConversationId)
+  const enabled = !!xmtpConversationId && !isTmpConversation(xmtpConversationId)
   return queryOptions({
     queryKey: getReactQueryKey({
       baseStr: "conversation-metadata",

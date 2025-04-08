@@ -96,15 +96,9 @@ const linking: LinkingOptions<NavigationParamList> = {
   getStateFromPath,
 }
 
-export function AppNavigator() {
+export const AppNavigator = memo(function AppNavigator() {
   const { themeScheme, navigationTheme, setThemeContextOverride, ThemeProvider } =
     useThemeProvider()
-
-  useIsCurrentVersionEnough()
-  useRefreshJwtAxiosInterceptor()
-  useSignoutIfNoPrivyUser()
-  useCreateUserIfNoExist()
-  useNotificationListeners()
 
   // Hydrate auth when the app is loaded
   useEffect(() => {
@@ -122,7 +116,7 @@ export function AppNavigator() {
       </NavigationContainer>
     </ThemeProvider>
   )
-}
+})
 
 export const AppNativeStack = createNativeStackNavigator<NavigationParamList>()
 

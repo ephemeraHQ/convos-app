@@ -9,6 +9,9 @@ import {
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { AuthenticationError } from "../../utils/error"
 
+// Store interceptor reference for cleanup
+let authHeadersInterceptorId: number | null = null
+
 /**
  * Headers interceptor that handles three types of routes:
  * 1. Authentication route - Requires special authentication headers
@@ -16,7 +19,13 @@ import { AuthenticationError } from "../../utils/error"
  * 3. All other routes - Requires standard authenticated headers
  */
 export function setupAxiosAuthHeadersInterceptor() {
-  return convosApi.interceptors.request.use(async (config) => {
+  // Clean up existing interceptor if it exists
+  if (authHeadersInterceptorId !== null) {
+    convosApi.interceptors.request.eject(authHeadersInterceptorId)
+  }
+
+  // Add new interceptor and store its ID
+  authHeadersInterceptorId = convosApi.interceptors.request.use(async (config) => {
     const url = config.url
 
     if (!url) {

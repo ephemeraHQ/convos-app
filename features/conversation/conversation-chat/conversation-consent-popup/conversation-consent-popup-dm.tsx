@@ -23,6 +23,7 @@ export function ConversationConsentPopupDm() {
   const { data: dm } = useDmQuery({
     clientInboxId: currentSenderInboxId,
     xmtpConversationId,
+    caller: "ConversationConsentPopupDm",
   })
 
   const navigation = useRouter()

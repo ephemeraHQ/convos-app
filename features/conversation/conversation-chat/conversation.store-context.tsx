@@ -73,6 +73,7 @@ const createConversationStore = (initProps: IConversationStoreProps) => {
       scrollToXmtpMessageId: null,
       searchSelectedUserInboxIds: [],
       isCreatingNewConversation: false,
+
       searchTextValue: "",
       ...initProps,
     })),

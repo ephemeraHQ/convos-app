@@ -1,24 +1,21 @@
-import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { getConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 
 export function getMessageFromConversationSafe({
   messageId,
-  xmtpConversationId,
   clientInboxId,
 }: {
   messageId: IXmtpMessageId
-  xmtpConversationId: IXmtpConversationId
   clientInboxId: IXmtpInboxId
 }) {
-  // First try in our local cache
-  const messages = getAllConversationMessageInInfiniteQueryData({
+  const message = getConversationMessageQueryData({
     clientInboxId,
-    xmtpConversationId,
+    xmtpMessageId: messageId,
   })
 
-  if (!messages) {
-    throw new Error(`Couldn't get conversation messages`)
+  if (!message) {
+    throw new Error(`Couldn't get conversation message`)
   }
 
-  return messages.byId[messageId]
+  return message
 }

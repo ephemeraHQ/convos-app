@@ -1,15 +1,15 @@
-import { HStack } from "@design-system/HStack"
-import { useMemo } from "react"
+import { AnimatedHStack, HStack } from "@design-system/HStack"
+import { memo, useMemo } from "react"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { debugBorder } from "@/utils/debug-style"
 
-export const BubbleContainer = ({
+export const BubbleContainer = memo(function BubbleContainer({
   children,
-  fromMe,
 }: {
   children: React.ReactNode
-  fromMe: boolean
-}) => {
+}) {
+  const fromMe = useConversationMessageContextSelector((state) => state.fromMe)
+
   return (
     <HStack
       // {...debugBorder()}
@@ -20,17 +20,23 @@ export const BubbleContainer = ({
       {children}
     </HStack>
   )
-}
+})
 
 type IBubbleContentContainerProps = {
   children: React.ReactNode
-  fromMe: boolean
-  hasNextMessageInSeries: boolean
 }
 
-export const BubbleContentContainer = (args: IBubbleContentContainerProps) => {
-  const { children, fromMe, hasNextMessageInSeries } = args
+export const BubbleContentContainer = memo(function BubbleContentContainer(
+  args: IBubbleContentContainerProps,
+) {
+  const { children } = args
   const { theme } = useAppTheme()
+
+  const fromMe = useConversationMessageContextSelector((state) => state.fromMe)
+
+  const hasNextMessageInSeries = useConversationMessageContextSelector(
+    (state) => state.hasNextMessageInSeries,
+  )
 
   const bubbleStyle = useMemo(() => {
     const baseStyle = {
@@ -52,5 +58,5 @@ export const BubbleContentContainer = (args: IBubbleContentContainerProps) => {
     return baseStyle
   }, [fromMe, hasNextMessageInSeries, theme])
 
-  return <HStack style={bubbleStyle}>{children}</HStack>
-}
+  return <AnimatedHStack style={bubbleStyle}>{children}</AnimatedHStack>
+})

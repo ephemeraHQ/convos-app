@@ -1,28 +1,145 @@
-import { memo, ReactNode } from "react"
+import { Fragment, memo, ReactNode, useMemo } from "react"
+import { StyleProp, ViewStyle } from "react-native"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationMessageSender } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender"
 import { ConversationSenderAvatar } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender-avatar"
-import { useConversationMessageContextStoreContext } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
-import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { useSelect } from "@/stores/stores.utils"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { debugBorder } from "@/utils/debug-style"
 
-type IConversationMessageLayoutProps = {
-  reactions?: ReactNode
-  message?: ReactNode
-  messageStatus?: ReactNode
-}
+export const ConversationMessageLayout = memo(function ConversationMessageLayout(args: {
+  reactionsComp?: ReactNode
+  messageComp?: ReactNode
+  messageStatusComp?: ReactNode
+}) {
+  const { reactionsComp, messageComp, messageStatusComp } = args
+  const messageStyles = useConversationMessageLayoutStyles()
 
-export const ConversationMessageLayout = memo(function ConversationMessageLayout({
-  message,
-  reactions,
-  messageStatus,
-}: IConversationMessageLayoutProps) {
+  const currentSender = useSafeCurrentSender()
+  const hasPreviousMessageInSeries = false
+  const hasNextMessageInSeries = useConversationMessageContextSelector(
+    (s) => s.hasNextMessageInSeries,
+  )
+  const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
+  const isGroupUpdate = useConversationMessageContextSelector((s) => s.isGroupUpdateMessage)
+
+  const contentContainerStyle = useMemo(() => {
+    return fromMe
+      ? messageStyles.hStackFromMe
+      : isGroupUpdate
+        ? messageStyles.hStackBase
+        : messageStyles.hStackFromOther
+  }, [fromMe, isGroupUpdate, messageStyles])
+
+  const messageContainerStyle = useMemo(() => {
+    return [
+      messageStyles.messageContainer,
+      {
+        alignItems: fromMe ? "flex-end" : "flex-start",
+        ...(Boolean(reactionsComp) && {
+          marginBottom: messageStyles.spaceBetweenMessagesInSeries,
+        }),
+      },
+    ] as StyleProp<ViewStyle>
+  }, [fromMe, reactionsComp, messageStyles])
+
+  const senderNameContainerStyle = useMemo(() => {
+    return {
+      flexDirection: "row" as const,
+      marginLeft: messageStyles.senderNameLeftMargin,
+      marginBottom: messageStyles.spaceBetweenMessageAndSender,
+    }
+  }, [messageStyles])
+
+  const reactionsContainerStyle = useMemo(() => {
+    return fromMe ? messageStyles.reactionsFromMe : messageStyles.reactionsFromOther
+  }, [fromMe, messageStyles])
+
+  return (
+    <ConversationMessageLayoutContainer hasReactions={Boolean(reactionsComp)}>
+      <HStack style={contentContainerStyle}>
+        {!fromMe && !isGroupUpdate && (
+          <Fragment>
+            {!hasNextMessageInSeries ? (
+              <ConversationSenderAvatar inboxId={currentSender.inboxId} />
+            ) : (
+              <VStack style={messageStyles.avatarPlaceholder} />
+            )}
+            <VStack style={messageStyles.avatarSpacer} />
+          </Fragment>
+        )}
+
+        <VStack style={messageContainerStyle}>
+          {!fromMe && !hasPreviousMessageInSeries && !isGroupUpdate && (
+            <VStack style={senderNameContainerStyle}>
+              <ConversationMessageSender inboxId={currentSender.inboxId} />
+            </VStack>
+          )}
+
+          {messageComp}
+        </VStack>
+      </HStack>
+
+      {Boolean(reactionsComp) && <HStack style={reactionsContainerStyle}>{reactionsComp}</HStack>}
+
+      {Boolean(messageStatusComp) && (
+        <HStack style={messageStyles.messageStatus}>{messageStatusComp}</HStack>
+      )}
+    </ConversationMessageLayoutContainer>
+  )
+})
+
+const ConversationMessageLayoutContainer = memo(function ConversationMessageLayoutContainer(args: {
+  children: ReactNode
+  hasReactions: boolean
+}) {
+  const { children, hasReactions } = args
+
   const { theme } = useAppTheme()
 
+  const messageStyles = useConversationMessageLayoutStyles()
+
+  const hasNextMessageInSeries = useConversationMessageContextSelector(
+    (s) => s.hasNextMessageInSeries,
+  )
+  const isLastMessage = useConversationMessageContextSelector((s) => s.isLastMessage)
+  const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
+
+  const containerStyle = useMemo(() => {
+    const styles: StyleProp<ViewStyle> = {
+      marginBottom: messageStyles.spaceBetweenMessagesInSeries,
+    }
+
+    if (isLastMessage && !fromMe) {
+      styles.marginBottom = messageStyles.spaceBetweenMessageFromDifferentUserOrType
+    }
+
+    if (!hasNextMessageInSeries) {
+      styles.marginBottom = 0
+    }
+
+    if (hasReactions) {
+      styles.marginBottom = messageStyles.spaceBetweenSeriesWithReactions
+    }
+
+    return styles
+  }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage, fromMe])
+
+  return (
+    <AnimatedVStack
+      // {...debugBorder()}
+      layout={theme.animation.reanimatedLayoutSpringTransition}
+      style={containerStyle}
+    >
+      {children}
+    </AnimatedVStack>
+  )
+})
+
+function useConversationMessageLayoutStyles() {
   const {
     messageContainerSidePadding,
     spaceBetweenSenderAvatarAndMessage,
@@ -34,144 +151,80 @@ export const ConversationMessageLayout = memo(function ConversationMessageLayout
     spaceBetweenSeriesWithReactions,
   } = useConversationMessageStyles()
 
-  const {
-    senderInboxId,
-    fromMe,
-    hasNextMessageInSeries,
-    hasPreviousMessageInSeries,
-    isSystemMessage,
-    nextMessage,
-    message: messageData,
-  } = useConversationMessageContextStoreContext(
-    useSelect([
-      "senderInboxId",
-      "fromMe",
-      "hasNextMessageInSeries",
-      "hasPreviousMessageInSeries",
-      "isSystemMessage",
-      "nextMessage",
-      "message",
-    ]),
-  )
-
-  const isGroupUpdate = isGroupUpdatedMessage(messageData)
-
-  function getMessageSpacing() {
-    if (nextMessage && !hasNextMessageInSeries) {
-      return spaceBetweenMessageFromDifferentUserOrType
+  return useMemo(() => {
+    const hStackBase: StyleProp<ViewStyle> = {
+      width: "100%",
+      alignItems: "flex-end",
     }
 
-    if (!hasNextMessageInSeries) {
-      return 0
+    const hStackFromMe: StyleProp<ViewStyle> = {
+      ...hStackBase,
+      paddingRight: messageContainerSidePadding,
+      justifyContent: "flex-end",
     }
 
-    if (reactions) {
-      return spaceBetweenSeriesWithReactions
+    const hStackFromOther: StyleProp<ViewStyle> = {
+      ...hStackBase,
+      paddingLeft: messageContainerSidePadding,
+      justifyContent: "flex-start",
     }
 
-    if (nextMessage && !hasNextMessageInSeries) {
-      return spaceBetweenMessageFromDifferentUserOrType
+    const avatarPlaceholder: StyleProp<ViewStyle> = {
+      width: senderAvatarSize,
     }
 
-    return spaceBetweenMessagesInSeries
-  }
+    const avatarSpacer: StyleProp<ViewStyle> = {
+      width: spaceBetweenSenderAvatarAndMessage,
+    }
 
-  return (
-    <AnimatedVStack
-      // {...debugBorder()}
-      layout={theme.animation.reanimatedLayoutSpringTransition}
-      style={{
-        marginBottom: getMessageSpacing(),
-      }}
-    >
-      <HStack
-        style={{
-          width: "100%",
-          alignItems: "flex-end",
-          ...(!isGroupUpdate && {
-            ...(fromMe
-              ? {
-                  paddingRight: messageContainerSidePadding,
-                  justifyContent: "flex-end",
-                }
-              : {
-                  paddingLeft: messageContainerSidePadding,
-                  justifyContent: "flex-start",
-                }),
-          }),
-        }}
-      >
-        {!fromMe && !isSystemMessage && (
-          <>
-            {!hasNextMessageInSeries ? (
-              <ConversationSenderAvatar inboxId={senderInboxId} />
-            ) : (
-              <VStack style={{ width: senderAvatarSize }} />
-            )}
-            <VStack style={{ width: spaceBetweenSenderAvatarAndMessage }} />
-          </>
-        )}
+    const messageContainer: StyleProp<ViewStyle> = {
+      width: "100%",
+      paddingVertical: 0.5, // Seems weird but for some reason otherwise the messages are too close to each other
+    }
 
-        <VStack
-          // {...debugBorder("red")}
-          style={{
-            width: "100%",
-            alignItems: fromMe ? "flex-end" : "flex-start",
-            ...(Boolean(reactions) && {
-              marginBottom: spaceBetweenMessagesInSeries,
-            }),
-            // REALLY not sure why... but otherwise the message bubble were cut off?
-            // Maybe because of layout animation on the FlatList? Let's check again when we move to Legend List
-            paddingVertical: 0.5,
-          }}
-        >
-          {!fromMe && !hasPreviousMessageInSeries && !isSystemMessage && (
-            <VStack
-              style={{
-                flexDirection: "row",
-                marginLeft: senderNameLeftMargin,
-                marginBottom: spaceBetweenMessageAndSender,
-              }}
-            >
-              <ConversationMessageSender inboxId={senderInboxId} />
-            </VStack>
-          )}
+    const reactionsFromMe: StyleProp<ViewStyle> = {
+      paddingRight: messageContainerSidePadding,
+      justifyContent: "flex-end",
+    }
 
-          {message}
-        </VStack>
-      </HStack>
+    const reactionsFromOther: StyleProp<ViewStyle> = {
+      paddingLeft:
+        messageContainerSidePadding + spaceBetweenSenderAvatarAndMessage + senderAvatarSize,
+      justifyContent: "flex-start",
+    }
 
-      {Boolean(reactions) && (
-        <HStack
-          style={
-            fromMe
-              ? {
-                  paddingRight: messageContainerSidePadding,
-                  justifyContent: "flex-end",
-                }
-              : {
-                  paddingLeft:
-                    messageContainerSidePadding +
-                    spaceBetweenSenderAvatarAndMessage +
-                    senderAvatarSize,
-                  justifyContent: "flex-start",
-                }
-          }
-        >
-          {reactions}
-        </HStack>
-      )}
+    const messageStatus: StyleProp<ViewStyle> = {
+      paddingRight: messageContainerSidePadding,
+      justifyContent: "flex-end",
+    }
 
-      {Boolean(messageStatus) && (
-        <HStack
-          style={{
-            paddingRight: messageContainerSidePadding,
-            justifyContent: "flex-end",
-          }}
-        >
-          {messageStatus}
-        </HStack>
-      )}
-    </AnimatedVStack>
-  )
-})
+    return {
+      hStackBase,
+      hStackFromMe,
+      hStackFromOther,
+      avatarPlaceholder,
+      avatarSpacer,
+      messageContainer,
+      reactionsFromMe,
+      reactionsFromOther,
+      messageStatus,
+      spaceBetweenMessageFromDifferentUserOrType,
+      spaceBetweenMessagesInSeries,
+      spaceBetweenSeriesWithReactions,
+      senderNameLeftMargin,
+      spaceBetweenMessageAndSender,
+      senderAvatarSize,
+      spaceBetweenSenderAvatarAndMessage,
+      messageContainerSidePadding,
+    }
+  }, [
+    messageContainerSidePadding,
+    spaceBetweenSenderAvatarAndMessage,
+    senderAvatarSize,
+    spaceBetweenMessageFromDifferentUserOrType,
+    spaceBetweenMessagesInSeries,
+    spaceBetweenMessageAndSender,
+    senderNameLeftMargin,
+    spaceBetweenSeriesWithReactions,
+  ])
+}

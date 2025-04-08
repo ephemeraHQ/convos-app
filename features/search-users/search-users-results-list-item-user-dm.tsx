@@ -16,6 +16,7 @@ export const SearchUsersResultsListItemUserDm = memo(
     const { data: dm } = useDmQuery({
       clientInboxId: currentSenderInboxId,
       xmtpConversationId,
+      caller: "SearchUsersResultsListItemUserDm",
     })
 
     if (!dm) {

@@ -56,7 +56,11 @@ async function searchExistingDms(args: { searchQuery: string; inboxId: IXmtpInbo
           caller: "SearchExistingDms",
         })
 
-        const hasProfileMatch = profile?.name?.toLowerCase().includes(normalizedSearchQuery)
+        if (!profile) {
+          return null
+        }
+
+        const hasProfileMatch = profile.name?.toLowerCase().includes(normalizedSearchQuery)
 
         const socialProfiles = await ensureSocialProfilesForAddressQuery({
           ethAddress: profile.privyAddress,
