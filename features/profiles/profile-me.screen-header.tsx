@@ -15,6 +15,7 @@ import { useHeader } from "@/navigation/use-header"
 import { useRouter } from "@/navigation/use-navigation"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
+import { ApiError } from "@/utils/convos-api/convos-api-error"
 import { Haptics } from "@/utils/haptics"
 import { AccountSwitcher } from "../authentication/components/account-switcher"
 
@@ -145,38 +146,14 @@ const DoneAction = memo(function DoneAction({ inboxId }: { inboxId: IXmtpInboxId
       })
 
       profileMeStore.getState().actions.reset()
-    } catch (err) {
-      const error = err as any
+    } catch (error) {
+      const apiError = new ApiError({
+        error,
+        additionalMessage: "Failed to save profile",
+      })
 
-      // Extract error message from the API response
-      if (error.response?.data) {
-        const statusCode = error.response.status
-
-        // Handle validation errors (400 Bad Request or 409 Conflict)
-        if (statusCode === 400 || statusCode === 409) {
-          // Generic approach to extract validation error messages
-          if (error.response?.data?.errors) {
-            const errors = error.response.data.errors
-
-            // Find the first error with a message
-            for (const field in errors) {
-              if (errors[field]?.message) {
-                const errorMessage = errors[field].message
-                captureErrorWithToast(error, { message: errorMessage })
-                return
-              }
-            }
-          }
-
-          // Fallback to the general message if we couldn't extract specific error
-          const backendMessage = error.response?.data?.message || `Error ${statusCode}`
-          captureErrorWithToast(error, { message: backendMessage })
-          return
-        }
-      }
-
-      // For other errors, use the default error handling
-      captureErrorWithToast(error)
+      captureErrorWithToast(apiError, { message: apiError.getErrorMessage() })
+      profileMeStore.getState().actions.setEditMode(true)
     }
   }, [profileMeStore, profile, inboxId, saveProfile])
 

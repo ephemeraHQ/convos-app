@@ -2,16 +2,16 @@
  * This store/context is to avoid prop drilling in message components.
  */
 
-import { IXmtpInboxId, IXmtpMessageId } from "@features/xmtp/xmtp.types"
-import { createContext, memo, useContext, useEffect, useRef } from "react"
+import { IXmtpMessageId } from "@features/xmtp/xmtp.types"
+import { createContext, memo, useContext, useMemo } from "react"
 import { createStore, useStore } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
+import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { getHasNextMessageInSeries } from "@/features/conversation/utils/has-next-message-in-serie"
 import { hasPreviousMessageInSeries } from "@/features/conversation/utils/has-previous-message-in-serie"
 import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
-import { convertNanosecondsToMilliseconds } from "@/utils/date"
-import { isDifferent } from "@/utils/objects"
-import { IConversationMessage } from "./conversation-message.types"
+import { messageShouldShowDateChange } from "@/features/conversation/utils/message-should-show-date-change"
 
 type IConversationMessageContextStoreProps = {
   message: IConversationMessage
@@ -20,16 +20,17 @@ type IConversationMessageContextStoreProps = {
 }
 
 type IConversationContextStoreState = {
-  message: IConversationMessage
-  previousMessage: IConversationMessage | undefined
-  nextMessage: IConversationMessage | undefined
+  // message: IConversationMessage
+  // previousMessage: IConversationMessage | undefined
+  // nextMessage: IConversationMessage | undefined
   xmtpMessageId: IXmtpMessageId
-  hasPreviousMessageInSeries: boolean
-  fromMe: boolean
-  sentAtMs: number
-  senderInboxId: IXmtpInboxId
   isShowingTime: boolean
-  isSystemMessage: boolean
+  hasPreviousMessageInSeries: boolean
+  hasNextMessageInSeries: boolean
+  fromMe: boolean
+  showDateChange: boolean
+  isLastMessage: boolean
+  isGroupUpdateMessage: boolean
 }
 
 // Function to calculate derived state from props
@@ -39,17 +40,24 @@ function getCalculatedState(
   return {
     ...props,
     xmtpMessageId: props.message.xmtpId,
+    isShowingTime: false,
     hasPreviousMessageInSeries: hasPreviousMessageInSeries({
       currentMessage: props.message,
       previousMessage: props.previousMessage,
     }),
+    hasNextMessageInSeries: getHasNextMessageInSeries({
+      currentMessage: props.message,
+      nextMessage: props.nextMessage,
+    }),
     fromMe: messageIsFromCurrentSenderInboxId({
       message: props.message,
     }),
-    sentAtMs: Math.floor(convertNanosecondsToMilliseconds(props.message.sentNs)),
-    senderInboxId: props.message.senderInboxId,
-    isShowingTime: false,
-    isSystemMessage: isGroupUpdatedMessage(props.message),
+    showDateChange: messageShouldShowDateChange({
+      messageOne: props.message,
+      messageTwo: props.previousMessage,
+    }),
+    isLastMessage: !props.nextMessage,
+    isGroupUpdateMessage: isGroupUpdatedMessage(props.message),
   }
 }
 
@@ -68,33 +76,29 @@ const MessageStoreContext = createContext<MessageStore | null>(null)
 
 export const ConversationMessageContextStoreProvider = memo(
   ({ children, ...props }: React.PropsWithChildren<IConversationMessageContextStoreProps>) => {
-    const storeRef = useRef<MessageStore>()
+    // const storeRef = useRef<MessageStore>()
 
-    // Create the store once
-    if (!storeRef.current) {
-      storeRef.current = createMessageStore(props)
-    }
+    // if (!storeRef.current) {
+    //   storeRef.current = createMessageStore(props)
+    // } else {
+    //   const storeCopy = getCalculatedState(props)
+    //   storeRef.current?.setState(storeCopy)
+    // }
 
-    // Update store state when props change
-    // Not happy with this solution because it means we'll first render with the old state...
-    useEffect(() => {
-      if (storeRef.current) {
-        const newState = getCalculatedState(props)
-        const currentState = storeRef.current.getState()
-        if (isDifferent(currentState, newState)) {
-          console.log("update")
-          // logJson("newState", newState)
+    const store = useMemo(() => {
+      return createMessageStore({
+        message: props.message,
+        previousMessage: props.previousMessage,
+        nextMessage: props.nextMessage,
+      })
+    }, [props.message, props.previousMessage, props.nextMessage])
 
-          storeRef.current.setState(newState)
-        }
-      }
-    }, [props])
+    // useEffect(() => {
+    //   const storeCopy = getCalculatedState(props)
+    //   storeRef.current?.setState(storeCopy)
+    // }, [props])
 
-    return (
-      <MessageStoreContext.Provider value={storeRef.current}>
-        {children}
-      </MessageStoreContext.Provider>
-    )
+    return <MessageStoreContext.Provider value={store}>{children}</MessageStoreContext.Provider>
   },
 )
 

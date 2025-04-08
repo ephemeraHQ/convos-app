@@ -83,15 +83,15 @@ export const getLocalizedTime = (date: number | Date): string => {
 }
 
 export function getTodayNs() {
-  return Date.now() * 1000000
+  return Date.now() * 1_000_000
+}
+
+export function getTodayMs() {
+  return Date.now()
 }
 
 export function convertNanosecondsToMilliseconds(nanoseconds: number) {
-  return nanoseconds / 1000000
-}
-
-export function convertMillisecondsToNanoseconds(ms: number) {
-  return ms * 1000000
+  return Math.floor(nanoseconds / 1_000_000)
 }
 
 export function isToday(timestamp: number) {

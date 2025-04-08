@@ -1,16 +1,14 @@
 import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  addMessageToConversationMessagesInfiniteQueryData,
-  removeMessageFromConversationMessagesInfiniteQueryData,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
+import { removeMessageFromConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   getXmtpConversationTopicFromXmtpId,
   sendXmtpConversationMessage,
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { getTodayNs } from "@/utils/date"
+import { getTodayMs, getTodayNs } from "@/utils/date"
 import { getRandomId } from "@/utils/general"
 import { IConversationMessageReactionContent } from "./conversation-message/conversation-message.types"
 
@@ -37,19 +35,21 @@ export function useRemoveReactionOnMessage(props: { xmtpConversationId: IXmtpCon
       const tempOptimisticId = getRandomId()
 
       // Add the removal reaction message
-      addMessageToConversationMessagesInfiniteQueryData({
+      processReactionConversationMessages({
         clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-        message: {
-          xmtpId: "" as IXmtpMessageId,
-          senderInboxId: currentSender.inboxId,
-          xmtpTopic: getXmtpConversationTopicFromXmtpId(xmtpConversationId),
-          type: "reaction",
-          sentNs: getTodayNs(),
-          status: "sent",
-          xmtpConversationId,
-          content: variables.reaction,
-        },
+        reactionMessages: [
+          {
+            xmtpId: "" as IXmtpMessageId,
+            senderInboxId: currentSender.inboxId,
+            xmtpTopic: getXmtpConversationTopicFromXmtpId(xmtpConversationId),
+            type: "reaction",
+            sentNs: getTodayNs(),
+            sentMs: getTodayMs(),
+            status: "sent",
+            xmtpConversationId,
+            content: variables.reaction,
+          },
+        ],
       })
 
       return {

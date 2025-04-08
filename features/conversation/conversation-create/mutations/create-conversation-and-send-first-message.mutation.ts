@@ -1,6 +1,7 @@
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@features/xmtp/xmtp.types"
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { setRealMessageIdForOptimisticMessageId } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { getMessageWithType } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-with-type"
 import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
@@ -20,7 +21,7 @@ import { setGroupQueryData } from "@/features/groups/queries/group.query"
 import { createXmtpDm } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-dm"
 import { createXmtpGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 import { captureError } from "@/utils/capture-error"
-import { getTodayNs } from "@/utils/date"
+import { getTodayMs, getTodayNs } from "@/utils/date"
 import { entify } from "@/utils/entify"
 import { getRandomId } from "@/utils/general"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
@@ -32,7 +33,10 @@ export type ICreateConversationAndSendFirstMessageParams = {
   tmpXmtpConversationId: IXmtpConversationId
 }
 
-type ICreateConversationAndSendFirstMessageContext = {}
+type ICreateConversationAndSendFirstMessageContext = {
+  tmpMessageXmtpIds: IXmtpMessageId[]
+  tmpXmtpConversationId: IXmtpConversationId
+}
 
 export type ICreateConversationAndSendFirstMessageReturnType = Awaited<
   ReturnType<typeof createConversationAndSendFirstMessage>
@@ -117,6 +121,7 @@ export const getCreateConversationAndSendFirstMessageMutationOptions =
             xmtpId: getRandomId() as IXmtpMessageId,
             senderInboxId: currentSender.inboxId,
             sentNs: getTodayNs(),
+            sentMs: getTodayMs(),
             status: "sending",
           },
           content: {
@@ -140,6 +145,7 @@ export const getCreateConversationAndSendFirstMessageMutationOptions =
               xmtpId: tmpXmtpMessageId,
               senderInboxId: currentSender.inboxId,
               sentNs: getTodayNs(),
+              sentMs: getTodayMs(),
               status: "sending",
             },
             content,
@@ -220,9 +226,10 @@ export const getCreateConversationAndSendFirstMessageMutationOptions =
 
         return {
           tmpXmtpConversationId,
+          tmpMessageXmtpIds: contentOptimisticMessages.map((message) => message.xmtpId),
         }
       },
-      onSuccess: (result, variables) => {
+      onSuccess: (result, variables, context) => {
         const currentSender = getSafeCurrentSender()
 
         // The last message of the created conversation will have the new member joined message
@@ -236,7 +243,8 @@ export const getCreateConversationAndSendFirstMessageMutationOptions =
 
         // Then all the other content messages
         if (result.sentXmtpMessageIds) {
-          for (const message of result.sentMessages) {
+          for (const [index, message] of result.sentMessages.entries()) {
+            setRealMessageIdForOptimisticMessageId(context.tmpMessageXmtpIds[index], message.xmtpId)
             addMessageToConversationMessagesInfiniteQueryData({
               clientInboxId: currentSender.inboxId,
               xmtpConversationId: result.conversation.xmtpId,

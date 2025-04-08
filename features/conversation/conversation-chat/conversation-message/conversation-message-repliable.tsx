@@ -32,7 +32,7 @@ export const ConversationMessageRepliable = memo(function ConversationMessageRep
   const handleLeftSwipe = useCallback(() => {
     logger.debug("[ConversationMessageRepliable] onLeftSwipe")
     Haptics.successNotificationAsync()
-    const xmtpMessageId = conversationMessageStore.getState().message.xmtpId
+    const xmtpMessageId = conversationMessageStore.getState().xmtpMessageId
     composerStore.getState().setReplyToMessageId(xmtpMessageId)
   }, [composerStore, conversationMessageStore])
 

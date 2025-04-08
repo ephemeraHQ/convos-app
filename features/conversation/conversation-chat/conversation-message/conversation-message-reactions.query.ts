@@ -5,9 +5,6 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
-import { ReactQueryError } from "@/utils/error"
-import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 
@@ -17,12 +14,12 @@ type IArgs = {
 }
 
 // Reaction structure for a single message
-export type IMessageReactions = {
+export type IConversationMessageReactions = {
   bySender: Record<IXmtpInboxId, IConversationMessageReactionContent[]>
   byReactionContent: Record<string, IXmtpInboxId[]>
 }
 
-export function getMessageReactionsQueryOptions(args: IArgs) {
+export function getConversationMessageReactionsQueryOptions(args: IArgs) {
   const { clientInboxId, xmtpMessageId } = args
   return queryOptions({
     queryKey: getReactQueryKey({
@@ -30,34 +27,47 @@ export function getMessageReactionsQueryOptions(args: IArgs) {
       clientInboxId,
       xmtpMessageId,
     }),
+    initialData: {
+      bySender: {},
+      byReactionContent: {},
+    } as IConversationMessageReactions,
     queryFn: () => {
-      // Return empty reactions structure by default
+      // Will add once in XMTP we can fetch reactions for a single message
       return {
         bySender: {},
         byReactionContent: {},
-      } as IMessageReactions
+      } as IConversationMessageReactions
     },
-    enabled: !!xmtpMessageId && !!clientInboxId,
+    // enabled: !!xmtpMessageId && !!clientInboxId,
+    enabled: false, // For now we can't fetch reactions from XMTP
   })
 }
 
-export function useMessageReactions(args: IArgs) {
-  return useQuery(getMessageReactionsQueryOptions(args))
+export function useConversationMessageReactionsQuery(args: IArgs) {
+  return useQuery(getConversationMessageReactionsQueryOptions(args))
 }
 
-export function setMessageReactionsQueryData(args: IArgs, reactions: IMessageReactions) {
-  return reactQueryClient.setQueryData(getMessageReactionsQueryOptions(args).queryKey, reactions)
+export function setConversationMessageReactionsQueryData(
+  args: IArgs,
+  reactions: IConversationMessageReactions,
+) {
+  return reactQueryClient.setQueryData(
+    getConversationMessageReactionsQueryOptions(args).queryKey,
+    reactions,
+  )
 }
 
-export function getMessageReactionsQueryData(args: IArgs): IMessageReactions | undefined {
-  return reactQueryClient.getQueryData(getMessageReactionsQueryOptions(args).queryKey)
+export function getConversationMessageReactionsQueryData(
+  args: IArgs,
+): IConversationMessageReactions | undefined {
+  return reactQueryClient.getQueryData(getConversationMessageReactionsQueryOptions(args).queryKey)
 }
 
 /**
  * Process one or multiple reaction messages
  * Updates the reactions for the referenced messages in the cache
  */
-export function processReactionMessages(args: {
+export function processReactionConversationMessages(args: {
   clientInboxId: IXmtpInboxId
   reactionMessages: IConversationMessage | IConversationMessage[]
 }) {
@@ -86,7 +96,7 @@ export function processReactionMessages(args: {
   // Process each group of reactions
   reactionsByReferenceId.forEach((messagesToProcess, referenceId) => {
     // Get current reactions for this message
-    const currentReactions = getMessageReactionsQueryData({
+    const currentReactions = getConversationMessageReactionsQueryData({
       clientInboxId,
       xmtpMessageId: referenceId,
     }) || {
@@ -142,20 +152,9 @@ export function processReactionMessages(args: {
     }
 
     // Update the reactions in the cache
-    setMessageReactionsQueryData({ clientInboxId, xmtpMessageId: referenceId }, updatedReactions)
-
-    // Log only if we processed a single message (to avoid excessive logging)
-    if (messages.length === 1) {
-      const message = messages[0]
-      if (isReactionMessage(message)) {
-        queryLogger.debug(
-          `Updated reactions for message ${referenceId}: ${message.content.action} ${message.content.content} from ${message.senderInboxId}`,
-        )
-      }
-    } else {
-      queryLogger.debug(
-        `Updated reactions for message ${referenceId} (batch processed ${messagesToProcess.length} reactions)`,
-      )
-    }
+    setConversationMessageReactionsQueryData(
+      { clientInboxId, xmtpMessageId: referenceId },
+      updatedReactions,
+    )
   })
 }

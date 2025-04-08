@@ -44,8 +44,9 @@ export function getConversationPreviousMessage(args: {
 export function useConversationPreviousMessageId(args: {
   messageId: IXmtpMessageId
   xmtpConversationId: IXmtpConversationId
+  caller: string
 }) {
-  const { messageId, xmtpConversationId } = args
+  const { messageId, xmtpConversationId, caller } = args
 
   const currentSender = useSafeCurrentSender()
 
@@ -53,7 +54,7 @@ export function useConversationPreviousMessageId(args: {
     ...getConversationMessagesInfiniteQueryOptions({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
-      caller: "useConversationPreviousMessage",
+      caller,
     }),
     select: (data) => {
       const allMessageIds = data?.pages.flatMap((page) => page.messageIds)

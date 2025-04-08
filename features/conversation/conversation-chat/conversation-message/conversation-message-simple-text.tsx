@@ -10,15 +10,14 @@ import {
 import { ConversationMessageGestures } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures"
 import { MessageText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
-import { useSelect } from "@/stores/stores.utils"
 import { IConversationMessageText } from "./conversation-message.types"
 
-export const MessageSimpleText = memo(function MessageSimpleText(props: {
+export const ConversationMessageSimpleText = memo(function ConversationMessageSimpleText(props: {
   message: IConversationMessageText
 }) {
   const { message } = props
 
-  const { fromMe } = useConversationMessageContextSelector(useSelect(["fromMe"]))
+  const fromMe = useConversationMessageContextSelector((state) => state.fromMe)
 
   if (shouldRenderBigEmoji(message.content.text)) {
     return (

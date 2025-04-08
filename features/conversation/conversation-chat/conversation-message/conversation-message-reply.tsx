@@ -163,6 +163,7 @@ const MessageReplyReference = memo(function MessageReplyReference(props: {
   const { data: referencedMessage } = useConversationMessageQuery({
     xmtpMessageId: referenceMessageId,
     clientInboxId: currentSender.inboxId,
+    caller: "MessageReplyReference",
   })
 
   const { displayName } = usePreferredDisplayInfo({

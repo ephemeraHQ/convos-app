@@ -1,7 +1,5 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
-import { Fragment, memo, ReactNode, useEffect, useMemo } from "react"
+import { Fragment, memo, ReactNode, useMemo } from "react"
 import { StyleProp, ViewStyle } from "react-native"
-import { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -9,35 +7,24 @@ import { ConversationMessageSender } from "@/features/conversation/conversation-
 import { ConversationSenderAvatar } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender-avatar"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
-import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { getConversationMessagesInfiniteQueryOptions } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
-import { useHasNextMessageInSeries } from "@/features/conversation/utils/has-next-message-in-serie"
-import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { debugBorder } from "@/utils/debug-style"
 
 export const ConversationMessageLayout = memo(function ConversationMessageLayout(args: {
-  reactions?: ReactNode
-  message?: ReactNode
-  messageStatus?: ReactNode
+  reactionsComp?: ReactNode
+  messageComp?: ReactNode
+  messageStatusComp?: ReactNode
 }) {
-  const { reactions, message, messageStatus } = args
+  const { reactionsComp, messageComp, messageStatusComp } = args
   const messageStyles = useConversationMessageLayoutStyles()
 
-  const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
-  const senderInboxId = useConversationMessageContextSelector((s) => s.senderInboxId)
-  const hasPreviousMessageInSeries = useConversationMessageContextSelector(
-    (s) => s.hasPreviousMessageInSeries,
+  const currentSender = useSafeCurrentSender()
+  const hasPreviousMessageInSeries = false
+  const hasNextMessageInSeries = useConversationMessageContextSelector(
+    (s) => s.hasNextMessageInSeries,
   )
-  const isSystemMessage = useConversationMessageContextSelector((s) => s.isSystemMessage)
-  const messageData = useConversationMessageContextSelector((s) => s.message)
-
-  const { data: hasNextMessageInSeries } = useHasNextMessageInSeries({
-    currentMessageId: messageData.xmtpId,
-    xmtpConversationId: messageData.xmtpConversationId,
-  })
-
-  const isGroupUpdate = isGroupUpdatedMessage(messageData)
+  const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
+  const isGroupUpdate = useConversationMessageContextSelector((s) => s.isGroupUpdateMessage)
 
   const contentContainerStyle = useMemo(() => {
     return fromMe
@@ -52,12 +39,12 @@ export const ConversationMessageLayout = memo(function ConversationMessageLayout
       messageStyles.messageContainer,
       {
         alignItems: fromMe ? "flex-end" : "flex-start",
-        ...(Boolean(reactions) && {
+        ...(Boolean(reactionsComp) && {
           marginBottom: messageStyles.spaceBetweenMessagesInSeries,
         }),
       },
     ] as StyleProp<ViewStyle>
-  }, [fromMe, reactions, messageStyles])
+  }, [fromMe, reactionsComp, messageStyles])
 
   const senderNameContainerStyle = useMemo(() => {
     return {
@@ -72,12 +59,12 @@ export const ConversationMessageLayout = memo(function ConversationMessageLayout
   }, [fromMe, messageStyles])
 
   return (
-    <ConversationMessageLayoutContainer hasReactions={Boolean(reactions)}>
+    <ConversationMessageLayoutContainer hasReactions={Boolean(reactionsComp)}>
       <HStack style={contentContainerStyle}>
-        {!fromMe && !isSystemMessage && (
+        {!fromMe && !isGroupUpdate && (
           <Fragment>
             {!hasNextMessageInSeries ? (
-              <ConversationSenderAvatar inboxId={senderInboxId} />
+              <ConversationSenderAvatar inboxId={currentSender.inboxId} />
             ) : (
               <VStack style={messageStyles.avatarPlaceholder} />
             )}
@@ -86,46 +73,24 @@ export const ConversationMessageLayout = memo(function ConversationMessageLayout
         )}
 
         <VStack style={messageContainerStyle}>
-          {!fromMe && !hasPreviousMessageInSeries && !isSystemMessage && (
+          {!fromMe && !hasPreviousMessageInSeries && !isGroupUpdate && (
             <VStack style={senderNameContainerStyle}>
-              <ConversationMessageSender inboxId={senderInboxId} />
+              <ConversationMessageSender inboxId={currentSender.inboxId} />
             </VStack>
           )}
 
-          {message}
+          {messageComp}
         </VStack>
       </HStack>
 
-      {Boolean(reactions) && <HStack style={reactionsContainerStyle}>{reactions}</HStack>}
+      {Boolean(reactionsComp) && <HStack style={reactionsContainerStyle}>{reactionsComp}</HStack>}
 
-      {Boolean(messageStatus) && (
-        <HStack style={messageStyles.messageStatus}>{messageStatus}</HStack>
+      {Boolean(messageStatusComp) && (
+        <HStack style={messageStyles.messageStatus}>{messageStatusComp}</HStack>
       )}
     </ConversationMessageLayoutContainer>
   )
 })
-
-function useIsLastMessage(args: {
-  xmtpMessageId: IXmtpMessageId | undefined
-  xmtpConversationId: IXmtpConversationId
-}) {
-  const { xmtpMessageId, xmtpConversationId } = args
-
-  const currentSender = useSafeCurrentSender()
-
-  return useInfiniteQuery({
-    ...getConversationMessagesInfiniteQueryOptions({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-      caller: "isLastMessage",
-    }),
-    select: (data) => {
-      const allMessageIds = data?.pages.flatMap((page) => page.messageIds) || []
-      const currentIndex = allMessageIds.findIndex((id) => id === xmtpMessageId)
-      return currentIndex === allMessageIds.length - 1
-    },
-  })
-}
 
 const ConversationMessageLayoutContainer = memo(function ConversationMessageLayoutContainer(args: {
   children: ReactNode
@@ -137,55 +102,37 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
 
   const messageStyles = useConversationMessageLayoutStyles()
 
-  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
-  const xmtpMessageId = useConversationMessageContextSelector((s) => s.xmtpMessageId)
+  const hasNextMessageInSeries = useConversationMessageContextSelector(
+    (s) => s.hasNextMessageInSeries,
+  )
+  const isLastMessage = useConversationMessageContextSelector((s) => s.isLastMessage)
+  const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
 
-  const { data: hasNextMessageInSeries } = useHasNextMessageInSeries({
-    currentMessageId: xmtpMessageId,
-    xmtpConversationId,
-  })
+  const containerStyle = useMemo(() => {
+    const styles: StyleProp<ViewStyle> = {
+      marginBottom: messageStyles.spaceBetweenMessagesInSeries,
+    }
 
-  const { data: isLastMessage } = useIsLastMessage({
-    xmtpMessageId,
-    xmtpConversationId,
-  })
-
-  const containerMarginBottom = useMemo(() => {
-    if (isLastMessage) {
-      return messageStyles.spaceBetweenMessageFromDifferentUserOrType
+    if (isLastMessage && !fromMe) {
+      styles.marginBottom = messageStyles.spaceBetweenMessageFromDifferentUserOrType
     }
 
     if (!hasNextMessageInSeries) {
-      return 0
+      styles.marginBottom = 0
     }
 
     if (hasReactions) {
-      return messageStyles.spaceBetweenSeriesWithReactions
+      styles.marginBottom = messageStyles.spaceBetweenSeriesWithReactions
     }
 
-    return messageStyles.spaceBetweenMessagesInSeries
-  }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage])
-
-  const containerMarginBottomAV = useSharedValue(containerMarginBottom)
-
-  useEffect(() => {
-    containerMarginBottomAV.value = withSpring(containerMarginBottom, {
-      stiffness: theme.animation.spring.stiffness,
-      damping: theme.animation.spring.damping,
-    })
-  }, [containerMarginBottom, containerMarginBottomAV, theme])
-
-  const containerAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      marginBottom: containerMarginBottomAV.value,
-    }
-  })
+    return styles
+  }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage, fromMe])
 
   return (
     <AnimatedVStack
       // {...debugBorder()}
       layout={theme.animation.reanimatedLayoutSpringTransition}
-      style={containerAnimatedStyle}
+      style={containerStyle}
     >
       {children}
     </AnimatedVStack>

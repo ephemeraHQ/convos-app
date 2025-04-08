@@ -20,6 +20,8 @@ import { ConversationStoreProvider } from "@/features/conversation/conversation-
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { $globalStyles } from "@/theme/styles"
+import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 import { useConversationMessageQuery } from "../conversation-chat/conversation-message/conversation-message.query"
 import { useMessageHasReactions } from "../conversation-chat/conversation-message/hooks/use-message-has-reactions"
 
@@ -74,15 +76,15 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
               // 15 is enough
               data={messageIds?.slice(0, 15)}
               renderItem={({ item, index }) => {
-                const message = item
-                const previousMessage = messageIds[index + 1]
-                const nextMessage = messageIds[index - 1]
+                const messageId = item
+                const previousMessageId = messageIds[index + 1]
+                const nextMessageId = messageIds[index - 1]
 
                 return (
                   <MessageWrapper
-                    messageId={message}
-                    previousMessageId={previousMessage}
-                    nextMessageId={nextMessage}
+                    messageId={messageId}
+                    previousMessageId={previousMessageId}
+                    nextMessageId={nextMessageId}
                   />
                 )
               }}
@@ -116,19 +118,25 @@ const MessageWrapper = memo(function MessageWrapper({
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId: messageId,
     clientInboxId: currentSender.inboxId,
+    caller: "Conversation Preview",
   })
 
   const { data: previousMessage } = useConversationMessageQuery({
     xmtpMessageId: previousMessageId,
     clientInboxId: currentSender.inboxId,
+    caller: "Conversation Preview",
   })
 
   const { data: nextMessage } = useConversationMessageQuery({
     xmtpMessageId: nextMessageId,
     clientInboxId: currentSender.inboxId,
+    caller: "Conversation Preview",
   })
 
   if (!message) {
+    captureError(
+      new GenericError({ error: new Error("Message not found in Conversation Preview") }),
+    )
     return null
   }
 
@@ -141,8 +149,8 @@ const MessageWrapper = memo(function MessageWrapper({
       <VStack>
         <ConversationMessageTimestamp />
         <ConversationMessageLayout
-          message={<ConversationMessage />}
-          reactions={hasReactions && <ConversationMessageReactions />}
+          messageComp={<ConversationMessage />}
+          reactionsComp={hasReactions && <ConversationMessageReactions />}
         />
       </VStack>
     </ConversationMessageContextStoreProvider>

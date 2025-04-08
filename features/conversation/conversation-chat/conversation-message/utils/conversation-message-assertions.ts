@@ -74,6 +74,10 @@ export function isMultiRemoteAttachmentMessage(
   return message.type === "multiRemoteAttachment"
 }
 
+export function isAttachmentsMessage(message: IConversationMessage) {
+  return isStaticAttachmentMessage(message) || isMultiRemoteAttachmentMessage(message)
+}
+
 /**
  * Message content assertions
  */

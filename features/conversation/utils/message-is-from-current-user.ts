@@ -14,10 +14,10 @@ type MessageFromCurrentUserPayload = {
 }
 
 export function messageIsFromCurrentSenderInboxId({ message }: MessageFromCurrentUserPayload) {
-  const { inboxId: currentInboxId } = getSafeCurrentSender()
+  const currentSender = getSafeCurrentSender()
   const messageSenderInboxId = message?.senderInboxId
 
-  if (!currentInboxId) {
+  if (!currentSender.inboxId) {
     logger.warn("[messageIsFromCurrentAccountInboxId] No current account inbox id")
     return false
   }
@@ -27,7 +27,7 @@ export function messageIsFromCurrentSenderInboxId({ message }: MessageFromCurren
     return false
   }
 
-  return isSameInboxId(messageSenderInboxId, currentInboxId)
+  return isSameInboxId(messageSenderInboxId, currentSender.inboxId)
 }
 
 export function useMessageIsFromCurrentSenderInboxId(args: { xmtpMessageId: IXmtpMessageId }) {
@@ -39,6 +39,7 @@ export function useMessageIsFromCurrentSenderInboxId(args: { xmtpMessageId: IXmt
     ...getConversationMessageQueryOptions({
       clientInboxId: currentSender.inboxId,
       xmtpMessageId,
+      caller: "useMessageIsFromCurrentSenderInboxId",
     }),
     select: (message) => message && messageIsFromCurrentSenderInboxId({ message }),
   })

@@ -16,6 +16,7 @@ import {
   useConversationMessageContextMenuStoreContext,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.store-context"
 import { useConversationMessageContextMenuStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.styles"
+import { useConversationMessageReactionsQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { getMessageFromConversationSafe } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-from-conversation"
 import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
@@ -23,7 +24,6 @@ import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conver
 import { useReactOnMessage } from "@/features/conversation/conversation-chat/use-react-on-message.mutation"
 import { useRemoveReactionOnMessage } from "@/features/conversation/conversation-chat/use-remove-reaction-on-message.mutation"
 import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
-import { useConversationMessageReactions } from "../hooks/use-conversation-message-reactions"
 import { getCurrentUserAlreadyReactedOnMessage } from "../utils/get-current-user-already-reacted-on-message"
 import { MessageContextMenuAboveMessageReactions } from "./conversation-message-context-menu-above-message-reactions"
 import { MessageContextMenuContainer } from "./conversation-message-context-menu-container"
@@ -54,7 +54,10 @@ const Content = memo(function Content(props: {
   const messageContextMenuStore = useConversationMessageContextMenuStore()
   const currentSender = useSafeCurrentSender()
 
-  const { bySender } = useConversationMessageReactions(messageId!)
+  const { data: reactions } = useConversationMessageReactionsQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpMessageId: messageId,
+  })
 
   const { message, previousMessage, nextMessage } = useMemo(() => {
     const message = getMessageFromConversationSafe({
@@ -118,7 +121,6 @@ const Content = memo(function Content(props: {
     (emoji: string) => {
       const currentUserAlreadyReacted = getCurrentUserAlreadyReactedOnMessage({
         messageId,
-        xmtpConversationId,
         emoji,
       })
 
@@ -132,20 +134,14 @@ const Content = memo(function Content(props: {
       }
       messageContextMenuStore.getState().setMessageContextMenuData(null)
     },
-    [
-      reactOnMessage,
-      messageId,
-      removeReactionOnMessage,
-      messageContextMenuStore,
-      xmtpConversationId,
-    ],
+    [reactOnMessage, messageId, removeReactionOnMessage, messageContextMenuStore],
   )
 
   const handleChooseMoreEmojis = useCallback(() => {
     openMessageContextMenuEmojiPicker()
   }, [])
 
-  const hasReactions = Boolean(bySender && Object.keys(bySender).length > 0)
+  const hasReactions = Boolean(reactions && Object.keys(reactions.bySender).length > 0)
 
   const { verticalSpaceBetweenSections } = useConversationMessageContextMenuStyles()
 
@@ -160,7 +156,7 @@ const Content = memo(function Content(props: {
         <Animated.View style={StyleSheet.absoluteFill}>
           <MessageContextMenuBackdrop handlePressBackdrop={handlePressBackdrop}>
             <AnimatedVStack style={StyleSheet.absoluteFill}>
-              {!!bySender && <MessageContextMenuReactors reactors={bySender} />}
+              {!!reactions && <MessageContextMenuReactors reactors={reactions.bySender} />}
               <MessageContextMenuContainer
                 itemRectY={itemRectY}
                 itemRectX={itemRectX}
@@ -171,7 +167,7 @@ const Content = memo(function Content(props: {
                 hasReactions={hasReactions}
               >
                 <MessageContextMenuAboveMessageReactions
-                  reactors={bySender ?? {}}
+                  reactors={reactions?.bySender ?? {}}
                   messageId={messageId}
                   onChooseMoreEmojis={handleChooseMoreEmojis}
                   onSelectReaction={handleSelectReaction}

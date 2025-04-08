@@ -72,6 +72,7 @@ const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversa
           const message = await ensureConversationMessageQueryData({
             xmtpMessageId: replyingToMessageId,
             clientInboxId: currentSender.inboxId,
+            caller: "ConversationComposerReplyPreview",
           })
           Haptics.softImpactAsync()
           setReplyMessage(message)

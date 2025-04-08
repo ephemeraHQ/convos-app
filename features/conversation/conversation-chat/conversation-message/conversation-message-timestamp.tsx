@@ -167,16 +167,19 @@ export const ConversationMessageTimestamp = memo(function ConversationMessageTim
   const { data: previousMessageId } = useConversationPreviousMessageId({
     messageId: xmtpMessageId,
     xmtpConversationId: xmtpConversationId,
+    caller: "ConversationMessageTimestamp",
   })
 
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId: xmtpMessageId,
     clientInboxId: currentSender.inboxId,
+    caller: "ConversationMessageTimestamp",
   })
 
   const { data: previousMessage } = useConversationMessageQuery({
     xmtpMessageId: previousMessageId,
     clientInboxId: currentSender.inboxId,
+    caller: "ConversationMessageTimestamp",
   })
 
   if (!message) {
@@ -186,8 +189,8 @@ export const ConversationMessageTimestamp = memo(function ConversationMessageTim
   if (
     previousMessage &&
     messageShouldShowDateChange({
-      message,
-      previousMessage,
+      messageOne: message,
+      messageTwo: previousMessage,
     })
   ) {
     return <MessageTimestampVisible timestampMs={message.sentMs} />

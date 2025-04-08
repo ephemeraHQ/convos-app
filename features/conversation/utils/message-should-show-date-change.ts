@@ -1,29 +1,28 @@
 import differenceInMinutes from "date-fns/differenceInMinutes"
+import { normalizeTimestampToMs } from "@/utils/date"
 import { IConversationMessage } from "../conversation-chat/conversation-message/conversation-message.types"
 
 type MessageShouldShowDateChangePayload = {
-  message: IConversationMessage | undefined
-  previousMessage: IConversationMessage | undefined
+  messageOne: IConversationMessage | undefined
+  messageTwo: IConversationMessage | undefined
 }
 
 export const messageShouldShowDateChange = ({
-  message,
-  previousMessage,
+  messageOne,
+  messageTwo,
 }: MessageShouldShowDateChangePayload) => {
-  if (!message) {
+  if (!messageOne) {
     return false
   }
 
-  if (!previousMessage) {
+  if (!messageTwo) {
     return true
   }
 
-  const currentMessageTime = convertNanosecondsToMilliseconds(message.sentNs)
-  const previousMessageTime = convertNanosecondsToMilliseconds(previousMessage.sentNs)
+  const minutes = differenceInMinutes(
+    normalizeTimestampToMs(messageOne.sentNs),
+    normalizeTimestampToMs(messageTwo.sentNs),
+  )
 
-  return differenceInMinutes(currentMessageTime, previousMessageTime) >= 5
-}
-
-function convertNanosecondsToMilliseconds(nanoseconds: number) {
-  return nanoseconds / 1000000
+  return Math.abs(minutes) >= 5
 }

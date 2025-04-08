@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query"
 import React, { memo, useEffect, useMemo } from "react"
 import { Center } from "@/design-system/Center"
 import { HStack } from "@/design-system/HStack"
@@ -6,8 +5,8 @@ import { Icon } from "@/design-system/Icon/Icon"
 import { Loader } from "@/design-system/loader"
 import { AnimatedText } from "@/design-system/Text"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useConversationMessageStatus } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-conversation-message-status"
 import { usePrevious } from "@/hooks/use-previous-value"
 import { translate } from "@/i18n"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -15,17 +14,13 @@ import { Haptics } from "@/utils/haptics"
 
 export const ConversationMessageStatus = memo(function ConversationMessageStatus() {
   const { theme } = useAppTheme()
-  const xmtpMessageId = useConversationMessageContextSelector((state) => state.message.xmtpId)
+
+  const xmtpMessageId = useConversationMessageContextSelector((state) => state.xmtpMessageId)
   const currentSender = useSafeCurrentSender()
 
-  const { data: messageStatus } = useQuery({
-    ...getConversationMessageQueryOptions({
-      xmtpMessageId,
-      clientInboxId: currentSender.inboxId,
-    }),
-    select: (data) => {
-      return data?.status
-    },
+  const { data: messageStatus } = useConversationMessageStatus({
+    xmtpMessageId,
+    clientInboxId: currentSender.inboxId,
   })
 
   const previousStatus = usePrevious(messageStatus)

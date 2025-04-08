@@ -1,109 +1,71 @@
 import { AxiosError } from "axios"
-import { ZodIssue } from "zod"
 import { BaseError, BaseErrorArgs } from "@/utils/error"
 
 /**
- * Type guard for ZodIssue arrays
- * Checks for expected properties on the first item
+ * API validation error structure
  */
-function isZodIssueArray(details: unknown): details is ZodIssue[] {
-  return (
-    Array.isArray(details) &&
-    details.length > 0 &&
-    typeof details[0] === "object" &&
-    details[0] !== null &&
-    "code" in details[0] &&
-    "path" in details[0] &&
-    "message" in details[0]
-  )
+type IApiValidationErrors = {
+  [field: string]: {
+    message?: string
+    [key: string]: any
+  }
+}
+
+/**
+ * Checks if the object matches the API validation errors structure
+ */
+function isApiValidationErrors(obj: unknown): obj is IApiValidationErrors {
+  if (!obj || typeof obj !== "object") return false
+
+  const entries = Object.entries(obj)
+  if (entries.length === 0) return false
+
+  return entries.some(([_, value]) => value && typeof value === "object" && "message" in value)
 }
 
 export class ApiError extends BaseError {
-  constructor(args: BaseErrorArgs & { details?: ZodIssue[] | string }) {
-    if (args.details) {
-      args.extra = {
-        ...args.extra,
-      }
+  private origError: unknown
 
-      if (typeof args.details === "string") {
-        args.extra.details = args.details
-      } else if (isZodIssueArray(args.details)) {
-        args.extra.validationDetails = args.details
+  constructor(args: BaseErrorArgs) {
+    // Extract errors if they exist in the response
+    if (args.error instanceof AxiosError && args.error.response?.data?.errors) {
+      const errors = args.error.response.data.errors
+      if (isApiValidationErrors(errors)) {
+        args.extra = {
+          ...args.extra,
+          apiErrors: errors,
+        }
       }
     }
 
     super("[API]", args)
+
+    // Store original error after super() call
+    this.origError = args.error
   }
 
-  // /**
-  //  * Checks if this error has validation details
-  //  */
-  // hasValidationErrors(): boolean {
-  //   return !!this.getValidationDetails()?.length
-  // }
+  /**
+   * Gets the first error message from the API errors object
+   */
+  getErrorMessage(): string {
+    // Check for API validation error messages first
+    const apiErrors = this.extra?.apiErrors as IApiValidationErrors | undefined
+    if (apiErrors) {
+      for (const field in apiErrors) {
+        if (apiErrors[field]?.message) {
+          return apiErrors[field].message
+        }
+      }
+    }
 
-  // /**
-  //  * Returns the validation details if present
-  //  */
-  // getValidationDetails(): ZodIssue[] | undefined {
-  //   return this.extra?.validationDetails as ZodIssue[] | undefined
-  // }
+    // Get message from response data if available
+    if (this.origError instanceof AxiosError && this.origError.response?.data?.message) {
+      return this.origError.response.data.message
+    }
 
-  // /**
-  //  * Returns the string details if present
-  //  */
-  // getDetails(): string | undefined {
-  //   return this.extra?.details as string | undefined
-  // }
-
-  // /**
-  //  * Groups validation errors by path
-  //  */
-  // getFormattedValidationErrors(): Record<string, string[]> {
-  //   const details = this.getValidationDetails()
-  //   if (!details) {
-  //     return {}
-  //   }
-
-  //   // Group validation errors by path
-  //   const errors: Record<string, string[]> = {}
-
-  //   for (const issue of details) {
-  //     const path = issue.path.join(".") || "root"
-  //     if (!errors[path]) {
-  //       errors[path] = []
-  //     }
-  //     errors[path].push(issue.message)
-  //   }
-
-  //   return errors
-  // }
-
-  // /**
-  //  * Formats the validation errors into a clean, readable string
-  //  */
-  // formatValidationDetails(): string {
-  //   if (!this.hasValidationErrors()) {
-  //     return "No validation errors"
-  //   }
-
-  //   const errors = this.getFormattedValidationErrors()
-  //   return Object.entries(errors)
-  //     .map(([path, messages]) => `${path}: ${messages.join(", ")}`)
-  //     .join("\n")
-  // }
-}
-
-export function handleApiError(error: unknown): never {
-  if (error instanceof AxiosError) {
-    throw new ApiError({
-      error,
-      additionalMessage: error.response?.data?.error,
-      details: error.response?.data?.details,
-    })
+    // Fallback to our message
+    return this.message
   }
-
-  throw error
 }
 
 export function isConvosApi404Error(error: unknown): boolean {

@@ -1,25 +1,21 @@
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { getConversationMessageReactionsQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 
 export function getCurrentUserAlreadyReactedOnMessage(args: {
   messageId: IXmtpMessageId
-  xmtpConversationId: IXmtpConversationId
-  emoji: string | undefined // Specific emoji or just reacted in general
+  emoji: string | undefined
 }) {
-  const { messageId, xmtpConversationId, emoji } = args
+  const { messageId, emoji } = args
 
   const currentSender = getSafeCurrentSender()
 
-  const messages = getAllConversationMessageInInfiniteQueryData({
+  const reactions = getConversationMessageReactionsQueryData({
     clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
+    xmtpMessageId: messageId,
   })
 
-  const reactions = messages?.reactions[messageId]
-  const bySender = reactions?.bySender
+  const senderReactions = reactions?.bySender[currentSender.inboxId]
 
-  return bySender?.[currentSender.inboxId!]?.some(
-    (reaction) => !emoji || reaction.content === emoji,
-  )
+  return senderReactions?.some((reaction) => !emoji || reaction.content === emoji)
 }

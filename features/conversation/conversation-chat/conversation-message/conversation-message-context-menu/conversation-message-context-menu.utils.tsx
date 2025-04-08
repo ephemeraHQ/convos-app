@@ -27,6 +27,7 @@ export function useMessageContextMenuItems(args: {
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId: messageId,
     clientInboxId: currentSender.inboxId,
+    caller: "Conversation Message Context Menu",
   })
 
   if (!message) {

@@ -1,17 +1,22 @@
 import { useMemo } from "react"
-import { isCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { isCurrentSender, useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useConversationMessageReactionsQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { ObjectTyped } from "@/utils/object-typed"
-import { useConversationMessageReactions } from "../hooks/use-conversation-message-reactions"
 import { RolledUpReactions, SortedReaction } from "./conversation-message-reactions.types"
 
 export function useConversationMessageReactionsRolledUp(args: { xmtpMessageId: IXmtpMessageId }) {
   const { xmtpMessageId } = args
 
-  const { bySender: reactionsBySender } = useConversationMessageReactions(xmtpMessageId)
+  const currentSender = useSafeCurrentSender()
 
-  const inboxIds = ObjectTyped.keys(reactionsBySender ?? {})
+  const { data: reactions } = useConversationMessageReactionsQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpMessageId,
+  })
+
+  const inboxIds = ObjectTyped.keys(reactions?.bySender ?? {})
 
   const preferredDisplayData = usePreferredDisplayInfoBatch({
     xmtpInboxIds: inboxIds,
@@ -23,7 +28,7 @@ export function useConversationMessageReactionsRolledUp(args: { xmtpMessageId: I
     let userReacted = false
 
     // Flatten reactions and track sender addresses
-    const flatReactions = ObjectTyped.entries(reactionsBySender ?? {}).flatMap(
+    const flatReactions = ObjectTyped.entries(reactions?.bySender ?? {}).flatMap(
       ([senderInboxId, senderReactions]) =>
         senderReactions.map((reaction) => ({ senderInboxId, ...reaction })),
     )
@@ -73,5 +78,5 @@ export function useConversationMessageReactionsRolledUp(args: { xmtpMessageId: I
       preview,
       detailed,
     }
-  }, [reactionsBySender, preferredDisplayData, xmtpMessageId, inboxIds])
+  }, [reactions?.bySender, preferredDisplayData, xmtpMessageId, inboxIds])
 }

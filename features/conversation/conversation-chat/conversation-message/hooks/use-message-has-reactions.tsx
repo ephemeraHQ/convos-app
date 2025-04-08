@@ -1,15 +1,26 @@
-import { useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useCallback } from "react"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  getConversationMessageReactionsQueryOptions,
+  IConversationMessageReactions,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { useConversationMessageReactions } from "./use-conversation-message-reactions"
 
 export function useMessageHasReactions(args: { xmtpMessageId: IXmtpMessageId }) {
   const { xmtpMessageId } = args
 
-  const reactions = useConversationMessageReactions(xmtpMessageId)
+  const currentSender = getSafeCurrentSender()
 
-  const hasReactions = useMemo(() => {
-    return Object.values(reactions.bySender || {}).some((reactions) => reactions.length > 0)
-  }, [reactions])
+  const select = useCallback((data: IConversationMessageReactions) => {
+    return Object.values(data.bySender || {}).some((reactions) => reactions.length > 0)
+  }, [])
 
-  return hasReactions
+  return useQuery({
+    ...getConversationMessageReactionsQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpMessageId,
+    }),
+    select,
+  })
 }

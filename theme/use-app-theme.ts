@@ -162,6 +162,7 @@ export type IThemed = ReturnType<typeof useAppTheme>["themed"]
 export const useAppTheme = (): UseAppThemeValue => {
   const colorScheme = useColorScheme()
   const context = useContext(ThemeContext)
+
   if (!context) {
     throw new Error("useTheme must be used within a ThemeProvider")
   }

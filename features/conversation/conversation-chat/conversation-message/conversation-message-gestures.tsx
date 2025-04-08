@@ -5,18 +5,14 @@ import {
   ConversationMessageGesturesDumb,
   IMessageGesturesOnLongPressArgs,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures.dumb"
-import {
-  useConversationMessageContextSelector,
-  useConversationMessageStore,
-} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { useConversationMessageStore } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { isMultiRemoteAttachmentMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { getMessageFromConversationSafe } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-from-conversation"
 import { useReactOnMessage } from "@/features/conversation/conversation-chat/use-react-on-message.mutation"
 import { useRemoveReactionOnMessage } from "@/features/conversation/conversation-chat/use-remove-reaction-on-message.mutation"
-import { useStableCallback } from "@/hooks/use-stable-callback"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { useCurrentXmtpConversationId } from "../conversation.store-context"
+import { useCurrentXmtpConversationIdSafe } from "../conversation.store-context"
 import { getCurrentUserAlreadyReactedOnMessage } from "./utils/get-current-user-already-reacted-on-message"
 
 export const ConversationMessageGestures = memo(function ConversationMessageGestures(props: {
@@ -24,13 +20,15 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
   contextMenuExtra?: Record<string, any> // Not best but okay for now
 }) {
   const { contextMenuExtra, children } = props
+
   const messageContextMenuStore = useConversationMessageContextMenuStore()
-  const messageStore = useConversationMessageStore()
-  const xmtpConversationId = useCurrentXmtpConversationId()!
+  const conversationMessageStore = useConversationMessageStore()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
   const { reactOnMessage } = useReactOnMessage({
     xmtpConversationId,
   })
+
   const { removeReactionOnMessage } = useRemoveReactionOnMessage({
     xmtpConversationId,
   })
@@ -39,12 +37,11 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
     async (e: IMessageGesturesOnLongPressArgs) => {
       try {
         const currentSender = getSafeCurrentSender()
-        const messageId = messageStore.getState().xmtpMessageId
+        const messageId = conversationMessageStore.getState().xmtpMessageId
         const message = getMessageFromConversationSafe({
           messageId,
           clientInboxId: currentSender.inboxId,
         })
-        console.log("message:", message)
         messageContextMenuStore.getState().setMessageContextMenuData({
           messageId,
           itemRectX: e.pageX,
@@ -63,26 +60,20 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
         )
       }
     },
-    [messageContextMenuStore, messageStore, contextMenuExtra],
+    [messageContextMenuStore, conversationMessageStore, contextMenuExtra],
   )
 
-  const isShowingTime = useConversationMessageContextSelector((s) => s.isShowingTime)
-
-  const handleTap = useStableCallback(
-    ({ isShowingTime }) => {
-      messageStore.setState({
-        isShowingTime: !isShowingTime,
-      })
-    },
-    { isShowingTime },
-    [messageStore],
-  )
+  const handleTap = useCallback(() => {
+    const isShowingTime = conversationMessageStore.getState().isShowingTime
+    conversationMessageStore.setState({
+      isShowingTime: !isShowingTime,
+    })
+  }, [conversationMessageStore])
 
   const handleDoubleTap = useCallback(() => {
-    const messageId = messageStore.getState().xmtpMessageId
+    const messageId = conversationMessageStore.getState().xmtpMessageId
     const alreadyReacted = getCurrentUserAlreadyReactedOnMessage({
       messageId,
-      xmtpConversationId,
       emoji: "❤️",
     })
     if (alreadyReacted) {
@@ -96,7 +87,7 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
         emoji: "❤️",
       })
     }
-  }, [reactOnMessage, removeReactionOnMessage, messageStore, xmtpConversationId])
+  }, [reactOnMessage, removeReactionOnMessage, conversationMessageStore])
 
   return (
     <ConversationMessageGesturesDumb

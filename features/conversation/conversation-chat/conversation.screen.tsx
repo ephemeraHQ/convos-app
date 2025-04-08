@@ -18,6 +18,7 @@ import { ConversationCreateSearchInput } from "@/features/conversation/conversat
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
+import { debugBorder } from "@/utils/debug-style"
 import { ConversationMessages } from "./conversation-messages"
 import {
   ConversationStoreProvider,
@@ -36,7 +37,7 @@ export const ConversationScreen = memo(function ConversationScreen(
   } = props.route.params
 
   return (
-    <Screen contentContainerStyle={$globalStyles.flex1}>
+    <Screen preset="fixed" contentContainerStyle={$globalStyles.flex1}>
       <ConversationStoreProvider
         xmtpConversationId={xmtpConversationId ?? null}
         isCreatingNewConversation={isNew}

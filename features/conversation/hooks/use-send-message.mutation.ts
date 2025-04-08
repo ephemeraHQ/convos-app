@@ -1,5 +1,9 @@
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getCurrentSender, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  setRealMessageIdForOptimisticMessageId,
+  updateConversationMessageQueryData,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { getMessageWithType } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-with-type"
@@ -7,7 +11,6 @@ import {
   addMessageToConversationMessagesInfiniteQueryData,
   invalidateConversationMessagesInfiniteMessagesQuery,
   removeMessageFromConversationMessagesInfiniteQueryData,
-  updateMessageInConversationMessagesInfiniteQueryData,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   getConversationQueryData,
@@ -21,7 +24,7 @@ import {
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
-import { getTodayNs } from "@/utils/date"
+import { getTodayMs, getTodayNs } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { getRandomId } from "@/utils/general"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
@@ -148,6 +151,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
             xmtpId: tmpXmtpMessageId, // Will be set once we send the message and replace with the real
             xmtpTopic: getXmtpConversationTopicFromXmtpId(xmtpConversationId),
             sentNs: getTodayNs(),
+            sentMs: getTodayMs(),
             status: "sending",
             xmtpConversationId,
             senderInboxId: currentSender.inboxId,
@@ -196,14 +200,18 @@ export const getSendMessageMutationOptions = (): MutationOptions<
           .slice(0, result.sentMessages.length)
           .forEach((tmpXmtpMessageId, index) => {
             try {
-              updateMessageInConversationMessagesInfiniteQueryData({
-                xmtpConversationId: variables.xmtpConversationId,
+              updateConversationMessageQueryData({
                 clientInboxId: currentSender.inboxId,
-                xmtpMessageIdToUpdate: tmpXmtpMessageId,
+                xmtpMessageId: tmpXmtpMessageId,
                 messageUpdate: {
                   status: "sent",
                 },
               })
+
+              setRealMessageIdForOptimisticMessageId(
+                tmpXmtpMessageId,
+                result.sentMessages[index].xmtpId,
+              )
             } catch (error) {
               captureError(
                 new GenericError({
