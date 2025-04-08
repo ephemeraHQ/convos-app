@@ -2,7 +2,6 @@ import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { ConversationScreen } from "@/features/conversation/conversation-chat/conversation.screen"
 import { translate } from "@/i18n"
 import { AppNativeStack } from "@/navigation/app-navigator"
-import { logger } from "@/utils/logger/logger"
 
 export type ConversationNavParams = {
   xmtpConversationId?: IXmtpConversationId
@@ -14,20 +13,8 @@ export type ConversationNavParams = {
 export const ConversationScreenConfig = {
   path: "/conversation/:inboxId?",
   parse: {
-    inboxId: (value: string | undefined) => {
-      if (!value) return undefined
-
-      const inboxId = decodeURIComponent(value) as IXmtpInboxId
-      logger.info(`Parsing inboxId from URL: ${inboxId}`)
-      return inboxId
-    },
-    composerTextPrefill: (value: string | undefined) => {
-      if (!value) return undefined
-
-      const text = decodeURIComponent(value)
-      logger.info(`Parsing composerTextPrefill from URL: ${text}`)
-      return text
-    },
+    inboxId: (value: string | undefined) => value ? decodeURIComponent(value) as IXmtpInboxId : undefined,
+    composerTextPrefill: (value: string | undefined) => value ? decodeURIComponent(value) : undefined,
   },
   stringify: {
     inboxId: (value: IXmtpInboxId | undefined) => (value ? encodeURIComponent(String(value)) : ""),
