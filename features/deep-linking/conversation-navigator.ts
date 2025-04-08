@@ -4,7 +4,8 @@ import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { logger } from "@/utils/logger/logger"
-import { checkConversationExists } from "./conversation-links"
+import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
+import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 
 /**
  * Custom hook to handle conversation deep links
@@ -30,20 +31,30 @@ export function useConversationDeepLinkHandler() {
           `Handling conversation deep link for inboxId: ${inboxId}${composerTextPrefill ? " with prefill text" : ""}`,
         )
 
-        // Check if the conversation exists
-        const { exists, conversationId } = await checkConversationExists(inboxId)
+        const state = useMultiInboxStore.getState()
+        const activeInboxId = state.currentSender?.inboxId
 
-        if (exists && conversationId) {
-          // We have an existing conversation - navigate to it
-          logger.info(`Found existing conversation with ID: ${conversationId}`)
+        if (!activeInboxId) {
+          throw new GenericError({
+            error: new Error("No active inbox"),
+            additionalMessage: "Cannot check conversation existence - no active inbox",
+          })
+        }
+
+        const conversation = await findConversationByInboxIds({
+          inboxIds: [inboxId],
+          clientInboxId: activeInboxId,
+        })
+
+        if (conversation) {
+          logger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
 
           navigation.navigate("Conversation", {
-            xmtpConversationId: conversationId,
+            xmtpConversationId: conversation.xmtpId as IXmtpConversationId,
             isNew: false,
             composerTextPrefill,
           })
         } else {
-          // No existing conversation - start a new one
           logger.info(
             `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
           )
@@ -81,7 +92,6 @@ export function processConversationDeepLink(
     const { inboxId, composerTextPrefill } = params
 
     if (!inboxId) {
-      // Skip if no inboxId
       logger.warn("Cannot process conversation deep link - missing inboxId")
       resolve(false)
       return
@@ -92,23 +102,33 @@ export function processConversationDeepLink(
         `Processing Conversation deep link via navigation for inboxId: ${inboxId}${composerTextPrefill ? " with prefill text" : ""}`,
       )
 
-      // Check if the conversation exists
-      const { exists, conversationId } = await checkConversationExists(inboxId as IXmtpInboxId)
+      const state = useMultiInboxStore.getState()
+      const activeInboxId = state.currentSender?.inboxId
 
-      if (exists && conversationId) {
-        logger.info(`Navigation found existing conversation with ID: ${conversationId}`)
+      if (!activeInboxId) {
+        throw new GenericError({
+          error: new Error("No active inbox"),
+          additionalMessage: "Cannot check conversation existence - no active inbox",
+        })
+      }
+
+      const conversation = await findConversationByInboxIds({
+        inboxIds: [inboxId as IXmtpInboxId],
+        clientInboxId: activeInboxId,
+      })
+
+      if (conversation) {
+        logger.info(`Navigation found existing conversation with ID: ${conversation.xmtpId}`)
         resolve(true)
         return
       }
 
-      // We didn't find an existing conversation, so we'll create a new one
       logger.info(
         `No existing conversation found with inboxId: ${inboxId}, navigation will create a new conversation`,
       )
       resolve(true)
     } catch (error) {
       logger.error(`Error in processConversationDeepLink: ${error}`)
-      // Still return true to indicate we're handling it, even though there was an error
       resolve(true)
     }
   })

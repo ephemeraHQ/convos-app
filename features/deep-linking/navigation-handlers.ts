@@ -2,7 +2,9 @@ import { getStateFromPath as defaultGetStateFromPath } from "@react-navigation/n
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigationRef } from "@/navigation/navigation.utils"
 import { logger } from "@/utils/logger/logger"
-import { checkConversationExists } from "./conversation-links"
+import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
+import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { GenericError } from "@/utils/error"
 
 /**
  * Custom getStateFromPath function to handle deep links for the app
@@ -47,28 +49,33 @@ export const getStateFromPath = (
       }`,
     )
 
-    // We need to check if a conversation exists with this inboxId
-    // Since we can't make this function async, we'll set up initial parameters
-    // for a new conversation, and our deep link handler will update it if needed
+    const storeState = useMultiInboxStore.getState()
+    const activeInboxId = storeState.currentSender?.inboxId
 
-    // Start checking if a conversation exists - this runs in parallel
-    checkConversationExists(inboxId)
-      .then(({ exists, conversationId }) => {
-        if (exists && conversationId) {
-          // We found an existing conversation, navigate to it
-          logger.info(
-            `Deep link handler: Found existing conversation, navigating to: ${conversationId}`,
-          )
-          navigationRef.current?.navigate("Conversation", {
-            xmtpConversationId: conversationId,
-            isNew: false,
-            composerTextPrefill,
-          })
-        }
+    if (activeInboxId) {
+      // We need to check if a conversation exists with this inboxId
+      // Since we can't make this function async, we'll set up initial parameters
+      // for a new conversation, and our deep link handler will update it if needed
+      findConversationByInboxIds({
+        inboxIds: [inboxId],
+        clientInboxId: activeInboxId,
       })
-      .catch((error) => {
-        logger.error(`Deep link handler: Error checking conversation existence: ${error}`)
-      })
+        .then((conversation) => {
+          if (conversation) {
+            logger.info(
+              `Deep link handler: Found existing conversation, navigating to: ${conversation.xmtpId}`,
+            )
+            navigationRef.current?.navigate("Conversation", {
+              xmtpConversationId: conversation.xmtpId,
+              isNew: false,
+              composerTextPrefill,
+            })
+          }
+        })
+        .catch((error) => {
+          logger.error(`Deep link handler: Error checking conversation existence: ${error}`)
+        })
+    }
 
     // Initially set up parameters for a new conversation, but we'll override
     // this with the navigation call above if we find an existing conversation
