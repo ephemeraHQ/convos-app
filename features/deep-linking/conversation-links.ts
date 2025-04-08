@@ -2,23 +2,19 @@ import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { logger } from "@/utils/logger/logger"
+import { XMTPError } from "@/utils/error"
 
-/**
- * Check if a conversation exists with the given inboxId
- * @param inboxId The inbox ID to check
- * @returns Promise with { exists, conversationId } - where conversationId is set if exists is true
- */
-export async function checkConversationExists(
-  inboxId: IXmtpInboxId,
-): Promise<{ exists: boolean; conversationId?: IXmtpConversationId }> {
+export async function checkConversationExists(inboxId: IXmtpInboxId) {
   try {
     // Get active user's inbox ID
     const state = useMultiInboxStore.getState()
     const activeInboxId = state.currentSender?.inboxId
 
     if (!activeInboxId) {
-      logger.warn("Cannot check conversation existence - no active inbox")
-      return { exists: false }
+      throw new XMTPError({
+        error: new Error("No active inbox"),
+        additionalMessage: "Cannot check conversation existence - no active inbox",
+      })
     }
 
     // Try to find an existing conversation
@@ -37,7 +33,9 @@ export async function checkConversationExists(
 
     return { exists: false }
   } catch (error) {
-    logger.warn(`Error checking conversation existence: ${error}`)
-    return { exists: false }
+    throw new XMTPError({
+      error,
+      additionalMessage: "Failed to check conversation existence",
+    })
   }
 }
