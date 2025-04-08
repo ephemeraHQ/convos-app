@@ -19,7 +19,7 @@ import {
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
-import { isTempConversation } from "@/features/conversation/utils/temp-conversation"
+import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
@@ -62,7 +62,7 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   useEffect(() => {
     if (conversationsIds) {
       for (const conversationId of conversationsIds) {
-        if (isTempConversation(conversationId)) {
+        if (isTmpConversation(conversationId)) {
           return
         }
         prefetchConversationMessagesInfiniteQuery({

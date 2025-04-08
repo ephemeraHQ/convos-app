@@ -1,12 +1,13 @@
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getCurrentSender, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
-  setRealMessageIdForOptimisticMessageId,
+  setConversationMessageQueryData,
   updateConversationMessageQueryData,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { getMessageWithType } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-with-type"
+import { generateTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/tmp-message"
 import {
   addMessageToConversationMessagesInfiniteQueryData,
   invalidateConversationMessagesInfiniteMessagesQuery,
@@ -26,8 +27,8 @@ import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { getTodayMs, getTodayNs } from "@/utils/date"
 import { GenericError } from "@/utils/error"
-import { getRandomId } from "@/utils/general"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { setRealMessageIdForOptimisticMessageId } from "../conversation-chat/conversation-message/conversation-message-optimistic-to-real"
 import {
   IConversationMessage,
   IConversationMessageContent,
@@ -141,7 +142,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
       const optimisticMessages: IConversationMessage[] = []
 
       for (const content of contents) {
-        const tmpXmtpMessageId = getRandomId() as IXmtpMessageId
+        const tmpXmtpMessageId = generateTmpMessageId() as IXmtpMessageId
         tmpXmtpMessageIds.push(tmpXmtpMessageId)
 
         const messageContent = content
@@ -161,17 +162,20 @@ export const getSendMessageMutationOptions = (): MutationOptions<
 
         optimisticMessages.push(optimisticMessage)
 
+        // Set message query data to be in cache
+        setConversationMessageQueryData({
+          clientInboxId: currentSender.inboxId,
+          xmtpMessageId: optimisticMessage.xmtpId,
+          message: optimisticMessage,
+        })
+
+        // Add message to conversation messages infinite query data
         addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId,
           message: optimisticMessage,
         })
       }
-
-      const previousConversation = getConversationQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-      })
 
       // Use the last optimistic message to update the conversation
       const lastOptimisticMessage = optimisticMessages[optimisticMessages.length - 1]
@@ -185,6 +189,11 @@ export const getSendMessageMutationOptions = (): MutationOptions<
         })
       }
 
+      const previousConversation = getConversationQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+      })
+
       return {
         tmpXmtpMessageIds,
         optimisticMessages,
@@ -194,6 +203,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
     onSuccess: async (result, variables, context) => {
       const currentSender = getSafeCurrentSender()
 
+      // Now set the messages status to sent!
       if (result.sentMessages && result.sentMessages.length > 0) {
         let hasError = false
         context.tmpXmtpMessageIds
@@ -231,39 +241,6 @@ export const getSendMessageMutationOptions = (): MutationOptions<
           })
         }
       }
-      // const currentSender = getSafeCurrentSender()
-      // // Replace each optimistic message with the real one
-      // if (result.sentMessages && result.sentMessages.length > 0) {
-      //   let hasError = false
-      //   // Replace optimistic messages with real ones, up to the number of messages we have
-      //   context.tmpXmtpMessageIds
-      //     .slice(0, result.sentMessages.length)
-      //     .forEach((tmpXmtpMessageId, index) => {
-      //       try {
-      //         replaceMessageInConversationMessagesInfiniteQueryData({
-      //           tmpXmtpMessageId,
-      //           xmtpConversationId: variables.xmtpConversationId,
-      //           clientInboxId: currentSender.inboxId,
-      //           realMessage: result.sentMessages[index],
-      //         })
-      //       } catch (error) {
-      //         captureError(
-      //           new GenericError({
-      //             error,
-      //             additionalMessage: "Error replacing optimistic message with real one",
-      //           }),
-      //         )
-      //         hasError = true
-      //       }
-      //     })
-      //   // If any replacement failed, invalidate the conversation messages query
-      //   if (hasError) {
-      //     invalidateConversationMessagesInfiniteMessagesQuery({
-      //       clientInboxId: currentSender.inboxId,
-      //       xmtpConversationId: variables.xmtpConversationId,
-      //     })
-      //   }
-      // }
     },
     onError: (_, variables, context) => {
       if (!context) {
@@ -278,6 +255,15 @@ export const getSendMessageMutationOptions = (): MutationOptions<
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: variables.xmtpConversationId,
           messageId: tmpMessageId,
+        })
+      }
+
+      // Revert the messages data
+      for (const tmpMessageId of context.tmpXmtpMessageIds) {
+        setConversationMessageQueryData({
+          clientInboxId: currentSender.inboxId,
+          xmtpMessageId: tmpMessageId,
+          message: null,
         })
       }
 

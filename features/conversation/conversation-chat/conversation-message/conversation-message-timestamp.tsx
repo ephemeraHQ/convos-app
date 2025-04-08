@@ -16,14 +16,34 @@ import {
 } from "react-native-reanimated"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { useConversationPreviousMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/get-conversation-previous-message"
-import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
-import { messageShouldShowDateChange } from "@/features/conversation/utils/message-should-show-date-change"
 import { useAppTheme } from "@/theme/use-app-theme"
 import {
   useConversationMessageContextSelector,
   useConversationMessageStore,
 } from "./conversation-message.store-context"
+
+export const ConversationMessageTimestamp = memo(function ConversationMessageTimestamp() {
+  const shouldShowDateChange = useConversationMessageContextSelector((s) => s.showDateChange)
+  const xmtpMessageId = useConversationMessageContextSelector((s) => s.xmtpMessageId)
+
+  const currentSender = useSafeCurrentSender()
+
+  const { data: message } = useConversationMessageQuery({
+    xmtpMessageId: xmtpMessageId,
+    clientInboxId: currentSender.inboxId,
+    caller: "ConversationMessageTimestamp",
+  })
+
+  if (!message) {
+    return null
+  }
+
+  if (shouldShowDateChange) {
+    return <MessageTimestampVisible timestampMs={message.sentMs} />
+  }
+
+  return <MessageTimestampHidden timestampMs={message.sentMs} />
+})
 
 // Determines if we should show only time (for messages less than 24h old)
 function shouldShowOnlyTime(timestampMs: number): boolean {
@@ -156,45 +176,4 @@ const MessageTimestampHidden = memo(function MessageTimestampHidden({
       </Text>
     </AnimatedVStack>
   )
-})
-
-export const ConversationMessageTimestamp = memo(function ConversationMessageTimestamp() {
-  const xmtpMessageId = useConversationMessageContextSelector((s) => s.xmtpMessageId)
-  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
-
-  const currentSender = useSafeCurrentSender()
-
-  const { data: previousMessageId } = useConversationPreviousMessageId({
-    messageId: xmtpMessageId,
-    xmtpConversationId: xmtpConversationId,
-    caller: "ConversationMessageTimestamp",
-  })
-
-  const { data: message } = useConversationMessageQuery({
-    xmtpMessageId: xmtpMessageId,
-    clientInboxId: currentSender.inboxId,
-    caller: "ConversationMessageTimestamp",
-  })
-
-  const { data: previousMessage } = useConversationMessageQuery({
-    xmtpMessageId: previousMessageId,
-    clientInboxId: currentSender.inboxId,
-    caller: "ConversationMessageTimestamp",
-  })
-
-  if (!message) {
-    return null
-  }
-
-  if (
-    previousMessage &&
-    messageShouldShowDateChange({
-      messageOne: message,
-      messageTwo: previousMessage,
-    })
-  ) {
-    return <MessageTimestampVisible timestampMs={message.sentMs} />
-  }
-
-  return <MessageTimestampHidden timestampMs={message.sentMs} />
 })

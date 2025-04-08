@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { useCallback } from "react"
 import {
   getSafeCurrentSender,
   useSafeCurrentSender,
@@ -35,12 +36,16 @@ export function useMessageIsFromCurrentSenderInboxId(args: { xmtpMessageId: IXmt
 
   const currentSender = useSafeCurrentSender()
 
+  const select = useCallback((message: IConversationMessage | null) => {
+    return message && messageIsFromCurrentSenderInboxId({ message })
+  }, [])
+
   return useQuery({
     ...getConversationMessageQueryOptions({
       clientInboxId: currentSender.inboxId,
       xmtpMessageId,
       caller: "useMessageIsFromCurrentSenderInboxId",
     }),
-    select: (message) => message && messageIsFromCurrentSenderInboxId({ message }),
+    select,
   })
 }

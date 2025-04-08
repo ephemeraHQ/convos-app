@@ -1,11 +1,11 @@
+import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
+import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   isAnActualMessage,
   isGroupUpdatedMessage,
+  isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import {
-  addMessageToConversationMessagesInfiniteQueryData,
-  // replaceMatchingTmpMessageInConversationMessagesInfiniteQueryData,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { updateConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
@@ -49,6 +49,16 @@ async function handleNewMessage(args: {
 
   streamLogger.debug(`New message:`, message)
 
+  if (isReactionMessage(message)) {
+    processReactionConversationMessages({ clientInboxId, reactionMessages: [message] })
+  } else {
+    setConversationMessageQueryData({
+      clientInboxId,
+      xmtpMessageId: message.xmtpId,
+      message,
+    })
+  }
+
   if (isGroupUpdatedMessage(message)) {
     try {
       handleNewGroupUpdatedMessage({
@@ -64,35 +74,14 @@ async function handleNewMessage(args: {
 
   try {
     const messageSentByCurrentUser = message.senderInboxId === clientInboxId
-
-    if (messageSentByCurrentUser) {
-      // Replace the matching temporary message with the actual message
-      // replaceMatchingTmpMessageInConversationMessagesInfiniteQueryData({
-      //   clientInboxId,
-      //   realMessage: message,
-      // })
-    }
     // Actual message received that we need to add to the conversation messages data
-    else if (isAnActualMessage(message)) {
+    if (!messageSentByCurrentUser && isAnActualMessage(message)) {
       addMessageToConversationMessagesInfiniteQueryData({
         clientInboxId,
         xmtpConversationId: message.xmtpConversationId,
         message,
       })
     }
-
-    // if (
-    //   // Because we handle the message sent by current user with optimistic update, we don't need to update the query cache
-    //   !messageSentByCurrentUser &&
-    //   // Message like group update can be "sent" by current user but it's not a message handled in sendMessage
-    //   isAnActualMessage(message)
-    // ) {
-    //   addMessageToConversationMessagesInfiniteQueryData({
-    //     clientInboxId,
-    //     xmtpConversationId: message.xmtpConversationId,
-    //     message,
-    //   })
-    // }
   } catch (error) {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))
   }

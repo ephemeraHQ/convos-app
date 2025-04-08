@@ -7,7 +7,7 @@ import {
   ISendMessageParams,
   sendMessageMutation,
 } from "@/features/conversation/hooks/use-send-message.mutation"
-import { generateTempConversationId } from "@/features/conversation/utils/temp-conversation"
+import { generateTmpConversationId } from "@/features/conversation/utils/tmp-conversation"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { logJson } from "@/utils/logger/logger"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
@@ -19,7 +19,7 @@ import {
 /**
  * Waits for all media previews to be uploaded
  */
-export function waitForMediaUploads(composerMediaPreviews: IComposerMediaPreview[]) {
+function waitForMediaUploads(composerMediaPreviews: IComposerMediaPreview[]) {
   return waitUntilPromise({
     checkFn: () =>
       composerMediaPreviews.every((preview) => !preview || preview.status === "uploaded"),
@@ -38,8 +38,7 @@ export function createMessageContents(args: {
 
   // Create separate content arrays for normal messages and replies
   const messageContents: ISendMessageParams["contents"] = replyingToMessageId
-    ? // Handling reply message - we need to create a proper reply structure for each content type
-      [
+    ? [
         // Add text content as a reply if we have text
         ...(inputValue.length > 0
           ? [
@@ -89,8 +88,6 @@ export function createMessageContents(args: {
 export function useCreateConversationAndSend() {
   const composerStore = useConversationComposerStore()
   const conversationStore = useConversationStore()
-  // const { mutateAsync: createConversationAndSendFirstMessageMutateAsync } =
-  //   useCreateConversationAndSendFirstMessageMutation()
 
   return useCallback(async () => {
     const { inputValue, replyingToMessageId, composerUploadedAttachments, composerMediaPreviews } =
@@ -113,7 +110,7 @@ export function useCreateConversationAndSend() {
       // Reset composer state before sending to prevent duplicate sends
       composerStore.getState().reset()
 
-      const tmpXmtpConversationId = generateTempConversationId()
+      const tmpXmtpConversationId = generateTmpConversationId()
 
       conversationStore.setState({
         xmtpConversationId: tmpXmtpConversationId,

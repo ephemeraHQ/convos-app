@@ -69,7 +69,7 @@ export function getConversationMessageReactionsQueryData(
  */
 export function processReactionConversationMessages(args: {
   clientInboxId: IXmtpInboxId
-  reactionMessages: IConversationMessage | IConversationMessage[]
+  reactionMessages: IConversationMessage[]
 }) {
   const { clientInboxId, reactionMessages } = args
 

@@ -2,8 +2,7 @@ import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
-import { getRealMessageIdForOptimisticMessageId } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { isTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/is-tmp-message"
+import { isTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/tmp-message"
 import { invalidateConversationMessagesInfiniteMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { getConversationForCurrentAccount } from "@/features/conversation/utils/get-conversation-for-current-account"
 import {
@@ -15,6 +14,7 @@ import { captureErrorWithToast } from "@/utils/capture-error"
 import { getTodayMs, getTodayNs } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { Haptics } from "@/utils/haptics"
+import { getRealMessageIdForOptimisticMessageId } from "./conversation-message/conversation-message-optimistic-to-real"
 import { IConversationMessageReactionContent } from "./conversation-message/conversation-message.types"
 
 export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversationId }) {

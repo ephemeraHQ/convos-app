@@ -47,6 +47,10 @@ if (isValid) {
 - Extract animation and complex logic into focused components that encapsulate their related behavior.
 - Prefer using useContextSelector or similar hooks to minimize re-renders by selecting only the needed data.
 - Avoid prop drilling - components should get their data as directly as possible from the appropriate store/context.
+- When a component or hook needs data from a store:
+  - Access the store directly within the component or hook rather than passing data as arguments or props
+  - For effects that only need store values temporarily, use getState() to access those values
+  - Don't extract store values in parent components just to pass them to child components or hooks
 
 ```typescript
 // ❌ Bad: Passing data through props when it could be accessed from store
@@ -59,6 +63,31 @@ function ParentComponent() {
 function UserProfile() {
   const userData = useUserStore(state => state.userData)
   return <View>{/* render using userData */}</View>
+}
+
+// ❌ Bad: Extracting store data in component to pass to hook
+function Component() {
+  const messageId = useMessageStore(state => state.messageId)
+  const { result } = useProcessMessage({ messageId })
+  return <View />
+}
+
+// ✅ Good: Hook accesses store directly
+function Component() {
+  const { result } = useProcessMessage()
+  return <View />
+}
+
+function useProcessMessage() {
+  const messageStore = useMessageStore()
+
+  useEffect(() => {
+    // Get value directly in the effect using getState if only needed here
+    const messageId = messageStore.getState().messageId
+    // Use messageId in effect...
+  }, [messageStore])
+
+  // Return result...
 }
 
 // ❌ Bad: Passing complex objects/components as props

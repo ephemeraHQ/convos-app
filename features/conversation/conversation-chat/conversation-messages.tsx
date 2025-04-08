@@ -29,13 +29,14 @@ import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
-import { isTempConversation } from "@/features/conversation/utils/temp-conversation"
+import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { window } from "@/theme/layout"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { logger } from "@/utils/logger/logger"
 import {
   useConversationStore,
   useCurrentXmtpConversationIdSafe,
@@ -47,6 +48,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const refreshingRef = useRef(false)
   const scrollRef = useAnimatedRef<FlatList>()
   const conversationStore = useConversationStore()
+  const hasPulledToRefreshRef = useRef(false)
 
   const {
     data: messageIds = [],
@@ -67,7 +69,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   // Refetch messages when we focus again
   useBetterFocusEffect(
     useCallback(() => {
-      if (isTempConversation(xmtpConversationId)) {
+      if (isTmpConversation(xmtpConversationId)) {
         return
       }
       refetchMessages().catch(captureError)
@@ -79,13 +81,9 @@ export const ConversationMessages = memo(function ConversationMessages() {
     caller: "Conversation Messages",
   })
 
-  // const latestMessageId = useMemo(() => {
-  //   return messageIds[messageIds.length - 1]
-  // }, [messageIds])
-
   // Safer to just mark as read every time messages change
   useEffect(() => {
-    if (isTempConversation(xmtpConversationId)) {
+    if (isTmpConversation(xmtpConversationId)) {
       return
     }
     markAsReadAsync().catch(captureError)
@@ -131,28 +129,58 @@ export const ConversationMessages = memo(function ConversationMessages() {
         return
       }
 
-      const contentOffset = e.nativeEvent.contentOffset.y
+      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
+      const contentOffsetY = contentOffset.y
 
-      // Calculate distance from top
-      const distanceFromTop = contentOffset
-
-      // If we're within threshold from the top, load more messages
-      if (distanceFromTop < window.height * 0.5 && hasNextPage) {
+      // Since the list is inverted, when scrolling to the top (older messages),
+      // contentOffset.y gets closer to 0 or becomes positive
+      if (contentOffsetY < window.height * 0.2 && hasNextPage) {
+        // Load more older messages when reaching top area
         refreshingRef.current = true
+        logger.debug("Fetching more messages (older)...")
         fetchNextPage()
+          .then(() => {
+            logger.debug("Done fetching more messages")
+          })
+          .catch(captureError)
+          .finally(() => {
+            refreshingRef.current = false
+          })
+      }
+
+      // Reset the flag when user scrolls back up past the threshold
+      if (contentOffsetY >= 0) {
+        hasPulledToRefreshRef.current = false
+      }
+
+      // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
+      // Determine if we've scrolled past the bottom of the content
+      const isPastBottomThreshold =
+        contentOffsetY < 0 &&
+        Math.abs(contentOffsetY) > contentSize.height - layoutMeasurement.height + 50 // Added small buffer
+
+      if (isPastBottomThreshold && !hasPulledToRefreshRef.current) {
+        // Only refetch if we haven't already refreshed during this pull-down gesture
+        hasPulledToRefreshRef.current = true
+        refreshingRef.current = true
+        logger.debug("Refetching latest messages...")
+        refetchMessages()
+          .then(() => {
+            logger.debug("Done refetching latest messages")
+          })
           .catch(captureError)
           .finally(() => {
             refreshingRef.current = false
           })
       }
     },
-    [fetchNextPage, hasNextPage, isRefetchingMessages],
+    [fetchNextPage, hasNextPage, isRefetchingMessages, refetchMessages],
   )
 
   const latestXmtpMessageIdFromCurrentSender = useMemo(() => {
-    return messageIds.find((messageId) => {
+    return messageIds.find((xmtpMessageId) => {
       const message = getConversationMessageQueryData({
-        xmtpMessageId: messageId,
+        xmtpMessageId,
         clientInboxId: currentSender.inboxId,
       })
       return message?.senderInboxId === currentSender.inboxId

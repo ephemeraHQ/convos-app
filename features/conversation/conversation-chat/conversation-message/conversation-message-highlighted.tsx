@@ -11,14 +11,14 @@ import { AnimatedVStack } from "@/design-system/VStack"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { useSelect } from "@/stores/stores.utils"
 import { useAppTheme } from "@/theme/use-app-theme"
 
 export const ConversationMessageHighlighted = memo(function ConversationMessageHighlighted(props: {
   children: React.ReactNode
 }) {
   const { children } = props
-  const { xmtpMessageId } = useConversationMessageContextSelector(useSelect(["xmtpMessageId"]))
+
+  const xmtpMessageId = useConversationMessageContextSelector((state) => state.xmtpMessageId)
   const { animatedStyle } = useHighlightAnimation({ xmtpMessageId })
 
   return (

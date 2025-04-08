@@ -9,7 +9,6 @@ import {
   useSendToExistingConversation,
 } from "@/features/conversation/conversation-chat/conversation-composer/hooks/use-conversation-composer-send"
 import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
-import { useTrackRenders } from "@/hooks/use-track-renders"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -38,11 +37,6 @@ export const ConversationComposer = memo(function ConversationComposer() {
       )
     }
   }, [sendToExistingConversation, createConversationAndSend, conversationStore])
-
-  useTrackRenders({
-    componentName: "ConversationComposer",
-    allowedDependencies: {},
-  })
 
   return (
     <VStack style={styles.container}>
@@ -94,12 +88,5 @@ function useStyles() {
         alignItems: "center",
       } satisfies ViewStyle,
     }
-  }, [
-    insets.bottom,
-    theme.colors.background.surfaceless,
-    theme.spacing.xxxs,
-    theme.borderWidth.sm,
-    theme.colors.border.subtle,
-    theme.borderRadius.md,
-  ])
+  }, [insets.bottom, theme])
 }

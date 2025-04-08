@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query"
 import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
-import { isTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/is-tmp-message"
+import { isTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/tmp-message"
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { mergeObjDeep } from "@/utils/objects"
@@ -11,6 +11,27 @@ import { convertXmtpMessageToConvosMessage } from "./utils/convert-xmtp-message-
 type IArgs = {
   clientInboxId: IXmtpInboxId
   xmtpMessageId: IXmtpMessageId | undefined
+}
+
+type IConversationMessageQueryData = Awaited<ReturnType<typeof getConversationMessage>>
+
+async function getConversationMessage(args: IArgs) {
+  const { clientInboxId, xmtpMessageId } = args
+
+  if (!xmtpMessageId) {
+    throw new Error("xmtpMessageId is required")
+  }
+
+  const xmtpMessage = await getXmtpConversationMessage({
+    messageId: xmtpMessageId,
+    clientInboxId,
+  })
+
+  if (!xmtpMessage) {
+    return null
+  }
+
+  return convertXmtpMessageToConvosMessage(xmtpMessage)
 }
 
 export function getConversationMessageQueryOptions(
@@ -28,31 +49,15 @@ export function getConversationMessageQueryOptions(
       clientInboxId,
       xmtpMessageId,
     }),
-    queryFn: async () => {
-      if (!xmtpMessageId) {
-        throw new Error("xmtpMessageId is required")
-      }
-
-      const xmtpMessage = await getXmtpConversationMessage({
-        messageId: xmtpMessageId,
-        clientInboxId,
-      })
-
-      if (!xmtpMessage) {
-        return null
-      }
-
-      return convertXmtpMessageToConvosMessage(xmtpMessage)
-    },
+    queryFn: () => getConversationMessage({ clientInboxId, xmtpMessageId }),
     enabled: !!xmtpMessageId && !!clientInboxId && !isTmpMessageId(xmtpMessageId),
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    staleTime: Infinity,
+    refetchOnMount: false, // Because we prefer setting the message query data from when we fetch list of messages
+    refetchOnWindowFocus: false, // Because we prefer setting the message query data from when we fetch list of messages
+    refetchOnReconnect: false, // Because we prefer setting the message query data from when we fetch list of messages
+    staleTime: Infinity, // Because we prefer setting the message query data from when we fetch list of messages
   })
 }
 
-// Main hook for fetching a message
 export function useConversationMessageQuery(
   args: IArgs & {
     caller: string
@@ -61,8 +66,15 @@ export function useConversationMessageQuery(
   return useQuery(getConversationMessageQueryOptions(args))
 }
 
-export function setConversationMessageQueryData(args: IArgs, message: IConversationMessage) {
-  return reactQueryClient.setQueryData(getConversationMessageQueryOptions(args).queryKey, message)
+export function setConversationMessageQueryData(
+  args: IArgs & {
+    message: IConversationMessageQueryData
+  },
+) {
+  return reactQueryClient.setQueryData(
+    getConversationMessageQueryOptions(args).queryKey,
+    args.message,
+  )
 }
 
 export function ensureConversationMessageQueryData(
@@ -73,9 +85,6 @@ export function ensureConversationMessageQueryData(
   return reactQueryClient.ensureQueryData(getConversationMessageQueryOptions(args))
 }
 
-/**
- * Update a message in the cache
- */
 export function updateConversationMessageQueryData(args: {
   clientInboxId: IXmtpInboxId
   xmtpMessageId: IXmtpMessageId
@@ -93,24 +102,15 @@ export function updateConversationMessageQueryData(args: {
 
   const updatedMessage = mergeObjDeep(currentMessage, messageUpdate)
 
-  setConversationMessageQueryData({ clientInboxId, xmtpMessageId }, updatedMessage)
+  setConversationMessageQueryData({
+    clientInboxId,
+    xmtpMessageId,
+    message: updatedMessage,
+  })
 
   return updatedMessage
 }
 
 export function getConversationMessageQueryData(args: IArgs) {
   return reactQueryClient.getQueryData(getConversationMessageQueryOptions(args).queryKey)
-}
-
-const optimisticMessageToRealMap = new Map<IXmtpMessageId, IXmtpMessageId>()
-
-export function getRealMessageIdForOptimisticMessageId(optimisticMessageId: IXmtpMessageId) {
-  return optimisticMessageToRealMap.get(optimisticMessageId)
-}
-
-export function setRealMessageIdForOptimisticMessageId(
-  optimisticMessageId: IXmtpMessageId,
-  realMessageId: IXmtpMessageId,
-) {
-  optimisticMessageToRealMap.set(optimisticMessageId, realMessageId)
 }

@@ -20,10 +20,9 @@ type IConversationMessageContextStoreProps = {
 }
 
 type IConversationContextStoreState = {
-  // message: IConversationMessage
-  // previousMessage: IConversationMessage | undefined
-  // nextMessage: IConversationMessage | undefined
   xmtpMessageId: IXmtpMessageId
+  previousMessageId: IXmtpMessageId | undefined
+  nextMessageId: IXmtpMessageId | undefined
   isShowingTime: boolean
   hasPreviousMessageInSeries: boolean
   hasNextMessageInSeries: boolean
@@ -40,6 +39,8 @@ function getCalculatedState(
   return {
     ...props,
     xmtpMessageId: props.message.xmtpId,
+    previousMessageId: props.previousMessage?.xmtpId,
+    nextMessageId: props.nextMessage?.xmtpId,
     isShowingTime: false,
     hasPreviousMessageInSeries: hasPreviousMessageInSeries({
       currentMessage: props.message,
@@ -76,15 +77,7 @@ const MessageStoreContext = createContext<MessageStore | null>(null)
 
 export const ConversationMessageContextStoreProvider = memo(
   ({ children, ...props }: React.PropsWithChildren<IConversationMessageContextStoreProps>) => {
-    // const storeRef = useRef<MessageStore>()
-
-    // if (!storeRef.current) {
-    //   storeRef.current = createMessageStore(props)
-    // } else {
-    //   const storeCopy = getCalculatedState(props)
-    //   storeRef.current?.setState(storeCopy)
-    // }
-
+    // Using useMemo to prevent glitches from message list item rendering before the correct state is set
     const store = useMemo(() => {
       return createMessageStore({
         message: props.message,
@@ -92,11 +85,6 @@ export const ConversationMessageContextStoreProvider = memo(
         nextMessage: props.nextMessage,
       })
     }, [props.message, props.previousMessage, props.nextMessage])
-
-    // useEffect(() => {
-    //   const storeCopy = getCalculatedState(props)
-    //   storeRef.current?.setState(storeCopy)
-    // }, [props])
 
     return <MessageStoreContext.Provider value={store}>{children}</MessageStoreContext.Provider>
   },

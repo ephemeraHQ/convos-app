@@ -5,7 +5,7 @@ import { stopStreamingConversations } from "@/features/xmtp/xmtp-conversations/x
 import { stopStreamingAllMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-stream"
 import { stopStreamingConsent } from "@/features/xmtp/xmtp-preferences/xmtp-preferences-stream"
 import { useAppStore } from "@/stores/app-store"
-import { useAppState } from "@/stores/use-app-state-store"
+import { useAppStateStore } from "@/stores/use-app-state-store"
 import { captureError } from "@/utils/capture-error"
 import { StreamError } from "@/utils/error"
 import { streamLogger } from "@/utils/logger/logger"
@@ -30,15 +30,9 @@ export function useSetupStreamingSubscriptions() {
   //   }
   // );
 
-  // Start streaming for all senders on first render
-  useEffect(() => {
-    const senders = useMultiInboxStore.getState().senders
-    startStreaming(senders.map((sender) => sender.inboxId))
-  }, [])
-
   useEffect(() => {
     // Handle app state changes
-    const unsubscribeAppStateStore = useAppState.subscribe(
+    const unsubscribeAppStateStore = useAppStateStore.subscribe(
       (state) => state.currentState,
       (currentState, previousState) => {
         const senders = useMultiInboxStore.getState().senders
@@ -52,6 +46,9 @@ export function useSetupStreamingSubscriptions() {
           stopStreaming(inboxIds).catch(captureError)
         }
       },
+      {
+        fireImmediately: true,
+      },
     )
 
     // Handle account changes
@@ -59,7 +56,7 @@ export function useSetupStreamingSubscriptions() {
       (state) => [state.senders] as const,
       ([senders], [previousSenders]) => {
         const { isInternetReachable } = useAppStore.getState()
-        const { currentState } = useAppState.getState()
+        const { currentState } = useAppStateStore.getState()
 
         // Only manage streams if app is active and has internet
         if (!isInternetReachable || currentState !== "active") {
