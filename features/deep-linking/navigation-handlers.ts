@@ -4,7 +4,6 @@ import { navigationRef } from "@/navigation/navigation.utils"
 import { logger } from "@/utils/logger/logger"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
-import { GenericError } from "@/utils/error"
 
 /**
  * Custom getStateFromPath function to handle deep links for the app
