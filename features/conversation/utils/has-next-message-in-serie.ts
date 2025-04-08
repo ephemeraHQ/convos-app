@@ -19,14 +19,14 @@ export const getHasNextMessageInSeries = ({
     return false
   }
 
-  // if (
-  //   messageShouldShowDateChange({
-  //     messageOne: nextMessage,
-  //     messageTwo: currentMessage,
-  //   })
-  // ) {
-  //   return false
-  // }
+  if (
+    messageShouldShowDateChange({
+      messageOne: nextMessage,
+      messageTwo: currentMessage,
+    })
+  ) {
+    return false
+  }
 
   return nextMessage.senderInboxId === currentMessage.senderInboxId
 }

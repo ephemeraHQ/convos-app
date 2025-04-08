@@ -15,7 +15,7 @@ import { Haptics } from "@/utils/haptics"
 export const ConversationMessageStatus = memo(function ConversationMessageStatus() {
   const { theme } = useAppTheme()
 
-  const xmtpMessageId = useConversationMessageContextSelector((state) => state.xmtpMessageId)
+  const xmtpMessageId = useConversationMessageContextSelector((state) => state.currentMessageId)
   const currentSender = useSafeCurrentSender()
 
   const { data: messageStatus } = useConversationMessageStatus({

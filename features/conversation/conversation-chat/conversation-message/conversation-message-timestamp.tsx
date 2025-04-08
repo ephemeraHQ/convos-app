@@ -24,7 +24,7 @@ import {
 
 export const ConversationMessageTimestamp = memo(function ConversationMessageTimestamp() {
   const shouldShowDateChange = useConversationMessageContextSelector((s) => s.showDateChange)
-  const xmtpMessageId = useConversationMessageContextSelector((s) => s.xmtpMessageId)
+  const xmtpMessageId = useConversationMessageContextSelector((s) => s.currentMessageId)
 
   const currentSender = useSafeCurrentSender()
 

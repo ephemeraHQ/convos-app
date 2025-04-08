@@ -18,7 +18,7 @@ export const ConversationMessageHighlighted = memo(function ConversationMessageH
 }) {
   const { children } = props
 
-  const xmtpMessageId = useConversationMessageContextSelector((state) => state.xmtpMessageId)
+  const xmtpMessageId = useConversationMessageContextSelector((state) => state.currentMessageId)
   const { animatedStyle } = useHighlightAnimation({ xmtpMessageId })
 
   return (

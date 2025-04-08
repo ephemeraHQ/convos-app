@@ -14,13 +14,13 @@ import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils
 import { messageShouldShowDateChange } from "@/features/conversation/utils/message-should-show-date-change"
 
 type IConversationMessageContextStoreProps = {
-  message: IConversationMessage
+  currentMessage: IConversationMessage
   previousMessage: IConversationMessage | undefined
   nextMessage: IConversationMessage | undefined
 }
 
-type IConversationContextStoreState = {
-  xmtpMessageId: IXmtpMessageId
+type IConversationContextStoreState = IConversationMessageContextStoreProps & {
+  currentMessageId: IXmtpMessageId
   previousMessageId: IXmtpMessageId | undefined
   nextMessageId: IXmtpMessageId | undefined
   isShowingTime: boolean
@@ -38,27 +38,30 @@ function getCalculatedState(
 ): IConversationContextStoreState {
   return {
     ...props,
-    xmtpMessageId: props.message.xmtpId,
+    currentMessage: props.currentMessage,
+    previousMessage: props.previousMessage,
+    nextMessage: props.nextMessage,
+    currentMessageId: props.currentMessage.xmtpId,
     previousMessageId: props.previousMessage?.xmtpId,
     nextMessageId: props.nextMessage?.xmtpId,
     isShowingTime: false,
     hasPreviousMessageInSeries: hasPreviousMessageInSeries({
-      currentMessage: props.message,
+      currentMessage: props.currentMessage,
       previousMessage: props.previousMessage,
     }),
     hasNextMessageInSeries: getHasNextMessageInSeries({
-      currentMessage: props.message,
+      currentMessage: props.currentMessage,
       nextMessage: props.nextMessage,
     }),
     fromMe: messageIsFromCurrentSenderInboxId({
-      message: props.message,
+      message: props.currentMessage,
     }),
     showDateChange: messageShouldShowDateChange({
-      messageOne: props.message,
+      messageOne: props.currentMessage,
       messageTwo: props.previousMessage,
     }),
     isLastMessage: !props.nextMessage,
-    isGroupUpdateMessage: isGroupUpdatedMessage(props.message),
+    isGroupUpdateMessage: isGroupUpdatedMessage(props.currentMessage),
   }
 }
 
@@ -80,11 +83,11 @@ export const ConversationMessageContextStoreProvider = memo(
     // Using useMemo to prevent glitches from message list item rendering before the correct state is set
     const store = useMemo(() => {
       return createMessageStore({
-        message: props.message,
+        currentMessage: props.currentMessage,
         previousMessage: props.previousMessage,
         nextMessage: props.nextMessage,
       })
-    }, [props.message, props.previousMessage, props.nextMessage])
+    }, [props.currentMessage, props.previousMessage, props.nextMessage])
 
     return <MessageStoreContext.Provider value={store}>{children}</MessageStoreContext.Provider>
   },

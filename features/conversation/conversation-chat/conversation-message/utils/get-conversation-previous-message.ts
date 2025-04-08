@@ -41,35 +41,35 @@ export function getConversationPreviousMessage(args: {
   })
 }
 
-export function useConversationPreviousMessageId(args: {
-  messageId: IXmtpMessageId
-  xmtpConversationId: IXmtpConversationId
-  caller: string
-}) {
-  const { messageId, xmtpConversationId, caller } = args
+// export function useConversationPreviousMessageId(args: {
+//   messageId: IXmtpMessageId
+//   xmtpConversationId: IXmtpConversationId
+//   caller: string
+// }) {
+//   const { messageId, xmtpConversationId, caller } = args
 
-  const currentSender = useSafeCurrentSender()
+//   const currentSender = useSafeCurrentSender()
 
-  return useInfiniteQuery({
-    ...getConversationMessagesInfiniteQueryOptions({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-      caller,
-    }),
-    select: (data) => {
-      const allMessageIds = data?.pages.flatMap((page) => page.messageIds)
+//   return useInfiniteQuery({
+//     ...getConversationMessagesInfiniteQueryOptions({
+//       clientInboxId: currentSender.inboxId,
+//       xmtpConversationId,
+//       caller,
+//     }),
+//     select: (data) => {
+//       const allMessageIds = data?.pages.flatMap((page) => page.messageIds)
 
-      if (!allMessageIds) {
-        return undefined
-      }
+//       if (!allMessageIds) {
+//         return undefined
+//       }
 
-      const currentIndex = allMessageIds.findIndex((id) => id === messageId)
+//       const currentIndex = allMessageIds.findIndex((id) => id === messageId)
 
-      if (currentIndex === -1) {
-        return undefined
-      }
+//       if (currentIndex === -1) {
+//         return undefined
+//       }
 
-      return allMessageIds[currentIndex + 1]
-    },
-  })
-}
+//       return allMessageIds[currentIndex + 1]
+//     },
+//   })
+// }

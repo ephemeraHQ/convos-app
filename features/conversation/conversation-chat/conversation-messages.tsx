@@ -62,10 +62,6 @@ export const ConversationMessages = memo(function ConversationMessages() {
     caller: "Conversation Messages",
   })
 
-  const messageIdsReversed = useMemo(() => {
-    return [...messageIds].reverse()
-  }, [messageIds])
-
   // Refetch messages when we focus again
   useBetterFocusEffect(
     useCallback(() => {
@@ -98,9 +94,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
           return
         }
 
-        const index = messageIdsReversed.findIndex(
-          (messageId) => messageId === scrollToXmtpMessageId,
-        )
+        const index = messageIds.findIndex((messageId) => messageId === scrollToXmtpMessageId)
         if (index === -1) {
           return
         }
@@ -120,7 +114,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     return () => {
       unsub()
     }
-  }, [conversationStore, messageIdsReversed, scrollRef])
+  }, [conversationStore, scrollRef, messageIds])
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -189,8 +183,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
 
   const renderItem = useCallback(
     ({ item, index }: { item: IXmtpMessageId; index: number }) => {
-      const previousXmtpMessageId = messageIdsReversed[index + 1]
-      const nextXmtpMessageId = messageIdsReversed[index - 1]
+      const previousXmtpMessageId = messageIds[index + 1]
+      const nextXmtpMessageId = messageIds[index - 1]
 
       return (
         <ConversationMessagesListItem
@@ -208,7 +202,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
         />
       )
     },
-    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIdsReversed],
+    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIds],
   )
 
   const getItemType = useCallback(
@@ -242,7 +236,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       scrollEventThrottle={200} // We don't need to throttle fast because we only use to know if we need to load more messages
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
-      getItemType={getItemType}
+      // getItemType={getItemType}
       // extraData={latestXmtpMessageIdFromCurrentSender}
 
       // LEGEND LIST PROPS
@@ -325,7 +319,7 @@ const ConversationMessagesListItem = memo(
 
     return (
       <ConversationMessageContextStoreProvider
-        message={message}
+        currentMessage={message}
         previousMessage={previousMessage ?? undefined}
         nextMessage={nextMessage ?? undefined}
       >

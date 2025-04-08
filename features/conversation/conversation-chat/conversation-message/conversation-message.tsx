@@ -22,7 +22,7 @@ import {
 export const ConversationMessage = memo(function ConversationMessage(props: {}) {
   const currentSender = useSafeCurrentSender()
 
-  const xmtpMessageId = useConversationMessageContextSelector((state) => state.xmtpMessageId)
+  const xmtpMessageId = useConversationMessageContextSelector((state) => state.currentMessageId)
 
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId,

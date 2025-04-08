@@ -2,13 +2,11 @@ import { Fragment, memo, ReactNode, useMemo } from "react"
 import { StyleProp, ViewStyle } from "react-native"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { ConversationMessageSender } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender"
 import { ConversationSenderAvatar } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender-avatar"
+import { ConversationMessageSenderName } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender-name"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { debugBorder } from "@/utils/debug-style"
 
 export const ConversationMessageLayout = memo(function ConversationMessageLayout(args: {
   reactionsComp?: ReactNode
@@ -18,8 +16,9 @@ export const ConversationMessageLayout = memo(function ConversationMessageLayout
   const { reactionsComp, messageComp, messageStatusComp } = args
   const messageStyles = useConversationMessageLayoutStyles()
 
-  const currentSender = useSafeCurrentSender()
-  const hasPreviousMessageInSeries = false
+  const hasPreviousMessageInSeries = useConversationMessageContextSelector(
+    (s) => s.hasPreviousMessageInSeries,
+  )
   const hasNextMessageInSeries = useConversationMessageContextSelector(
     (s) => s.hasNextMessageInSeries,
   )
@@ -64,7 +63,7 @@ export const ConversationMessageLayout = memo(function ConversationMessageLayout
         {!fromMe && !isGroupUpdate && (
           <Fragment>
             {!hasNextMessageInSeries ? (
-              <ConversationSenderAvatar inboxId={currentSender.inboxId} />
+              <ConversationSenderAvatar />
             ) : (
               <VStack style={messageStyles.avatarPlaceholder} />
             )}
@@ -75,7 +74,7 @@ export const ConversationMessageLayout = memo(function ConversationMessageLayout
         <VStack style={messageContainerStyle}>
           {!fromMe && !hasPreviousMessageInSeries && !isGroupUpdate && (
             <VStack style={senderNameContainerStyle}>
-              <ConversationMessageSender inboxId={currentSender.inboxId} />
+              <ConversationMessageSenderName />
             </VStack>
           )}
 
@@ -109,23 +108,30 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
   const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
 
   const containerStyle = useMemo(() => {
-    const styles: StyleProp<ViewStyle> = {
-      marginBottom: messageStyles.spaceBetweenMessagesInSeries,
-    }
+    const marginBottom = (() => {
+      if (isLastMessage && !fromMe) {
+        // Random value, we just wanted this for now since we don't want the last message to be too close to the reply message
+        return messageStyles.spaceBetweenMessageFromDifferentUserOrType / 2
+      }
 
-    if (isLastMessage && !fromMe) {
-      styles.marginBottom = messageStyles.spaceBetweenMessageFromDifferentUserOrType
-    }
+      if (!hasNextMessageInSeries && !fromMe) {
+        return messageStyles.spaceBetweenMessageFromDifferentUserOrType
+      }
 
-    if (!hasNextMessageInSeries) {
-      styles.marginBottom = 0
-    }
+      if (!hasNextMessageInSeries) {
+        return 0
+      }
 
-    if (hasReactions) {
-      styles.marginBottom = messageStyles.spaceBetweenSeriesWithReactions
-    }
+      if (hasReactions) {
+        return messageStyles.spaceBetweenSeriesWithReactions
+      }
 
-    return styles
+      return messageStyles.spaceBetweenMessagesInSeries
+    })()
+
+    return {
+      marginBottom,
+    } satisfies StyleProp<ViewStyle>
   }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage, fromMe])
 
   return (

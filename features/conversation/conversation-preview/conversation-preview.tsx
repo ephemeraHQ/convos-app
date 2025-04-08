@@ -142,7 +142,7 @@ const MessageWrapper = memo(function MessageWrapper({
 
   return (
     <ConversationMessageContextStoreProvider
-      message={message}
+      currentMessage={message}
       previousMessage={previousMessage ?? undefined}
       nextMessage={nextMessage ?? undefined}
     >

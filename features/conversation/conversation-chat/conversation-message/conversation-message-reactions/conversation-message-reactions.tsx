@@ -14,19 +14,19 @@ const MAX_REACTION_EMOJIS_SHOWN = 3
 export const ConversationMessageReactions = memo(function ConversationMessageReactions() {
   const { themed, theme } = useAppTheme()
 
-  const { fromMe, xmtpMessageId: messageId } = useConversationMessageContextSelector(
-    useSelect(["fromMe", "xmtpMessageId"]),
+  const { fromMe, currentMessageId } = useConversationMessageContextSelector(
+    useSelect(["fromMe", "currentMessageId"]),
   )
 
   const rolledUpReactions = useConversationMessageReactionsRolledUp({
-    xmtpMessageId: messageId,
+    xmtpMessageId: currentMessageId,
   })
 
   const handlePressContainer = useCallback(() => {
     openMessageReactionsDrawer({
-      messageId,
+      messageId: currentMessageId,
     })
-  }, [messageId])
+  }, [currentMessageId])
 
   if (rolledUpReactions.totalCount === 0) {
     return null

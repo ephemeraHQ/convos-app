@@ -37,7 +37,7 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
     async (e: IMessageGesturesOnLongPressArgs) => {
       try {
         const currentSender = getSafeCurrentSender()
-        const messageId = conversationMessageStore.getState().xmtpMessageId
+        const messageId = conversationMessageStore.getState().currentMessageId
         const message = getMessageFromConversationSafe({
           messageId,
           clientInboxId: currentSender.inboxId,
@@ -71,7 +71,7 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
   }, [conversationMessageStore])
 
   const handleDoubleTap = useCallback(() => {
-    const messageId = conversationMessageStore.getState().xmtpMessageId
+    const messageId = conversationMessageStore.getState().currentMessageId
     const alreadyReacted = getCurrentUserAlreadyReactedOnMessage({
       messageId,
       emoji: "❤️",

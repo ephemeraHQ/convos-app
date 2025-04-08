@@ -183,7 +183,7 @@ const Content = memo(function Content(props: {
                 />
 
                 <ConversationMessageContextStoreProvider
-                  message={message}
+                  currentMessage={message}
                   nextMessage={nextMessage}
                   previousMessage={previousMessage}
                 >

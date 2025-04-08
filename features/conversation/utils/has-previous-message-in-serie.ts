@@ -19,14 +19,14 @@ export const hasPreviousMessageInSeries = ({
     return false
   }
 
-  // if (
-  //   messageShouldShowDateChange({
-  //     messageOne: currentMessage,
-  //     messageTwo: previousMessage,
-  //   })
-  // ) {
-  //   return false
-  // }
+  if (
+    messageShouldShowDateChange({
+      messageOne: currentMessage,
+      messageTwo: previousMessage,
+    })
+  ) {
+    return false
+  }
 
   return previousMessage.senderInboxId === currentMessage.senderInboxId
 }
