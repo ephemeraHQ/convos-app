@@ -34,43 +34,43 @@ permissions:
   id-token: write
 
 jobs:
-  check-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      has_native_changes: ${{ steps.check-changes.outputs.has_native_changes }}
-      commit_message: ${{ steps.commit_msg.outputs.message }}
+  # check-changes:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     has_native_changes: ${{ steps.check-changes.outputs.has_native_changes }}
+  #     commit_message: ${{ steps.commit_msg.outputs.message }}
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 2
 
-      - name: Get Commit Message
-        id: commit_msg
-        run: |
-          # Escape the commit message and store it in a variable
-          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-          # Properly escape the message for GitHub Actions output
-          COMMIT_MESSAGE="${COMMIT_MESSAGE//'%'/'%25'}"
-          COMMIT_MESSAGE="${COMMIT_MESSAGE//$'\n'/'%0A'}"
-          COMMIT_MESSAGE="${COMMIT_MESSAGE//$'\r'/'%0D'}"
-          echo "message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+  #     - name: Get Commit Message
+  #       id: commit_msg
+  #       run: |
+  #         # Escape the commit message and store it in a variable
+  #         COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+  #         # Properly escape the message for GitHub Actions output
+  #         COMMIT_MESSAGE="${COMMIT_MESSAGE//'%'/'%25'}"
+  #         COMMIT_MESSAGE="${COMMIT_MESSAGE//$'\n'/'%0A'}"
+  #         COMMIT_MESSAGE="${COMMIT_MESSAGE//$'\r'/'%0D'}"
+  #         echo "message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
 
-      - name: Check for native changes
-        id: check-changes
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.force_native_build }}" == "true" ]]; then
-            echo "has_native_changes=true" >> $GITHUB_OUTPUT
-          elif git diff --name-only HEAD^ HEAD | grep -E "package.json|app.config.ts|patches/|google-services/|yarn.lock|eas.json"; then
-            echo "has_native_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_native_changes=false" >> $GITHUB_OUTPUT
-          fi
+  #     - name: Check for native changes
+  #       id: check-changes
+  #       run: |
+  #         if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.force_native_build }}" == "true" ]]; then
+  #           echo "has_native_changes=true" >> $GITHUB_OUTPUT
+  #         elif git diff --name-only HEAD^ HEAD | grep -E "package.json|app.config.ts|patches/|google-services/|yarn.lock|eas.json"; then
+  #           echo "has_native_changes=true" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "has_native_changes=false" >> $GITHUB_OUTPUT
+  #         fi
 
   ios-build:
-    needs: [check-changes]
-    if: needs.check-changes.outputs.has_native_changes == 'true'
+    # needs: [check-changes]
+    # if: needs.check-changes.outputs.has_native_changes == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -113,93 +113,93 @@ jobs:
       #   run: |
       #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
 
-  android-build:
-    needs: [check-changes]
-    if: needs.check-changes.outputs.has_native_changes == 'true'
-    runs-on: ubuntu-latest
+  # android-build:
+  #   needs: [check-changes]
+  #   if: needs.check-changes.outputs.has_native_changes == 'true'
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: main
+  #         fetch-depth: 0
 
-      - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: "yarn"
-          cache-dependency-path: yarn.lock
-        env:
-          SKIP_YARN_COREPACK_CHECK: "1"
-      - run: corepack enable
+  #     - name: Setup node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version-file: .nvmrc
+  #         cache: "yarn"
+  #         cache-dependency-path: yarn.lock
+  #       env:
+  #         SKIP_YARN_COREPACK_CHECK: "1"
+  #     - run: corepack enable
 
-      - name: Install dependencies
-        run: yarn install
+  #     - name: Install dependencies
+  #       run: yarn install
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: yarn
-          eas-cache: true
-          patch-watchers: true # Prevents ENOSPC errors on Ubuntu runners
+  #     - name: Setup EAS
+  #       uses: expo/expo-github-action@v8
+  #       with:
+  #         eas-version: latest
+  #         token: ${{ secrets.EXPO_TOKEN }}
+  #         packager: yarn
+  #         eas-cache: true
+  #         patch-watchers: true # Prevents ENOSPC errors on Ubuntu runners
 
-      - name: Install Sentry CLI
-        run: npm install -g @sentry/cli
+  #     - name: Install Sentry CLI
+  #       run: npm install -g @sentry/cli
 
-      - name: Build and submit to store
-        run: |
-          eas build --platform android --profile preview --non-interactive --auto-submit
+  #     - name: Build and submit to store
+  #       run: |
+  #         eas build --platform android --profile preview --non-interactive --auto-submit
 
-      # - name: Resolve Sentry Issues
-      #   run: |
-      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
+  #     # - name: Resolve Sentry Issues
+  #     #   run: |
+  #     #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
 
-  ota-update:
-    needs: [check-changes]
-    if: needs.check-changes.outputs.has_native_changes == 'false'
-    runs-on: ubuntu-latest
+  # ota-update:
+  #   needs: [check-changes]
+  #   if: needs.check-changes.outputs.has_native_changes == 'false'
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: "yarn"
-          cache-dependency-path: yarn.lock
-        env:
-          SKIP_YARN_COREPACK_CHECK: "1"
-      - run: corepack enable
+  #     - name: Setup node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version-file: .nvmrc
+  #         cache: "yarn"
+  #         cache-dependency-path: yarn.lock
+  #       env:
+  #         SKIP_YARN_COREPACK_CHECK: "1"
+  #     - run: corepack enable
 
-      - name: Install dependencies
-        run: yarn install --immutable
+  #     - name: Install dependencies
+  #       run: yarn install --immutable
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: yarn
-          eas-cache: true
-          patch-watchers: true # Prevents ENOSPC errors on Ubuntu runners
+  #     - name: Setup EAS
+  #       uses: expo/expo-github-action@v8
+  #       with:
+  #         eas-version: latest
+  #         token: ${{ secrets.EXPO_TOKEN }}
+  #         packager: yarn
+  #         eas-cache: true
+  #         patch-watchers: true # Prevents ENOSPC errors on Ubuntu runners
 
-      - name: Install Sentry CLI
-        run: npm install -g @sentry/cli
+  #     - name: Install Sentry CLI
+  #       run: npm install -g @sentry/cli
 
-      - name: Run EAS Update
-        run: |
-          eas update --channel=preview --message "${{ needs.check-changes.outputs.commit_message }}" --non-interactive --environment=preview
+  #     - name: Run EAS Update
+  #       run: |
+  #         eas update --channel=preview --message "${{ needs.check-changes.outputs.commit_message }}" --non-interactive --environment=preview
 
-      - name: Upload Sourcemaps to Sentry
-        run: |
-          eas env:exec --environment preview -- 'npx sentry-expo-upload-sourcemaps dist'
+  #     - name: Upload Sourcemaps to Sentry
+  #       run: |
+  #         eas env:exec --environment preview -- 'npx sentry-expo-upload-sourcemaps dist'
 
-      # - name: Resolve Sentry Issues
-      #   run: |
-      #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
+  #     # - name: Resolve Sentry Issues
+  #     #   run: |
+  #     #     eas env:exec --environment preview 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
