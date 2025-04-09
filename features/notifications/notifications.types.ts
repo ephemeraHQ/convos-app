@@ -10,6 +10,13 @@ type INotificationWithData<T> = Omit<Notifications.Notification, "request"> & {
   }
 }
 
+export type INotificationPermissionStatus = "granted" | "denied" | "notDetermined" | "canAskAgain"
+
+export type INotificationPermissions = {
+  status: INotificationPermissionStatus
+  canAskAgain: boolean
+}
+
 // Type for Expo push notifications containing new messages
 export type IExpoNewMessageNotification = INotificationWithData<{
   contentTopic: IConversationTopic

@@ -29,7 +29,7 @@ async function getConversation(args: IGetConversationArgs) {
     throw new Error("Inbox ID is required")
   }
 
-  // Let's make sure we have this query done otherwise it dones't make sense to do "syncOneXmtpConversation"
+  // Let's make sure we have this query done otherwise it doesn't make sense to do "syncOneXmtpConversation"
   await ensureConversationSyncAllQuery({
     clientInboxId,
   })

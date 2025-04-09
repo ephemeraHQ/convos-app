@@ -7,7 +7,6 @@ import {
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
-import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { queryLogger } from "@/utils/logger/logger"
@@ -74,14 +73,8 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("Conversation not found")
   }
 
-  // Let's make sure we have this query done otherwise it doesn't make sense to do "syncOneXmtpConversation"
   await ensureConversationSyncAllQuery({
     clientInboxId,
-  })
-
-  await syncOneXmtpConversation({
-    clientInboxId,
-    conversationId: conversation.xmtpId,
   })
 
   const xmtpMessages = await getXmtpConversationMessages({
@@ -362,9 +355,6 @@ export const removeMessageFromConversationMessagesInfiniteQueryData = (args: {
   })
 }
 
-/**
- * Invalidate the infinite query cache to force a refetch
- */
 export function invalidateConversationMessagesInfiniteMessagesQuery(args: IArgs) {
   const { clientInboxId, xmtpConversationId } = args
   const queryKey = getConversationMessagesInfiniteQueryOptions({
@@ -374,6 +364,14 @@ export function invalidateConversationMessagesInfiniteMessagesQuery(args: IArgs)
   return reactQueryClient.invalidateQueries({ queryKey })
 }
 
+export function refetchConversationMessagesInfiniteQuery(args: IArgs) {
+  const { clientInboxId, xmtpConversationId } = args
+  const queryKey = getConversationMessagesInfiniteQueryOptions({
+    clientInboxId,
+    xmtpConversationId,
+  }).queryKey
+  return reactQueryClient.refetchQueries({ queryKey })
+}
 export function getConversationMessagesInfiniteQueryData(args: IArgs) {
   const { clientInboxId, xmtpConversationId } = args
   const queryKey = getConversationMessagesInfiniteQueryOptions({

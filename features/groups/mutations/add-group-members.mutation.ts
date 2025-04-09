@@ -1,11 +1,8 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  getGroupQueryData,
-  invalidateGroupQuery,
-  setGroupQueryData,
-} from "@/features/groups/queries/group.query"
+import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { getGroupQueryData, setGroupQueryData } from "@/features/groups/queries/group.query"
 import { addXmtpGroupMembers } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 import { IGroup } from "../group.types"
 
@@ -71,19 +68,9 @@ export function useAddGroupMembersMutation() {
 
       return { previousGroup }
     },
-    onError: (_error, variables, context) => {
-      // Roll back to previous group on error
-      if (context?.previousGroup) {
-        setGroupQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: variables.group.xmtpId,
-          group: context.previousGroup,
-        })
-      }
-    },
-    onSettled: (_data, _error, variables) => {
-      // Invalidate and refetch after error or success
-      invalidateGroupQuery({
+    onSettled: (data, error, variables) => {
+      // Let's make sure we are up to date
+      refetchConversationMessagesInfiniteQuery({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: variables.group.xmtpId,
       })

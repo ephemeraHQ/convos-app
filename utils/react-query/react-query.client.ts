@@ -100,8 +100,8 @@ export const reactQueryClient = new QueryClient({
       // Prevent infinite refetch loops by manually controlling when queries should refetch when components mount
       refetchOnMount: false,
 
-      refetchOnWindowFocus: "always",
-      refetchOnReconnect: "always",
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
 
       // Offers better performance by avoiding deep equality checks
       structuralSharing: false,

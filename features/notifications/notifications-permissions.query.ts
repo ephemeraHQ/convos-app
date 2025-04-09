@@ -5,8 +5,12 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 export const getNotificationsPermissionsQueryConfig = () => {
   return queryOptions({
     queryKey: ["notifications-permissions"],
-    queryFn: () => {
-      return Notifications.getPermissionsAsync()
+    queryFn: async () => {
+      const permissions = await Notifications.getPermissionsAsync()
+      return {
+        status: permissions.granted ? "granted" : "denied",
+        canAskAgain: permissions.canAskAgain,
+      }
     },
     staleTime: Infinity,
   })

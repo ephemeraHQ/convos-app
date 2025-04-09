@@ -77,7 +77,7 @@ export async function addXmtpGroupMembers(args: {
       inboxId: clientInboxId,
     })
 
-    await wrapXmtpCallWithDuration("addGroupMembers", () =>
+    return wrapXmtpCallWithDuration("addGroupMembers", () =>
       addGroupMembers(client.installationId, groupId, inboxIds),
     )
   } catch (error) {

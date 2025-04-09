@@ -39,9 +39,16 @@ export function setupConversationsNotificationsSubscriptions() {
   // Set up subscription for notifications permissions changes
   const permissionsObserver = createQueryObserverWithPreviousData({
     queryOptions: getNotificationsPermissionsQueryConfig(),
-    observerCallbackFn: ({ data, previousData }) => {
-      if (data !== previousData) {
-        updateConversationSubscriptions()
+    observerCallbackFn: async ({ data, previousData }) => {
+      console.log("notif granted")
+      if (data?.status === "granted") {
+        // Permission granted
+        const currentSenders = useMultiInboxStore.getState().senders
+        const inboxIds = currentSenders.map((sender) => sender.inboxId)
+        await subscribeConversationsForInboxes(inboxIds)
+      } else {
+        // Permission revoked or not granted
+        await unsubscribeAllConversationsNotifications()
       }
     },
   })
@@ -51,10 +58,38 @@ export function setupConversationsNotificationsSubscriptions() {
   // Set up subscription for multi-inbox store changes
   inboxStoreUnsubscribe = useMultiInboxStore.subscribe(
     (state) => state.senders,
-    (senders, previousSenders) => {
-      if (senders.length !== previousSenders.length) {
-        updateConversationSubscriptions()
+    async (senders, previousSenders) => {
+      if (senders.length === previousSenders.length) {
+        return
       }
+
+      const hasPushNotificationPermissions = await userHasGrantedNotificationsPermissions()
+      if (!hasPushNotificationPermissions) {
+        return
+      }
+
+      const currentInboxIds = senders.map((sender) => sender.inboxId)
+      const previousInboxIds = previousSendersInboxIds
+
+      // Find inbox IDs to unsubscribe (present in previous but not in current)
+      const inboxIdsToUnsubscribe = previousInboxIds.filter((id) => !currentInboxIds.includes(id))
+
+      // Find inbox IDs to subscribe (present in current but not in previous)
+      const inboxIdsToSubscribe = currentInboxIds.filter((id) => !previousInboxIds.includes(id))
+
+      // Handle unsubscriptions
+      if (inboxIdsToUnsubscribe.length > 0) {
+        await unsubscribeConversationsForInboxes(inboxIdsToUnsubscribe)
+      }
+
+      // Handle subscriptions
+      if (inboxIdsToSubscribe.length > 0) {
+        console.log("notif subscribing")
+        await subscribeConversationsForInboxes(inboxIdsToSubscribe)
+      }
+
+      // Update our tracking of previous senders
+      previousSendersInboxIds = [...currentInboxIds]
     },
     {
       fireImmediately: true,
@@ -85,51 +120,30 @@ function cleanupSubscriptions() {
   previousSendersInboxIds = []
 }
 
-async function updateConversationSubscriptions() {
-  notificationsLogger.debug("Updating conversation subscriptions")
+/**
+ * Sets up observers and subscriptions for multiple inbox IDs
+ */
+async function subscribeConversationsForInboxes(inboxIds: IXmtpInboxId[]) {
+  notificationsLogger.debug(`Setting up observers for ${inboxIds.length} inboxes`)
 
-  // Check if notifications permissions are granted
-  const hasPushNotificationPermissions = await userHasGrantedNotificationsPermissions()
-
-  // Permissions revoked or not granted, reset everything
-  if (!hasPushNotificationPermissions) {
-    return unsubscribeFromAllConversationsNotifications().catch((error) =>
-      captureError(
-        new NotificationError({
-          error,
-          additionalMessage: "Failed to unsubscribe from all conversations notifications",
-        }),
-      ),
-    )
+  for (const inboxId of inboxIds) {
+    setupObserverForInbox(inboxId)
   }
+}
 
-  // Get current senders from the store
-  const currentSenders = useMultiInboxStore.getState().senders
-  const currentInboxIds = currentSenders.map((sender) => sender.inboxId)
-  const previousInboxIds = previousSendersInboxIds
+/**
+ * Removes observers and unsubscribes for multiple inbox IDs
+ */
+async function unsubscribeConversationsForInboxes(inboxIds: IXmtpInboxId[]) {
+  notificationsLogger.debug(`Removing observers for ${inboxIds.length} inboxes`)
 
-  // Find inbox IDs to unsubscribe (present in previous but not in current)
-  const inboxIdsToUnsubscribe = previousInboxIds.filter((id) => !currentInboxIds.includes(id))
-
-  // Find inbox IDs to subscribe (present in current but not in previous)
-  const inboxIdsToSubscribe = currentInboxIds.filter((id) => !previousInboxIds.includes(id))
-
-  // Unsubscribe removed senders
-  for (const inboxId of inboxIdsToUnsubscribe) {
+  for (const inboxId of inboxIds) {
     const observer = observersMap.get(inboxId)
     if (observer) {
       observer.destroy()
       observersMap.delete(inboxId)
     }
   }
-
-  // Subscribe new senders
-  for (const inboxId of inboxIdsToSubscribe) {
-    setupObserverForInbox(inboxId)
-  }
-
-  // Update our tracking of previous senders
-  previousSendersInboxIds = [...currentInboxIds]
 }
 
 /**
@@ -191,7 +205,7 @@ function setupObserverForInbox(clientInboxId: IXmtpInboxId) {
   observersMap.set(clientInboxId, observer)
 }
 
-async function unsubscribeFromAllConversationsNotifications() {
+async function unsubscribeAllConversationsNotifications() {
   notificationsLogger.debug("Notifications not granted, clearing observers and unsubscribing")
 
   const senders = useMultiInboxStore.getState().senders
@@ -200,7 +214,7 @@ async function unsubscribeFromAllConversationsNotifications() {
     senders.map(async (sender) => {
       const conversationIds = await ensureAllowedConsentConversationsQueryData({
         clientInboxId: sender.inboxId,
-        caller: "updateConversationSubscriptions",
+        caller: "unsubscribeAllConversationsNotifications",
       })
 
       await unsubscribeFromConversationsNotifications({

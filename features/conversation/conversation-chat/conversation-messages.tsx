@@ -21,6 +21,7 @@ import {
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useMessageHasReactions } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-message-has-reactions"
 import {
+  isAnActualMessage,
   isAttachmentsMessage,
   isGroupUpdatedMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
@@ -32,7 +33,6 @@ import { isConversationDm } from "@/features/conversation/utils/is-conversation-
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
-import { window } from "@/theme/layout"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -68,6 +68,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       if (isTmpConversation(xmtpConversationId)) {
         return
       }
+      logger.debug("Refetching messages because we're now focused again on the conversation")
       refetchMessages().catch(captureError)
     }, [refetchMessages, xmtpConversationId]),
   )
@@ -82,8 +83,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
     if (isTmpConversation(xmtpConversationId)) {
       return
     }
+    if (messageIds.length === 0) {
+      return
+    }
     markAsReadAsync().catch(captureError)
-  }, [markAsReadAsync, xmtpConversationId])
+  }, [markAsReadAsync, xmtpConversationId, messageIds.length])
 
   // Scroll to message when we select one in the store
   useEffect(() => {
@@ -124,17 +128,19 @@ export const ConversationMessages = memo(function ConversationMessages() {
       }
 
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
-      const contentOffsetY = contentOffset.y
 
-      // Since the list is inverted, when scrolling to the top (older messages),
-      // contentOffset.y gets closer to 0 or becomes positive
-      if (contentOffsetY < window.height * 0.2 && hasNextPage) {
-        // Load more older messages when reaching top area
+      const contentOffsetY = contentOffset.y
+      const listHeight = layoutMeasurement.height
+      const listContentHeight = contentSize.height - listHeight
+      const distanceFromTop = listContentHeight - contentOffsetY
+      const isPastTopThreshold = distanceFromTop < listHeight * 0.2
+
+      if (isPastTopThreshold && hasNextPage) {
         refreshingRef.current = true
-        logger.debug("Fetching more messages (older)...")
+        logger.debug("Fetching older messages because we're scrolled past the top...")
         fetchNextPage()
           .then(() => {
-            logger.debug("Done fetching more messages")
+            logger.debug("Done fetching older messages because we're scrolled past the top")
           })
           .catch(captureError)
           .finally(() => {
@@ -142,7 +148,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
           })
       }
 
-      // Reset the flag when user scrolls back up past the threshold
+      // Reset once the user has scrolled back up past the threshold
       if (contentOffsetY >= 0) {
         hasPulledToRefreshRef.current = false
       }
@@ -157,10 +163,10 @@ export const ConversationMessages = memo(function ConversationMessages() {
         // Only refetch if we haven't already refreshed during this pull-down gesture
         hasPulledToRefreshRef.current = true
         refreshingRef.current = true
-        logger.debug("Refetching latest messages...")
+        logger.debug("Refetching newest messages because we're scrolled past the bottom...")
         refetchMessages()
           .then(() => {
-            logger.debug("Done refetching latest messages")
+            logger.debug("Done refetching newest messages because we're scrolled past the bottom")
           })
           .catch(captureError)
           .finally(() => {
@@ -287,8 +293,11 @@ const ConversationMessagesListItem = memo(
     )
 
     const statusComponent = useMemo(
-      () => (isLatestXmtpMessageIdFromCurrentSender ? <ConversationMessageStatus /> : null),
-      [isLatestXmtpMessageIdFromCurrentSender],
+      () =>
+        isLatestXmtpMessageIdFromCurrentSender && message && isAnActualMessage(message) ? (
+          <ConversationMessageStatus />
+        ) : null,
+      [isLatestXmtpMessageIdFromCurrentSender, message],
     )
 
     const { data: messageHasReactions } = useMessageHasReactions({

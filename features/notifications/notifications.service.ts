@@ -171,7 +171,7 @@ export async function requestNotificationsPermissions(): Promise<{ granted: bool
 
 export async function userHasGrantedNotificationsPermissions() {
   const permission = await ensureNotificationsPermissions()
-  return permission.status === Notifications.PermissionStatus.GRANTED
+  return permission.status === "granted"
 }
 
 export async function canAskForNotificationsPermissions() {

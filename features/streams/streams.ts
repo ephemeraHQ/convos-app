@@ -38,10 +38,14 @@ export function useSetupStreamingSubscriptions() {
         const senders = useMultiInboxStore.getState().senders
         const inboxIds = senders.map((sender) => sender.inboxId)
 
-        if (currentState === "active" && previousState !== "active") {
+        if (inboxIds.length === 0) {
+          return
+        }
+
+        if (currentState === "active") {
           streamLogger.debug("App became active, restarting streams")
           startStreaming(inboxIds).catch(captureError)
-        } else if (currentState !== "active" && previousState === "active") {
+        } else if (currentState === "background") {
           streamLogger.debug("App went to background, stopping streams")
           stopStreaming(inboxIds).catch(captureError)
         }
