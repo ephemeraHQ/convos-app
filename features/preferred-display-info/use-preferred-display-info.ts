@@ -14,7 +14,7 @@ import {
   getProfileQueryData,
   useProfileQuery,
 } from "@/features/profiles/profiles.query"
-import { useSocialProfilesForInboxId } from "@/features/social-profiles/hooks/use-social-profiles-for-inbox-id"
+import { useSocialProfilesForInboxIdQuery } from "@/features/social-profiles/social-profiles-for-inbox-id.query"
 import {
   ensureSocialProfilesForAddressQuery,
   getSocialProfilesForEthAddressQueryData,
@@ -62,6 +62,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
   const { data: ethAddressesForXmtpInboxId } = useEthAddressesForXmtpInboxIdQuery({
     clientInboxId: currentSender.inboxId,
     inboxId,
+    caller: "usePreferredDisplayInfo",
   })
 
   // Get Convos profile data
@@ -72,8 +73,10 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
 
   // Get social profiles data
   const { data: socialProfilesForInboxId, isLoading: isLoadingSocialProfilesForInboxId } =
-    useSocialProfilesForInboxId({
+    useSocialProfilesForInboxIdQuery({
       inboxId,
+      clientInboxId: currentSender.inboxId,
+      caller: "usePreferredDisplayInfo",
     })
 
   const ethAddress = ethAddressArg || ethAddressesForXmtpInboxId?.[0]
@@ -215,6 +218,7 @@ export async function ensurePreferredDisplayInfo(args: PreferredDisplayInfoArgs)
       await ensureEthAddressesForXmtpInboxIdQueryData({
         clientInboxId: currentSender.inboxId,
         inboxId: inboxId,
+        caller: "ensurePreferredDisplayInfo",
       })
     )?.[0]
   }

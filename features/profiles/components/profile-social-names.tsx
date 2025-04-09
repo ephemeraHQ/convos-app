@@ -7,7 +7,8 @@ import { Chip, ChipAvatar, ChipText } from "@/design-system/chip"
 import { HStack } from "@/design-system/HStack"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
-import { useSocialProfilesForInboxId } from "@/features/social-profiles/hooks/use-social-profiles-for-inbox-id"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useSocialProfilesForInboxIdQuery } from "@/features/social-profiles/social-profiles-for-inbox-id.query"
 import { supportedSocialProfiles } from "@/features/social-profiles/supported-social-profiles"
 import { translate } from "@/i18n"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -21,8 +22,12 @@ type IProfileSocialsNamesProps = {
 export function ProfileSocialsNames({ inboxId }: IProfileSocialsNamesProps) {
   const { theme, themed } = useAppTheme()
 
-  const { data: socialProfiles } = useSocialProfilesForInboxId({
+  const currentSender = useSafeCurrentSender()
+
+  const { data: socialProfiles } = useSocialProfilesForInboxIdQuery({
     inboxId,
+    clientInboxId: currentSender.inboxId,
+    caller: "ProfileSocialsNames",
   })
 
   const handleNamePress = (name: string) => {

@@ -34,10 +34,11 @@ async function getConversation(args: IGetConversationArgs) {
     clientInboxId,
   })
 
-  await syncOneXmtpConversation({
-    clientInboxId,
-    conversationId: xmtpConversationId,
-  })
+  // Not sure if needed and it slows down the app so removing it forn now
+  // await syncOneXmtpConversation({
+  //   clientInboxId,
+  //   conversationId: xmtpConversationId,
+  // })
 
   const xmtpConversation = await getXmtpConversation({
     clientInboxId,

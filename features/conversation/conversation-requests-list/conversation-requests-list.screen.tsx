@@ -1,4 +1,3 @@
-import { useFocusEffect } from "@react-navigation/native"
 import { memo, useCallback, useState } from "react"
 import { Screen } from "@/components/screen/screen"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
@@ -10,32 +9,37 @@ import { $globalStyles } from "@/theme/styles"
 import { captureError } from "@/utils/capture-error"
 import { useConversationRequestsListItem } from "./use-conversation-requests-list-items"
 
+export type ITab = "you-might-know" | "hidden"
+
 export const ConversationRequestsListScreen = memo(function () {
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [selectedTab, setSelectedTab] = useState<ITab>("you-might-know")
 
-  useConversationRequestsListScreenHeader()
+  useConversationRequestsListScreenHeader({ selectedTab })
 
-  const handleToggleSelect = useCallback((index: number) => {
-    setSelectedIndex(index)
+  const handleToggleSelect = useCallback((tab: ITab) => {
+    setSelectedTab(tab)
   }, [])
 
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
       <ConversationRequestsToggle
-        options={[translate("You might know"), translate("Hidden")]}
-        selectedIndex={selectedIndex}
+        options={[
+          { label: translate("You might know"), value: "you-might-know" },
+          { label: translate("Hidden"), value: "hidden" },
+        ]}
+        selectedTab={selectedTab}
         onSelect={handleToggleSelect}
       />
 
-      <ConversationListWrapper selectedIndex={selectedIndex} />
+      <ConversationListWrapper selectedTab={selectedTab} />
     </Screen>
   )
 })
 
 const ConversationListWrapper = memo(function ConversationListWrapper({
-  selectedIndex,
+  selectedTab,
 }: {
-  selectedIndex: number
+  selectedTab: ITab
 }) {
   const { likelyNotSpamConversationIds, likelySpamConversationIds, refetch } =
     useConversationRequestsListItem()
@@ -49,7 +53,7 @@ const ConversationListWrapper = memo(function ConversationListWrapper({
   return (
     <ConversationList
       conversationsIds={
-        selectedIndex === 0 ? likelyNotSpamConversationIds : likelySpamConversationIds
+        selectedTab === "you-might-know" ? likelyNotSpamConversationIds : likelySpamConversationIds
       }
     />
   )

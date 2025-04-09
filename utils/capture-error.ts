@@ -10,12 +10,19 @@ import { logger } from "@/utils/logger/logger"
 import { sentryTrackError } from "./sentry/sentry-track-error"
 
 export async function captureError(error: BaseError) {
+  // If the error is not a BaseError, we need to wrap it in a GenericError
+  if (!(error instanceof BaseError)) {
+    error = new GenericError({ error })
+  }
+
   try {
     if (error.hasErrorType(FeedbackError)) {
+      console.log("FeedbackError")
       return
     }
 
     if (error.hasErrorType(UserCancelledError)) {
+      console.log("UserCancelledError")
       return
     }
 
@@ -30,6 +37,7 @@ export async function captureError(error: BaseError) {
       extras: error.extra,
     })
   } catch (error) {
+    logger.error("Failed to capture error", error)
     sentryTrackError({
       error: new GenericError({
         error,

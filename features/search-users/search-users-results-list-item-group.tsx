@@ -27,19 +27,14 @@ export const SearchUsersResultsListItemGroup = memo(
     })
 
     const preferredDisplayData = usePreferredDisplayInfoBatch({
-      xmtpInboxIds: members?.ids?.slice(0, 3) ?? [],
+      xmtpInboxIds: members?.ids?.slice(0, 4) ?? [],
     })
 
     return (
       <SearchUsersResultListItem
         avatar={<GroupAvatar xmtpConversationId={xmtpConversationId} />}
         title={groupName}
-        subtitle={
-          preferredDisplayData
-            ?.slice(0, 3)
-            .map((profile) => profile?.displayName)
-            .join(", ") ?? ""
-        }
+        subtitle={preferredDisplayData.map((profile) => profile?.displayName).join(", ") ?? ""}
         onPress={onPress}
       />
     )

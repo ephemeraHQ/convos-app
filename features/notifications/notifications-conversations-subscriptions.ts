@@ -20,7 +20,7 @@ import {
 } from "./notifications.api"
 
 // Global map to track observers by inbox ID
-const observersMap = new Map<
+const allowedConversationsObserversMap = new Map<
   IXmtpInboxId,
   ReturnType<typeof getAllowedConsentConversationsQueryObserver>
 >()
@@ -32,20 +32,30 @@ let previousSendersInboxIds: IXmtpInboxId[] = []
 let notificationsPermissionsUnsubscribe: (() => void) | null = null
 let inboxStoreUnsubscribe: (() => void) | null = null
 
-export function setupConversationsNotificationsSubscriptions() {
-  // Clean up existing subscriptions first
+export async function setupConversationsNotificationsSubscriptions() {
   cleanupSubscriptions()
 
   // Set up subscription for notifications permissions changes
   const permissionsObserver = createQueryObserverWithPreviousData({
     queryOptions: getNotificationsPermissionsQueryConfig(),
     observerCallbackFn: async ({ data, previousData }) => {
-      console.log("notif granted")
-      if (data?.status === "granted") {
+      if (!data) {
+        return
+      }
+
+      const isNewPermissionStatus = data.status !== previousData?.status
+
+      if (!isNewPermissionStatus) {
+        return
+      }
+
+      if (data.status === "granted") {
         // Permission granted
         const currentSenders = useMultiInboxStore.getState().senders
         const inboxIds = currentSenders.map((sender) => sender.inboxId)
-        await subscribeConversationsForInboxes(inboxIds)
+        for (const inboxId of inboxIds) {
+          await setupAllowedConversationObserverForInbox(inboxId)
+        }
       } else {
         // Permission revoked or not granted
         await unsubscribeAllConversationsNotifications()
@@ -83,9 +93,8 @@ export function setupConversationsNotificationsSubscriptions() {
       }
 
       // Handle subscriptions
-      if (inboxIdsToSubscribe.length > 0) {
-        console.log("notif subscribing")
-        await subscribeConversationsForInboxes(inboxIdsToSubscribe)
+      for (const inboxId of inboxIdsToSubscribe) {
+        await setupAllowedConversationObserverForInbox(inboxId)
       }
 
       // Update our tracking of previous senders
@@ -98,6 +107,8 @@ export function setupConversationsNotificationsSubscriptions() {
 }
 
 function cleanupSubscriptions() {
+  notificationsLogger.debug("Cleaned up notifications subscriptions and observers")
+
   // Unsubscribe from notifications permissions observer
   if (notificationsPermissionsUnsubscribe) {
     notificationsPermissionsUnsubscribe()
@@ -111,24 +122,13 @@ function cleanupSubscriptions() {
   }
 
   // Clean up all conversation observers
-  observersMap.forEach((observer) => {
+  allowedConversationsObserversMap.forEach((observer) => {
     observer.destroy()
   })
-  observersMap.clear()
+  allowedConversationsObserversMap.clear()
 
   // Reset previous senders
   previousSendersInboxIds = []
-}
-
-/**
- * Sets up observers and subscriptions for multiple inbox IDs
- */
-async function subscribeConversationsForInboxes(inboxIds: IXmtpInboxId[]) {
-  notificationsLogger.debug(`Setting up observers for ${inboxIds.length} inboxes`)
-
-  for (const inboxId of inboxIds) {
-    setupObserverForInbox(inboxId)
-  }
 }
 
 /**
@@ -138,10 +138,10 @@ async function unsubscribeConversationsForInboxes(inboxIds: IXmtpInboxId[]) {
   notificationsLogger.debug(`Removing observers for ${inboxIds.length} inboxes`)
 
   for (const inboxId of inboxIds) {
-    const observer = observersMap.get(inboxId)
+    const observer = allowedConversationsObserversMap.get(inboxId)
     if (observer) {
       observer.destroy()
-      observersMap.delete(inboxId)
+      allowedConversationsObserversMap.delete(inboxId)
     }
   }
 }
@@ -149,12 +149,9 @@ async function unsubscribeConversationsForInboxes(inboxIds: IXmtpInboxId[]) {
 /**
  * Sets up a query observer for a each client inbox ID
  */
-function setupObserverForInbox(clientInboxId: IXmtpInboxId) {
-  // Cleanup any existing observer for this inbox
-  const existingObserver = observersMap.get(clientInboxId)
-  if (existingObserver) {
-    existingObserver.destroy()
-    observersMap.delete(clientInboxId)
+function setupAllowedConversationObserverForInbox(clientInboxId: IXmtpInboxId) {
+  if (allowedConversationsObserversMap.has(clientInboxId)) {
+    return
   }
 
   // Store conversation IDs for comparison
@@ -202,7 +199,9 @@ function setupObserverForInbox(clientInboxId: IXmtpInboxId) {
   })
 
   // Store the observer in our map for tracking
-  observersMap.set(clientInboxId, observer)
+  allowedConversationsObserversMap.set(clientInboxId, observer)
+
+  notificationsLogger.debug(`New allowed conversation observer setup for ${clientInboxId}`)
 }
 
 async function unsubscribeAllConversationsNotifications() {
@@ -226,10 +225,10 @@ async function unsubscribeAllConversationsNotifications() {
 
   previousSendersInboxIds = []
 
-  observersMap.forEach((observer) => {
+  allowedConversationsObserversMap.forEach((observer) => {
     observer.destroy()
   })
-  observersMap.clear()
+  allowedConversationsObserversMap.clear()
 
   notificationsLogger.debug("Unsubscribed from all conversations notifications")
 }
@@ -240,7 +239,7 @@ async function subscribeToConversationsNotifications(args: {
 }) {
   const { conversationIds, clientInboxId } = args
 
-  notificationsLogger.debug(`Subscribing to ${conversationIds.length} conversations`)
+  notificationsLogger.debug(`Subscribing to ${conversationIds.length} conversations...`)
 
   try {
     // Get installation ID once for all conversations
@@ -317,9 +316,7 @@ async function unsubscribeFromConversationsNotifications(args: {
 }) {
   const { conversationIds, clientInboxId } = args
 
-  notificationsLogger.debug(
-    `[unsubscribeFromConversationsNotifications] Unsubscribing from ${conversationIds.length} conversations`,
-  )
+  notificationsLogger.debug(`Unsubscribing from ${conversationIds.length} conversations`)
 
   try {
     // Get installation ID once for all conversations

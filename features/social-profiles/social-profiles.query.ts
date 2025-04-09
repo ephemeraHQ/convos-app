@@ -1,7 +1,8 @@
-import { Optional, queryOptions, skipToken, useQueries, useQuery } from "@tanstack/react-query"
+import { Optional, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { IEthereumAddress, isEthereumAddress } from "@/utils/evm/address"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
+import { DateUtils } from "@/utils/time.utils"
 import { fetchSocialProfilesForAddress } from "./social-profiles.api"
 
 type IArgs = {
@@ -39,30 +40,12 @@ const getSocialProfilesForAddressQueryOptions = (args: Optional<IArgsWithCaller,
             })
           }
         : skipToken,
-    staleTime: 30 * 24 * 60 * 60 * 1000, // 30 days, it's very rare that we need to refetch this
+    staleTime: DateUtils.days(30).toMilliseconds(), // 30 days, it's very rare that this should change
   })
 }
 
 export const useSocialProfilesForAddressQuery = (args: IArgsWithCaller) => {
   return useQuery(getSocialProfilesForAddressQueryOptions(args))
-}
-
-export function useSocialProfilesForEthAddressQueries(args: {
-  ethAddresses: IEthereumAddress[]
-  caller: string
-}) {
-  const { ethAddresses, caller } = args
-  return useQueries({
-    queries: ethAddresses.map((ethAddress) =>
-      getSocialProfilesForAddressQueryOptions({ ethAddress, caller }),
-    ),
-    combine: (results) => ({
-      data: results.map((result) => result.data),
-      isLoading: results.some((result) => result.isLoading),
-      isError: results.some((result) => result.isError),
-      error: results.find((result) => result.error)?.error,
-    }),
-  })
 }
 
 export const ensureSocialProfilesForAddressQuery = async (args: IStrictArgsWithCaller) => {

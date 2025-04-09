@@ -18,6 +18,7 @@ type IArgsWithCaller = IArgs & {
 export const getProfileQueryConfig = (args: Optional<IArgsWithCaller, "caller">) => {
   const { xmtpId, caller } = args
   const enabled = !!xmtpId
+
   return queryOptions({
     meta: {
       caller,
@@ -61,6 +62,7 @@ export function updateProfileQueryData(args: IArgs & { data: Partial<IProfileQue
     }
   })
 }
+
 export const ensureProfileQueryData = (args: IArgsWithCaller) => {
   return reactQueryClient.ensureQueryData(getProfileQueryConfig(args))
 }
@@ -68,24 +70,6 @@ export const ensureProfileQueryData = (args: IArgsWithCaller) => {
 export const invalidateProfileQuery = (args: IArgsWithCaller) => {
   return reactQueryClient.invalidateQueries({
     queryKey: getProfileQueryConfig(args).queryKey,
-  })
-}
-
-export const useProfilesQueries = ({
-  xmtpInboxIds,
-}: {
-  xmtpInboxIds: IXmtpInboxId[] | undefined
-}) => {
-  return useQueries({
-    queries: (xmtpInboxIds ?? []).map((xmtpInboxId) =>
-      getProfileQueryConfig({ xmtpId: xmtpInboxId }),
-    ),
-    combine: (results) => ({
-      data: results.map((result) => result.data),
-      isLoading: results.some((result) => result.isLoading),
-      isError: results.some((result) => result.isError),
-      error: results.find((result) => result.error)?.error,
-    }),
   })
 }
 

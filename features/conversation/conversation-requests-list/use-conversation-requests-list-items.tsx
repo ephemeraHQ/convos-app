@@ -1,11 +1,8 @@
 import { useQueries, useQuery } from "@tanstack/react-query"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { getConversationSpamQueryOptions } from "@/features/conversation/conversation-requests-list/conversation-spam.query"
 import { getUnknownConsentConversationsQueryOptions } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
-import { getMessageSpamScore } from "@/features/conversation/conversation-requests-list/utils/get-message-spam-score"
-import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { captureError } from "@/utils/capture-error"
-import { GenericError } from "@/utils/error"
-import { ensureMessageContentStringValue } from "../conversation-list/hooks/use-message-content-string-value"
 
 export function useConversationRequestsListItem() {
   const currentSender = useSafeCurrentSender()
@@ -22,59 +19,50 @@ export function useConversationRequestsListItem() {
   })
 
   const spamQueries = useQueries({
-    queries: (unknownConsentConversationIds ?? []).map((conversationId) => ({
-      queryKey: ["is-spam", conversationId, currentSender.inboxId],
-      queryFn: async () => {
-        try {
-          const conversation = await ensureConversationQueryData({
-            clientInboxId: currentSender.inboxId,
-            xmtpConversationId: conversationId,
-            caller: "useConversationRequestsListItem",
-          })
-
-          if (!conversation) {
-            throw new Error("Conversation not found")
-          }
-
-          const lastMessage = conversation.lastMessage
-
-          if (!lastMessage) {
-            throw new Error("No last message found")
-          }
-
-          const messageText = await ensureMessageContentStringValue(lastMessage)
-
-          if (!messageText) {
-            throw new Error("No message text found")
-          }
-
-          const spamScore = await getMessageSpamScore({
-            message: lastMessage,
-          })
-
-          const isSpam = spamScore !== 0
-          return isSpam
-        } catch (error) {
-          captureError(new GenericError({ error, additionalMessage: "Error checking spam score" }))
-          return true
-        }
-      },
-    })),
+    queries: (unknownConsentConversationIds ?? []).map((conversationId) =>
+      getConversationSpamQueryOptions({
+        xmtpConversationId: conversationId,
+        clientInboxId: currentSender.inboxId,
+      }),
+    ),
   })
 
-  const isLoading = isLoadingUnknownConsentConversationIds || spamQueries.some((q) => q.isLoading)
+  const metadataQueries = useQueries({
+    queries: (unknownConsentConversationIds ?? []).map((conversationId) =>
+      getConversationMetadataQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+      }),
+    ),
+  })
 
-  const spamResults =
-    unknownConsentConversationIds?.map((conversationId, i) => ({
-      conversationId,
-      isSpam: spamQueries[i].data ?? true,
-    })) ?? []
+  const isLoading =
+    isLoadingUnknownConsentConversationIds ||
+    spamQueries.some((q) => q.isLoading) ||
+    metadataQueries.some((q) => q.isLoading && !q.data)
+
+  // Filter and prepare results, checking both spam status and metadata
+  const processedResults =
+    unknownConsentConversationIds?.map((conversationId, i) => {
+      const isSpam = spamQueries[i].data ?? true
+      const metadata = metadataQueries[i].data
+      const isDeleted = metadata?.deleted ?? false
+
+      return {
+        conversationId,
+        isSpam,
+        isDeleted,
+      }
+    }) ?? []
+
+  // Filter out deleted conversations
+  const nonDeletedResults = processedResults.filter((r) => !r.isDeleted)
 
   return {
     likelyNotSpamConversationIds:
-      spamResults.filter((r) => !r.isSpam).map((r) => r.conversationId) ?? [],
+      nonDeletedResults.filter((r) => !r.isSpam).map((r) => r.conversationId) ?? [],
     likelySpamConversationIds:
-      spamResults.filter((r) => r.isSpam).map((r) => r.conversationId) ?? [],
+      nonDeletedResults.filter((r) => r.isSpam).map((r) => r.conversationId) ?? [],
     isLoading,
     refetch: refetchUnknownConsentConversationIds,
   }

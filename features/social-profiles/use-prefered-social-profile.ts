@@ -1,4 +1,4 @@
-import { ISocialProfile } from "../social-profiles.api"
+import { ISocialProfile } from "./social-profiles.api"
 
 export function usePreferredSocialProfile(args: { socialProfiles: ISocialProfile[] }) {
   const { socialProfiles } = args

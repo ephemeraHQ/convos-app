@@ -7,6 +7,11 @@ import { ActionSheet } from "@/components/action-sheet"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
 import { DebugProvider } from "@/components/debug-provider"
 import { Snackbars } from "@/components/snackbar/snackbars"
+import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
+import { useSignoutIfNoPrivyUser } from "@/features/authentication/use-logout-if-no-privy-user"
+import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
+import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
+import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
@@ -17,7 +22,7 @@ import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
 import { ReactQueryPersistProvider } from "@/utils/react-query/react-query-persist-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import "expo-dev-client"
-import React, { memo } from "react"
+import React, { memo, useEffect } from "react"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -29,20 +34,10 @@ import { registerBackgroundNotificationTask } from "./features/notifications/bac
 import { setupConversationsNotificationsSubscriptions } from "./features/notifications/notifications-conversations-subscriptions"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
-import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
-import { useSignoutIfNoPrivyUser } from "@/features/authentication/use-logout-if-no-privy-user"
-import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
-import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
-import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
 preventSplashScreenAutoHide()
-sentryInit()
-setupConvosApi()
-configureForegroundNotificationBehavior()
-setupConversationsNotificationsSubscriptions()
-registerBackgroundNotificationTask().catch(captureError)
 
 const baseMainnetOverride: Chain = {
   ...base,
@@ -63,6 +58,14 @@ export function App() {
   useSetupStreamingSubscriptions()
   useCachedResources()
   useCoinbaseWalletListener()
+
+  useEffect(() => {
+    sentryInit()
+    setupConvosApi()
+    configureForegroundNotificationBehavior()
+    setupConversationsNotificationsSubscriptions().catch(captureError)
+    registerBackgroundNotificationTask().catch(captureError)
+  }, [])
 
   // Seems to be slowing the app. Need to investigate
   // useSyncQueries({ queryClient: reactQueryClient })

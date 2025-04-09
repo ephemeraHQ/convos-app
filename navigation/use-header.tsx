@@ -21,7 +21,7 @@ const HeaderRenderer = memo(function HeaderRenderer(props: { headerProps: Header
       if (!operation.startTime) {
         return false
       }
-      return Date.now() - operation.startTime > 3000
+      return Date.now() - operation.startTime > (__DEV__ ? 0 : 3000)
     }),
   )
 

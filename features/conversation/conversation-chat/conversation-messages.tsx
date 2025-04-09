@@ -68,7 +68,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       if (isTmpConversation(xmtpConversationId)) {
         return
       }
-      logger.debug("Refetching messages because we're now focused again on the conversation")
+      logger.debug("Refetching messages because we're now focused again on the conversation...")
       refetchMessages().catch(captureError)
     }, [refetchMessages, xmtpConversationId]),
   )

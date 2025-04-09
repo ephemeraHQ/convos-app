@@ -1,6 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { queryOptions, useQueries } from "@tanstack/react-query"
+import { useQueries } from "@tanstack/react-query"
 import { useMemo } from "react"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useStableArray } from "@/features/conversation/hooks/use-stable-array"
 import {
   getPreferredAvatarUrl,
@@ -8,7 +9,7 @@ import {
   getPreferredEthAddress,
 } from "@/features/preferred-display-info/preferred-display-info.utils"
 import { getProfileQueryConfig } from "@/features/profiles/profiles.query"
-import { getSocialProfilesForInboxId } from "@/features/social-profiles/hooks/use-social-profiles-for-inbox-id"
+import { getSocialProfilesForInboxIdQueryOptions } from "@/features/social-profiles/social-profiles-for-inbox-id.query"
 
 export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[] }) {
   const { xmtpInboxIds } = args
@@ -16,11 +17,13 @@ export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[
   // Get a stable reference to the inbox IDs
   const stableInboxIds = useStableArray(xmtpInboxIds)
 
+  const currentSender = useSafeCurrentSender()
+
   // Memoize the profile queries configuration
   const profileQueryConfigs = useMemo(
     () =>
       stableInboxIds.map((inboxId) => ({
-        ...getProfileQueryConfig({ xmtpId: inboxId }),
+        ...getProfileQueryConfig({ xmtpId: inboxId, caller: "usePreferredDisplayInfoBatch" }),
       })),
     [stableInboxIds],
   )
@@ -29,12 +32,13 @@ export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[
   const socialProfileQueryConfigs = useMemo(
     () =>
       stableInboxIds.map((inboxId) =>
-        queryOptions({
-          queryKey: ["social-profiles", inboxId],
-          queryFn: () => getSocialProfilesForInboxId({ inboxId }),
+        getSocialProfilesForInboxIdQueryOptions({
+          inboxId,
+          clientInboxId: currentSender.inboxId,
+          caller: "usePreferredDisplayInfoBatch",
         }),
       ),
-    [stableInboxIds],
+    [stableInboxIds, currentSender.inboxId],
   )
 
   // Execute the profile queries

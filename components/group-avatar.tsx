@@ -57,7 +57,7 @@ export const GroupAvatarInboxIds = memo(function GroupAvatarInboxIds(props: {
   const { inboxIds } = props
 
   const preferredDisplayData = usePreferredDisplayInfoBatch({
-    xmtpInboxIds: inboxIds,
+    xmtpInboxIds: inboxIds.slice(0, 4),
   })
 
   const members = useMemo(() => {
@@ -117,7 +117,7 @@ export const GroupAvatar = memo(function GroupAvatar(props: {
 
   // Get display info for all members
   const preferredDisplayData = usePreferredDisplayInfoBatch({
-    xmtpInboxIds: memberInboxIds,
+    xmtpInboxIds: memberInboxIds.slice(0, 4),
   })
 
   // Transform display data into member format

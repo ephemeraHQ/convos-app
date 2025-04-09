@@ -27,6 +27,7 @@ export function getConversationMetadataQueryOptions({ xmtpConversationId, client
     }),
     queryFn: () => getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }),
     enabled,
+    staleTime: Infinity, // Because the current user is the only one that can make changes to their conversation metadata
   })
 }
 

@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { FlashList } from "@shopify/flash-list"
 import { memo, useCallback } from "react"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
 import { EmptyState } from "@/design-system/empty-state"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -19,6 +20,7 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
   const router = useRouter()
   const { xmtpConversationId } = props.route.params
   const currentSender = useSafeCurrentSender()
+  const insets = useSafeAreaInsets()
 
   const { data: group, isLoading: isGroupLoading } = useGroupQuery({
     clientInboxId: currentSender.inboxId,
@@ -65,6 +67,9 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
     <>
       <Screen contentContainerStyle={$globalStyles.flex1}>
         <FlashList
+          contentContainerStyle={{
+            paddingBottom: insets.bottom,
+          }}
           data={sortGroupMembers(Object.values(group?.members.byId || {}))}
           renderItem={({ item }) => <MemberListItem memberInboxId={item.inboxId} />}
           estimatedItemSize={60}
