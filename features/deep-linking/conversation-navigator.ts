@@ -52,8 +52,6 @@ export function useConversationDeepLinkHandler() {
           clientInboxId: activeInboxId,
         })
 
-        deepLinkLogger.info(`Found conversation: ${JSON.stringify(conversation)}`)
-
         if (conversation) {
           deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
 
