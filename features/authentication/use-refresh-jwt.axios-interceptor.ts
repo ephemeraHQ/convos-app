@@ -1,5 +1,5 @@
 import { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { getConvosAuthenticatedHeaders } from "@/features/authentication/authentication.headers"
 import { refreshAndGetNewJwtQuery } from "@/features/authentication/jwt.query"
 import { useLogout } from "@/features/authentication/use-logout"
@@ -22,7 +22,7 @@ export const useRefreshJwtAxiosInterceptor = () => {
   useEffect(() => {
     // Create a function that handles JWT refresh failures by logging out the user
     const handleRefreshFailure = async () => {
-      apiLogger.debug("[useRefreshJwtAxiosInterceptor] Logging out due to JWT refresh failure")
+      apiLogger.debug("Logging out due to JWT refresh failure")
       try {
         await logout({ caller: "useRefreshJwtAxiosInterceptor" })
       } catch (error) {
@@ -61,12 +61,12 @@ const createRefreshTokenInterceptor = (
   return async (error: AxiosError): Promise<AxiosResponse> => {
     // If there's no response, we can't handle this error
     if (!error.response) {
-      return Promise.reject(error)
+      return Promise.reject(new ApiError({ error, additionalMessage: "No response from server" }))
     }
 
     // Only handle 401 Unauthorized errors
     if (error.response.status !== 401) {
-      return Promise.reject(error)
+      return Promise.reject(new ApiError({ error, additionalMessage: "Unexpected error" }))
     }
 
     const originalRequest = error.config as ExtendedAxiosRequestConfig
@@ -93,7 +93,12 @@ const createRefreshTokenInterceptor = (
 
       // Logout and reject - we can't recover from this
       await onRefreshFailure()
-      return Promise.reject(error)
+      return Promise.reject(
+        new ApiError({
+          error,
+          additionalMessage: "JWT refresh failed: token refresh already attempted",
+        }),
+      )
     }
 
     try {
@@ -120,9 +125,20 @@ const createRefreshTokenInterceptor = (
         },
       })
     } catch (refreshError) {
-      // If token refresh fails, logout the user and reject the promise
-      await onRefreshFailure()
-      return Promise.reject(refreshError)
+      // Only logout for authentication-related errors
+      if (
+        refreshError instanceof AuthenticationError ||
+        (refreshError instanceof AxiosError && refreshError.response?.status === 401)
+      ) {
+        await onRefreshFailure()
+      }
+
+      return Promise.reject(
+        new ApiError({
+          error: refreshError,
+          additionalMessage: "JWT refresh failed",
+        }),
+      )
     }
   }
 }

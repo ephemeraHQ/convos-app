@@ -1,6 +1,5 @@
 import { queryOptions, useQuery } from "@tanstack/react-query"
 import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
-import { isTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/tmp-message"
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { mergeObjDeep } from "@/utils/objects"
@@ -50,7 +49,7 @@ export function getConversationMessageQueryOptions(
       xmtpMessageId,
     }),
     queryFn: () => getConversationMessage({ clientInboxId, xmtpMessageId }),
-    enabled: !!xmtpMessageId && !!clientInboxId && !isTmpMessageId(xmtpMessageId),
+    enabled: !!xmtpMessageId && !!clientInboxId,
     refetchOnMount: false, // Because we prefer setting the message query data from when we fetch list of messages
     refetchOnWindowFocus: false, // Because we prefer setting the message query data from when we fetch list of messages
     refetchOnReconnect: false, // Because we prefer setting the message query data from when we fetch list of messages

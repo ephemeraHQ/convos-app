@@ -1,59 +1,42 @@
 import { MutationOptions, useMutation } from "@tanstack/react-query"
-import { getCurrentSender, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  setConversationMessageQueryData,
-  updateConversationMessageQueryData,
-} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
-import { getMessageWithType } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-with-type"
-import { generateTmpMessageId } from "@/features/conversation/conversation-chat/conversation-message/utils/tmp-message"
 import {
   addMessageToConversationMessagesInfiniteQueryData,
   invalidateConversationMessagesInfiniteMessagesQuery,
-  removeMessageFromConversationMessagesInfiniteQueryData,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import {
-  getConversationQueryData,
-  updateConversationQueryData,
-} from "@/features/conversation/queries/conversation.query"
+import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { convertConvosMessageContentToXmtpMessageContent } from "@/features/conversation/utils/convert-convos-message-content-to-xmtp-message-content"
 import {
-  getXmtpConversationTopicFromXmtpId,
-  sendXmtpConversationMessage,
+  publishXmtpConversationMessages,
+  sendXmtpConversationMessageOptimistic,
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
-import { getTodayMs, getTodayNs } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
-import { setRealMessageIdForOptimisticMessageId } from "../conversation-chat/conversation-message/conversation-message-optimistic-to-real"
 import {
   IConversationMessage,
   IConversationMessageContent,
 } from "../conversation-chat/conversation-message/conversation-message.types"
 import { IConversation } from "../conversation.types"
 
-export type ISendMessageParams = {
+export type ISendMessageOptimisticallyParams = {
   xmtpConversationId: IXmtpConversationId
   contents: IConversationMessageContent[] // Array because we can send text at same time as attachments for example
 }
 
-export type ISendMessageReturnType = Awaited<ReturnType<typeof sendMessage>>
+export type ISendMessageReturnType = Awaited<ReturnType<typeof sendMessageOptimistically>>
 
-export async function sendMessage(args: ISendMessageParams) {
+export async function sendMessageOptimistically(args: ISendMessageOptimisticallyParams) {
   const { contents, xmtpConversationId } = args
 
   const currentSender = getSafeCurrentSender()
 
-  const results: {
-    sentXmtpMessageIds: IXmtpMessageId[]
-    sentMessages: IConversationMessage[]
-  } = {
-    sentXmtpMessageIds: [],
-    sentMessages: [],
-  }
+  const sentMessages: IConversationMessage[] = []
 
   // Send each content as a separate message
   for (const content of contents) {
@@ -65,7 +48,7 @@ export async function sendMessage(args: ISendMessageParams) {
       // Content is already a reply, send it with the inner content properly converted
       const innerPayload = convertConvosMessageContentToXmtpMessageContent(content.content)
 
-      sentXmtpMessageId = await sendXmtpConversationMessage({
+      sentXmtpMessageId = await sendXmtpConversationMessageOptimistic({
         clientInboxId: currentSender.inboxId,
         conversationId: xmtpConversationId,
         content: {
@@ -77,7 +60,7 @@ export async function sendMessage(args: ISendMessageParams) {
       })
     } else {
       // Send as a regular message
-      sentXmtpMessageId = await sendXmtpConversationMessage({
+      sentXmtpMessageId = await sendXmtpConversationMessageOptimistic({
         clientInboxId: currentSender.inboxId,
         conversationId: xmtpConversationId,
         content: payload,
@@ -108,15 +91,14 @@ export async function sendMessage(args: ISendMessageParams) {
       continue
     }
 
-    results.sentXmtpMessageIds.push(sentXmtpMessageId)
-    results.sentMessages.push(convertXmtpMessageToConvosMessage(sentXmtpMessage))
+    sentMessages.push(convertXmtpMessageToConvosMessage(sentXmtpMessage))
   }
 
-  if (results.sentXmtpMessageIds.length === 0) {
+  if (sentMessages.length === 0) {
     throw new Error("Couldn't send any messages")
   }
 
-  return results
+  return sentMessages
 }
 
 type ISendMessageContext = {
@@ -128,118 +110,32 @@ type ISendMessageContext = {
 export const getSendMessageMutationOptions = (): MutationOptions<
   ISendMessageReturnType,
   unknown,
-  ISendMessageParams,
+  ISendMessageOptimisticallyParams,
   ISendMessageContext
 > => {
   return {
-    mutationFn: sendMessage,
-    onMutate: async (variables) => {
-      const { xmtpConversationId, contents } = variables
-
-      const currentSender = getCurrentSender()!
-
-      const tmpXmtpMessageIds: IXmtpMessageId[] = []
-      const optimisticMessages: IConversationMessage[] = []
-
-      for (const content of contents) {
-        const tmpXmtpMessageId = generateTmpMessageId() as IXmtpMessageId
-        tmpXmtpMessageIds.push(tmpXmtpMessageId)
-
-        const messageContent = content
-
-        const optimisticMessage = getMessageWithType({
-          baseMessage: {
-            xmtpId: tmpXmtpMessageId, // Will be set once we send the message and replace with the real
-            xmtpTopic: getXmtpConversationTopicFromXmtpId(xmtpConversationId),
-            sentNs: getTodayNs(),
-            sentMs: getTodayMs(),
-            status: "sending",
-            xmtpConversationId,
-            senderInboxId: currentSender.inboxId,
-          },
-          content: messageContent,
-        })
-
-        optimisticMessages.push(optimisticMessage)
-
-        // Set message query data to be in cache
-        setConversationMessageQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: optimisticMessage.xmtpId,
-          message: optimisticMessage,
-        })
-
-        // Add message to conversation messages infinite query data
-        addMessageToConversationMessagesInfiniteQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId,
-          message: optimisticMessage,
-        })
-      }
-
-      // Use the last optimistic message to update the conversation
-      const lastOptimisticMessage = optimisticMessages[optimisticMessages.length - 1]
-      if (lastOptimisticMessage) {
-        updateConversationQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId,
-          conversationUpdate: {
-            lastMessage: lastOptimisticMessage,
-          },
-        })
-      }
-
-      const previousConversation = getConversationQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-      })
-
-      return {
-        tmpXmtpMessageIds,
-        optimisticMessages,
-        previousConversation,
-      }
-    },
-    onSuccess: async (result, variables, context) => {
+    mutationFn: sendMessageOptimistically,
+    onSuccess: async (sentMessages, variables) => {
       const currentSender = getSafeCurrentSender()
 
-      // Now set the messages status to sent!
-      if (result.sentMessages && result.sentMessages.length > 0) {
-        let hasError = false
-        context.tmpXmtpMessageIds
-          .slice(0, result.sentMessages.length)
-          .forEach((tmpXmtpMessageId, index) => {
-            try {
-              updateConversationMessageQueryData({
-                clientInboxId: currentSender.inboxId,
-                xmtpMessageId: tmpXmtpMessageId,
-                messageUpdate: {
-                  status: "sent",
-                },
-              })
+      // Send the messages to the network
+      publishXmtpConversationMessages({
+        clientInboxId: currentSender.inboxId,
+        conversationId: variables.xmtpConversationId,
+      }).catch(captureError)
 
-              setRealMessageIdForOptimisticMessageId(
-                tmpXmtpMessageId,
-                result.sentMessages[index].xmtpId,
-              )
-            } catch (error) {
-              captureError(
-                new GenericError({
-                  error,
-                  additionalMessage: "Error replacing optimistic message with real one",
-                }),
-              )
-              hasError = true
-            }
-          })
+      for (const sentMessage of sentMessages) {
+        setConversationMessageQueryData({
+          clientInboxId: currentSender.inboxId,
+          xmtpMessageId: sentMessage.xmtpId,
+          message: sentMessage,
+        })
 
-        // If any replacement failed, invalidate the conversation messages query
-        if (hasError) {
-          invalidateConversationMessagesInfiniteMessagesQuery({
-            clientInboxId: currentSender.inboxId,
-            xmtpConversationId: variables.xmtpConversationId,
-          })
-        }
+        addMessageToConversationMessagesInfiniteQueryData({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId: variables.xmtpConversationId,
+          message: sentMessage,
+        })
       }
     },
     onError: (_, variables, context) => {
@@ -249,39 +145,20 @@ export const getSendMessageMutationOptions = (): MutationOptions<
 
       const currentSender = getSafeCurrentSender()
 
-      // Remove all optimistic messages
-      for (const tmpMessageId of context.tmpXmtpMessageIds) {
-        removeMessageFromConversationMessagesInfiniteQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: variables.xmtpConversationId,
-          messageId: tmpMessageId,
-        })
-      }
+      invalidateConversationMessagesInfiniteMessagesQuery({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: variables.xmtpConversationId,
+      }).catch(captureError)
 
-      // Revert the messages data
-      for (const tmpMessageId of context.tmpXmtpMessageIds) {
-        setConversationMessageQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: tmpMessageId,
-          message: null,
-        })
-      }
-
-      if (context.previousConversation) {
-        // Revert last message of conversation and list
-        updateConversationQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: variables.xmtpConversationId,
-          conversationUpdate: {
-            lastMessage: context.previousConversation?.lastMessage,
-          },
-        })
-      }
+      invalidateConversationQuery({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: variables.xmtpConversationId,
+      }).catch(captureError)
     },
   }
 }
 
-export const sendMessageMutation = (args: ISendMessageParams) => {
+export const sendMessageMutation = (args: ISendMessageOptimisticallyParams) => {
   return reactQueryClient
     .getMutationCache()
     .build(reactQueryClient, getSendMessageMutationOptions())

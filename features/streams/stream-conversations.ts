@@ -2,6 +2,7 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { StreamError } from "@utils/error"
 import { addConversationToAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { addConversationToUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { isConversationConsentUnknown } from "@/features/conversation/utils/is-conversation-consent-unknown"
@@ -37,6 +38,12 @@ async function handleNewConversation(args: {
   const { clientInboxId, conversation } = args
 
   streamLogger.debug(`[Stream] Received new conversation for ${clientInboxId}:`, conversation)
+
+  setConversationQueryData({
+    clientInboxId,
+    xmtpConversationId: conversation.xmtpId,
+    conversation,
+  })
 
   if (isConversationAllowed(conversation)) {
     addConversationToAllowedConsentConversationsQuery({

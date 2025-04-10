@@ -144,6 +144,7 @@ export function getConvosMessageStatusForXmtpMessage(
 
   switch (message.deliveryStatus) {
     case MessageDeliveryStatus.UNPUBLISHED:
+      return "sending"
     case MessageDeliveryStatus.FAILED:
       return "error"
     case MessageDeliveryStatus.PUBLISHED:

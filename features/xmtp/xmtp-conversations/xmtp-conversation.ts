@@ -7,8 +7,14 @@ import {
   IXmtpGroupWithCodecs,
   IXmtpInboxId,
 } from "@features/xmtp/xmtp.types"
-import { ConversationVersion, findConversation, sendMessage } from "@xmtp/react-native-sdk"
+import {
+  ConversationVersion,
+  findConversation,
+  prepareMessage,
+  publishPreparedMessages,
+} from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 
@@ -36,7 +42,7 @@ export async function getXmtpConversation(args: {
   }
 }
 
-export async function sendXmtpConversationMessage(args: {
+export async function sendXmtpConversationMessageOptimistic(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
   content: IXmtpConversationSendPayload
@@ -48,15 +54,33 @@ export async function sendXmtpConversationMessage(args: {
   })
 
   try {
-    const result = await wrapXmtpCallWithDuration("sendMessage", () =>
-      sendMessage(client.installationId, conversationId, content),
+    return wrapXmtpCallWithDuration("prepareMessage", () =>
+      prepareMessage(client.installationId, conversationId, content),
     )
-
-    return result
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: `Failed to send message to conversation: ${conversationId}`,
+      additionalMessage: `Failed to prepare message for conversation: ${conversationId}`,
+    })
+  }
+}
+
+export async function publishXmtpConversationMessages(args: {
+  clientInboxId: IXmtpInboxId
+  conversationId: IXmtpConversationId
+}) {
+  const { clientInboxId, conversationId } = args
+
+  try {
+    const installationId = await ensureXmtpInstallationQueryData({
+      inboxId: clientInboxId,
+    })
+
+    await publishPreparedMessages(installationId, conversationId)
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Error publishing messages for conversation ${conversationId}`,
     })
   }
 }

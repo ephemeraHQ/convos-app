@@ -12,7 +12,7 @@ export async function getEthAddressesFromInboxIds(args: {
     inboxId: clientInboxId,
   })
 
-  const inboxStates = await client.inboxStates(false, inboxIds)
+  const inboxStates = await client.inboxStates(true, inboxIds)
 
   return inboxStates
     .map((inboxState) => inboxState.identities.filter((identity) => identity.kind === "ETHEREUM"))

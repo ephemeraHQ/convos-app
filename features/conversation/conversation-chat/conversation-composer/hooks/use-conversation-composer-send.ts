@@ -4,10 +4,9 @@ import { IUploadedRemoteAttachment } from "@/features/conversation/conversation-
 import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { createConversationAndSendFirstMessageMutation } from "@/features/conversation/conversation-create/mutations/create-conversation-and-send-first-message.mutation"
 import {
-  ISendMessageParams,
+  ISendMessageOptimisticallyParams,
   sendMessageMutation,
 } from "@/features/conversation/hooks/use-send-message.mutation"
-import { generateTmpConversationId } from "@/features/conversation/utils/tmp-conversation"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { logJson } from "@/utils/logger/logger"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
@@ -37,7 +36,7 @@ export function createMessageContents(args: {
   const { inputValue, replyingToMessageId, composerUploadedAttachments } = args
 
   // Create separate content arrays for normal messages and replies
-  const messageContents: ISendMessageParams["contents"] = replyingToMessageId
+  const messageContents: ISendMessageOptimisticallyParams["contents"] = replyingToMessageId
     ? [
         // Add text content as a reply if we have text
         ...(inputValue.length > 0
@@ -110,30 +109,21 @@ export function useCreateConversationAndSend() {
       // Reset composer state before sending to prevent duplicate sends
       composerStore.getState().reset()
 
-      const tmpXmtpConversationId = generateTmpConversationId()
-
-      conversationStore.setState({
-        xmtpConversationId: tmpXmtpConversationId,
-        isCreatingNewConversation: false,
-      })
-
       // Create conversation and send message
       const {
         conversation: createdConversation,
         errorSendingMessage,
-        sentXmtpMessageIds,
         sentMessages,
       } = await createConversationAndSendFirstMessageMutation({
         variables: {
           inboxIds: searchSelectedUserInboxIds,
           contents: messageContents,
-          tmpXmtpConversationId,
         },
       })
 
       if (errorSendingMessage) {
         showSnackbar({
-          message: "Failed to send message",
+          message: "Created conversation but failed to send message",
           type: "error",
         })
       }
@@ -141,11 +131,11 @@ export function useCreateConversationAndSend() {
       // Update conversation state to reflect the new conversation
       conversationStore.setState({
         xmtpConversationId: createdConversation?.xmtpId,
+        isCreatingNewConversation: false,
       })
 
       return {
         createdConversation,
-        sentMessageIds: sentXmtpMessageIds,
         sentMessages,
         errorSendingMessage,
       }

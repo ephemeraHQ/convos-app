@@ -4,7 +4,6 @@ import {
   isXmtpGroupUpdatedContentType,
   isXmtpMultiRemoteAttachmentContentType,
   isXmtpReactionContentType,
-  isXmtpReadReceiptContentType,
   isXmtpRemoteAttachmentContentType,
   isXmtpReplyContentType,
   isXmtpStaticAttachmentContentType,

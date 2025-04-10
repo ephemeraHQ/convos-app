@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/react-native"
 import * as FileSystem from "expo-file-system"
-import { InteractionManager } from "react-native"
 import {
   consoleTransport,
   fileAsyncTransport,
@@ -59,8 +58,8 @@ const transports = [
 const baseLogger = RNLogger.createLogger({
   severity: config.loggerLevel,
   levels: LOG_LEVELS,
-  printLevel: false, // Not needed IMO, too verbose
-  printDate: false, // Not needed IMO, too verbose
+  printLevel: !__DEV__, // Too verbose in dev but useful for other environments
+  printDate: !__DEV__, // Too verbose in dev but useful for other environments
   enabled: true,
   transport: transports,
   transportOptions: {

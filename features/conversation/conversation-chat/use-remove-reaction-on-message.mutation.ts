@@ -5,7 +5,7 @@ import { processReactionConversationMessages } from "@/features/conversation/con
 import { removeMessageFromConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   getXmtpConversationTopicFromXmtpId,
-  sendXmtpConversationMessage,
+  sendXmtpConversationMessageOptimistic,
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { getTodayMs, getTodayNs } from "@/utils/date"
@@ -21,7 +21,7 @@ export function useRemoveReactionOnMessage(props: { xmtpConversationId: IXmtpCon
     mutationFn: async (variables: { reaction: IConversationMessageReactionContent }) => {
       const { reaction } = variables
 
-      await sendXmtpConversationMessage({
+      await sendXmtpConversationMessageOptimistic({
         conversationId: xmtpConversationId,
         clientInboxId: currentSender.inboxId,
         content: {
