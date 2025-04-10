@@ -40,21 +40,20 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   // Doing this since we are using a uncontrolled component
   useEffect(() => {
     const unsubscribe = store.subscribe((state, prevState) => {
+      // Handle clearing the input
       if (prevState.inputValue && !state.inputValue) {
         inputRef.current?.clear()
+      }
+      
+      // Handle prefill value changes
+      if (state.inputValue && !initialValueRef.current) {
+        initialValueRef.current = state.inputValue
+        inputRef.current?.setNativeProps({ text: state.inputValue })
       }
     })
 
     return () => unsubscribe()
   }, [store])
-
-  // Handle prefill value changes
-  useEffect(() => {
-    if (inputDefaultValue && !initialValueRef.current) {
-      initialValueRef.current = inputDefaultValue
-      inputRef.current?.setNativeProps({ text: inputDefaultValue })
-    }
-  }, [inputDefaultValue])
 
   const handleSubmitEditing = useCallback(() => {
     onSubmitEditing()
