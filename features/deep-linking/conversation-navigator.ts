@@ -1,9 +1,9 @@
 import { useNavigation } from "@react-navigation/native"
 import { useCallback } from "react"
-import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { logger } from "@/utils/logger/logger"
+import { deepLinkLogger } from "@/utils/logger/logger"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 
@@ -19,7 +19,7 @@ export function useConversationDeepLinkHandler() {
     async (args: { inboxId: IXmtpInboxId; composerTextPrefill?: string }) => {
       const { inboxId, composerTextPrefill } = args
 
-      logger.info(`handleConversationDeepLink called with inboxId: ${inboxId}`)
+      deepLinkLogger.info(`Processing conversation for inboxId: ${inboxId}`)
 
       if (!inboxId) {
         throw new GenericError({
@@ -29,8 +29,8 @@ export function useConversationDeepLinkHandler() {
       }
 
       try {
-        logger.info(
-          `Handling conversation deep link for inboxId: ${inboxId}${
+        deepLinkLogger.info(
+          `Processing conversation for inboxId: ${inboxId}${
             composerTextPrefill ? " with prefill text" : ""
           }`,
         )
@@ -38,7 +38,7 @@ export function useConversationDeepLinkHandler() {
         const state = useMultiInboxStore.getState()
         const activeInboxId = state.currentSender?.inboxId
 
-        logger.info(`Current active inboxId: ${activeInboxId}`)
+        deepLinkLogger.info(`Current active inboxId: ${activeInboxId}`)
 
         if (!activeInboxId) {
           throw new GenericError({
@@ -52,18 +52,18 @@ export function useConversationDeepLinkHandler() {
           clientInboxId: activeInboxId,
         })
 
-        logger.info(`Found conversation: ${JSON.stringify(conversation)}`)
+        deepLinkLogger.info(`Found conversation: ${JSON.stringify(conversation)}`)
 
         if (conversation) {
-          logger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
+          deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
 
           navigation.navigate("Conversation", {
-            xmtpConversationId: conversation.xmtpId as IXmtpConversationId,
+            xmtpConversationId: conversation.xmtpId,
             isNew: false,
             composerTextPrefill,
           })
         } else {
-          logger.info(
+          deepLinkLogger.info(
             `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
           )
 
@@ -74,7 +74,6 @@ export function useConversationDeepLinkHandler() {
           })
         }
       } catch (error) {
-        logger.error(`Error handling conversation deep link: ${error}`)
         captureError(
           new GenericError({
             error,
