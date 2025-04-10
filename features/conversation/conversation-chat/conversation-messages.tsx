@@ -1,4 +1,5 @@
 import { FlashList } from "@shopify/flash-list"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import React, { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
 import { FlatList, NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
 import { FadeInDown, useAnimatedRef } from "react-native-reanimated"
@@ -25,16 +26,18 @@ import {
   isAttachmentsMessage,
   isGroupUpdatedMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { useConversationMessagesInfiniteQueryAllMessageIds } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { getConversationMessagesInfiniteQueryOptions } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
+import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
+import { convertNanosecondsToMilliseconds } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { logger } from "@/utils/logger/logger"
 import {
@@ -50,16 +53,28 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const conversationStore = useConversationStore()
   const hasPulledToRefreshRef = useRef(false)
 
+  const { data: settings } = useDisappearingMessageSettings({
+    clientInboxId: currentSender.inboxId,
+    conversationId: xmtpConversationId,
+    caller: "Conversation Messages",
+  })
+
   const {
     data: messageIds = [],
     isRefetching: isRefetchingMessages,
     refetch: refetchMessages,
     fetchNextPage,
     hasNextPage,
-  } = useConversationMessagesInfiniteQueryAllMessageIds({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-    caller: "Conversation Messages",
+  } = useInfiniteQuery({
+    ...getConversationMessagesInfiniteQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages",
+    }),
+    select: (data) => data.pages.flatMap((page) => page.messageIds),
+    ...(settings?.retentionDurationInNs && {
+      refetchInterval: convertNanosecondsToMilliseconds(settings.retentionDurationInNs) * 0.5,
+    }),
   })
 
   // Refetch messages when we focus again
@@ -154,10 +169,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       }
 
       // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
-      // Determine if we've scrolled past the bottom of the content
-      const isPastBottomThreshold =
-        contentOffsetY < 0 &&
-        Math.abs(contentOffsetY) > contentSize.height - layoutMeasurement.height + 50 // Added small buffer
+      const isPastBottomThreshold = contentOffsetY < 50
 
       if (isPastBottomThreshold && !hasPulledToRefreshRef.current) {
         // Only refetch if we haven't already refreshed during this pull-down gesture
@@ -242,7 +254,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       scrollEventThrottle={200} // We don't need to throttle fast because we only use to know if we need to load more messages
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
-      // getItemType={getItemType}
+      getItemType={getItemType}
       // extraData={latestXmtpMessageIdFromCurrentSender}
 
       // LEGEND LIST PROPS

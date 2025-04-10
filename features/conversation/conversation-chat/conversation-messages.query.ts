@@ -212,17 +212,11 @@ export function getConversationMessagesInfiniteQueryOptions(
   })
 }
 
-export const useConversationMessagesInfiniteQuery = (args: IArgsWithCaller) => {
-  return useInfiniteQuery(getConversationMessagesInfiniteQueryOptions(args))
-}
-
 export function useConversationMessagesInfiniteQueryAllMessageIds(args: IArgsWithCaller) {
   return useInfiniteQuery({
     ...getConversationMessagesInfiniteQueryOptions(args),
     select: (data) => {
-      const baseQuery = getConversationMessagesInfiniteQueryOptions(args)
-      const baseData = baseQuery.select?.(data) ?? data
-      return baseData.pages.flatMap((page) => page.messageIds)
+      return data.pages.flatMap((page) => page.messageIds)
     },
   })
 }

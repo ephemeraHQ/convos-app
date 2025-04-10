@@ -1,4 +1,5 @@
 import { IXmtpDecodedMessage, IXmtpInboxId } from "@features/xmtp/xmtp.types"
+import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { xmtpLogger } from "@/utils/logger/logger"
@@ -18,7 +19,13 @@ export const streamAllMessages = async (args: {
 
   try {
     // Not wrapping the stream initiation itself as it's long-running
-    await client.conversations.streamAllMessages(onNewMessage)
+    await client.conversations.streamAllMessages((newMessage) => {
+      if (!isSupportedXmtpMessage(newMessage)) {
+        xmtpLogger.debug(`Skipping message streamed because it's not supported`, newMessage)
+        return Promise.resolve()
+      }
+      return onNewMessage(newMessage)
+    })
   } catch (error) {
     throw new XMTPError({
       error,

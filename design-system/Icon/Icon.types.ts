@@ -71,6 +71,9 @@ export type IIconName =
   | "camera"
   | "contact-card"
   | "person-badge-key"
+  | "clock"
+  | "timer"
+
 /**
  * Props for the Icon component.
  * @example

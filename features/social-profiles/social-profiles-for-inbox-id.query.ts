@@ -16,11 +16,11 @@ export function getSocialProfilesForInboxIdQueryOptions(args: IArgs) {
   const { inboxId, clientInboxId, caller } = args
 
   return queryOptions({
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: getReactQueryKey({
       baseStr: "social-profiles-for-inbox-id",
       inboxId,
       clientInboxId,
-      caller,
     }),
     meta: {
       caller,

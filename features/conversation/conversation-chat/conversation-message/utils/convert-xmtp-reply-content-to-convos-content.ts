@@ -3,7 +3,10 @@ import {
   IXmtpInboxId,
   IXmtpMessageId,
 } from "@/features/xmtp/xmtp.types"
-import { IConversationMessageContent } from "../conversation-message.types"
+import {
+  IConversationMessageContent,
+  IGroupUpdatedMetadataEntryFieldName,
+} from "../conversation-message.types"
 
 // XMTP reply content is weird, not the same as a normal message content so we need
 // this function to convert it to our format
@@ -64,7 +67,11 @@ export function convertXmtpReplyContentToConvosContent(
       membersRemoved: content.groupUpdated.membersRemoved.map((member) => ({
         inboxId: member.inboxId as unknown as IXmtpInboxId,
       })),
-      metadataFieldsChanged: content.groupUpdated.metadataFieldsChanged || [],
+      metadataFieldsChanged: content.groupUpdated.metadataFieldsChanged.map((field) => ({
+        fieldName: field.fieldName as IGroupUpdatedMetadataEntryFieldName,
+        newValue: field.newValue,
+        oldValue: field.oldValue,
+      })),
     }
   }
 

@@ -32,6 +32,7 @@ export type IGroup = IConversationBase & {
   name: string
   description?: string
   imageUrl?: string
+  messageDisappearFromNs?: number
   addedByInboxId: IXmtpInboxId
   creatorInboxId: IXmtpInboxId
   members: EntityObject<IGroupMember, IXmtpInboxId>

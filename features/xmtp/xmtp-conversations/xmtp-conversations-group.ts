@@ -1,4 +1,8 @@
-import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
+import {
+  IXmtpConversationId,
+  IXmtpDisappearingMessageSettings,
+  IXmtpInboxId,
+} from "@features/xmtp/xmtp.types"
 import {
   addAdmin,
   addGroupMembers,
@@ -33,6 +37,7 @@ export async function createXmtpGroup(args: {
   groupName?: string
   groupPhoto?: string
   groupDescription?: string
+  disappearingMessageSettings?: IXmtpDisappearingMessageSettings
 }) {
   try {
     const {
@@ -42,6 +47,7 @@ export async function createXmtpGroup(args: {
       groupName,
       groupPhoto,
       groupDescription,
+      disappearingMessageSettings,
     } = args
 
     const client = await getXmtpClientByInboxId({
@@ -53,6 +59,7 @@ export async function createXmtpGroup(args: {
         name: groupName,
         imageUrl: groupPhoto,
         description: groupDescription,
+        disappearingMessageSettings,
       }),
     )
 

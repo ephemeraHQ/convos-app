@@ -13,6 +13,7 @@ import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { useDmPeerInboxId } from "@/features/conversation/hooks/use-dm-peer-inbox-id"
+import { DisappearingMessagesHeaderAction } from "@/features/disappearing-messages/disappearing-messages-header-action"
 import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
@@ -56,6 +57,9 @@ export function useConversationScreenHeader() {
         return {
           ...baseConfig,
           titleComponent: <DmConversationTitle xmtpConversationId={xmtpConversationId} />,
+          RightActionComponent: (
+            <DisappearingMessagesHeaderAction xmtpConversationId={xmtpConversationId} />
+          ),
         }
       }
 
@@ -63,6 +67,9 @@ export function useConversationScreenHeader() {
         return {
           ...baseConfig,
           titleComponent: <GroupConversationTitle xmtpConversationId={xmtpConversationId} />,
+          RightActionComponent: (
+            <DisappearingMessagesHeaderAction xmtpConversationId={xmtpConversationId} />
+          ),
         }
       }
     }

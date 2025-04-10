@@ -4,6 +4,7 @@ import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { addConversationToAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
+import { defaultConversationDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { publishXmtpConversationMessages } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { createXmtpDm } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-dm"
 import { createXmtpGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
@@ -45,12 +46,14 @@ export async function createConversationAndSendFirstMessage(
           await createXmtpGroup({
             clientInboxId: currentSender.inboxId,
             inboxIds,
+            disappearingMessageSettings: defaultConversationDisappearingMessageSettings,
           }),
         )
       : await convertXmtpConversationToConvosConversation(
           await createXmtpDm({
             senderClientInboxId: currentSender.inboxId,
             peerInboxId: inboxIds[0],
+            disappearingMessageSettings: defaultConversationDisappearingMessageSettings,
           }),
         )
 

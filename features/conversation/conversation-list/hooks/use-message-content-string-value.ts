@@ -102,7 +102,6 @@ export function getMessageContentStringValue(args: {
         const change = messageContent.metadataFieldsChanged[0]
         switch (change.fieldName) {
           case "group_name":
-          case "name":
             return `${initiatorDisplayName} changed group name to ${change.newValue}`
           case "description":
             return `${initiatorDisplayName} changed description to ${change.newValue}`
@@ -117,7 +116,7 @@ export function getMessageContentStringValue(args: {
       if (!initiatorDisplayName) {
         return messageContent.metadataFieldsChanged
           .map((field) => {
-            if (field.fieldName === "name" || field.fieldName === "group_name") {
+            if (field.fieldName === "group_name") {
               return `Group name changed from "${field.oldValue}" to "${field.newValue}"`
             }
             return `${field.fieldName} updated`

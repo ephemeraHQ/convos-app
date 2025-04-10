@@ -8,6 +8,7 @@ import { getInlinedItem } from "./dropdown-menu.utils"
 
 export type IDropdownMenuAction = Omit<RNMenuAction, "titleColor" | "imageColor"> & {
   color?: string
+  id: string
 }
 
 type IDropdownMenuProps = {

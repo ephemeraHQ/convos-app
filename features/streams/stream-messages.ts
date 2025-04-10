@@ -1,7 +1,6 @@
 import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
 import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
-  isAnActualMessage,
   isGroupUpdatedMessage,
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
@@ -21,6 +20,7 @@ import { streamLogger } from "@/utils/logger/logger"
 import {
   IConversationMessage,
   IConversationMessageGroupUpdated,
+  IGroupUpdatedMetadataEntryFieldName,
 } from "../conversation/conversation-chat/conversation-message/conversation-message.types"
 import { convertXmtpMessageToConvosMessage } from "../conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 
@@ -59,6 +59,7 @@ async function handleNewMessage(args: {
     })
   }
 
+  // Handle group update messages
   if (isGroupUpdatedMessage(message)) {
     try {
       handleNewGroupUpdatedMessage({
@@ -72,21 +73,18 @@ async function handleNewMessage(args: {
     }
   }
 
+  // Add the message in the list!
   try {
-    const messageSentByCurrentUser = message.senderInboxId === clientInboxId
-    // Actual message received that we need to add to the conversation messages data
-    if (!messageSentByCurrentUser && isAnActualMessage(message)) {
-      addMessageToConversationMessagesInfiniteQueryData({
-        clientInboxId,
-        xmtpConversationId: message.xmtpConversationId,
-        message,
-      })
-    }
+    addMessageToConversationMessagesInfiniteQueryData({
+      clientInboxId,
+      xmtpConversationId: message.xmtpConversationId,
+      message,
+    })
   } catch (error) {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))
   }
 
-  // Update the conversation query data
+  // Update the conversation last message
   try {
     // We don't want group update message as last message
     if (!isGroupUpdatedMessage(message)) {
@@ -106,13 +104,16 @@ async function handleNewMessage(args: {
 }
 
 // XMTP doesn't have typing yet
-const METADATA_FIELD_MAP: Record<string, keyof IGroup> = {
+const METADATA_FIELD_NAME_MAP_TO_GROUP_PROPERTY_NAME: Record<
+  IGroupUpdatedMetadataEntryFieldName,
+  keyof IGroup | null
+> = {
   group_name: "name",
   group_image_url_square: "imageUrl",
   description: "description",
+  message_disappear_from_ns: "messageDisappearFromNs",
+  message_disappear_in_ns: null, // For now there is no group property for this in XMTP
 } as const
-
-type MetadataField = keyof typeof METADATA_FIELD_MAP
 
 function handleNewGroupUpdatedMessage(args: {
   inboxId: IXmtpInboxId
@@ -144,30 +145,41 @@ function handleNewGroupUpdatedMessage(args: {
 
   // Process metadata changes (e.g., group name, image, description)
   if (message.content.metadataFieldsChanged.length > 0) {
-    message.content.metadataFieldsChanged.forEach((field) => {
-      const fieldName = field.fieldName as MetadataField
+    const groupUpdateFields = message.content.metadataFieldsChanged.filter(
+      (field) => field.fieldName !== "message_disappear_in_ns",
+    )
 
-      // Validate that the field is supported
-      if (!(fieldName in METADATA_FIELD_MAP)) {
+    const groupUpdates: Partial<IGroup> = {}
+
+    groupUpdateFields.forEach((field) => {
+      // Check if field is supported in our mapping
+      const groupPropertyName = METADATA_FIELD_NAME_MAP_TO_GROUP_PROPERTY_NAME[field.fieldName]
+
+      if (groupPropertyName === undefined) {
         captureError(
           new StreamError({
-            error: new Error(`Unsupported metadata field name: ${fieldName}`),
+            error: new Error(`Unsupported metadata field name: ${field.fieldName}`),
           }),
         )
         return
       }
 
-      // Map the field name to our internal property name and update if there's a new value
-      const updateKey = METADATA_FIELD_MAP[fieldName]
-      if (updateKey && field.newValue) {
-        const update = { [updateKey]: field.newValue }
-
-        updateGroupQueryData({
-          clientInboxId: inboxId,
-          xmtpConversationId: message.xmtpConversationId,
-          updates: update,
-        })
+      if (groupPropertyName === null) {
+        // Not handling for now
+        return
       }
+
+      // Update group data with the new field value
+      // @ts-ignore
+      groupUpdates[groupPropertyName] = field.newValue
     })
+
+    if (Object.keys(groupUpdates).length > 0) {
+      updateGroupQueryData({
+        clientInboxId: inboxId,
+        xmtpConversationId: message.xmtpConversationId,
+        updates: groupUpdates,
+      })
+    }
   }
 }

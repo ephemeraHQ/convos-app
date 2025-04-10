@@ -51,10 +51,17 @@ export type IConversationMessageGroupUpdatedContent = {
   metadataFieldsChanged: IGroupUpdatedMetadataEntry[]
 }
 
+export type IGroupUpdatedMetadataEntryFieldName =
+  | "message_disappear_in_ns"
+  | "message_disappear_from_ns"
+  | "group_name"
+  | "description"
+  | "group_image_url_square"
+
 export type IGroupUpdatedMetadataEntry = {
   oldValue: string
   newValue: string
-  fieldName: string
+  fieldName: IGroupUpdatedMetadataEntryFieldName
 }
 
 export type IConversationAttachment = {
