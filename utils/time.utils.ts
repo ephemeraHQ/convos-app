@@ -3,18 +3,22 @@ import { hoursToMilliseconds, minutesToMilliseconds, secondsToMilliseconds } fro
 // Helper functions to create a fluent API
 const createDays = (days: number) => ({
   toMilliseconds: () => days * 24 * 60 * 60 * 1000,
+  toNanoseconds: () => days * 24 * 60 * 60 * 1000 * 1000000,
 })
 
 const createHours = (hours: number) => ({
   toMilliseconds: () => hoursToMilliseconds(hours),
+  toNanoseconds: () => hoursToMilliseconds(hours) * 1000000,
 })
 
 const createMinutes = (minutes: number) => ({
   toMilliseconds: () => minutesToMilliseconds(minutes),
+  toNanoseconds: () => minutesToMilliseconds(minutes) * 1000000,
 })
 
 const createSeconds = (seconds: number) => ({
   toMilliseconds: () => secondsToMilliseconds(seconds),
+  toNanoseconds: () => secondsToMilliseconds(seconds) * 1000000,
 })
 
 export const nowNano = () => {

@@ -1,7 +1,6 @@
 import { HStack } from "@design-system/HStack"
 import { Pressable } from "@design-system/Pressable"
 import { ITextProps, Text } from "@design-system/Text"
-import { translate, TxKeyPath } from "@i18n"
 import { memo } from "react"
 import { ViewStyle } from "react-native"
 import { Avatar } from "@/components/avatar"
@@ -10,6 +9,7 @@ import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-p
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
+import { logJson } from "@/utils/logger/logger"
 import {
   IConversationMessageGroupUpdated,
   IGroupUpdatedMetadataEntry,
@@ -23,11 +23,6 @@ export function ConversationMessageGroupUpdate({ message }: IConversationMessage
   const { theme } = useAppTheme()
 
   const content = message.content
-
-  if (typeof content === "string") {
-    // TODO
-    return null
-  }
 
   return (
     <Center
@@ -89,7 +84,7 @@ function ChatGroupMemberLeft({ inboxId }: IChatGroupMemberLeftProps) {
         <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
         <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
       </Pressable>
-      <ChatGroupUpdateText>{translate("group_member_left")}</ChatGroupUpdateText>
+      <ChatGroupUpdateText>left</ChatGroupUpdateText>
     </HStack>
   )
 }
@@ -115,9 +110,34 @@ function ChatGroupMemberJoined({ inboxId }: IChatGroupMemberJoinedProps) {
         <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
         <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
       </Pressable>
-      <ChatGroupUpdateText>{translate("group_member_joined")}</ChatGroupUpdateText>
+      <ChatGroupUpdateText>joined</ChatGroupUpdateText>
     </HStack>
   )
+}
+
+function formatDisappearingTime(nanoseconds: string) {
+  const ns = parseInt(nanoseconds, 10)
+  const seconds = ns / 1_000_000_000
+  const minutes = seconds / 60
+  const hours = minutes / 60
+  const days = hours / 24
+
+  if (days >= 1 && days % 7 === 0) {
+    const weeks = days / 7
+    return `${weeks} ${weeks === 1 ? "week" : "weeks"}`
+  } else if (days >= 1) {
+    const daysValue = Math.floor(days)
+    return `${daysValue} ${daysValue === 1 ? "day" : "days"}`
+  } else if (hours >= 1) {
+    const hoursValue = Math.floor(hours)
+    return `${hoursValue} ${hoursValue === 1 ? "hour" : "hours"}`
+  } else if (minutes >= 1) {
+    const minutesValue = Math.floor(minutes)
+    return `${minutesValue} ${minutesValue === 1 ? "minute" : "minutes"}`
+  } else {
+    const secondsValue = Math.floor(seconds)
+    return `${secondsValue} ${secondsValue === 1 ? "second" : "seconds"}`
+  }
 }
 
 type IChatGroupMetadataUpdateProps = {
@@ -134,21 +154,36 @@ function ChatGroupMetadataUpdate({
     inboxId: initiatorInboxId,
   })
 
-  let txKey: TxKeyPath
-  let txParams: Record<string, string> = {}
+  let updateMessage = ""
 
   switch (metadataEntry.fieldName) {
     case "group_name":
-      txKey = "group_name_changed_to"
-      txParams = { newValue: metadataEntry.newValue }
+      updateMessage = `changed group name to ${metadataEntry.newValue}`
       break
     case "group_image_url_square":
-      txKey = "group_photo_changed"
+      updateMessage = "changed group photo"
       break
     case "description":
-      txKey = "group_description_changed"
-      txParams = { newValue: metadataEntry.newValue }
+      updateMessage = `changed group description to ${metadataEntry.newValue}`
       break
+    case "message_disappear_in_ns": {
+      const newTime = formatDisappearingTime(metadataEntry.newValue)
+
+      if (metadataEntry.oldValue === "0") {
+        updateMessage = `set messages to disappear in ${newTime}`
+      } else {
+        const oldTime = formatDisappearingTime(metadataEntry.oldValue)
+        updateMessage = `changed disappearing messages from ${oldTime} to ${newTime}`
+      }
+      break
+    }
+    // case "message_disappear_from_ns": {
+    //   const timestamp = parseInt(metadataEntry.newValue, 10)
+    //   const milliseconds = normalizeTimestampToMs(timestamp)
+    //   const fromTime = getRelativeDateTime(milliseconds)
+    //   updateMessage = `set messages to start disappearing from ${fromTime}`
+    //   break
+    // }
     default:
       return null
   }
@@ -166,7 +201,7 @@ function ChatGroupMetadataUpdate({
         <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
         <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
       </Pressable>
-      <ChatGroupUpdateText>{translate(txKey, txParams)}</ChatGroupUpdateText>
+      <ChatGroupUpdateText>{updateMessage}</ChatGroupUpdateText>
     </HStack>
   )
 }

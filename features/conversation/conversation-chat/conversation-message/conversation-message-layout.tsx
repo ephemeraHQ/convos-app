@@ -7,6 +7,7 @@ import { ConversationMessageSenderName } from "@/features/conversation/conversat
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { debugBorder } from "@/utils/debug-style"
 
 export const ConversationMessageLayout = memo(function ConversationMessageLayout(args: {
   reactionsComp?: ReactNode

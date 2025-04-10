@@ -104,8 +104,6 @@ export const EditGroupScreen = memo(function EditGroupScreen(
     )
   }
 
-  console.log("group:", group)
-
   return (
     <Screen preset="fixed">
       <VStack

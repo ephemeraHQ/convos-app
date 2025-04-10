@@ -74,6 +74,8 @@ export const iconRegistry: Record<IIconName, keyof typeof MaterialIcons.glyphMap
   camera: "camera",
   "contact-card": "person",
   "person-badge-key": "person",
+  clock: "access-time",
+  timer: "timer",
 }
 
 export function Icon(props: IIconProps) {

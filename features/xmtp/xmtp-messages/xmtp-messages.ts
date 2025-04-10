@@ -10,6 +10,7 @@ import {
   isXmtpTextContentType,
 } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import {
@@ -25,23 +26,6 @@ import {
   IXmtpInboxId,
   IXmtpMessageId,
 } from "../xmtp.types"
-
-// function isSupportedXmtpMessage(message: IXmtpDecodedMessage) {
-//   if (isXmtpReadReceiptContentType(message.contentTypeId)) {
-//     return false
-//   }
-
-//   return true
-// }
-
-function xmtpMessageGroupUpdatedContentIsEmpty(message: IXmtpDecodedGroupUpdatedMessage) {
-  const content = message.content()
-  return (
-    content.membersAdded.length === 0 &&
-    content.membersRemoved.length === 0 &&
-    content.metadataFieldsChanged.length === 0
-  )
-}
 
 export async function getXmtpConversationMessages(args: {
   clientInboxId: IXmtpInboxId
@@ -69,22 +53,7 @@ export async function getXmtpConversationMessages(args: {
       ),
     )
 
-    return messages.filter((message) => {
-      // // Shouldn't need this but just to make sure
-      // if (!isSupportedXmtpMessage(message)) {
-      //   return false
-      // }
-
-      // For some reason, XMTP returns group updated messages with empty content...
-      if (
-        isXmtpGroupUpdatedContentType(message.contentTypeId) &&
-        xmtpMessageGroupUpdatedContentIsEmpty(message as IXmtpDecodedGroupUpdatedMessage)
-      ) {
-        return false
-      }
-
-      return true
-    })
+    return messages.filter(isSupportedXmtpMessage)
   } catch (error) {
     throw new XMTPError({
       error,

@@ -7,6 +7,7 @@ import {
   IConversationMessageReply,
   IConversationMessageStatus,
   IConversationMessageText,
+  IGroupUpdatedMetadataEntryFieldName,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import {
@@ -96,7 +97,11 @@ export function convertXmtpMessageToConvosMessage(
         membersRemoved: groupUpdatedContent.membersRemoved.map((member) => ({
           inboxId: member.inboxId as unknown as IXmtpInboxId,
         })),
-        metadataFieldsChanged: groupUpdatedContent.metadataFieldsChanged,
+        metadataFieldsChanged: groupUpdatedContent.metadataFieldsChanged.map((field) => ({
+          oldValue: field.oldValue,
+          newValue: field.newValue,
+          fieldName: field.fieldName as IGroupUpdatedMetadataEntryFieldName,
+        })),
       },
     } satisfies IConversationMessageGroupUpdated
   }

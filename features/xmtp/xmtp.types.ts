@@ -7,12 +7,15 @@ import {
   ConversationVersion,
   DecodedMessage,
   DecryptedLocalAttachment,
+  DisappearingMessageSettings,
+  disappearingMessageSettings,
   Dm,
   Group,
   GroupUpdatedCodec,
   GroupUpdatedContent,
   GroupUpdatedMetadatEntry,
   InboxId,
+  isDisappearingMessagesEnabled,
   Member,
   MessageDeliveryStatus,
   MultiRemoteAttachmentCodec,
@@ -29,6 +32,7 @@ import {
   StaticAttachmentCodec,
   StaticAttachmentContent,
   TextCodec,
+  updateDisappearingMessageSettings,
 } from "@xmtp/react-native-sdk"
 import { ConversationSendPayload, MessageId } from "@xmtp/react-native-sdk/build/lib/types"
 import { ISupportedXmtpCodecs } from "./xmtp-codecs/xmtp-codecs"
@@ -113,3 +117,9 @@ export type IXmtpConversationSendPayload = Exclude<
 >
 
 export type IXmtpMessageId = MessageId
+
+// ===== Disappearing Message Types =====
+export type IXmtpDisappearingMessageSettings = DisappearingMessageSettings
+export const IXmtpDisappearingMessageSettings = disappearingMessageSettings
+export const IXmtpIsDisappearingMessagesEnabled = isDisappearingMessagesEnabled
+export const IXmtpUpdateDisappearingMessageSettings = updateDisappearingMessageSettings

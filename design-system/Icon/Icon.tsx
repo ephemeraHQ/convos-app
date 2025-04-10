@@ -74,6 +74,8 @@ export const iconRegistry: Record<IIconName, SFSymbol> = {
   camera: "camera.fill",
   "contact-card": "person.text.rectangle",
   "person-badge-key": "person.badge.key",
+  clock: "clock",
+  timer: "timer",
 }
 
 export function Icon(props: IIconProps) {
