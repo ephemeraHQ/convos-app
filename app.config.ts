@@ -46,7 +46,12 @@ const settings: Record<Environment, EnvironmentConfig> = {
     ios: {
       bundleIdentifier: "com.convos.dev",
       // For now use preview domain for dev
-      associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
+      associatedDomains: [
+        "applinks:preview.convos.org",
+        "applinks:*.preview.convos.org",
+        "webcredentials:preview.convos.org",
+        "webcredentials:*.preview.convos.org",
+      ],
       googleServicesFile: "./google-services/google-services-ios-dev.plist",
       icon: {
         dark: "./assets/icon-dark.png",
@@ -71,7 +76,12 @@ const settings: Record<Environment, EnvironmentConfig> = {
     scheme: "convos-preview",
     ios: {
       bundleIdentifier: "com.convos.preview",
-      associatedDomains: ["applinks:preview.convos.org", "webcredentials:preview.convos.org"],
+      associatedDomains: [
+        "applinks:preview.convos.org",
+        "applinks:*.preview.convos.org",
+        "webcredentials:preview.convos.org",
+        "webcredentials:*.preview.convos.org",
+      ],
       googleServicesFile: "./google-services/google-services-ios-preview.plist",
       icon: {
         dark: "./assets/icon-dark.png",
@@ -95,7 +105,12 @@ const settings: Record<Environment, EnvironmentConfig> = {
     scheme: "convos",
     ios: {
       bundleIdentifier: "com.convos.prod",
-      associatedDomains: ["applinks:convos.org", "webcredentials:convos.org"],
+      associatedDomains: [
+        "applinks:convos.org",
+        "applinks:*.convos.org",
+        "webcredentials:convos.org",
+        "webcredentials:*.convos.org",
+      ],
       googleServicesFile: "./google-services/google-services-ios-prod.plist",
       icon: {
         dark: "./assets/icon-dark.png",

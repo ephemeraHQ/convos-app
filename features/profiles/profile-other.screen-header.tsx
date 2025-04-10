@@ -12,12 +12,13 @@ import { useHeader } from "@/navigation/use-header"
 import { useRouter } from "@/navigation/use-navigation"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { Haptics } from "@/utils/haptics"
+import { generateProfileUrl } from "@/features/profiles/utils/profile-url"
 
 export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId }) {
   const { theme, themed } = useAppTheme()
   const router = useRouter()
 
-  const { displayName } = usePreferredDisplayInfo({ inboxId })
+  const { displayName, username } = usePreferredDisplayInfo({ inboxId })
 
   const handleChatPress = useCallback(() => {
     router.navigate("Conversation", {
@@ -30,7 +31,7 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
       Haptics.selectionAsync()
       switch (actionId) {
         case "share": {
-          const shareUrl = `${config.app.webDomain}/profile/${inboxId}`
+          const shareUrl = generateProfileUrl({ username, inboxId })
           await Share.share({
             message: shareUrl,
           })
@@ -78,7 +79,7 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
         // break;
       }
     },
-    [inboxId],
+    [inboxId, username],
   )
 
   useHeader(

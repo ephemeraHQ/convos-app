@@ -6,6 +6,41 @@ import { logger } from "@/utils/logger/logger"
 import { useConversationDeepLinkHandler } from "./conversation-navigator"
 import { parseURL } from "./link-parser"
 
+type IDeepLinkPattern = {
+  pattern: string
+  handler: (args: { 
+    params: Record<string, string | undefined>
+    handleConversationDeepLink: (args: { inboxId: IXmtpInboxId; composerTextPrefill?: string }) => Promise<void>
+  }) => Promise<void>
+}
+
+const deepLinkPatterns: IDeepLinkPattern[] = [
+  {
+    pattern: "dm/:inboxId",
+    handler: async ({ params, handleConversationDeepLink }) => {
+      const inboxId = params.inboxId as IXmtpInboxId
+      await handleConversationDeepLink({ 
+        inboxId, 
+        composerTextPrefill: params.composerTextPrefill 
+      })
+    },
+  },
+  {
+    pattern: "group/:groupId",
+    handler: async () => {
+      // TODO
+      logger.info("Group deep link handler not implemented yet")
+    },
+  },
+  {
+    pattern: "group-invite/:inviteId",
+    handler: async () => {
+      // TODO
+      logger.info("Group invite deep link handler not implemented yet")
+    },
+  },
+]
+
 /**
  * Component that handles deep links for the app
  * This should be included at the app root to handle incoming links
@@ -20,26 +55,41 @@ export function DeepLinkHandler() {
   const handleUrl = useCallback(
     async (url: string) => {
       logger.info(`Handling deep link URL: ${url}`)
-
       const { segments, params } = parseURL(url)
+      logger.info(`Parsed segments: ${JSON.stringify(segments)}`)
+      logger.info(`Parsed params: ${JSON.stringify(params)}`)
 
-      // Handle different types of deep links based on the URL pattern
-      if (segments[0] === "conversation" && segments[1]) {
-        // Pattern: convos://conversation/{inboxId}
-        const inboxId = segments[1] as IXmtpInboxId
-        const composerTextPrefill = params.composerTextPrefill
+      for (const { pattern, handler } of deepLinkPatterns) {
+        const patternSegments = pattern.split("/")
+        if (patternSegments.length !== segments.length) continue
 
-        logger.info(
-          `Deep link matches conversation pattern, inboxId: ${inboxId}${
-            composerTextPrefill ? `, composerTextPrefill: ${composerTextPrefill}` : ""
-          }`,
-        )
+        const extractedParams: Record<string, string> = {}
+        let matches = true
 
-        // Use the conversation deep link handler
-        await handleConversationDeepLink(inboxId, composerTextPrefill)
-      } else {
-        logger.info(`Unhandled deep link pattern: ${segments.join("/")}`)
+        for (let i = 0; i < patternSegments.length; i++) {
+          const patternPart = patternSegments[i]
+          const pathPart = segments[i]
+
+          if (patternPart.startsWith(":")) {
+            extractedParams[patternPart.slice(1)] = pathPart
+          } else if (patternPart !== pathPart) {
+            matches = false
+            break
+          }
+        }
+
+        if (matches) {
+          logger.info(`Found matching pattern: ${pattern}`)
+          logger.info(`Extracted params: ${JSON.stringify(extractedParams)}`)
+          await handler({ 
+            params: { ...extractedParams, composerTextPrefill: params.composerTextPrefill }, 
+            handleConversationDeepLink 
+          })
+          return
+        }
       }
+
+      logger.info(`No matching pattern found for URL: ${url}`)
     },
     [handleConversationDeepLink],
   )

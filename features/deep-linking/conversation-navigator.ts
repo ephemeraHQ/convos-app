@@ -1,10 +1,11 @@
 import { useNavigation } from "@react-navigation/native"
 import { useCallback } from "react"
-import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { logger } from "@/utils/logger/logger"
-import { checkConversationExists } from "./conversation-links"
+import { deepLinkLogger } from "@/utils/logger/logger"
+import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
+import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 
 /**
  * Custom hook to handle conversation deep links
@@ -13,38 +14,56 @@ import { checkConversationExists } from "./conversation-links"
 export function useConversationDeepLinkHandler() {
   const navigation = useNavigation()
 
-  /**
-   * Process an inbox ID from a deep link and navigate to the appropriate conversation
-   * @param inboxId The inbox ID from the deep link
-   * @param composerTextPrefill Optional text to prefill in the composer
-   */
+  // Process an inbox ID from a deep link and navigate to the appropriate conversation
   const handleConversationDeepLink = useCallback(
-    async (inboxId: IXmtpInboxId, composerTextPrefill?: string) => {
+    async (args: { inboxId: IXmtpInboxId; composerTextPrefill?: string }) => {
+      const { inboxId, composerTextPrefill } = args
+
+      deepLinkLogger.info(`Processing conversation for inboxId: ${inboxId}`)
+
       if (!inboxId) {
-        logger.warn("Cannot handle conversation deep link - missing inboxId")
-        return
+        throw new GenericError({
+          error: new Error("Missing inboxId"),
+          additionalMessage: "Cannot handle conversation deep link - missing inboxId",
+        })
       }
 
       try {
-        logger.info(
-          `Handling conversation deep link for inboxId: ${inboxId}${composerTextPrefill ? " with prefill text" : ""}`,
+        deepLinkLogger.info(
+          `Processing conversation for inboxId: ${inboxId}${
+            composerTextPrefill ? " with prefill text" : ""
+          }`,
         )
 
-        // Check if the conversation exists
-        const { exists, conversationId } = await checkConversationExists(inboxId)
+        const state = useMultiInboxStore.getState()
+        const activeInboxId = state.currentSender?.inboxId
 
-        if (exists && conversationId) {
-          // We have an existing conversation - navigate to it
-          logger.info(`Found existing conversation with ID: ${conversationId}`)
+        deepLinkLogger.info(`Current active inboxId: ${activeInboxId}`)
+
+        if (!activeInboxId) {
+          throw new GenericError({
+            error: new Error("No active inbox"),
+            additionalMessage: "Cannot check conversation existence - no active inbox",
+          })
+        }
+
+        const conversation = await findConversationByInboxIds({
+          inboxIds: [inboxId],
+          clientInboxId: activeInboxId,
+        })
+
+        deepLinkLogger.info(`Found conversation: ${JSON.stringify(conversation)}`)
+
+        if (conversation) {
+          deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
 
           navigation.navigate("Conversation", {
-            xmtpConversationId: conversationId,
+            xmtpConversationId: conversation.xmtpId,
             isNew: false,
             composerTextPrefill,
           })
         } else {
-          // No existing conversation - start a new one
-          logger.info(
+          deepLinkLogger.info(
             `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
           )
 
@@ -68,48 +87,4 @@ export function useConversationDeepLinkHandler() {
   )
 
   return { handleConversationDeepLink }
-}
-
-/**
- * Global function to process a new deep link that uses the ConversationScreenConfig format
- * This function is called by the navigation library when it receives a deep link
- */
-export function processConversationDeepLink(
-  params: Record<string, string | undefined>,
-): Promise<boolean> {
-  return new Promise(async (resolve) => {
-    const { inboxId, composerTextPrefill } = params
-
-    if (!inboxId) {
-      // Skip if no inboxId
-      logger.warn("Cannot process conversation deep link - missing inboxId")
-      resolve(false)
-      return
-    }
-
-    try {
-      logger.info(
-        `Processing Conversation deep link via navigation for inboxId: ${inboxId}${composerTextPrefill ? " with prefill text" : ""}`,
-      )
-
-      // Check if the conversation exists
-      const { exists, conversationId } = await checkConversationExists(inboxId as IXmtpInboxId)
-
-      if (exists && conversationId) {
-        logger.info(`Navigation found existing conversation with ID: ${conversationId}`)
-        resolve(true)
-        return
-      }
-
-      // We didn't find an existing conversation, so we'll create a new one
-      logger.info(
-        `No existing conversation found with inboxId: ${inboxId}, navigation will create a new conversation`,
-      )
-      resolve(true)
-    } catch (error) {
-      logger.error(`Error in processConversationDeepLink: ${error}`)
-      // Still return true to indicate we're handling it, even though there was an error
-      resolve(true)
-    }
-  })
 }

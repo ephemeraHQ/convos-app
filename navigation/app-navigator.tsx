@@ -34,6 +34,7 @@ import { WebviewPreview } from "@/screens/WebviewPreview"
 import { useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { hideSplashScreen } from "@/utils/splash/splash"
+import { DeepLinkHandler } from "@/features/deep-linking/deep-link-handler.component"
 
 const prefix = Linking.createURL("/")
 const schemes = [prefix, ...config.app.universalLinks]
@@ -112,6 +113,7 @@ export const AppNavigator = memo(function AppNavigator() {
         linking={linking}
         ref={navigationRef}
       >
+        <DeepLinkHandler />
         <AppStacks />
       </NavigationContainer>
     </ThemeProvider>

@@ -15,6 +15,7 @@ import { translate } from "@/i18n"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { generateProfileUrl } from "@/features/profiles/utils/profile-url"
 
 type IShareProfileScreenProps = NativeStackScreenProps<NavigationParamList, "ShareProfile">
 
@@ -27,8 +28,8 @@ export function ShareProfileScreen({ route, navigation }: IShareProfileScreenPro
   const { username, displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId,
   })
-  
-  const profileUrl = `https://${username || inboxId}.${config.app.webDomain}`
+
+  const profileUrl = generateProfileUrl({ username, inboxId })
 
   const shareDict = Platform.OS === "ios" ? { url: profileUrl } : { message: profileUrl }
 
@@ -59,13 +60,13 @@ export function ShareProfileScreen({ route, navigation }: IShareProfileScreenPro
           <Text
             preset="title"
             style={{
-              marginTop: 8,
+              margin: 8,
               textAlign: "center",
             }}
           >
             {displayName || shortAddress(inboxId)}
           </Text>
-          {displayName && (
+          {username && (
             <Text
               preset="formLabel"
               style={{
@@ -73,7 +74,7 @@ export function ShareProfileScreen({ route, navigation }: IShareProfileScreenPro
                 textAlign: "center",
               }}
             >
-              {displayName || shortAddress(inboxId)}
+              {`${username}.${config.app.webDomain}`}
             </Text>
           )}
         </View>

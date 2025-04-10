@@ -17,12 +17,13 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const { onSubmitEditing } = props
 
   const inputRef = useRef<RNTextInput>(null)
+  const initialValueRef = useRef<string | null>(null)
 
   const { theme } = useAppTheme()
 
   const store = useConversationComposerStore()
-  const isEnabled = useConversationComposerIsEnabled()
   const inputDefaultValue = store.getState().inputValue
+  const isEnabled = useConversationComposerIsEnabled()
 
   const handleChangeText = useCallback(
     (text: string) => {
@@ -39,8 +40,15 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   // Doing this since we are using a uncontrolled component
   useEffect(() => {
     const unsubscribe = store.subscribe((state, prevState) => {
+      // Handle clearing the input
       if (prevState.inputValue && !state.inputValue) {
         inputRef.current?.clear()
+      }
+      
+      // Handle prefill value changes
+      if (state.inputValue && !initialValueRef.current) {
+        initialValueRef.current = state.inputValue
+        inputRef.current?.setNativeProps({ text: state.inputValue })
       }
     })
 
