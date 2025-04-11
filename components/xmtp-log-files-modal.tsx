@@ -65,18 +65,12 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
 
           // Update all sizes at once
           const newSizes: Record<string, string> = {}
-          let emptyCount = 0
-
+          
           results.forEach(({ path, size, isEmpty }) => {
             newSizes[path] = isEmpty ? `${size} (empty)` : size
-            if (isEmpty) emptyCount++
           })
 
           setFileSizes(newSizes)
-
-          if (emptyCount > 0) {
-            setLogStatus(prev => `${prev}\n${emptyCount} empty log file(s) found. Make sure logging is properly activated.`)
-          }
         } catch (error) {
           captureError(new GenericError({ error, additionalMessage: "Error fetching log files" }))
           setLogStatus(`Error: ${error instanceof Error ? error.message : String(error)}`)
