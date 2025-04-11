@@ -17,7 +17,13 @@ import {
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
 import { useStreamingStore } from "@/features/streams/stream-store"
-import { clearXmtpLogFiles, clearXmtpLogs, getXmtpLogFile, startXmtpFileLogging, stopXmtpFileLogging } from "@/features/xmtp/xmtp-logs"
+import {
+  clearXmtpLogFiles,
+  clearXmtpLogs,
+  getXmtpLogFile,
+  startXmtpFileLogging,
+  stopXmtpFileLogging,
+} from "@/features/xmtp/xmtp-logs"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { $globalStyles } from "@/theme/styles"
@@ -36,7 +42,7 @@ export function DebugProvider(props: { children: React.ReactNode }) {
   const tapCountRef = useRef(0)
   const tapTimeoutRef = useRef<NodeJS.Timeout>()
   const [logFilesModalVisible, setLogFilesModalVisible] = useState(false)
-  
+
   const showDebugMenu = useShowDebugMenu({
     setLogFilesModalVisible,
   })
@@ -74,15 +80,19 @@ export function DebugProvider(props: { children: React.ReactNode }) {
   return (
     <VStack onTouchStart={handleTouchStart} style={$globalStyles.flex1}>
       {children}
-      <XmtpLogFilesModal 
-        visible={logFilesModalVisible} 
-        onClose={() => setLogFilesModalVisible(false)} 
+      <XmtpLogFilesModal
+        visible={logFilesModalVisible}
+        onClose={() => setLogFilesModalVisible(false)}
       />
     </VStack>
   )
 }
 
-function useShowDebugMenu({ setLogFilesModalVisible }: { setLogFilesModalVisible: (visible: boolean) => void }) {
+function useShowDebugMenu({
+  setLogFilesModalVisible,
+}: {
+  setLogFilesModalVisible: (visible: boolean) => void
+}) {
   const { logout } = useLogout()
   const { currentlyRunning } = Updates.useUpdates()
 
@@ -104,9 +114,15 @@ function useShowDebugMenu({ setLogFilesModalVisible }: { setLogFilesModalVisible
       "-": () => Promise.resolve(), // Separator
       "Start Libxmtp File Logging": async () => {
         startXmtpFileLogging()
+        showSnackbar({
+          message: "XMTP log files started",
+        })
       },
       "Stop Libxmtp File Logging": async () => {
         stopXmtpFileLogging()
+        showSnackbar({
+          message: "XMTP log files stopped",
+        })
       },
       "View Libxmtp File Logs": async () => {
         setLogFilesModalVisible(true)
@@ -118,7 +134,7 @@ function useShowDebugMenu({ setLogFilesModalVisible }: { setLogFilesModalVisible
           [
             {
               text: "Cancel",
-              style: "cancel"
+              style: "cancel",
             },
             {
               text: "Delete",
@@ -127,11 +143,12 @@ function useShowDebugMenu({ setLogFilesModalVisible }: { setLogFilesModalVisible
                 stopXmtpFileLogging()
                 clearXmtpLogFiles()
                 showSnackbar({
-                  message: "XMTP log files cleared. Logging paused, click Start File logging to restart."
+                  message:
+                    "XMTP log files cleared. Logging paused, click Start File logging to restart.",
                 })
-              }
-            }
-          ]
+              },
+            },
+          ],
         )
       },
       "--": () => Promise.resolve(), // Separator

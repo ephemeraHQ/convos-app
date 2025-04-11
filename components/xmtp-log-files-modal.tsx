@@ -1,16 +1,16 @@
+import { Client } from "@xmtp/react-native-sdk"
 import { useCallback, useEffect, useState } from "react"
 import { Alert, FlatList, Modal, StyleSheet, TouchableOpacity, View } from "react-native"
-import { Client } from "@xmtp/react-native-sdk"
 import { Center } from "@/design-system/Center"
 import { HStack } from "@/design-system/HStack"
 import { Loader } from "@/design-system/loader"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { getXmtpFilePaths } from "@/features/xmtp/xmtp-logs"
+import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { shareContent } from "@/utils/share"
-import { useAppTheme } from "@/theme/use-app-theme"
 
 type XmtpLogFilesModalProps = {
   visible: boolean
@@ -41,9 +41,9 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
           setLogFiles(files)
 
           if (files.length === 0) {
-            setLogStatus(prev => `${prev}\nNo log files found. Try activating logs first.`)
+            setLogStatus((prev) => `${prev}\nNo log files found. Try activating logs first.`)
           } else {
-            setLogStatus(prev => `${prev}\nFound ${files.length} log file(s)`)
+            setLogStatus((prev) => `${prev}\nFound ${files.length} log file(s)`)
           }
 
           // Load file sizes in parallel
@@ -53,10 +53,12 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
               return {
                 path,
                 size: `${(content.length / 1024).toFixed(2)} KB`,
-                isEmpty: content.length === 0
+                isEmpty: content.length === 0,
               }
             } catch (error) {
-              captureError(new GenericError({ error, additionalMessage: `Error loading size for ${path}` }))
+              captureError(
+                new GenericError({ error, additionalMessage: `Error loading size for ${path}` }),
+              )
               return { path, size: "Error loading size", isEmpty: true }
             }
           })
@@ -65,7 +67,7 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
 
           // Update all sizes at once
           const newSizes: Record<string, string> = {}
-          
+
           results.forEach(({ path, size, isEmpty }) => {
             newSizes[path] = isEmpty ? `${size} (empty)` : size
           })
@@ -96,7 +98,7 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
 
       // Share the log file
       shareContent({
-        title: `XMTP Log: ${filePath.split('/').pop()}`,
+        title: `XMTP Log: ${filePath.split("/").pop()}`,
         url: `file://${filePath}`,
         type: "text/plain",
       }).catch(captureError)
@@ -107,12 +109,7 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
   }, [])
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalContainer}>
         <View style={[styles.modalContent, { backgroundColor: theme.colors.background.surface }]}>
           <Text style={styles.modalTitle}>XMTP Log Files</Text>
@@ -120,14 +117,18 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
           {/* Display log status information */}
           {logStatus ? (
             <View style={styles.statusContainer}>
-              <Text preset="small" color="secondary">{logStatus}</Text>
+              <Text preset="small" color="secondary">
+                {logStatus}
+              </Text>
             </View>
           ) : null}
 
           {isLoading ? (
             <Center style={{ padding: theme.spacing.lg }}>
               <Loader />
-              <Text color="secondary" style={{ marginTop: theme.spacing.sm }}>Loading log files...</Text>
+              <Text color="secondary" style={{ marginTop: theme.spacing.sm }}>
+                Loading log files...
+              </Text>
             </Center>
           ) : logFiles.length === 0 ? (
             <Center style={{ padding: theme.spacing.lg }}>
@@ -143,7 +144,7 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
                   onPress={() => shareLogFile(item)}
                 >
                   <Text numberOfLines={1} ellipsizeMode="middle">
-                    {item.split('/').pop()}
+                    {item.split("/").pop()}
                   </Text>
                   <HStack style={{ justifyContent: "space-between", marginTop: theme.spacing.xxs }}>
                     <Text preset="small" color="secondary">
@@ -159,10 +160,7 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
             />
           )}
 
-          <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={onClose}
-          >
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Text>Close</Text>
           </TouchableOpacity>
         </View>
