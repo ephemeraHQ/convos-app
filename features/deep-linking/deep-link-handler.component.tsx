@@ -5,6 +5,8 @@ import { deepLinkLogger } from "@/utils/logger/logger"
 import { navigateToConversation } from "./conversation-navigator"
 import { parseURL } from "./link-parser"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
+import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 
 type IDeepLinkPattern = {
   pattern: string
@@ -75,7 +77,13 @@ function processDeepLink(url: string) {
       deepLinkLogger.info(`Extracted params: ${JSON.stringify(extractedParams)}`)
       handler({ ...extractedParams, composerTextPrefill: params.composerTextPrefill })
         .catch((error) => {
-          deepLinkLogger.error(`Error handling deep link: ${error}`)
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: `Failed to handle deep link pattern: ${pattern}`,
+              extra: { pattern, params: extractedParams },
+            })
+          )
         })
       return
     }
@@ -105,7 +113,12 @@ export function DeepLinkHandler() {
         }
       })
       .catch((error) => {
-        deepLinkLogger.warn(`Error getting initial URL: ${error}`)
+        captureError(
+          new GenericError({
+            error,
+            additionalMessage: "Failed to get initial deep link URL",
+          })
+        )
       })
 
     // Listen for URL events when the app is running
