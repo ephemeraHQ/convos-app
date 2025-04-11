@@ -20,9 +20,6 @@ export const getXmtpInstallationQueryOptions = (args: IArgs) => {
 
       return client.installationId
     },
-    meta: {
-      persist: false, // Not persisting until we verify it's safe
-    },
   })
 }
 
