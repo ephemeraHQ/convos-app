@@ -33,7 +33,7 @@ let notificationsPermissionsUnsubscribe: (() => void) | null = null
 let inboxStoreUnsubscribe: (() => void) | null = null
 
 export async function setupConversationsNotificationsSubscriptions() {
-  cleanupSubscriptions()
+  // cleanupSubscriptions()
 
   // Set up subscription for notifications permissions changes
   const permissionsObserver = createQueryObserverWithPreviousData({
@@ -106,30 +106,30 @@ export async function setupConversationsNotificationsSubscriptions() {
   )
 }
 
-function cleanupSubscriptions() {
-  notificationsLogger.debug("Cleaned up notifications subscriptions and observers")
+// function cleanupSubscriptions() {
+//   notificationsLogger.debug("Cleaned up notifications subscriptions and observers")
 
-  // Unsubscribe from notifications permissions observer
-  if (notificationsPermissionsUnsubscribe) {
-    notificationsPermissionsUnsubscribe()
-    notificationsPermissionsUnsubscribe = null
-  }
+//   // Unsubscribe from notifications permissions observer
+//   if (notificationsPermissionsUnsubscribe) {
+//     notificationsPermissionsUnsubscribe()
+//     notificationsPermissionsUnsubscribe = null
+//   }
 
-  // Unsubscribe from multi-inbox store
-  if (inboxStoreUnsubscribe) {
-    inboxStoreUnsubscribe()
-    inboxStoreUnsubscribe = null
-  }
+//   // Unsubscribe from multi-inbox store
+//   if (inboxStoreUnsubscribe) {
+//     inboxStoreUnsubscribe()
+//     inboxStoreUnsubscribe = null
+//   }
 
-  // Clean up all conversation observers
-  allowedConversationsObserversMap.forEach((observer) => {
-    observer.destroy()
-  })
-  allowedConversationsObserversMap.clear()
+//   // Clean up all conversation observers
+//   allowedConversationsObserversMap.forEach((observer) => {
+//     observer.destroy()
+//   })
+//   allowedConversationsObserversMap.clear()
 
-  // Reset previous senders
-  previousSendersInboxIds = []
-}
+//   // Reset previous senders
+//   previousSendersInboxIds = []
+// }
 
 /**
  * Removes observers and unsubscribes for multiple inbox IDs

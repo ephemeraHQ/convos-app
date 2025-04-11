@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { captureError } from "@/utils/capture-error"
-import { ApiError } from "@/utils/convos-api/convos-api-error"
+import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { convosPublicApi } from "@/utils/convos-api/convos-api-instance"
 
 export const AppConfigSchema = z.object({
@@ -18,7 +18,7 @@ export async function getAppConfig() {
   const result = AppConfigSchema.safeParse(data)
 
   if (!result.success) {
-    captureError(new ApiError({ error: result.error }))
+    captureError(new ConvosApiError({ error: result.error }))
   }
 
   return data

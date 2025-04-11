@@ -20,7 +20,7 @@ export function useSetupStreamingSubscriptions() {
   //   (state) => state.isInternetReachable,
   //   (isInternetReachable) => {
   //     streamLogger.debug(
-  //       `[Streaming] Internet reachability changed: ${isInternetReachable}`
+  //       `Internet reachability changed: ${isInternetReachable}`
   //     );
   //     if (!isInternetReachable) {
   //       return;
@@ -106,7 +106,7 @@ async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
     const streamingState = store.accountStreamingStates[inboxId]
 
     if (!streamingState?.isStreamingConversations) {
-      streamLogger.debug(`[Streaming] Starting conversation stream for ${inboxId}...`)
+      streamLogger.debug(`Starting conversation stream for ${inboxId}...`)
       try {
         await startConversationStreaming({ clientInboxId: inboxId })
         store.actions.updateStreamingState(inboxId, {
@@ -123,7 +123,7 @@ async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
     }
 
     if (!streamingState?.isStreamingMessages) {
-      streamLogger.debug(`[Streaming] Starting messages stream for ${inboxId}...`)
+      streamLogger.debug(`Starting messages stream for ${inboxId}...`)
       try {
         await startMessageStreaming({ clientInboxId: inboxId })
         store.actions.updateStreamingState(inboxId, {
@@ -141,7 +141,7 @@ async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
 
     // TODO: Fix and handle the consent stream. I think needed for notifications
     // if (!streamingState?.isStreamingConsent) {
-    //   streamLogger.debug(`[Streaming] Starting consent stream for ${account}`);
+    //   streamLogger.debug(`Starting consent stream for ${account}`);
     //   try {
     //     store.actions.updateStreamingState(account, {
     //       isStreamingConsent: true,
@@ -163,13 +163,13 @@ async function stopStreaming(inboxIds: IXmtpInboxId[]) {
   await Promise.all(
     inboxIds.map(async (inboxId) => {
       try {
-        streamLogger.debug(`[Streaming] Stopping streams for ${inboxId}`)
+        streamLogger.debug(`Stopping streams for ${inboxId}`)
         await Promise.all([
           stopStreamingAllMessage({ inboxId }),
           stopStreamingConversations({ inboxId }),
-          stopStreamingConsent({ inboxId }),
+          // stopStreamingConsent({ inboxId }),
         ])
-        streamLogger.debug(`[Streaming] Stopped streams for ${inboxId}`)
+        streamLogger.debug(`Stopped streams for ${inboxId}`)
       } catch (error) {
         captureError(
           new StreamError({

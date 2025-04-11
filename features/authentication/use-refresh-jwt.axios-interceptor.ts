@@ -4,7 +4,7 @@ import { getConvosAuthenticatedHeaders } from "@/features/authentication/authent
 import { refreshAndGetNewJwtQuery } from "@/features/authentication/jwt.query"
 import { useLogout } from "@/features/authentication/use-logout"
 import { captureError } from "@/utils/capture-error"
-import { ApiError } from "@/utils/convos-api/convos-api-error"
+import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { apiLogger } from "@/utils/logger/logger"
 import { convosApi } from "../../utils/convos-api/convos-api-instance"
 import { AuthenticationError } from "../../utils/error"
@@ -61,18 +61,20 @@ const createRefreshTokenInterceptor = (
   return async (error: AxiosError): Promise<AxiosResponse> => {
     // If there's no response, we can't handle this error
     if (!error.response) {
-      return Promise.reject(new ApiError({ error, additionalMessage: "No response from server" }))
+      return Promise.reject(
+        new ConvosApiError({ error, additionalMessage: "No response from server" }),
+      )
     }
 
     // Only handle 401 Unauthorized errors
     if (error.response.status !== 401) {
-      return Promise.reject(new ApiError({ error, additionalMessage: "Unexpected error" }))
+      return Promise.reject(new ConvosApiError({ error }))
     }
 
     const originalRequest = error.config as ExtendedAxiosRequestConfig
     if (!originalRequest) {
       captureError(
-        new ApiError({
+        new ConvosApiError({
           error,
           additionalMessage: "Cannot retry request: original request config is missing",
         }),
@@ -85,7 +87,7 @@ const createRefreshTokenInterceptor = (
     if (originalRequest._retry) {
       apiLogger.debug("Token refresh failed: already attempted refresh for this request")
       captureError(
-        new ApiError({
+        new ConvosApiError({
           error,
           additionalMessage: "JWT refresh failed: token refresh already attempted",
         }),
@@ -94,7 +96,7 @@ const createRefreshTokenInterceptor = (
       // Logout and reject - we can't recover from this
       await onRefreshFailure()
       return Promise.reject(
-        new ApiError({
+        new ConvosApiError({
           error,
           additionalMessage: "JWT refresh failed: token refresh already attempted",
         }),
@@ -134,7 +136,7 @@ const createRefreshTokenInterceptor = (
       }
 
       return Promise.reject(
-        new ApiError({
+        new ConvosApiError({
           error: refreshError,
           additionalMessage: "JWT refresh failed",
         }),

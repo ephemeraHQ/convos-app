@@ -26,15 +26,14 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
 
     const backgroundNotificationData = data as IExpoBackgroundNotificationData
 
+    // Not handling other types of background notifications for now
+    if (!backgroundNotificationData.body?.contentTopic) {
+      return
+    }
+
     notificationsLogger.debug("New background notification received", {
       backgroundNotificationData,
     })
-
-    if (!backgroundNotificationData.body?.contentTopic) {
-      throw new NotificationError({
-        error: `Wrong background notification data? ${JSON.stringify(backgroundNotificationData)}`,
-      })
-    }
 
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage: backgroundNotificationData.body.encryptedMessage,

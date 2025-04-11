@@ -3,7 +3,6 @@ import { useEffect } from "react"
 import { logger } from "@/utils/logger/logger"
 import { config } from "../../config"
 import { useAppStore } from "../../stores/app-store"
-import { useSelect } from "../../stores/stores.utils"
 
 NetInfo.configure({
   reachabilityUrl: `${config.app.apiUrl}/healthcheck`,
@@ -12,17 +11,17 @@ NetInfo.configure({
 })
 
 export function useMonitorNetworkConnectivity() {
-  const { isInternetReachable, setIsInternetReachable } = useAppStore(
-    useSelect(["isInternetReachable", "setIsInternetReachable"]),
-  )
-
   useEffect(() => {
-    return NetInfo.addEventListener((netState) => {
+    const unsubscribe = NetInfo.addEventListener((netState) => {
       const reachable = !!netState.isInternetReachable
-      if (reachable !== isInternetReachable) {
+      const currentReachable = useAppStore.getState().isInternetReachable
+
+      if (reachable !== currentReachable) {
         logger.debug(`Internet reachable: ${reachable}`)
-        setIsInternetReachable(reachable)
+        useAppStore.getState().setIsInternetReachable(reachable)
       }
     })
-  }, [isInternetReachable, setIsInternetReachable])
+
+    return unsubscribe
+  }, [])
 }
