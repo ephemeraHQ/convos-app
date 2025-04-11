@@ -1,7 +1,4 @@
-import { IConversationAttachment } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
-
-// TODO
-export type LocalAttachment = {
+export type IAttachmentPreview = {
   mediaURI: string
   mimeType: string | undefined
   dimensions?: { width: number; height: number }
@@ -16,5 +13,3 @@ export type LocalAttachmentMetadata = {
   mediaURL: string
   contentLength: number
 }
-
-export type IUploadedRemoteAttachment = IConversationAttachment

@@ -1,6 +1,5 @@
 import { useCallback } from "react"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
-import { IUploadedRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachments.types"
 import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { createConversationAndSendFirstMessageMutation } from "@/features/conversation/conversation-create/mutations/create-conversation-and-send-first-message.mutation"
 import {
@@ -11,17 +10,21 @@ import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { logJson } from "@/utils/logger/logger"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 import {
-  IComposerMediaPreview,
+  IComposerAttachment,
+  IComposerAttachmentUploaded,
   useConversationComposerStore,
 } from "../conversation-composer.store-context"
 
-/**
- * Waits for all media previews to be uploaded
- */
-function waitForMediaUploads(composerMediaPreviews: IComposerMediaPreview[]) {
+function isComposerAttachmentUploaded(
+  attachment: IComposerAttachment,
+): attachment is IComposerAttachmentUploaded {
+  return attachment.status === "uploaded"
+}
+
+function waitForMediaUploads(composerAttachments: IComposerAttachment[]) {
   return waitUntilPromise({
     checkFn: () =>
-      composerMediaPreviews.every((preview) => !preview || preview.status === "uploaded"),
+      composerAttachments.every((attachment) => !attachment || attachment.status === "uploaded"),
   })
 }
 
@@ -31,7 +34,7 @@ function waitForMediaUploads(composerMediaPreviews: IComposerMediaPreview[]) {
 export function createMessageContents(args: {
   inputValue: string
   replyingToMessageId: IXmtpMessageId | null
-  composerUploadedAttachments: IUploadedRemoteAttachment[]
+  composerUploadedAttachments: IComposerAttachmentUploaded[]
 }) {
   const { inputValue, replyingToMessageId, composerUploadedAttachments } = args
 
@@ -89,13 +92,13 @@ export function useCreateConversationAndSend() {
   const conversationStore = useConversationStore()
 
   return useCallback(async () => {
-    const { inputValue, replyingToMessageId, composerUploadedAttachments, composerMediaPreviews } =
-      composerStore.getState()
+    const { inputValue, replyingToMessageId, composerAttachments } = composerStore.getState()
     const { searchSelectedUserInboxIds } = conversationStore.getState()
 
     try {
-      // Wait for media uploads to complete
-      await waitForMediaUploads(composerMediaPreviews)
+      await waitForMediaUploads(composerAttachments)
+
+      const composerUploadedAttachments = composerAttachments.filter(isComposerAttachmentUploaded)
 
       // Create message contents
       const messageContents = createMessageContents({
@@ -159,8 +162,7 @@ export function useSendToExistingConversation() {
   const conversationStore = useConversationStore()
 
   return useCallback(async () => {
-    const { inputValue, replyingToMessageId, composerUploadedAttachments, composerMediaPreviews } =
-      composerStore.getState()
+    const { inputValue, replyingToMessageId, composerAttachments } = composerStore.getState()
     const { xmtpConversationId } = conversationStore.getState()
 
     if (!xmtpConversationId) {
@@ -168,7 +170,9 @@ export function useSendToExistingConversation() {
     }
 
     // Wait for media uploads to complete
-    await waitForMediaUploads(composerMediaPreviews)
+    await waitForMediaUploads(composerAttachments)
+
+    const composerUploadedAttachments = composerAttachments.filter(isComposerAttachmentUploaded)
 
     // Create message contents
     const messageContents = createMessageContents({

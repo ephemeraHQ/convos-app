@@ -11,7 +11,10 @@ import { memo, useCallback } from "react"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { Center } from "@/design-system/Center"
 import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
-import { useConversationComposerStore } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
+import {
+  IComposerAttachmentPicked,
+  useConversationComposerStore,
+} from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
 import { useConversationComposerIsEnabled } from "@/features/conversation/conversation-chat/conversation-composer/hooks/use-conversation-composer-is-enabled"
 import { uploadFile } from "@/features/uploads/upload.api"
 import { Xmtp } from "@/features/xmtp"
@@ -30,22 +33,26 @@ export const ConversationComposerAddAttachmentButton = memo(
 
     const handleAttachmentSelected = useCallback(
       async (asset: ImagePicker.ImagePickerAsset) => {
-        const mediaPreview = {
+        const mediaPreview: IComposerAttachmentPicked = {
+          status: "picked",
           mediaURI: asset.uri,
-          mimeType: asset.mimeType,
-          dimensions: {
+          mediaType: asset.mimeType || "image",
+          mediaDimensions: {
             width: asset.width,
             height: asset.height,
           },
-          status: "picked" as const,
         }
 
-        // Add preview and get its URI as ID
-        const mediaURI = store.getState().addComposerMediaPreview(mediaPreview)
+        store.getState().addComposerAttachment(mediaPreview)
 
         try {
           // Update status to uploading
-          store.getState().updateMediaPreviewStatus(mediaURI, "uploading")
+          store.getState().updateComposerAttachment({
+            mediaURI: mediaPreview.mediaURI,
+            attachment: {
+              status: "uploading",
+            },
+          })
 
           // Compress and resize image
           const resizedImage = await compressAndResizeImage(asset.uri)
@@ -73,8 +80,8 @@ export const ConversationComposerAddAttachmentButton = memo(
           prefetchImageUrl(publicUrl).catch(captureError)
 
           // Add uploaded attachment
-          store.getState().addComposerUploadedAttachment({
-            mediaURI,
+          store.getState().updateComposerAttachment({
+            mediaURI: mediaPreview.mediaURI,
             attachment: {
               url: publicUrl,
               contentDigest: encryptedAttachment.metadata.contentDigest,
@@ -85,16 +92,19 @@ export const ConversationComposerAddAttachmentButton = memo(
                 encryptedAttachment.metadata.filename || asset.uri.split("/").pop() || "attachment",
               contentLength: String(encryptedAttachment.metadata.contentLength) || "0",
               scheme: "https://",
+              status: "uploaded",
             },
           })
-
-          // Update status to uploaded
-          store.getState().updateMediaPreviewStatus(mediaURI, "uploaded")
         } catch (error) {
           // Update status to error
-          store.getState().updateMediaPreviewStatus(mediaURI, "error")
+          store.getState().updateComposerAttachment({
+            mediaURI: mediaPreview.mediaURI,
+            attachment: {
+              status: "error",
+            },
+          })
           // Remove media preview
-          store.getState().removeComposerMediaPreview(mediaURI)
+          store.getState().removeComposerAttachment(mediaPreview.mediaURI)
           captureErrorWithToast(
             new GenericError({ error, additionalMessage: "Failed to add attachment" }),
           )
@@ -114,8 +124,22 @@ export const ConversationComposerAddAttachmentButton = memo(
         // Process each asset
         await Promise.allSettled(convertToArray(assets).map(handleAttachmentSelected)).then(
           (results: PromiseSettledResult<void>[]) => {
-            const failedCount = results.filter((result) => result.status === "rejected").length
+            const failedResults = results.filter(
+              (result) => result.status === "rejected",
+            ) as PromiseRejectedResult[]
+            const failedCount = failedResults.length
+
             if (failedCount > 0) {
+              // Capture errors from failed results
+              failedResults.forEach((result) => {
+                captureError(
+                  new GenericError({
+                    error: result.reason,
+                    additionalMessage: "Failed to process attachment",
+                  }),
+                )
+              })
+
               showSnackbar({
                 message: `Failed to process ${failedCount} attachment${failedCount > 1 ? "s" : ""}`,
                 type: "error",
