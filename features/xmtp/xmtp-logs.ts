@@ -30,7 +30,7 @@ export function getXmtpLogs() {
 
 const LIBXMTP_LOG_LEVEL = LogLevel.DEBUG
 const LOG_ROTATION_POLICY = LogRotation.HOURLY
-const MAX_LOG_FILES = 10
+const MAX_LOG_FILES = 6
 
 export function startXmtpFileLogging() {
   Client.activatePersistentLibXMTPLogWriter(LIBXMTP_LOG_LEVEL, LOG_ROTATION_POLICY, MAX_LOG_FILES)
