@@ -124,9 +124,10 @@ function useShowDebugMenu({ setLogFilesModalVisible }: { setLogFilesModalVisible
               text: "Delete",
               style: "destructive",
               onPress: () => {
+                stopXmtpFileLogging()
                 clearXmtpLogFiles()
                 showSnackbar({
-                  message: "XMTP log files cleared successfully"
+                  message: "XMTP log files cleared. Logging paused, click Start File logging to restart."
                 })
               }
             }
