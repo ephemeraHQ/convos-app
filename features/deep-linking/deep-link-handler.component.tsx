@@ -1,26 +1,22 @@
-import { useCallback, useEffect } from "react"
+import { useEffect } from "react"
 import { Linking } from "react-native"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { useAppStateStore } from "@/stores/use-app-state-store"
 import { deepLinkLogger } from "@/utils/logger/logger"
-import { useConversationDeepLinkHandler } from "./conversation-navigator"
+import { navigateToConversation } from "./conversation-navigator"
 import { parseURL } from "./link-parser"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 
 type IDeepLinkPattern = {
   pattern: string
-  handler: (args: { 
-    params: Record<string, string | undefined>
-    handleConversationDeepLink: (args: { inboxId: IXmtpInboxId; composerTextPrefill?: string }) => Promise<void>
-  }) => Promise<void>
+  handler: (params: Record<string, string | undefined>) => Promise<void>
 }
 
 const deepLinkPatterns: IDeepLinkPattern[] = [
   {
     pattern: "dm/:inboxId",
-    handler: async ({ params, handleConversationDeepLink }) => {
+    handler: async (params) => {
       const inboxId = params.inboxId as IXmtpInboxId
-      await handleConversationDeepLink({ 
+      await navigateToConversation({ 
         inboxId, 
         composerTextPrefill: params.composerTextPrefill 
       })
@@ -42,16 +38,15 @@ const deepLinkPatterns: IDeepLinkPattern[] = [
   },
 ]
 
-/**
- * Process a URL by parsing it and routing to the appropriate handler
- */
-function processDeepLink(args: { 
-  url: string
-  handleConversationDeepLink: (args: { inboxId: IXmtpInboxId; composerTextPrefill?: string }) => Promise<void>
-}) {
-  const { url, handleConversationDeepLink } = args
-  deepLinkLogger.info(`Processing deep link URL: ${url}`)
+function processDeepLink(url: string) {
+  const { status: authStatus } = useAuthenticationStore.getState()
 
+  if (authStatus !== "signedIn") {
+    deepLinkLogger.info(`Skipping deep link processing - not authenticated (auth: ${authStatus})`)
+    return
+  }
+
+  deepLinkLogger.info(`Processing deep link URL: ${url}`)
   const { segments, params } = parseURL(url)
   deepLinkLogger.info(`Parsed segments: ${JSON.stringify(segments)}`)
   deepLinkLogger.info(`Parsed params: ${JSON.stringify(params)}`)
@@ -78,12 +73,10 @@ function processDeepLink(args: {
     if (matches) {
       deepLinkLogger.info(`Found matching pattern: ${pattern}`)
       deepLinkLogger.info(`Extracted params: ${JSON.stringify(extractedParams)}`)
-      handler({ 
-        params: { ...extractedParams, composerTextPrefill: params.composerTextPrefill }, 
-        handleConversationDeepLink 
-      }).catch((error) => {
-        deepLinkLogger.error(`Error handling deep link: ${error}`)
-      })
+      handler({ ...extractedParams, composerTextPrefill: params.composerTextPrefill })
+        .catch((error) => {
+          deepLinkLogger.error(`Error handling deep link: ${error}`)
+        })
       return
     }
   }
@@ -96,17 +89,7 @@ function processDeepLink(args: {
  * This should be included at the app root to handle incoming links
  */
 export function DeepLinkHandler() {
-  const { currentState } = useAppStateStore.getState()
-  const { handleConversationDeepLink } = useConversationDeepLinkHandler()
   const authStatus = useAuthenticationStore((state) => state.status)
-
-  const handleDeepLink = useCallback((url: string) => {
-    if (currentState === "active" && authStatus === "signedIn") {
-      processDeepLink({ url, handleConversationDeepLink })
-    } else {
-      deepLinkLogger.info(`Skipping deep link processing - app not ready (state: ${currentState}, auth: ${authStatus})`)
-    }
-  }, [currentState, authStatus, handleConversationDeepLink])
 
   useEffect(() => {
     // Handle initial URL when the app is first launched
@@ -114,7 +97,11 @@ export function DeepLinkHandler() {
       .then((url) => {
         if (url) {
           deepLinkLogger.info(`App launched from deep link: ${url}`)
-          handleDeepLink(url)
+          if (authStatus === "signedIn") {
+            processDeepLink(url)
+          } else {
+            deepLinkLogger.info(`Waiting for auth before processing deep link`)
+          }
         }
       })
       .catch((error) => {
@@ -124,11 +111,11 @@ export function DeepLinkHandler() {
     // Listen for URL events when the app is running
     const subscription = Linking.addEventListener("url", ({ url }) => {
       deepLinkLogger.info(`Received deep link while running: ${url}`)
-      handleDeepLink(url)
+      processDeepLink(url)
     })
 
     return () => subscription.remove()
-  }, [handleDeepLink])
+  }, [authStatus])
 
   return null
 }
