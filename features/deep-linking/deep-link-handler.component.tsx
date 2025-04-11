@@ -2,11 +2,13 @@ import { useEffect } from "react"
 import { Linking } from "react-native"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { deepLinkLogger } from "@/utils/logger/logger"
-import { navigateToConversation } from "./conversation-navigator"
 import { parseURL } from "./link-parser"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { navigate } from "@/navigation/navigation.utils"
+import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
+import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 
 type IDeepLinkPattern = {
   pattern: string
@@ -18,10 +20,68 @@ const deepLinkPatterns: IDeepLinkPattern[] = [
     pattern: "dm/:inboxId",
     handler: async (params) => {
       const inboxId = params.inboxId as IXmtpInboxId
-      await navigateToConversation({ 
-        inboxId, 
-        composerTextPrefill: params.composerTextPrefill 
-      })
+
+      deepLinkLogger.info(`Processing conversation for inboxId: ${inboxId}`)
+
+      if (!inboxId) {
+        throw new GenericError({
+          error: new Error("Missing inboxId"),
+          additionalMessage: "Cannot handle conversation deep link - missing inboxId",
+        })
+      }
+
+      try {
+        deepLinkLogger.info(
+          `Processing conversation for inboxId: ${inboxId}${
+            params.composerTextPrefill ? " with prefill text" : ""
+          }`,
+        )
+
+        const state = useMultiInboxStore.getState()
+        const activeInboxId = state.currentSender?.inboxId
+
+        deepLinkLogger.info(`Current active inboxId: ${activeInboxId}`)
+
+        if (!activeInboxId) {
+          throw new GenericError({
+            error: new Error("No active inbox"),
+            additionalMessage: "Cannot check conversation existence - no active inbox",
+          })
+        }
+
+        const conversation = await findConversationByInboxIds({
+          inboxIds: [inboxId],
+          clientInboxId: activeInboxId,
+        })
+
+        if (conversation) {
+          deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
+
+          await navigate("Conversation", {
+            xmtpConversationId: conversation.xmtpId,
+            isNew: false,
+            composerTextPrefill: params.composerTextPrefill,
+          })
+        } else {
+          deepLinkLogger.info(
+            `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
+          )
+
+          await navigate("Conversation", {
+            searchSelectedUserInboxIds: [inboxId],
+            isNew: true,
+            composerTextPrefill: params.composerTextPrefill,
+          })
+        }
+      } catch (error) {
+        captureError(
+          new GenericError({
+            error,
+            additionalMessage: `Failed to handle conversation deep link for inboxId: ${inboxId}`,
+            extra: { inboxId },
+          }),
+        )
+      }
     },
   },
   {
