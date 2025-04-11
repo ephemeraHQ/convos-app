@@ -3,7 +3,7 @@ import Constants from "expo-constants"
 import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Alert, Platform } from "react-native"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
@@ -17,7 +17,13 @@ import {
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
 import { useStreamingStore } from "@/features/streams/stream-store"
-import { clearXmtpLogs, getXmtpLogFile } from "@/features/xmtp/xmtp-logs"
+import {
+  clearXmtpLogFiles,
+  clearXmtpLogs,
+  getXmtpLogFile,
+  startXmtpFileLogging,
+  stopXmtpFileLogging,
+} from "@/features/xmtp/xmtp-logs"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { $globalStyles } from "@/theme/styles"
@@ -28,13 +34,18 @@ import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { ObjectTyped } from "@/utils/object-typed"
 import { shareContent } from "@/utils/share"
 import { showActionSheet } from "./action-sheet"
+import { XmtpLogFilesModal } from "./xmtp-log-files-modal"
 
 export function DebugProvider(props: { children: React.ReactNode }) {
   const { children } = props
 
   const tapCountRef = useRef(0)
   const tapTimeoutRef = useRef<NodeJS.Timeout>()
-  const showDebugMenu = useShowDebugMenu()
+  const [logFilesModalVisible, setLogFilesModalVisible] = useState(false)
+
+  const showDebugMenu = useShowDebugMenu({
+    setLogFilesModalVisible,
+  })
 
   const handleTouchStart = useCallback(() => {
     // Increment tap count
@@ -69,13 +80,20 @@ export function DebugProvider(props: { children: React.ReactNode }) {
   return (
     <VStack onTouchStart={handleTouchStart} style={$globalStyles.flex1}>
       {children}
+      <XmtpLogFilesModal
+        visible={logFilesModalVisible}
+        onClose={() => setLogFilesModalVisible(false)}
+      />
     </VStack>
   )
 }
 
-function useShowDebugMenu() {
+function useShowDebugMenu({
+  setLogFilesModalVisible,
+}: {
+  setLogFilesModalVisible: (visible: boolean) => void
+}) {
   const { logout } = useLogout()
-
   const { currentlyRunning } = Updates.useUpdates()
 
   const showLogsMenu = useCallback(() => {
@@ -94,6 +112,46 @@ function useShowDebugMenu() {
         navigate("WebviewPreview", { uri: LOG_FILE_PATH }).catch(captureError)
       },
       "-": () => Promise.resolve(), // Separator
+      "Start Libxmtp File Logging": async () => {
+        startXmtpFileLogging()
+        showSnackbar({
+          message: "XMTP log files started",
+        })
+      },
+      "Stop Libxmtp File Logging": async () => {
+        stopXmtpFileLogging()
+        showSnackbar({
+          message: "XMTP log files stopped",
+        })
+      },
+      "View Libxmtp File Logs": async () => {
+        setLogFilesModalVisible(true)
+      },
+      "Clear Libxmtp File Logs": async () => {
+        Alert.alert(
+          "Confirm Delete",
+          "Are you sure you want to delete all XMTP log files stored on this device?",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => {
+                stopXmtpFileLogging()
+                clearXmtpLogFiles()
+                showSnackbar({
+                  message:
+                    "XMTP log files cleared. Logging paused, click Start File logging to restart.",
+                })
+              },
+            },
+          ],
+        )
+      },
+      "--": () => Promise.resolve(), // Separator
       "Clear XMTP logs": async () => {
         try {
           await clearXmtpLogs()
@@ -148,7 +206,7 @@ function useShowDebugMenu() {
         }
       },
     })
-  }, [])
+  }, [setLogFilesModalVisible])
 
   const showNotificationsMenu = useCallback(() => {
     const notificationsMethods = {

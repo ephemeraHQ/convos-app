@@ -1,4 +1,5 @@
 import { Client } from "@xmtp/react-native-sdk"
+import { LogLevel, LogRotation } from "@xmtp/react-native-sdk/build/lib/types"
 import * as RNFS from "react-native-fs"
 
 // import { v4 as uuidv4 } from "uuid"
@@ -25,6 +26,30 @@ export async function getXmtpLogFile() {
 
 export function getXmtpLogs() {
   return Client.exportNativeLogs() as Promise<string>
+}
+
+const LIBXMTP_LOG_LEVEL = LogLevel.DEBUG
+const LOG_ROTATION_POLICY = LogRotation.HOURLY
+const MAX_LOG_FILES = 6
+
+export function startXmtpFileLogging() {
+  Client.activatePersistentLibXMTPLogWriter(LIBXMTP_LOG_LEVEL, LOG_ROTATION_POLICY, MAX_LOG_FILES)
+}
+
+export function stopXmtpFileLogging() {
+  Client.deactivatePersistentLibXMTPLogWriter()
+}
+
+export function getXmtpFilePaths(): string[] {
+  return Client.getXMTPLogFilePaths() as string[]
+}
+
+export function clearXmtpLogFiles() {
+  Client.clearXMTPLogs()
+}
+
+export function isXmtpFileLoggingActive() {
+  return Client.isLogWriterActive()
 }
 
 // const LOGGING_INTERVAL_MS = 5000
