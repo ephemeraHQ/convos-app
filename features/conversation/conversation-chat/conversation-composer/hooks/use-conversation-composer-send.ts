@@ -25,6 +25,7 @@ function waitForMediaUploads(composerAttachments: IComposerAttachment[]) {
   return waitUntilPromise({
     checkFn: () =>
       composerAttachments.every((attachment) => !attachment || attachment.status === "uploaded"),
+    errorMessage: "Uploading media took too long, please try again",
   })
 }
 

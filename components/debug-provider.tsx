@@ -32,6 +32,8 @@ import { GenericError } from "@/utils/error"
 import { getEnv } from "@/utils/getEnv"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { ObjectTyped } from "@/utils/object-typed"
+import { reactQueryMMKV } from "@/utils/react-query/react-query-persister"
+import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
 import { showActionSheet } from "./action-sheet"
 import { XmtpLogFilesModal } from "./xmtp-log-files-modal"
@@ -484,6 +486,24 @@ function useShowDebugMenu({
           })
         } catch (error) {
           alert(error)
+        }
+      },
+      "Clear React Query cache": () => {
+        try {
+          // Clear both in-memory cache and persisted data
+          reactQueryClient.getQueryCache().clear()
+          reactQueryClient.clear()
+          reactQueryClient.removeQueries()
+          reactQueryMMKV.clearAll()
+
+          showSnackbar({
+            message: "React Query cache completely cleared",
+          })
+        } catch (error) {
+          captureError(
+            new GenericError({ error, additionalMessage: "Error clearing React Query cache" }),
+          )
+          alert("Error clearing React Query cache")
         }
       },
       "Clear expo image cache": async () => {

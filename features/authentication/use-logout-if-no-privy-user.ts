@@ -17,7 +17,7 @@ export function useSignoutIfNoPrivyUser() {
       if (currentSender) {
         captureError(
           new AuthenticationError({
-            error: new Error("Privy user is not set but current sender was set"),
+            error: new Error("Privy is ready but we can't find Privy user, so signing out"),
           }),
         )
       }

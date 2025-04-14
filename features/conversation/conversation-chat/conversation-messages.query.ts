@@ -166,7 +166,7 @@ export function getConversationMessagesInfiniteQueryOptions(
       return conversationMessagesInfiniteQueryFn({
         clientInboxId,
         xmtpConversationId,
-        pageParam: pageParam as IInfiniteMessagesPageParam,
+        pageParam: pageParam,
       })
     },
     initialPageParam: {

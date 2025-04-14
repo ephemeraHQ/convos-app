@@ -97,6 +97,10 @@ export function convertNanosecondsToMilliseconds(nanoseconds: number) {
   return Math.floor(nanoseconds / 1_000_000)
 }
 
+export function convertMillisecondsToNanoseconds(milliseconds: number) {
+  return milliseconds * 1_000_000
+}
+
 export function isToday(timestamp: number) {
   return _isToday(new Date(timestamp))
 }

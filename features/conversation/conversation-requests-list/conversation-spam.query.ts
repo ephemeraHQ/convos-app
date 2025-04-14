@@ -40,8 +40,9 @@ export function getConversationSpamQueryOptions(args: IArgs) {
       })
       const firstMessageId = messageQueryData.pages[0]?.messageIds[0]
 
+      // For now to make it easier, no last message isn't spam
       if (!firstMessageId) {
-        return true
+        return false
       }
 
       const lastMessage = await ensureConversationMessageQueryData({
@@ -50,8 +51,11 @@ export function getConversationSpamQueryOptions(args: IArgs) {
         caller: "getConversationSpamQueryOptions",
       })
 
+      console.log("lastMessage:", lastMessage)
+
+      // For now to make it easier, no last message isn't spam
       if (!lastMessage) {
-        return true
+        return false
       }
 
       const messageText = await ensureMessageContentStringValue(lastMessage)
@@ -63,6 +67,8 @@ export function getConversationSpamQueryOptions(args: IArgs) {
       const spamScore = await getMessageSpamScore({
         message: lastMessage,
       })
+
+      console.log("spamScore:", spamScore)
 
       const isSpam = spamScore !== 0
 

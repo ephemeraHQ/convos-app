@@ -7,8 +7,14 @@ export function waitUntilPromise<T>(args: {
   checkFn: () => T | Promise<T>
   intervalMs?: number
   timeoutMs?: number
+  errorMessage?: string
 }): Promise<T> {
-  const { checkFn, intervalMs = 100, timeoutMs = 10000 } = args
+  const {
+    checkFn,
+    intervalMs = 100,
+    timeoutMs = 10000,
+    errorMessage = "Promise timed out, please try again",
+  } = args
 
   return new Promise((resolve, reject) => {
     const startTime = Date.now()
@@ -26,7 +32,7 @@ export function waitUntilPromise<T>(args: {
           if (timeoutId) {
             clearTimeout(timeoutId)
           }
-          reject(new Error("Promise timed out, please try again"))
+          reject(new Error(errorMessage))
         } else {
           timeoutId = setTimeout(check, intervalMs)
         }

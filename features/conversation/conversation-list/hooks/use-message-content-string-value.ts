@@ -161,7 +161,7 @@ export function getMessageContentStringValue(args: {
   }
 
   if (messageContentIsMultiRemoteAttachment(messageContent)) {
-    return `${initiatorDisplayName} sent an attachment`
+    return `${initiatorDisplayName} sent many attachments`
   }
 
   if (messageContentIsReply(messageContent)) {

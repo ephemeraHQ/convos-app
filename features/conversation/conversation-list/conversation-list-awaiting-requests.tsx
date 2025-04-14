@@ -67,7 +67,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
       const queryOptions = getConversationMessagesInfiniteQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
-        caller: "useConversationListConversations",
+        caller: "ConversationListAwaitingRequests",
       })
 
       return {
@@ -84,7 +84,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
       ...getConversationMessageQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpMessageId: query.data as IXmtpMessageId | undefined,
-        caller: "useConversationListConversations",
+        caller: "ConversationListAwaitingRequests",
       }),
     })),
   })
