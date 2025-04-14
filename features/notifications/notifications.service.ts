@@ -19,9 +19,8 @@ import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/us
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
-import { IXmtpConversationTopic, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { getCurrentRoute } from "@/navigation/navigation.utils"
-import { convertMillisecondsToNanoseconds } from "@/utils/date"
 import { NotificationError, UserCancelledError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { ensureMessageContentStringValue } from "../conversation/conversation-list/hooks/use-message-content-string-value"
@@ -190,39 +189,10 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
 }) {
   const TIMEOUT_MS = 45000 // 45 seconds
 
-  const displayFallbackNotification = async () => {
-    notificationsLogger.debug("Displaying fallback notification due to timeout...")
-    const now = Date.now()
-    await displayLocalNotification({
-      content: {
-        title: "New Message",
-        body: "You received a new message",
-        data: {
-          message: {
-            type: "text",
-            status: "sent",
-            senderInboxId: "fallback" as IXmtpInboxId,
-            sentNs: convertMillisecondsToNanoseconds(now),
-            sentMs: now,
-            xmtpId: "fallback" as IXmtpMessageId,
-            xmtpTopic: args.topic,
-            xmtpConversationId: getXmtpConversationIdFromXmtpTopic(args.topic),
-            content: {
-              text: "New message",
-            },
-          },
-          isProcessedByConvo: true,
-        } satisfies INotificationMessageDataConverted,
-      },
-      trigger: null,
-    })
-    notificationsLogger.debug("Fallback notification displayed")
-  }
-
   try {
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
-        reject(new Error("Notification processing timed out after 30 seconds"))
+        reject(new Error("Notification processing timed out after 45 seconds"))
       }, TIMEOUT_MS)
     })
 
@@ -316,9 +286,6 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
 
     await Promise.race([processNotificationPromise, timeoutPromise])
   } catch (error) {
-    // If it was a timeout or any other error, show the fallback notification
-    await displayFallbackNotification()
-
     throw new NotificationError({
       error,
       additionalMessage: "Failed to display fallback notification",

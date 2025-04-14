@@ -38,7 +38,6 @@ import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { convertNanosecondsToMilliseconds } from "@/utils/date"
-import { GenericError } from "@/utils/error"
 import { logger } from "@/utils/logger/logger"
 import {
   useConversationStore,
@@ -334,7 +333,6 @@ const ConversationMessagesListItem = memo(
     })
 
     if (!message) {
-      captureError(new GenericError({ error: "Message not found, this shouldn't happen" }))
       return null
     }
 
