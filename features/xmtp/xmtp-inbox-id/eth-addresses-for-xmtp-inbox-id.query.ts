@@ -4,7 +4,6 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { create, windowScheduler } from "@yornaath/batshit"
-import { IEthereumAddress } from "@/utils/evm/address"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { getEthAddressesFromInboxIds } from "./eth-addresses-from-xmtp-inbox-id"
@@ -64,17 +63,10 @@ function createBatcher(clientInboxId: IXmtpInboxId) {
   return create({
     name: `eth-addresses-for-xmtp-inbox-id-${clientInboxId}`,
     fetcher: async (inboxIds: IXmtpInboxId[]) => {
-      const result = await getEthAddressesFromInboxIds({
+      return await getEthAddressesFromInboxIds({
         clientInboxId,
         inboxIds,
       })
-      return inboxIds.reduce(
-        (acc, inboxId) => {
-          acc[inboxId] = result
-          return acc
-        },
-        {} as Record<IXmtpInboxId, IEthereumAddress[]>,
-      )
     },
     scheduler: windowScheduler(100),
     resolver: (addressesByInboxId, inboxId) => {

@@ -1,7 +1,6 @@
 import { ensureEthAddressesForXmtpInboxIdQueryData } from "@features/xmtp/xmtp-inbox-id/eth-addresses-for-xmtp-inbox-id.query"
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, useQuery } from "@tanstack/react-query"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ensureSocialProfilesForAddressesQuery } from "@/features/social-profiles/social-profiles.query"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
@@ -50,19 +49,7 @@ export function getSocialProfilesForInboxIdQueryOptions(args: IArgs) {
 }
 
 export function useSocialProfilesForInboxIdQuery(args: IArgs) {
-  const { inboxId, caller } = args
-  const currentSender = useSafeCurrentSender()
-
-  const queryOptions = getSocialProfilesForInboxIdQueryOptions({
-    inboxId,
-    clientInboxId: currentSender.inboxId,
-    caller,
-  })
-
-  return useQuery({
-    ...queryOptions,
-    enabled: Boolean(inboxId) && Boolean(currentSender?.inboxId),
-  })
+  return useQuery(getSocialProfilesForInboxIdQueryOptions(args))
 }
 
 export async function ensureSocialProfilesForInboxIdQueryData(args: IArgs) {
