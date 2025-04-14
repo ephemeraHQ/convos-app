@@ -11,8 +11,7 @@ import Animated, {
   runOnJS,
   withSpring,
   interpolate,
-  Extrapolate,
-  useAnimatedGestureHandler,
+  withDecay,
 } from 'react-native-reanimated'
 import {
   Gesture,
@@ -23,8 +22,8 @@ import {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 // Constants for animations
-const MAX_SCALE = 5
-const MIN_SCALE_THRESHOLD = 0.7
+const MAX_SCALE = 4
+const MIN_SCALE_THRESHOLD = 0.2
 const SPRING_CONFIG = {
   damping: 15,
   mass: 1,
@@ -87,46 +86,6 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     })
   }
 
-  // Double tap gesture for quick zoom in/out
-  const doubleTapGesture = Gesture.Tap()
-    .numberOfTaps(2)
-    .maxDuration(250)
-    .onStart((event) => {
-      'worklet';
-      if (scale.value !== 1) {
-        // Reset to original position and scale
-        scale.value = withSpring(1, SPRING_CONFIG)
-        translateX.value = withSpring(0, SPRING_CONFIG)
-        translateY.value = withSpring(0, SPRING_CONFIG)
-        savedScale.value = 1
-        savedTranslateX.value = 0
-        savedTranslateY.value = 0
-      } else {
-        // Zoom in to 3x centered on the tap point
-        scale.value = withSpring(3, SPRING_CONFIG)
-        savedScale.value = 3
-        
-        // Calculate the focal point offset from center
-        const focalX = event.x - SCREEN_WIDTH / 2
-        const focalY = event.y - SCREEN_HEIGHT / 2
-        
-        // Adjust the translation to zoom into the tapped point
-        translateX.value = withSpring(-focalX, SPRING_CONFIG)
-        translateY.value = withSpring(-focalY, SPRING_CONFIG)
-        savedTranslateX.value = -focalX
-        savedTranslateY.value = -focalY
-      }
-    })
-
-  // Single tap gesture to close the viewer
-  const singleTapGesture = Gesture.Tap()
-    .numberOfTaps(1)
-    .maxDuration(250)
-    .onStart(() => {
-      runOnJS(handleClose)()
-    })
-    .requireExternalGestureToFail(doubleTapGesture)
-
   // Pinch gesture for zooming with focal point - defined without refs to improve performance
   const pinchGesture = Gesture.Pinch()
     .onStart(() => {
@@ -146,17 +105,36 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
         const pinchCenterY = event.focalY - SCREEN_HEIGHT / 2
         
         // More responsive translation calculation
-        translateX.value = savedTranslateX.value + pinchCenterX * (1 - event.scale)
-        translateY.value = savedTranslateY.value + pinchCenterY * (1 - event.scale)
+        let newTranslateX = savedTranslateX.value + pinchCenterX * (1 - event.scale)
+        let newTranslateY = savedTranslateY.value + pinchCenterY * (1 - event.scale)
+        
+        // Enforce boundaries with elasticity during pinch
+        const maxTranslateX = (newScale - 1) * SCREEN_WIDTH / 2
+        const maxTranslateY = (newScale - 1) * SCREEN_HEIGHT / 2
+        
+        // Apply elastic behavior at the edges
+        if (newTranslateX < -maxTranslateX) {
+          const overscroll = -maxTranslateX - newTranslateX
+          newTranslateX = -maxTranslateX - overscroll / 3
+        } else if (newTranslateX > maxTranslateX) {
+          const overscroll = newTranslateX - maxTranslateX
+          newTranslateX = maxTranslateX + overscroll / 3
+        }
+        
+        if (newTranslateY < -maxTranslateY) {
+          const overscroll = -maxTranslateY - newTranslateY
+          newTranslateY = -maxTranslateY - overscroll / 3
+        } else if (newTranslateY > maxTranslateY) {
+          const overscroll = newTranslateY - maxTranslateY
+          newTranslateY = maxTranslateY + overscroll / 3
+        }
+        
+        translateX.value = newTranslateX
+        translateY.value = newTranslateY
       }
     })
     .onEnd(() => {
       'worklet';
-      // Update saved values
-      savedScale.value = scale.value
-      savedTranslateX.value = translateX.value
-      savedTranslateY.value = translateY.value
-      
       // If below threshold, close the modal
       if (scale.value < MIN_SCALE_THRESHOLD) {
         runOnJS(handleClose)()
@@ -171,6 +149,46 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
         translateY.value = withSpring(0, SPRING_CONFIG)
         savedTranslateX.value = 0
         savedTranslateY.value = 0
+      } else if (scale.value > 1) {
+        // When zoomed in, check boundaries and snap to edges if needed
+        const maxTranslateX = (scale.value - 1) * SCREEN_WIDTH / 2
+        const maxTranslateY = (scale.value - 1) * SCREEN_HEIGHT / 2
+        
+        let targetX = translateX.value
+        let targetY = translateY.value
+        
+        // Check X bounds and adjust if needed
+        if (translateX.value < -maxTranslateX) {
+          targetX = -maxTranslateX
+        } else if (translateX.value > maxTranslateX) {
+          targetX = maxTranslateX
+        }
+        
+        // Check Y bounds and adjust if needed
+        if (translateY.value < -maxTranslateY) {
+          targetY = -maxTranslateY
+        } else if (translateY.value > maxTranslateY) {
+          targetY = maxTranslateY
+        }
+        
+        // Apply spring animation to snap to edges if needed
+        if (targetX !== translateX.value) {
+          translateX.value = withSpring(targetX, SPRING_CONFIG)
+        }
+        
+        if (targetY !== translateY.value) {
+          translateY.value = withSpring(targetY, SPRING_CONFIG)
+        }
+        
+        // Update saved values
+        savedScale.value = scale.value
+        savedTranslateX.value = targetX
+        savedTranslateY.value = targetY
+      } else {
+        // Just update saved values at normal scale
+        savedScale.value = scale.value
+        savedTranslateX.value = translateX.value
+        savedTranslateY.value = translateY.value
       }
     })
 
@@ -232,8 +250,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
         backgroundOpacity.value = interpolate(
           dragDistance,
           [0, DISMISS_THRESHOLD],
-          [1, 0.3],
-          Extrapolate.CLAMP
+          [1, 0.3]
         )
         
         // Allow very minimal horizontal movement, basically none
@@ -265,19 +282,69 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
           savedTranslateY.value = 0
         }
       } else {
-        // Save current position when zoomed in
-        savedTranslateX.value = translateX.value
-        savedTranslateY.value = translateY.value
+        // When zoomed in, apply deceleration with bounds checking
+        const maxTranslateX = (scale.value - 1) * SCREEN_WIDTH / 2
+        const maxTranslateY = (scale.value - 1) * SCREEN_HEIGHT / 2
+        
+        // First, check if we're already out of bounds
+        if (translateX.value < -maxTranslateX || translateX.value > maxTranslateX ||
+            translateY.value < -maxTranslateY || translateY.value > maxTranslateY) {
+          // If out of bounds, just snap to edges with spring
+          let targetX = translateX.value
+          let targetY = translateY.value
+          
+          if (translateX.value < -maxTranslateX) {
+            targetX = -maxTranslateX
+          } else if (translateX.value > maxTranslateX) {
+            targetX = maxTranslateX
+          }
+          
+          if (translateY.value < -maxTranslateY) {
+            targetY = -maxTranslateY
+          } else if (translateY.value > maxTranslateY) {
+            targetY = maxTranslateY
+          }
+          
+          translateX.value = withSpring(targetX, SPRING_CONFIG)
+          translateY.value = withSpring(targetY, SPRING_CONFIG)
+          savedTranslateX.value = targetX
+          savedTranslateY.value = targetY
+        } else {
+          // Otherwise, apply deceleration with momentum
+          // X-axis with deceleration
+          translateX.value = withDecay({
+            velocity: event.velocityX,
+            deceleration: 0.992, // Higher value = less friction
+            clamp: [-maxTranslateX, maxTranslateX], // Boundary constraints
+            onFinish: (finished) => {
+              'worklet';
+              if (finished) {
+                savedTranslateX.value = translateX.value
+              }
+            },
+          })
+          
+          // Y-axis with deceleration
+          translateY.value = withDecay({
+            velocity: event.velocityY,
+            deceleration: 0.992,
+            clamp: [-maxTranslateY, maxTranslateY],
+            onFinish: (finished) => {
+              'worklet';
+              if (finished) {
+                savedTranslateY.value = translateY.value
+              }
+            },
+          })
+        }
       }
     })
 
   // Combined gestures - optimize for immediate response
   const combinedGestures = Gesture.Exclusive(
-    doubleTapGesture,
     Gesture.Simultaneous(
       pinchGesture,
       panGesture,
-      singleTapGesture
     )
   )
 
