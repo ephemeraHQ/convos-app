@@ -11,7 +11,7 @@ import Animated, {
   runOnJS,
   withSpring,
   interpolate,
-  withDecay,
+  Easing,
 } from 'react-native-reanimated'
 import {
   Gesture,
@@ -31,6 +31,7 @@ const SPRING_CONFIG = {
   overshootClamping: false,
 }
 const DISMISS_THRESHOLD = 120 // Distance to dismiss in pixels
+const TRANSITION_DURATION = 200
 
 export type IMediaViewerProps = {
   visible: boolean
@@ -39,10 +40,17 @@ export type IMediaViewerProps = {
   sender?: string
   timestamp?: string
   formatTimestamp?: (timestamp: string) => string
+  // Source position for transition animation
+  sourcePosition?: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
 }
 
 export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
-  const { visible, onClose, uri, sender, timestamp, formatTimestamp } = props
+  const { visible, onClose, uri, sender, timestamp, formatTimestamp, sourcePosition } = props
   
   const { theme, themed } = useAppTheme()
 
@@ -55,32 +63,61 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
   const translateY = useSharedValue(0)
   const savedTranslateX = useSharedValue(0)
   const savedTranslateY = useSharedValue(0)
-  const backgroundOpacity = useSharedValue(1)
+  const backgroundOpacity = useSharedValue(0) // Start transparent
+  
+  // Transition animation values
+  const transitionProgress = useSharedValue(0)
+  const isAnimatingTransition = useSharedValue(false)
   
   // Reset animation values when opening the viewer
   const resetAnimationValues = useCallback(() => {
+    // Reset all animation values to their initial state
     scale.value = 1
     savedScale.value = 1
     translateX.value = 0
     translateY.value = 0
     savedTranslateX.value = 0
     savedTranslateY.value = 0
-    backgroundOpacity.value = 1
-  }, [scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY, backgroundOpacity])
+    backgroundOpacity.value = 0 // Start transparent
+    transitionProgress.value = 0
+    isAnimatingTransition.value = true
+  }, [scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY, backgroundOpacity, transitionProgress, isAnimatingTransition])
 
   useEffect(() => {
     if (visible) {
       setModalVisible(true)
       resetAnimationValues()
+      
+      // Animate transition from bubble to fullscreen
+      transitionProgress.value = withTiming(1, {
+        duration: 300,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      }, () => {
+        isAnimatingTransition.value = false;
+      })
+      
+      // Fade in the background
+      backgroundOpacity.value = withTiming(1, { duration: 300 })
     }
-  }, [visible, resetAnimationValues])
+  }, [visible, resetAnimationValues, backgroundOpacity, transitionProgress, isAnimatingTransition])
 
   // Handle closing the modal with animation
   const handleClose = () => {
-    scale.value = withTiming(1, { duration: 150 })
-    translateX.value = withTiming(0, { duration: 150 })
-    translateY.value = withTiming(0, { duration: 150 })
-    backgroundOpacity.value = withTiming(0, { duration: 250 }, () => {
+    isAnimatingTransition.value = true;
+    
+    // Reset any zoom first
+    scale.value = withTiming(1, { duration: TRANSITION_DURATION })
+    translateX.value = withTiming(0, { duration: TRANSITION_DURATION })
+    translateY.value = withTiming(0, { duration: TRANSITION_DURATION })
+    
+    // Animate back to source position
+    transitionProgress.value = withTiming(0, {
+      duration: 300,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1), 
+    })
+    
+    // Fade out the background
+    backgroundOpacity.value = withTiming(0, { duration: TRANSITION_DURATION }, () => {
       runOnJS(setModalVisible)(false)
       runOnJS(onClose)()
     })
@@ -271,8 +308,8 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
         if (shouldDismiss) {
           // Dismiss in the direction of movement
           const direction = translateY.value > 0 ? 1 : -1
-          translateY.value = withTiming(direction * SCREEN_HEIGHT, { duration: 200 })
-          backgroundOpacity.value = withTiming(0, { duration: 200 }, () => {
+          translateY.value = withTiming(direction * SCREEN_HEIGHT, { duration: TRANSITION_DURATION })
+          backgroundOpacity.value = withTiming(0, { duration: TRANSITION_DURATION }, () => {
             runOnJS(setModalVisible)(false)
             runOnJS(onClose)()
           })
@@ -336,7 +373,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       }
     })
 
-  // Combined gestures
+  // Combined gestures - don't allow gestures during transition
   const combinedGestures = Gesture.Race(
     doubleTapGesture,
     Gesture.Simultaneous(
@@ -345,28 +382,119 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     )
   )
 
-  // Animated styles for the image
-  const animatedImageStyles = useAnimatedStyle(() => {
+  // Gesture state based on transition
+  const gestureEnabled = useAnimatedStyle(() => {
     return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { scale: scale.value }
-      ]
+      pointerEvents: isAnimatingTransition.value ? 'none' : 'auto',
+    };
+  });
+
+  // Image container transition animation
+  const containerTransitionStyle = useAnimatedStyle(() => {
+    if (!sourcePosition) return {};
+    
+    // Start values (from bubble)
+    const startX = sourcePosition.x - sourcePosition.width / 2;
+    const startY = sourcePosition.y - sourcePosition.height / 2;
+    const startWidth = sourcePosition.width;
+    const startHeight = sourcePosition.height;
+    
+    // End values (fullscreen)
+    const endX = 0;
+    const endY = 0;
+    const endWidth = SCREEN_WIDTH;
+    const endHeight = SCREEN_HEIGHT;
+    
+    // Interpolate all values based on progress
+    const x = interpolate(
+      transitionProgress.value,
+      [0, 1],
+      [startX, endX]
+    );
+    
+    const y = interpolate(
+      transitionProgress.value,
+      [0, 1],
+      [startY, endY]
+    );
+    
+    const width = interpolate(
+      transitionProgress.value,
+      [0, 1],
+      [startWidth, endWidth]
+    );
+    
+    const height = interpolate(
+      transitionProgress.value,
+      [0, 1],
+      [startHeight, endHeight]
+    );
+    
+    return {
+      position: 'absolute',
+      left: x,
+      top: y,
+      width: width,
+      height: height,
+    };
+  });
+
+  // Image scale during transition
+  const imageTransitionStyle = useAnimatedStyle(() => {
+    if (isAnimatingTransition.value && !sourcePosition) {
+      // If no source position, use simple scale animation
+      return {
+        opacity: transitionProgress.value,
+        transform: [
+          { scale: interpolate(transitionProgress.value, [0, 1], [0.5, 1]) }
+        ]
+      };
     }
-  })
-  
-  // Animated styles for background opacity - ensure black background is visible
+    
+    // Normal image transforms for pinch/zoom when not transitioning
+    if (!isAnimatingTransition.value) {
+      return {
+        transform: [
+          { translateX: translateX.value },
+          { translateY: translateY.value },
+          { scale: scale.value }
+        ]
+      };
+    }
+    
+    return {};
+  });
+
+  // Animated styles for background opacity
   const animatedBackgroundStyles = useAnimatedStyle(() => {
+    const opacity = backgroundOpacity.value * 0.9;
     return {
-      backgroundColor: `rgba(0, 0, 0, ${Math.max(0.9, backgroundOpacity.value * 0.9)})`,
-    }
-  })
+      backgroundColor: `rgba(0, 0, 0, ${Math.max(0, opacity)})`,
+    };
+  });
 
   // Pre-calculate the info container animated style to avoid conditional hook calls
   const infoContainerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: backgroundOpacity.value
   }))
+
+  // Fix animated view styling
+  const animatedImageStyle: ViewStyle = {
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+  }
+
+  // Update closeButton opacity
+  const closeButtonAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: backgroundOpacity.value
+  }))
+
+  // Convert themed styles to ensure they're ViewStyle not ImageStyle
+  // TODO Rework this
+  const closeButtonStyle = useMemo(() => themed($closeButton), [themed])
+  
+const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
 
   return (
     <Modal
@@ -379,28 +507,37 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Animated.View style={[themed($container), animatedBackgroundStyles]}>
-          <GestureDetector gesture={combinedGestures}>
-            <Animated.View style={[$imageContainer, animatedImageStyles]}>
-              <Image
-                source={{ uri }}
-                style={$image}
-                contentFit="contain"
-                transition={0}
-                cachePolicy="memory-disk"
-              />
+          {/* Container with position transition */}
+          <Animated.View style={sourcePosition ? containerTransitionStyle : $imageContainer}>
+            {/* Gesture handling container */}
+            <Animated.View style={[animatedImageStyle, gestureEnabled]}>
+              <GestureDetector gesture={combinedGestures}>
+                {/* Image with scale/transform animations */}
+                <Animated.View style={imageTransitionStyle}>
+                  <Image
+                    source={{ uri }}
+                    style={$image}
+                    contentFit="contain"
+                    transition={0}
+                    cachePolicy="memory-disk"
+                    recyclingKey={uri}
+                  />
+                </Animated.View>
+              </GestureDetector>
             </Animated.View>
-          </GestureDetector>
+          </Animated.View>
           
-          <TouchableOpacity
-            style={themed($closeButton)}
-            onPress={handleClose}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          >
-            <Icon icon="xmark" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
+          <Animated.View style={[closeButtonStyle, closeButtonAnimatedStyle]}>
+            <TouchableOpacity
+              onPress={handleClose}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            >
+              <Icon icon="xmark" size={24} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+          </Animated.View>
           
           {(sender || timestamp) && (
-            <Animated.View style={[themed($infoContainer), infoContainerAnimatedStyle]}>
+            <Animated.View style={[infoContainerStyle, infoContainerAnimatedStyle]}>
               {sender && (
                 <Text preset="body" weight="bold" color="primary">
                   {sender}
@@ -424,7 +561,7 @@ const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
   flex: 1,
   justifyContent: 'center',
   alignItems: 'center',
-  backgroundColor: 'rgba(0, 0, 0, 0.9)',
+  backgroundColor: 'transparent', // Start transparent for smooth fade in
 })
 
 const $imageContainer: ViewStyle = {
@@ -434,6 +571,7 @@ const $imageContainer: ViewStyle = {
   alignItems: 'center',
 }
 
+// Separate image style
 const $image: ImageStyle = {
   width: '100%',
   height: '100%',

@@ -1,5 +1,5 @@
-import React, { memo } from 'react'
-import { MediaViewerPortal } from './use-media-viewer'
+import React, { memo, useState, useEffect } from 'react'
+import { MediaViewer } from './conversation-media-viewer'
 
 // Global event-based media viewer handler
 type MediaViewerParams = {
@@ -27,10 +27,42 @@ export const mediaViewerManager = {
 }
 
 /**
+ * MediaViewerPortal component
+ * 
+ * This component listens for global media viewer events and displays the MediaViewer
+ */
+const MediaViewerPortal = memo(function MediaViewerPortal() {
+  const [visible, setVisible] = useState(false)
+  const [mediaParams, setMediaParams] = useState<MediaViewerParams | null>(null)
+  
+  useEffect(() => {
+    // Register for media viewer events
+    const unregister = mediaViewerManager.registerCallback((params) => {
+      setMediaParams(params)
+      setVisible(true)
+    })
+    
+    // Clean up event handler on unmount
+    return unregister
+  }, [])
+  
+  if (!mediaParams) return null
+  
+  return (
+    <MediaViewer
+      visible={visible}
+      onClose={() => setVisible(false)}
+      uri={mediaParams.uri}
+      sender={mediaParams.sender}
+      timestamp={mediaParams.timestamp?.toString()}
+    />
+  )
+})
+
+/**
  * MediaViewerHost component
  * 
  * Add this component to your app once at the navigator level or screen where you want to use the media viewer
- * For example, add it to the ConversationScreen component
  */
 export const MediaViewerHost = memo(function MediaViewerHost() {
   return <MediaViewerPortal />
