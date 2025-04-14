@@ -3,17 +3,6 @@ import { format } from "date-fns"
 import { MediaViewer } from "./conversation-media-viewer"
 import { mediaViewerManager } from "./global-media-viewer"
 
-// Singleton state for the MediaViewer
-let isMediaViewerVisible = false
-let mediaViewerUri = ""
-let mediaViewerSender = ""
-let mediaViewerTimestamp = ""
-let formatTimestampFn: (timestamp: number) => string = 
-  (timestamp: number) => format(new Date(timestamp), "MMM d, yyyy h:mm a")
-
-// Callback references for the MediaViewer
-let closeMediaViewerCallback: (() => void) | null = null
-
 type IUseMediaViewerOptions = {
   formatTimestamp?: (timestamp: number) => string
 }
@@ -25,7 +14,7 @@ export function MediaViewerPortal() {
   const [sender, setSender] = useState("")
   const [timestamp, setTimestamp] = useState("")
   
-const formatTimestampFn = useCallback(
+  const formatTimestampFn = useCallback(
     (ts: number) => format(new Date(ts), "MMM d, yyyy h:mm a"),
     []
   )
@@ -38,6 +27,7 @@ const formatTimestampFn = useCallback(
       sender?: string
       timestamp?: number
     }) => {
+      console.log("MediaViewerPortal received event:", params.uri)
       setUri(params.uri)
       setSender(params.sender || "")
       
@@ -63,8 +53,8 @@ const formatTimestampFn = useCallback(
 
   return (
     <MediaViewer
-      imageUri={uri}
-      isVisible={isVisible}
+      uri={uri}
+      visible={isVisible}
       onClose={handleClose}
       sender={sender}
       timestamp={timestamp}
@@ -76,6 +66,7 @@ const formatTimestampFn = useCallback(
 export function useMediaViewer(options?: IUseMediaViewerOptions) {
   const openMediaViewer = useCallback(
     (params: { uri: string; sender?: string; timestamp?: number }) => {
+      console.log("openMediaViewer called with URI:", params.uri)
       mediaViewerManager.openMediaViewer(params)
     },
     []
