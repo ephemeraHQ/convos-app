@@ -12,6 +12,7 @@ import { useDeleteDm } from "@/features/conversation/conversation-list/hooks/use
 import { useMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { useRestoreConversation } from "@/features/conversation/conversation-list/hooks/use-restore-conversation"
 import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
+import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useDmQuery } from "@/features/dm/dm.query"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -31,11 +32,12 @@ type IConversationListItemDmProps = {
 export const ConversationListItemDm = memo(function ConversationListItemDm({
   xmtpConversationId,
 }: IConversationListItemDmProps) {
-  const currentSender = useSafeCurrentSender()
   const { theme } = useAppTheme()
 
   // Need this so the timestamp is updated on every focus
   useFocusRerender()
+
+  const currentSender = useSafeCurrentSender()
 
   // Conversation related hooks
   const { data: dm } = useDmQuery({
@@ -51,7 +53,9 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   // Status hooks
   const { isUnread } = useConversationIsUnread({ xmtpConversationId })
   const { isDeleted } = useConversationIsDeleted({ xmtpConversationId })
-  const messageText = useMessageContentStringValue(dm?.lastMessage)
+
+  const { data: lastMessage } = useConversationLastMessage({ xmtpConversationId })
+  const messageText = useMessageContentStringValue(lastMessage)
 
   // Action hooks
   const deleteDm = useDeleteDm({ xmtpConversationId })
@@ -62,7 +66,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     xmtpConversationId,
   })
 
-  const timestamp = dm?.lastMessage?.sentNs ?? 0
+  const timestamp = lastMessage?.sentNs ?? 0
 
   // No need for timeToShow variable anymore
   const subtitle = !messageText

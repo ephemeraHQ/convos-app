@@ -184,7 +184,10 @@ export function getConversationMessagesInfiniteQueryOptions(
       }
       return { cursorNs: lastPage.nextCursorNs, direction: "next" } as IInfiniteMessagesPageParam
     },
-    enabled: Boolean(xmtpConversationId) && !isTmpConversation(xmtpConversationId),
+    enabled:
+      Boolean(clientInboxId) &&
+      Boolean(xmtpConversationId) &&
+      !isTmpConversation(xmtpConversationId),
     // Not sure we need this anymore
     // select: (data) => {
     //   const seenMessageIds = new Set<IXmtpMessageId>()
@@ -478,3 +481,7 @@ export function prefetchConversationMessagesInfiniteQuery(args: IArgsWithCaller)
 //   const { optimisticMessageId, realMessageId } = args
 //   optimisticMessageToRealMap.set(optimisticMessageId, realMessageId)
 // }
+
+export function ensureConversationMessagesInfiniteQueryData(args: IArgsWithCaller) {
+  return reactQueryClient.ensureInfiniteQueryData(getConversationMessagesInfiniteQueryOptions(args))
+}

@@ -49,7 +49,10 @@ export function normalizeTimestampToMs(timestamp: number) {
 }
 
 export const getCompactRelativeTime = (unnormalizedDate: number) => {
-  if (!unnormalizedDate) return ""
+  if (!unnormalizedDate) {
+    return ""
+  }
+
   const date = normalizeTimestampToMs(unnormalizedDate)
   // To-do: Add supporting locale logic
   // const locale = getLocale();

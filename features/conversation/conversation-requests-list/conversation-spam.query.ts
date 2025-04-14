@@ -1,4 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
+import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { ensureConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { getMessageSpamScore } from "@/features/conversation/conversation-requests-list/utils/get-message-spam-score"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
@@ -31,7 +33,22 @@ export function getConversationSpamQueryOptions(args: IArgs) {
         throw new Error("Conversation not found")
       }
 
-      const lastMessage = conversation.lastMessage
+      const messageQueryData = await ensureConversationMessagesInfiniteQueryData({
+        clientInboxId,
+        xmtpConversationId,
+        caller: "getConversationSpamQueryOptions",
+      })
+      const firstMessageId = messageQueryData.pages[0]?.messageIds[0]
+
+      if (!firstMessageId) {
+        return true
+      }
+
+      const lastMessage = await ensureConversationMessageQueryData({
+        clientInboxId,
+        xmtpMessageId: firstMessageId,
+        caller: "getConversationSpamQueryOptions",
+      })
 
       if (!lastMessage) {
         return true

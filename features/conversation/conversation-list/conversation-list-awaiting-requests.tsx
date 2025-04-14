@@ -5,6 +5,11 @@ import { Center } from "@/design-system/Center"
 import { AnimatedHStack, HStack } from "@/design-system/HStack"
 import { Image } from "@/design-system/image"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import {
+  getConversationMessagesInfiniteQueryOptions,
+  IConversationMessagesInfiniteQueryData,
+} from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   ConversationListItem,
   ConversationListItemSubtitle,
@@ -14,6 +19,7 @@ import { getConversationMetadataQueryOptions } from "@/features/conversation/con
 import { useConversationRequestsListItem } from "@/features/conversation/conversation-requests-list/use-conversation-requests-list-items"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { useAppTheme } from "@/theme/use-app-theme"
 
@@ -55,6 +61,34 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     })),
   })
 
+  const lastMessageIdQueries = useQueries({
+    // @ts-ignore queries doesn't work great with infiniteQueryOptions
+    queries: (likelyNotSpamConversationIds ?? []).map((conversationId) => {
+      const queryOptions = getConversationMessagesInfiniteQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+        caller: "useConversationListConversations",
+      })
+
+      return {
+        ...queryOptions,
+        select: (data: IConversationMessagesInfiniteQueryData) => {
+          return data.pages[0]?.messageIds[0]
+        },
+      }
+    }),
+  })
+
+  const lastMessageQueries = useQueries({
+    queries: lastMessageIdQueries.map((query) => ({
+      ...getConversationMessageQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpMessageId: query.data as IXmtpMessageId | undefined,
+        caller: "useConversationListConversations",
+      }),
+    })),
+  })
+
   // Combine the results
   const { numberOfRequestsLikelyNotSpam, hasUnreadMessages } = useMemo(() => {
     const numberOfRequestsLikelyNotSpam = likelyNotSpamConversationIds.length
@@ -70,9 +104,11 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
         return false
       }
 
+      const lastMessage = lastMessageQueries[index].data
+
       return conversationIsUnreadForInboxId({
-        lastMessageSent: conversationQuery.data?.lastMessage?.sentNs ?? null,
-        lastMessageSenderInboxId: conversationQuery.data?.lastMessage?.senderInboxId ?? null,
+        lastMessageSentAt: lastMessage?.sentNs ?? null,
+        lastMessageSenderInboxId: lastMessage?.senderInboxId ?? null,
         consumerInboxId: currentSender.inboxId,
         markedAsUnread: metadataQuery.data?.unread ?? false,
         readUntil: metadataQuery.data?.readUntil
@@ -92,6 +128,8 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
     conversationQueries,
     currentSender,
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
+    lastMessageQueries,
   ])
 
   const title = useMemo(() => {

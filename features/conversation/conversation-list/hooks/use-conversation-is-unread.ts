@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
-import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
+import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 
@@ -20,12 +20,8 @@ export const useConversationIsUnread = ({ xmtpConversationId }: UseConversationI
     }),
   )
 
-  const { data: lastMessage, isLoading: isLoadingLastMessage } = useQuery({
-    ...getConversationQueryOptions({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-    }),
-    select: (data) => data?.lastMessage,
+  const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationLastMessage({
+    xmtpConversationId,
   })
 
   const isUnread = useMemo(() => {
@@ -40,7 +36,7 @@ export const useConversationIsUnread = ({ xmtpConversationId }: UseConversationI
     }
 
     return conversationIsUnreadForInboxId({
-      lastMessageSent: lastMessage?.sentNs ?? null,
+      lastMessageSentAt: lastMessage?.sentNs ?? null,
       lastMessageSenderInboxId: lastMessage?.senderInboxId ?? null,
       consumerInboxId: currentSender.inboxId,
       markedAsUnread: conversationMetadata?.unread ?? false,

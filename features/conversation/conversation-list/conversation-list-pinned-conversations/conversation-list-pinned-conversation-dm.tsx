@@ -5,6 +5,7 @@ import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { useConversationListPinnedConversationsStyles } from "@/features/conversation/conversation-list/conversation-list-pinned-conversations/conversation-list-pinned-conversations.styles"
 import { useConversationIsUnread } from "@/features/conversation/conversation-list/hooks/use-conversation-is-unread"
 import { useDmConversationContextMenuViewProps } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
+import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useDmQuery } from "@/features/dm/dm.query"
 import { IDm } from "@/features/dm/dm.types"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
@@ -43,8 +44,11 @@ export const ConversationListPinnedConversationDm = ({
     navigate("Conversation", { xmtpConversationId }).catch(captureError)
   }, [xmtpConversationId])
 
-  const displayMessagePreview =
-    conversation.lastMessage && isTextMessage(conversation.lastMessage) && isUnread
+  const { data: lastMessage } = useConversationLastMessage({
+    xmtpConversationId,
+  })
+
+  const displayMessagePreview = lastMessage && isTextMessage(lastMessage) && isUnread
 
   const contextMenuProps = useDmConversationContextMenuViewProps({
     xmtpConversationId,
@@ -61,9 +65,7 @@ export const ConversationListPinnedConversationDm = ({
         title={displayName ?? ""}
         contextMenuProps={contextMenuProps}
       />
-      {displayMessagePreview && (
-        <PinnedConversationMessagePreview message={conversation.lastMessage!} />
-      )}
+      {displayMessagePreview && <PinnedConversationMessagePreview message={lastMessage} />}
     </VStack>
   )
 }
