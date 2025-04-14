@@ -5,7 +5,6 @@ import { IConversationMessageRemoteAttachmentContent } from "@/features/conversa
 import { useCurrentXmtpConversationId } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { usePrevious } from "@/hooks/use-previous-value"
-import { logger } from "@/utils/logger/logger"
 import { zustandMMKVStorage } from "@/utils/zustand/zustand"
 
 export type IComposerAttachmentStatus = "picked" | "uploading" | "error" | "uploaded"
@@ -86,7 +85,7 @@ export const ConversationComposerStoreProvider = memo(
   ({ children, inputValue, ...props }: IConversationComposerStoreProviderProps) => {
     const storeRef = useRef<IConversationComposerStore>()
     const xmtpConversationId = useCurrentXmtpConversationId()
-    const previousTopic = usePrevious(xmtpConversationId)
+    const previousConversationId = usePrevious(xmtpConversationId)
 
     // Initialize store on mount
     if (!storeRef.current) {
@@ -97,32 +96,28 @@ export const ConversationComposerStoreProvider = memo(
       })
     }
 
-    // Handle topic changes and store recreation
+    // Handle conversation changes
     useEffect(() => {
       const store = storeRef.current
-      if (!store) return
 
-      if (xmtpConversationId !== previousTopic) {
-        // Reset the store when changing topics
-        store.getState().reset()
-        storeRef.current = createConversationComposerStore({
-          inputValue,
-          storeName: getStoreName(xmtpConversationId),
-          ...props,
+      if (!store) {
+        return
+      }
+
+      if (xmtpConversationId !== previousConversationId) {
+        // Update the store name for the new conversation
+        store.persist.setOptions({
+          name: getStoreName(xmtpConversationId),
+        })
+
+        // Reset state for new conversation
+        store.setState({
+          inputValue: inputValue ?? "",
+          composerAttachments: [],
+          replyingToMessageId: null,
         })
       }
-    }, [xmtpConversationId, previousTopic, inputValue, props])
-
-    // Handle input value updates
-    useEffect(() => {
-      const store = storeRef.current
-      if (!store) return
-
-      if (inputValue !== undefined) {
-        logger.info(`ConversationComposerStoreProvider: inputValue changed to ${inputValue}`)
-        store.getState().setInputValue(inputValue)
-      }
-    }, [inputValue])
+    }, [xmtpConversationId, previousConversationId, inputValue])
 
     return (
       <ConversationComposerStoreContext.Provider value={storeRef.current}>

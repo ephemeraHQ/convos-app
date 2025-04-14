@@ -1,4 +1,4 @@
-import { useNavigation } from "@react-navigation/native"
+import { useIsFocused, useNavigation } from "@react-navigation/native"
 import { memo, useLayoutEffect } from "react"
 import { Header, HeaderProps } from "@/design-system/Header/Header"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
@@ -95,9 +95,13 @@ export function useHeader(
 ) {
   const navigation = useNavigation()
 
-  // No store subscription here anymore
+  const isFocused = useIsFocused()
 
   useLayoutEffect(() => {
+    if (!isFocused) {
+      return
+    }
+
     // The effect now only depends on the original deps, navigation, and headerProps
     navigation.setOptions({
       headerShown: true,

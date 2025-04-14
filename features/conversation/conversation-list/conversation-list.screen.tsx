@@ -1,3 +1,4 @@
+import { useNavigation } from "@react-navigation/native"
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { memo, useCallback, useEffect } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -24,6 +25,7 @@ import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
+import { useEffectWhenCondition } from "@/hooks/use-effect-once"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -48,7 +50,7 @@ export const ConversationListScreen = memo(function ConversationListScreen(
     isLoading: isLoadingConversations,
   } = useConversationListConversations()
 
-  const { theme } = useAppTheme()
+  const navigation = useNavigation()
 
   const insets = useSafeAreaInsets()
 
@@ -59,20 +61,28 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   }, [])
 
   // Let's prefetch the messages for all the conversations
-  useEffect(() => {
-    if (conversationsIds) {
-      for (const conversationId of conversationsIds) {
+  useEffectWhenCondition(
+    () => {
+      // For now let's only prefetch the first 5 conversations
+      for (const conversationId of conversationsIds.slice(0, 5)) {
         if (isTmpConversation(conversationId)) {
           return
         }
+        // Preload the conversation messages
         prefetchConversationMessagesInfiniteQuery({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: conversationId,
           caller: "useConversationListConversations",
         }).catch(captureError)
+
+        // Preload the conversation screen
+        navigation.preload("Conversation", {
+          xmtpConversationId: conversationId,
+        })
       }
-    }
-  }, [conversationsIds, currentSender])
+    },
+    Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
+  )
 
   const handleRefresh = useCallback(async () => {
     try {

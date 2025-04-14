@@ -51,7 +51,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const scrollRef = useAnimatedRef<FlatList>()
   const conversationStore = useConversationStore()
   const hasPulledToRefreshRef = useRef(false)
-
+  const { theme } = useAppTheme()
   const { data: settings } = useDisappearingMessageSettings({
     clientInboxId: currentSender.inboxId,
     conversationId: xmtpConversationId,
@@ -100,7 +100,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     if (messageIds.length === 0) {
       return
     }
-    markAsReadAsync().catch(captureError)
+    // markAsReadAsync().catch(captureError)
   }, [markAsReadAsync, xmtpConversationId, messageIds.length])
 
   // Scroll to message when we select one in the store
@@ -254,6 +254,10 @@ export const ConversationMessages = memo(function ConversationMessages() {
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
       getItemType={getItemType}
+      estimatedListSize={{
+        height: theme.layout.screen.height,
+        width: theme.layout.screen.width,
+      }}
       // extraData={latestXmtpMessageIdFromCurrentSender}
 
       // LEGEND LIST PROPS
