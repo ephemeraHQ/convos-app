@@ -64,11 +64,22 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
   )
 
   const handleTap = useCallback(() => {
+    // If this is an image attachment with a viewer handler, open it
+    if (contextMenuExtra?.openAttachmentViewer && typeof contextMenuExtra.openAttachmentViewer === 'function') {
+      try {
+        contextMenuExtra.openAttachmentViewer()
+        return
+      } catch (error) {
+        console.error("Error opening attachment viewer:", error)
+      }
+    }
+    
+    // Default behavior: toggle time display
     const isShowingTime = conversationMessageStore.getState().isShowingTime
     conversationMessageStore.setState({
       isShowingTime: !isShowingTime,
     })
-  }, [conversationMessageStore])
+  }, [conversationMessageStore, contextMenuExtra])
 
   const handleDoubleTap = useCallback(() => {
     const messageId = conversationMessageStore.getState().currentMessageId

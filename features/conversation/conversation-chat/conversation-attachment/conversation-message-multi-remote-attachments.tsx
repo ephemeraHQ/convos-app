@@ -24,6 +24,9 @@ export const MessageMultiRemoteAttachment = memo(function MessageMultiRemoteAtta
     return null
   }
 
+  // TODO: remove this - used to test media viewer
+  return;
+
   return (
     <VStack
       style={{

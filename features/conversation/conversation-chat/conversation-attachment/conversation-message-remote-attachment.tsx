@@ -15,8 +15,11 @@ export const ConversationMessageRemoteAttachment = memo(
     const { theme } = useAppTheme()
 
     const content = message.content
-
     const fromMe = messageIsFromCurrentSenderInboxId({ message })
+    const sentTimestamp = message.sentMs // Using milliseconds for display
+
+    // Determine a simple sender name based on whether the message is from the current user
+    const senderName = fromMe ? "Me" : "Sender"
 
     if (typeof content === "string") {
       // TODO
@@ -37,6 +40,14 @@ export const ConversationMessageRemoteAttachment = memo(
             remoteMessageContent={content}
             fitAspectRatio
           />
+
+          {/* <AttachmentRemoteImage
+            xmtpMessageId={message.xmtpId}
+            remoteMessageContent={content}
+            fitAspectRatio
+            senderName={senderName}
+            sentTimestamp={sentTimestamp}
+          /> */}
         </ConversationMessageGestures>
       </VStack>
     )
