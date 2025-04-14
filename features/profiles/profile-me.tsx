@@ -84,15 +84,9 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
         // In view mode, show profile info and settings
         <>
           {/* Show username and description if they exist */}
-          {profile?.username || profile?.description ? (
+          {profile?.description && (
             <ProfileSection withTopBorder>
               <VStack style={{ rowGap: theme.spacing.md }}>
-                {profile.username && (
-                  <VStack style={{ rowGap: theme.spacing.xxs }}>
-                    <Text preset="formLabel">{translate("Username")}</Text>
-                    <Text preset="body">{profile.username}</Text>
-                  </VStack>
-                )}
                 {profile?.description && (
                   <VStack style={{ rowGap: theme.spacing.xxs }}>
                     <Text preset="formLabel">{translate("About")}</Text>
@@ -101,7 +95,7 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
                 )}
               </VStack>
             </ProfileSection>
-          ) : null}
+          )}
 
           <ProfileSocialsNames inboxId={inboxId} />
 

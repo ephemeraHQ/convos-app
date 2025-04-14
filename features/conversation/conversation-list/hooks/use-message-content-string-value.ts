@@ -15,6 +15,7 @@ import {
   usePreferredDisplayInfo,
 } from "@/features/preferred-display-info/use-preferred-display-info"
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
+import { Nullable } from "@/types/general"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import {
@@ -160,7 +161,7 @@ export function getMessageContentStringValue(args: {
   }
 
   if (messageContentIsMultiRemoteAttachment(messageContent)) {
-    return `${initiatorDisplayName} sent an attachment`
+    return `${initiatorDisplayName} sent many attachments`
   }
 
   if (messageContentIsReply(messageContent)) {
@@ -218,7 +219,7 @@ export async function ensureMessageContentStringValue(message: IConversationMess
   })
 }
 
-export function useMessageContentStringValue(message: IConversationMessage | undefined) {
+export function useMessageContentStringValue(message: Nullable<IConversationMessage>) {
   const initiatorInboxId =
     message?.senderInboxId ??
     (message && isGroupUpdatedMessage(message) ? message.content.initiatedByInboxId : undefined)

@@ -9,6 +9,10 @@ import {
   getSafeCurrentSender,
 } from "@/features/authentication/multi-inbox.store"
 import {
+  createIdentity,
+  fetchDeviceIdentities,
+} from "@/features/convos-identities/convos-identities.api"
+import {
   createUserMutation,
   ICreateUserMutationArgs,
 } from "@/features/current-user/create-user.mutation"
@@ -18,7 +22,6 @@ import { createDevice, fetchDevice, IDeviceCreateInput } from "@/features/device
 import { IDevice } from "@/features/devices/devices.types"
 import { getDeviceModelId, getDeviceOs } from "@/features/devices/devices.utils"
 import { setUserDeviceQueryData } from "@/features/devices/user-device.query"
-import { createIdentity, fetchDeviceIdentities } from "@/features/identities/identities.api"
 import {
   getDevicePushNotificationsToken,
   getExpoPushNotificationsToken,

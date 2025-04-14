@@ -64,7 +64,7 @@ export type IGroupUpdatedMetadataEntry = {
   fieldName: IGroupUpdatedMetadataEntryFieldName
 }
 
-export type IConversationAttachment = {
+export type IConversationMessageRemoteAttachmentContent = {
   filename?: string
   secret: string
   salt: string
@@ -75,10 +75,8 @@ export type IConversationAttachment = {
   contentLength: string
 }
 
-export type IConversationMessageRemoteAttachmentContent = IConversationAttachment
-
 export type IConversationMessageMultiRemoteAttachmentContent = {
-  attachments: IConversationAttachment[]
+  attachments: IConversationMessageRemoteAttachmentContent[]
 }
 
 export type IConversationMessageStaticAttachmentContent = {

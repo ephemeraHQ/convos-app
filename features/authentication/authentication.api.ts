@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ApiError } from "@/utils/convos-api/convos-api-error"
+import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { AUTHENTICATE_ROUTE } from "./authentication.constants"
 
@@ -16,7 +16,7 @@ export async function fetchJwt({ signal }: { signal?: AbortSignal }): Promise<Fe
     })
     return fetchJwtResponseSchema.parse(response.data)
   } catch (error) {
-    throw new ApiError({
+    throw new ConvosApiError({
       error,
       additionalMessage: "Failed to fetch JWT",
     })

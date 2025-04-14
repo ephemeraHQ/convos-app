@@ -6,7 +6,7 @@ import { getDeviceModelId, getDeviceOs } from "@/features/devices/devices.utils"
 import { ConvosProfileSchema, IConvosProfile } from "@/features/profiles/profiles.types"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
-import { ApiError } from "@/utils/convos-api/convos-api-error"
+import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { IEthereumAddress } from "@/utils/evm/address"
 
@@ -88,7 +88,7 @@ export async function createUser(args: ICreateUserArgs) {
 
     if (!responseValidation.success) {
       captureError(
-        new ApiError({
+        new ConvosApiError({
           error: responseValidation.error,
           additionalMessage: "Invalid create user response data",
         }),
@@ -97,7 +97,7 @@ export async function createUser(args: ICreateUserArgs) {
 
     return apiResponse.data
   } catch (error) {
-    throw new ApiError({
+    throw new ConvosApiError({
       error,
       additionalMessage: "Failed to create user",
     })

@@ -9,8 +9,8 @@ import { useConversationIsUnread } from "@/features/conversation/conversation-li
 import { useDeleteGroup } from "@/features/conversation/conversation-list/hooks/use-delete-group"
 import { useMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
+import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
-import { useGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useFocusRerender } from "@/hooks/use-focus-rerender"
 import { useRouter } from "@/navigation/use-navigation"
@@ -25,14 +25,12 @@ type IConversationListItemGroupProps = {
 export const ConversationListItemGroup = memo(function ConversationListItemGroup({
   xmtpConversationId,
 }: IConversationListItemGroupProps) {
-  const currentSender = useSafeCurrentSender()
   const router = useRouter()
 
   // Need this so the timestamp is updated on every focus
   useFocusRerender()
 
-  const { data: group } = useGroupQuery({
-    clientInboxId: currentSender.inboxId,
+  const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId,
   })
 
@@ -54,9 +52,9 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
   const title = groupName
 
   // Subtitle
-  const timestamp = group?.lastMessage?.sentNs ?? 0
+  const timestamp = lastMessage?.sentNs ?? 0
   const timeToShow = getCompactRelativeTime(timestamp)
-  const messageText = useMessageContentStringValue(group?.lastMessage)
+  const messageText = useMessageContentStringValue(lastMessage)
   const subtitle = timeToShow && messageText ? `${timeToShow} ${MIDDLE_DOT} ${messageText}` : ""
 
   const { toggleReadStatusAsync } = useToggleReadStatus({

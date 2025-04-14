@@ -1,6 +1,7 @@
 import { BottomSheetModalProvider } from "@design-system/BottomSheet/BottomSheetModalProvider"
 import { useReactQueryDevTools } from "@dev-plugins/react-query"
 import { ActionSheetProvider } from "@expo/react-native-action-sheet"
+import { addRpcUrlOverrideToChain } from "@privy-io/chains"
 import { Chain, PrivyProvider } from "@privy-io/expo"
 import { SmartWalletsProvider } from "@privy-io/expo/smart-wallets"
 import { ActionSheet } from "@/components/action-sheet"
@@ -39,18 +40,8 @@ import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
 preventSplashScreenAutoHide()
 
-const baseMainnetOverride: Chain = {
-  ...base,
-  rpcUrls: {
-    ...base.rpcUrls,
-    default: {
-      http: [config.evm.rpcEndpoint],
-    },
-  },
-}
-
-// For now let's just be on mainnet. Easier to debug
-const supportedChains = [baseMainnetOverride] as [Chain, ...Chain[]]
+const chainOverride = addRpcUrlOverrideToChain(base, config.evm.rpcEndpoint)
+const supportedChains = [chainOverride] as [Chain, ...Chain[]]
 
 export function App() {
   useMonitorNetworkConnectivity()

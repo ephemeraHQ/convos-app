@@ -49,7 +49,10 @@ export function normalizeTimestampToMs(timestamp: number) {
 }
 
 export const getCompactRelativeTime = (unnormalizedDate: number) => {
-  if (!unnormalizedDate) return ""
+  if (!unnormalizedDate) {
+    return ""
+  }
+
   const date = normalizeTimestampToMs(unnormalizedDate)
   // To-do: Add supporting locale logic
   // const locale = getLocale();
@@ -92,6 +95,10 @@ export function getTodayMs() {
 
 export function convertNanosecondsToMilliseconds(nanoseconds: number) {
   return Math.floor(nanoseconds / 1_000_000)
+}
+
+export function convertMillisecondsToNanoseconds(milliseconds: number) {
+  return milliseconds * 1_000_000
 }
 
 export function isToday(timestamp: number) {

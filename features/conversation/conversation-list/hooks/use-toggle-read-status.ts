@@ -4,6 +4,7 @@ import {
   useSafeCurrentSender,
 } from "@/features/authentication/multi-inbox.store"
 import { getConversationMetadataQueryData } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useMarkConversationAsUnreadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-unread"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
@@ -32,6 +33,10 @@ export const useToggleReadStatus = ({ xmtpConversationId }: UseToggleReadStatusP
     caller: "useToggleReadStatus",
   })
 
+  const { data: lastMessage } = useConversationLastMessage({
+    xmtpConversationId,
+  })
+
   const toggleReadStatusAsync = useCallback(async () => {
     const currentSender = getSafeCurrentSender()
 
@@ -45,8 +50,8 @@ export const useToggleReadStatus = ({ xmtpConversationId }: UseToggleReadStatusP
     })
 
     const conversationIsUnread = conversationIsUnreadForInboxId({
-      lastMessageSent: conversation?.lastMessage?.sentNs ?? null,
-      lastMessageSenderInboxId: conversation?.lastMessage?.senderInboxId ?? null,
+      lastMessageSentAt: lastMessage?.sentNs ?? null,
+      lastMessageSenderInboxId: lastMessage?.senderInboxId ?? null,
       consumerInboxId: currentSender.inboxId,
       readUntil: conversationData?.readUntil
         ? new Date(conversationData.readUntil).getTime()
@@ -59,7 +64,7 @@ export const useToggleReadStatus = ({ xmtpConversationId }: UseToggleReadStatusP
     } else {
       await markAsUnreadAsync()
     }
-  }, [markAsReadAsync, markAsUnreadAsync, xmtpConversationId, conversation])
+  }, [markAsReadAsync, markAsUnreadAsync, xmtpConversationId, conversation, lastMessage])
 
   return { toggleReadStatusAsync }
 }

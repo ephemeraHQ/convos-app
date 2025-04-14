@@ -1,24 +1,57 @@
 import { createContext, memo, useContext, useEffect, useRef } from "react"
 import { createStore, useStore } from "zustand"
 import { createJSONStorage, persist, subscribeWithSelector } from "zustand/middleware"
-import {
-  IUploadedRemoteAttachment,
-  LocalAttachment,
-} from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachments.types"
+import { IConversationMessageRemoteAttachmentContent } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { useCurrentXmtpConversationId } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { usePrevious } from "@/hooks/use-previous-value"
-import { zustandMMKVStorage } from "@/utils/zustand/zustand"
 import { logger } from "@/utils/logger/logger"
+import { zustandMMKVStorage } from "@/utils/zustand/zustand"
 
-export type IComposerMediaPreviewStatus = "picked" | "uploading" | "uploaded" | "error" | "sending"
+export type IComposerAttachmentStatus = "picked" | "uploading" | "error" | "uploaded"
 
-// TODO: Maybe move in attachments and make it more generic? (without that status)
-export type IComposerMediaPreview =
-  | (LocalAttachment & {
-      status: IComposerMediaPreviewStatus
-    })
-  | null
+export type IComposerMediaPreview = {
+  mediaURI: string
+  mediaType: string
+  mediaDuration?: number
+  mediaDimensions?: { width: number; height: number }
+}
+
+export type IComposerAttachmentPicked = IComposerMediaPreview & {
+  status: "picked"
+}
+
+export type IComposerAttachmentError = IComposerMediaPreview & {
+  status: "error"
+  error: string
+}
+
+export type IComposerAttachmentUploading = IComposerMediaPreview & {
+  status: "uploading"
+}
+
+export type IComposerAttachmentUploaded = IComposerMediaPreview &
+  IConversationMessageRemoteAttachmentContent & {
+    status: "uploaded"
+    // secret: string
+    // salt: string
+    // nonce: string
+    // contentDigest: string
+
+    // scheme: "https://"
+    // url: string
+    // contentLength: string
+    // url: string
+    // type: string
+    // name: string
+    // size: number
+  }
+
+export type IComposerAttachment =
+  | IComposerAttachmentPicked
+  | IComposerAttachmentUploading
+  | IComposerAttachmentError
+  | IComposerAttachmentUploaded
 
 type IConversationComposerStoreProps = {
   inputValue?: string
@@ -27,22 +60,19 @@ type IConversationComposerStoreProps = {
 type IConversationComposerState = IConversationComposerStoreProps & {
   inputValue: string
   replyingToMessageId: IXmtpMessageId | null
-  composerMediaPreviews: IComposerMediaPreview[]
-  composerUploadedAttachments: IUploadedRemoteAttachment[]
+  composerAttachments: IComposerAttachment[]
 }
 
 type IConversationComposerActions = {
   reset: () => void
   setInputValue: (value: string) => void
   setReplyToMessageId: (messageId: IXmtpMessageId | null) => void
-  addComposerMediaPreview: (mediaPreview: NonNullable<IComposerMediaPreview>) => string
-  removeComposerMediaPreview: (mediaURI: string) => void
-  addComposerUploadedAttachment: (args: {
+  addComposerAttachment: (attachment: IComposerAttachment) => void
+  removeComposerAttachment: (mediaURI: string) => void
+  updateComposerAttachment: (args: {
     mediaURI: string
-    attachment: IUploadedRemoteAttachment
+    attachment: Partial<IComposerAttachment>
   }) => void
-  updateMediaPreviewStatus: (mediaURI: string, status: IComposerMediaPreviewStatus) => void
-  removeComposerUploadedAttachment: (mediaURI: string) => void
 }
 
 type IConversationComposerStoreState = IConversationComposerState & IConversationComposerActions
@@ -107,8 +137,7 @@ const createConversationComposerStore = (
 ) => {
   const DEFAULT_STATE: IConversationComposerState = {
     inputValue: initProps.inputValue ?? "",
-    composerMediaPreviews: [],
-    composerUploadedAttachments: [],
+    composerAttachments: [],
     replyingToMessageId: null,
   }
 
@@ -124,35 +153,26 @@ const createConversationComposerStore = (
             })),
           setInputValue: (value) => set({ inputValue: value }),
           setReplyToMessageId: (messageId) => set({ replyingToMessageId: messageId }),
-          addComposerMediaPreview: (mediaPreview) => {
+          addComposerAttachment: (attachment) =>
             set((state) => ({
-              composerMediaPreviews: [...state.composerMediaPreviews, mediaPreview],
-            }))
-            return mediaPreview.mediaURI
-          },
-          removeComposerMediaPreview: (mediaURI) =>
+              composerAttachments: [...state.composerAttachments, attachment],
+            })),
+          removeComposerAttachment: (mediaURI) =>
             set((state) => ({
-              composerMediaPreviews: state.composerMediaPreviews.filter(
-                (preview) => preview?.mediaURI !== mediaURI,
-              ),
-              composerUploadedAttachments: state.composerUploadedAttachments.filter(
-                (attachment) => attachment.url !== mediaURI,
+              composerAttachments: state.composerAttachments.filter(
+                (attachment) => attachment.mediaURI !== mediaURI,
               ),
             })),
-          addComposerUploadedAttachment: ({ mediaURI, attachment }) =>
+          updateComposerAttachment: ({ mediaURI, attachment }) =>
             set((state) => ({
-              composerUploadedAttachments: [...state.composerUploadedAttachments, attachment],
-            })),
-          updateMediaPreviewStatus: (mediaURI, status) =>
-            set((state) => ({
-              composerMediaPreviews: state.composerMediaPreviews.map((preview) =>
-                preview?.mediaURI === mediaURI ? { ...preview, status } : preview,
-              ),
-            })),
-          removeComposerUploadedAttachment: (mediaURI) =>
-            set((state) => ({
-              composerUploadedAttachments: state.composerUploadedAttachments.filter(
-                (attachment) => attachment.url !== mediaURI,
+              composerAttachments: state.composerAttachments.map((existing) =>
+                existing.mediaURI === mediaURI
+                  ? ({
+                      ...existing,
+                      ...attachment,
+                      status: attachment.status,
+                    } as IComposerAttachment)
+                  : existing,
               ),
             })),
         }),
@@ -162,8 +182,7 @@ const createConversationComposerStore = (
           partialize: (state) => ({
             inputValue: state.inputValue,
             replyingToMessageId: state.replyingToMessageId,
-            composerMediaPreviews: state.composerMediaPreviews,
-            composerUploadedAttachments: state.composerUploadedAttachments,
+            composerAttachments: state.composerAttachments,
           }),
         },
       ),
@@ -190,4 +209,3 @@ export function useConversationComposerStore() {
   if (!store) throw new Error()
   return store
 }
-

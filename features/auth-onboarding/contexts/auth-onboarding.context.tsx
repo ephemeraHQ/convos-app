@@ -59,11 +59,13 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
   const { waitUntil: waitUntilPrivyIsReady } = useWaitUntil({
     thing: isPrivyReady,
+    errorMessage: "Privy took too long to be ready",
   })
 
   const { waitUntil: waitUntilSmartWalletClientIsReady } = useWaitUntil({
     thing: smartWalletClient,
     timeoutMs: 20000, // Yes unfortunately, this can sometimes take a while... Need to investigate our RPC
+    errorMessage: "Smart wallet took too long to create",
   })
 
   const login = useCallback(async () => {
@@ -156,10 +158,11 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
 
       // Step 1: Passkey signup
-      authLogger.debug(`[Passkey Signup] Starting passkey registration`)
-
+      authLogger.debug(`Waiting for Privy to be ready...`)
       await waitUntilPrivyIsReady()
+      authLogger.debug(`Privy is ready`)
 
+      authLogger.debug(`Signing up with passkey...`)
       const { data: user, error: signupError } = await tryCatch(
         privySignupWithPasskey({ relyingParty: RELYING_PARTY }),
       )
@@ -172,15 +175,19 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         throw new Error("Passkey signup failed")
       }
 
+      authLogger.debug(`Passkey signup complete`)
+
       useAuthOnboardingStore.getState().actions.setPage("contact-card")
 
       // Step 2: Create embedded wallet
-      authLogger.debug(`Creating embedded wallet`)
+      authLogger.debug(`Creating embedded wallet...`)
       const { error: walletError } = await tryCatch(createEmbeddedWallet())
 
       if (walletError) {
         throw walletError
       }
+
+      authLogger.debug(`Embedded wallet created`)
 
       authLogger.debug(`Waiting for smart wallet to be created`)
       const { data: swcClient, error: swcError } = await tryCatch(

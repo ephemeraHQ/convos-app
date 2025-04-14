@@ -87,7 +87,7 @@ const baseLogger = RNLogger.createLogger({
 // }
 
 // Logger exports
-export const logger = baseLogger
+export const logger = baseLogger.extend("GENERAL")
 export const authLogger = baseLogger.extend("AUTH")
 export const streamLogger = baseLogger.extend("STREAM")
 export const apiLogger = baseLogger.extend("API")

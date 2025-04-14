@@ -12,7 +12,7 @@ export const SendButton = memo(function SendButton(props: { onPress: () => void 
   const canSend = useConversationComposerStoreContext((state) => {
     return (
       state.inputValue.length > 0 ||
-      state.composerMediaPreviews.some((preview) => preview?.status === "uploaded")
+      state.composerAttachments.some((attachment) => attachment.status === "uploaded")
     )
   })
 

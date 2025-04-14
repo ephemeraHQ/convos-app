@@ -9,6 +9,7 @@ import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Image } from "@/design-system/image"
 import { useAppTheme } from "@/theme/use-app-theme"
 import {
+  IComposerAttachment,
   useConversationComposerStore,
   useConversationComposerStoreContext,
 } from "./conversation-composer.store-context"
@@ -17,16 +18,15 @@ export const ConversationComposerAttachmentPreview = memo(
   function ConversationComposerAttachmentPreview() {
     const { theme } = useAppTheme()
 
-    const mediaPreviews = useConversationComposerStoreContext(
-      (state) => state.composerMediaPreviews,
+    const composerAttachments = useConversationComposerStoreContext(
+      (state) => state.composerAttachments,
     )
 
     const store = useConversationComposerStore()
 
     const handleAttachmentClosed = useCallback(
-      (mediaURI: string) => {
-        store.getState().removeComposerMediaPreview(mediaURI)
-        store.getState().removeComposerUploadedAttachment(mediaURI)
+      (attachment: IComposerAttachment) => {
+        store.getState().removeComposerAttachment(attachment.mediaURI)
       },
       [store],
     )
@@ -35,16 +35,16 @@ export const ConversationComposerAttachmentPreview = memo(
 
     const containerAS = useAnimatedStyle(() => {
       return {
-        height: withSpring(mediaPreviews.length > 0 ? maxHeight : 0, {
+        height: withSpring(composerAttachments.length > 0 ? maxHeight : 0, {
           damping: SICK_DAMPING,
           stiffness: SICK_STIFFNESS,
         }),
       }
-    }, [mediaPreviews.length, maxHeight])
+    }, [composerAttachments.length, maxHeight])
 
     return (
       <AnimatedVStack style={containerAS}>
-        {mediaPreviews.length > 0 && (
+        {composerAttachments.length > 0 && (
           <HStack
             style={{
               flex: 1,
@@ -53,22 +53,22 @@ export const ConversationComposerAttachmentPreview = memo(
               columnGap: theme.spacing.xxs,
             }}
           >
-            {mediaPreviews.map((mediaPreview) => {
-              if (!mediaPreview) return null
+            {composerAttachments.map((attachment) => {
+              if (!attachment) return null
 
               const isLandscape = !!(
-                mediaPreview.dimensions?.height &&
-                mediaPreview.dimensions?.width &&
-                mediaPreview.dimensions.width > mediaPreview.dimensions.height
+                attachment.mediaDimensions?.height &&
+                attachment.mediaDimensions?.width &&
+                attachment.mediaDimensions.width > attachment.mediaDimensions.height
               )
 
               return (
                 <AttachmentPreview
-                  key={mediaPreview.mediaURI}
-                  uri={mediaPreview.mediaURI}
-                  onClose={() => handleAttachmentClosed(mediaPreview.mediaURI)}
-                  error={mediaPreview.status === "error"}
-                  isLoading={mediaPreview.status === "uploading"}
+                  key={attachment.mediaURI}
+                  uri={attachment.mediaURI}
+                  onClose={() => handleAttachmentClosed(attachment)}
+                  error={attachment.status === "error"}
+                  isLoading={attachment.status === "uploading"}
                   isLandscape={isLandscape}
                 />
               )

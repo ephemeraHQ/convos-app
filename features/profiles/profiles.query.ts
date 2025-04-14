@@ -1,5 +1,5 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { queryOptions, skipToken, useQueries, useQuery } from "@tanstack/react-query"
+import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { fetchProfile } from "@/features/profiles/profiles.api"
 import { Optional } from "@/types/general"
 import { isConvosApi404Error } from "@/utils/convos-api/convos-api-error"

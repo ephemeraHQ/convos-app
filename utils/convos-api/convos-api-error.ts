@@ -23,7 +23,7 @@ function isApiValidationErrors(obj: unknown): obj is IApiValidationErrors {
   return entries.some(([_, value]) => value && typeof value === "object" && "message" in value)
 }
 
-export class ApiError extends BaseError {
+export class ConvosApiError extends BaseError {
   private origError: unknown
 
   constructor(args: BaseErrorArgs) {

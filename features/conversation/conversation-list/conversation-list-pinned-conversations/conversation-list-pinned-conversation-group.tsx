@@ -5,6 +5,7 @@ import { isTextMessage } from "@/features/conversation/conversation-chat/convers
 import { useConversationListPinnedConversationsStyles } from "@/features/conversation/conversation-list/conversation-list-pinned-conversations/conversation-list-pinned-conversations.styles"
 import { useConversationIsUnread } from "@/features/conversation/conversation-list/hooks/use-conversation-is-unread"
 import { useGroupConversationContextMenuViewProps } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
+import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { IGroup } from "@/features/groups/group.types"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { navigate } from "@/navigation/navigation.utils"
@@ -35,7 +36,11 @@ export const ConversationListPinnedConversationGroup = ({
     xmtpConversationId: groupConversationTopic,
   })
 
-  const displayMessagePreview = group.lastMessage && isTextMessage(group.lastMessage) && isUnread
+  const { data: lastMessage } = useConversationLastMessage({
+    xmtpConversationId: groupConversationTopic,
+  })
+
+  const displayMessagePreview = lastMessage && isTextMessage(lastMessage) && isUnread
 
   const contextMenuProps = useGroupConversationContextMenuViewProps({
     xmtpConversationId: groupConversationTopic,
@@ -52,7 +57,7 @@ export const ConversationListPinnedConversationGroup = ({
         showUnread={isUnread}
         title={groupName ?? ""}
       />
-      {displayMessagePreview && <PinnedConversationMessagePreview message={group.lastMessage!} />}
+      {displayMessagePreview && <PinnedConversationMessagePreview message={lastMessage} />}
     </VStack>
   )
 }

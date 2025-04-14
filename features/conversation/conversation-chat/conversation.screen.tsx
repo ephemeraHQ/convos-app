@@ -1,6 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { memo } from "react"
-import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Center } from "@/design-system/Center"
@@ -18,7 +17,6 @@ import { ConversationCreateSearchInput } from "@/features/conversation/conversat
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
-import { debugBorder } from "@/utils/debug-style"
 import { ConversationMessages } from "./conversation-messages"
 import {
   ConversationStoreProvider,
@@ -77,7 +75,7 @@ const Content = memo(function Content() {
   }
 
   return (
-    <IsReadyWrapper>
+    <>
       <VStack style={$globalStyles.flex1}>
         {isCreatingNewConversation && <ConversationCreateSearchInput />}
 
@@ -96,6 +94,6 @@ const Content = memo(function Content() {
       </VStack>
       <ConversationMessageContextMenu />
       <MessageReactionsDrawer />
-    </IsReadyWrapper>
+    </>
   )
 })

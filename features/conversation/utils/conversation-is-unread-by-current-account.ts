@@ -2,14 +2,19 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { normalizeTimestampToMs } from "@/utils/date"
 
 export function conversationIsUnreadForInboxId(args: {
-  lastMessageSent: number | null
+  lastMessageSentAt: number | null
   lastMessageSenderInboxId: IXmtpInboxId | null
   consumerInboxId: IXmtpInboxId
   markedAsUnread: boolean | null
   readUntil: number | null
 }) {
-  const { lastMessageSent, lastMessageSenderInboxId, consumerInboxId, markedAsUnread, readUntil } =
-    args
+  const {
+    lastMessageSentAt,
+    lastMessageSenderInboxId,
+    consumerInboxId,
+    markedAsUnread,
+    readUntil,
+  } = args
 
   if (markedAsUnread) {
     return true
@@ -20,7 +25,7 @@ export function conversationIsUnreadForInboxId(args: {
     return false
   }
 
-  if (!lastMessageSent) {
+  if (!lastMessageSentAt) {
     return false
   }
 
@@ -28,5 +33,5 @@ export function conversationIsUnreadForInboxId(args: {
     return true
   }
 
-  return readUntil < normalizeTimestampToMs(lastMessageSent)
+  return readUntil < normalizeTimestampToMs(lastMessageSentAt)
 }

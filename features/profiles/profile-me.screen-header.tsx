@@ -15,7 +15,7 @@ import { useHeader } from "@/navigation/use-header"
 import { useRouter } from "@/navigation/use-navigation"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
-import { ApiError } from "@/utils/convos-api/convos-api-error"
+import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { Haptics } from "@/utils/haptics"
 import { AccountSwitcher } from "../authentication/components/account-switcher"
 
@@ -147,7 +147,7 @@ const DoneAction = memo(function DoneAction({ inboxId }: { inboxId: IXmtpInboxId
 
       profileMeStore.getState().actions.reset()
     } catch (error) {
-      const apiError = new ApiError({
+      const apiError = new ConvosApiError({
         error,
         additionalMessage: "Failed to save profile",
       })

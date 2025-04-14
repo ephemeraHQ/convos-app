@@ -4,7 +4,6 @@ import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
-import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -100,16 +99,9 @@ export const setConversationQueryData = (
         return undefined
       }
 
-      // Keep existing lastMessage if new conversation has undefined lastMessage
-      const lastMessage =
-        conversation.lastMessage === undefined
-          ? previousConversation.lastMessage
-          : conversation.lastMessage
-
       return {
         ...previousConversation,
         ...conversation,
-        lastMessage,
       }
     },
   )
