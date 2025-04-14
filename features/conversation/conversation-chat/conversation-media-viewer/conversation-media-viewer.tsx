@@ -93,48 +93,56 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       savedTranslateX.value = translateX.value
       savedTranslateY.value = translateY.value
     })
-    .onUpdate((event: { scale: number; focalX: number; focalY: number }) => {
+    .onUpdate((event: { scale: number; focalX: number; focalY: number; numberOfPointers: number }) => {
       'worklet';
-      // Immediately apply scale changes without waiting
-      const newScale = Math.min(Math.max(savedScale.value * event.scale, MIN_SCALE_THRESHOLD), MAX_SCALE)
-      scale.value = newScale
-      
-      if (newScale > 1) {
-        // Apply translation immediately for focal point zooming
-        const pinchCenterX = event.focalX - SCREEN_WIDTH / 2
-        const pinchCenterY = event.focalY - SCREEN_HEIGHT / 2
+      // Only handle updates with 2 pointers for smooth pinching
+      if (event.numberOfPointers === 2) {
+        // Immediately apply scale changes without waiting
+        const newScale = Math.min(Math.max(savedScale.value * event.scale, MIN_SCALE_THRESHOLD), MAX_SCALE)
+        scale.value = newScale
         
-        // More responsive translation calculation
-        let newTranslateX = savedTranslateX.value + pinchCenterX * (1 - event.scale)
-        let newTranslateY = savedTranslateY.value + pinchCenterY * (1 - event.scale)
-        
-        // Enforce boundaries with elasticity during pinch
-        const maxTranslateX = (newScale - 1) * SCREEN_WIDTH / 2
-        const maxTranslateY = (newScale - 1) * SCREEN_HEIGHT / 2
-        
-        // Apply elastic behavior at the edges
-        if (newTranslateX < -maxTranslateX) {
-          const overscroll = -maxTranslateX - newTranslateX
-          newTranslateX = -maxTranslateX - overscroll / 3
-        } else if (newTranslateX > maxTranslateX) {
-          const overscroll = newTranslateX - maxTranslateX
-          newTranslateX = maxTranslateX + overscroll / 3
+        if (newScale > 1) {
+          // Apply translation immediately for focal point zooming
+          const pinchCenterX = event.focalX - SCREEN_WIDTH / 2
+          const pinchCenterY = event.focalY - SCREEN_HEIGHT / 2
+          
+          // More responsive translation calculation
+          let newTranslateX = savedTranslateX.value + pinchCenterX * (1 - event.scale)
+          let newTranslateY = savedTranslateY.value + pinchCenterY * (1 - event.scale)
+          
+          // Enforce boundaries with elasticity during pinch
+          const maxTranslateX = (newScale - 1) * SCREEN_WIDTH / 2
+          const maxTranslateY = (newScale - 1) * SCREEN_HEIGHT / 2
+          
+          // Apply elastic behavior at the edges
+          if (newTranslateX < -maxTranslateX) {
+            const overscroll = -maxTranslateX - newTranslateX
+            newTranslateX = -maxTranslateX - overscroll / 3
+          } else if (newTranslateX > maxTranslateX) {
+            const overscroll = newTranslateX - maxTranslateX
+            newTranslateX = maxTranslateX + overscroll / 3
+          }
+          
+          if (newTranslateY < -maxTranslateY) {
+            const overscroll = -maxTranslateY - newTranslateY
+            newTranslateY = -maxTranslateY - overscroll / 3
+          } else if (newTranslateY > maxTranslateY) {
+            const overscroll = newTranslateY - maxTranslateY
+            newTranslateY = maxTranslateY + overscroll / 3
+          }
+          
+          translateX.value = newTranslateX
+          translateY.value = newTranslateY
         }
-        
-        if (newTranslateY < -maxTranslateY) {
-          const overscroll = -maxTranslateY - newTranslateY
-          newTranslateY = -maxTranslateY - overscroll / 3
-        } else if (newTranslateY > maxTranslateY) {
-          const overscroll = newTranslateY - maxTranslateY
-          newTranslateY = maxTranslateY + overscroll / 3
-        }
-        
-        translateX.value = newTranslateX
-        translateY.value = newTranslateY
       }
     })
     .onEnd(() => {
       'worklet';
+      // Save state at the end of each gesture
+      savedScale.value = scale.value;
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      
       // If below threshold, close the modal
       if (scale.value < MIN_SCALE_THRESHOLD) {
         runOnJS(handleClose)()
@@ -184,11 +192,6 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
         savedScale.value = scale.value
         savedTranslateX.value = targetX
         savedTranslateY.value = targetY
-      } else {
-        // Just update saved values at normal scale
-        savedScale.value = scale.value
-        savedTranslateX.value = translateX.value
-        savedTranslateY.value = translateY.value
       }
     })
 
@@ -282,69 +285,63 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
           savedTranslateY.value = 0
         }
       } else {
-        // When zoomed in, apply deceleration with bounds checking
+        // When zoomed in, check if the image is out of bounds and snap to edges
         const maxTranslateX = (scale.value - 1) * SCREEN_WIDTH / 2
         const maxTranslateY = (scale.value - 1) * SCREEN_HEIGHT / 2
         
-        // First, check if we're already out of bounds
-        if (translateX.value < -maxTranslateX || translateX.value > maxTranslateX ||
-            translateY.value < -maxTranslateY || translateY.value > maxTranslateY) {
-          // If out of bounds, just snap to edges with spring
-          let targetX = translateX.value
-          let targetY = translateY.value
-          
-          if (translateX.value < -maxTranslateX) {
-            targetX = -maxTranslateX
-          } else if (translateX.value > maxTranslateX) {
-            targetX = maxTranslateX
-          }
-          
-          if (translateY.value < -maxTranslateY) {
-            targetY = -maxTranslateY
-          } else if (translateY.value > maxTranslateY) {
-            targetY = maxTranslateY
-          }
-          
-          translateX.value = withSpring(targetX, SPRING_CONFIG)
-          translateY.value = withSpring(targetY, SPRING_CONFIG)
-          savedTranslateX.value = targetX
-          savedTranslateY.value = targetY
-        } else {
-          // Otherwise, apply deceleration with momentum
-          // X-axis with deceleration
-          translateX.value = withDecay({
-            velocity: event.velocityX,
-            deceleration: 0.992, // Higher value = less friction
-            clamp: [-maxTranslateX, maxTranslateX], // Boundary constraints
-            onFinish: (finished) => {
-              'worklet';
-              if (finished) {
-                savedTranslateX.value = translateX.value
-              }
-            },
-          })
-          
-          // Y-axis with deceleration
-          translateY.value = withDecay({
-            velocity: event.velocityY,
-            deceleration: 0.992,
-            clamp: [-maxTranslateY, maxTranslateY],
-            onFinish: (finished) => {
-              'worklet';
-              if (finished) {
-                savedTranslateY.value = translateY.value
-              }
-            },
-          })
+        let targetX = translateX.value
+        let targetY = translateY.value
+        
+        // Check X bounds and adjust if needed
+        if (translateX.value < -maxTranslateX) {
+          targetX = -maxTranslateX
+        } else if (translateX.value > maxTranslateX) {
+          targetX = maxTranslateX
         }
+        
+        // Check Y bounds and adjust if needed
+        if (translateY.value < -maxTranslateY) {
+          targetY = -maxTranslateY
+        } else if (translateY.value > maxTranslateY) {
+          targetY = maxTranslateY
+        }
+        
+        // Apply spring animation to snap to edges
+        translateX.value = withSpring(targetX, SPRING_CONFIG)
+        translateY.value = withSpring(targetY, SPRING_CONFIG)
+        
+        // Update saved values
+        savedTranslateX.value = targetX
+        savedTranslateY.value = targetY
       }
     })
 
-  // Combined gestures - optimize for immediate response
-  const combinedGestures = Gesture.Exclusive(
+  // Double tap gesture to zoom out
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .maxDuration(300)
+    .onEnd(() => {
+      'worklet';
+      // Only reset zoom if already zoomed in
+      if (scale.value > 1) {
+        // Animate back to scale 1 with smooth spring animation
+        scale.value = withSpring(1, SPRING_CONFIG)
+        translateX.value = withSpring(0, SPRING_CONFIG)
+        translateY.value = withSpring(0, SPRING_CONFIG)
+        
+        // Update saved values
+        savedScale.value = 1
+        savedTranslateX.value = 0
+        savedTranslateY.value = 0
+      }
+    })
+
+  // Combined gestures
+  const combinedGestures = Gesture.Race(
+    doubleTapGesture,
     Gesture.Simultaneous(
       pinchGesture,
-      panGesture,
+      panGesture
     )
   )
 
