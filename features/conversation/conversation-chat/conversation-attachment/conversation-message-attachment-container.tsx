@@ -1,5 +1,6 @@
 import { IVStackProps, VStack } from "@design-system/VStack"
 import { memo } from "react"
+import { useConversationAttachmentStyles } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 
 export type IConversationMessageAttachmentContainerProps = IVStackProps & {
@@ -14,13 +15,15 @@ export const ConversationMessageAttachmentContainer = memo(
 
     const { theme } = useAppTheme()
 
+    const { borderRadius } = useConversationAttachmentStyles()
+
     return (
       <VStack
         style={[
           {
             // ...debugBorder(),
             overflow: "hidden",
-            borderRadius: theme.borderRadius.sm,
+            borderRadius,
             width: "100%",
             justifyContent: "center",
             alignItems: "center",

@@ -26,10 +26,17 @@ type IConversationStore = ReturnType<typeof createConversationStore>
 export const ConversationStoreProvider = memo(
   ({ children, ...props }: IConversationStoreProviderProps) => {
     const storeRef = useRef<IConversationStore>()
+
     if (!storeRef.current) {
       storeRef.current = createConversationStore(props)
     }
 
+    // Update the store if the props change
+    useEffect(() => {
+      storeRef.current?.setState(props)
+    }, [props])
+
+    // Check searchSelectedUserInboxIds and update the xmtpConversationId if we can find a conversation with those inboxIds
     useEffect(() => {
       storeRef.current?.subscribe(async (nextState, previousState) => {
         try {

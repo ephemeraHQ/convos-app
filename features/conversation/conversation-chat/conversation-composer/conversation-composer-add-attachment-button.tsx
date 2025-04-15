@@ -7,7 +7,8 @@ import {
   takePictureFromCamera,
 } from "@utils/media"
 import * as ImagePicker from "expo-image-picker"
-import { memo, useCallback } from "react"
+import { memo, useCallback, useMemo } from "react"
+import { ViewStyle } from "react-native"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { Center } from "@/design-system/Center"
 import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
@@ -17,21 +18,20 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
 import { useConversationComposerIsEnabled } from "@/features/conversation/conversation-chat/conversation-composer/hooks/use-conversation-composer-is-enabled"
 import { uploadFile } from "@/features/uploads/upload.api"
-import { Xmtp } from "@/features/xmtp"
-import { useAppTheme } from "@/theme/use-app-theme"
-import { convertToArray } from "@/utils/array"
+import { encryptXmtpAttachment } from "@/features/xmtp/xmtp-codecs/xmtp-codecs-attachments"
+import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { prefetchImageUrl } from "@/utils/image"
 
 export const ConversationComposerAddAttachmentButton = memo(
   function ConversationComposerAddAttachmentButton() {
-    const { theme } = useAppTheme()
+    const { theme, themed } = useAppTheme()
 
     const store = useConversationComposerStore()
     const isEnabled = useConversationComposerIsEnabled()
 
-    const handleAttachmentSelected = useCallback(
+    const handleAsset = useCallback(
       async (asset: ImagePicker.ImagePickerAsset) => {
         const mediaPreview: IComposerAttachmentPicked = {
           status: "picked",
@@ -43,9 +43,9 @@ export const ConversationComposerAddAttachmentButton = memo(
           },
         }
 
-        store.getState().addComposerAttachment(mediaPreview)
-
         try {
+          store.getState().addComposerAttachment(mediaPreview)
+
           // Update status to uploading
           store.getState().updateComposerAttachment({
             mediaURI: mediaPreview.mediaURI,
@@ -66,7 +66,7 @@ export const ConversationComposerAddAttachmentButton = memo(
           }
 
           // Encrypt and upload attachment
-          const encryptedAttachment = await Xmtp.encryptAttachment({
+          const encryptedAttachment = await encryptXmtpAttachment({
             fileUri: resizedImage.uri,
             mimeType,
           })
@@ -96,18 +96,8 @@ export const ConversationComposerAddAttachmentButton = memo(
             },
           })
         } catch (error) {
-          // Update status to error
-          store.getState().updateComposerAttachment({
-            mediaURI: mediaPreview.mediaURI,
-            attachment: {
-              status: "error",
-            },
-          })
-          // Remove media preview
           store.getState().removeComposerAttachment(mediaPreview.mediaURI)
-          captureErrorWithToast(
-            new GenericError({ error, additionalMessage: "Failed to add attachment" }),
-          )
+          throw new GenericError({ error, additionalMessage: "Failed to process attachment" })
         }
       },
       [store],
@@ -121,38 +111,33 @@ export const ConversationComposerAddAttachmentButton = memo(
           return
         }
 
-        // Process each asset
-        await Promise.allSettled(convertToArray(assets).map(handleAttachmentSelected)).then(
-          (results: PromiseSettledResult<void>[]) => {
-            const failedResults = results.filter(
-              (result) => result.status === "rejected",
-            ) as PromiseRejectedResult[]
-            const failedCount = failedResults.length
+        const results = await Promise.allSettled(assets.map(handleAsset))
 
-            if (failedCount > 0) {
-              // Capture errors from failed results
-              failedResults.forEach((result) => {
-                captureError(
-                  new GenericError({
-                    error: result.reason,
-                    additionalMessage: "Failed to process attachment",
-                  }),
-                )
-              })
+        const failedResults = results.filter((result) => result.status === "rejected")
+        const failedCount = failedResults.length
 
-              showSnackbar({
-                message: `Failed to process ${failedCount} attachment${failedCount > 1 ? "s" : ""}`,
-                type: "error",
-              })
-            }
-          },
-        )
+        if (failedCount > 0) {
+          // Capture errors from failed results
+          failedResults.forEach((result) => {
+            captureError(
+              new GenericError({
+                error: result.reason,
+                additionalMessage: "Failed to process attachment",
+              }),
+            )
+          })
+
+          showSnackbar({
+            message: `Failed to process ${failedCount} attachment${failedCount > 1 ? "s" : ""}`,
+            type: "error",
+          })
+        }
       } catch (error) {
         captureErrorWithToast(
           new GenericError({ error, additionalMessage: "Failed to pick media" }),
         )
       }
-    }, [handleAttachmentSelected])
+    }, [handleAsset])
 
     const openCamera = useCallback(async () => {
       try {
@@ -162,13 +147,16 @@ export const ConversationComposerAddAttachmentButton = memo(
           return
         }
 
-        await handleAttachmentSelected(asset)
+        await handleAsset(asset)
       } catch (error) {
         captureErrorWithToast(
-          new GenericError({ error, additionalMessage: "Failed to open camera" }),
+          new GenericError({
+            error,
+            additionalMessage: "Failed to process attachment from camera",
+          }),
         )
       }
-    }, [handleAttachmentSelected])
+    }, [handleAsset])
 
     const onDropdownMenuPress = useCallback(
       (actionId: string) => {
@@ -184,35 +172,29 @@ export const ConversationComposerAddAttachmentButton = memo(
       [openCamera, pickMedia],
     )
 
+    const dropdownMenuActions = useMemo(() => {
+      return [
+        {
+          id: "mediaLibrary",
+          title: translate("photo_library"),
+          image: iconRegistry["photos"],
+        },
+        {
+          id: "camera",
+          title: translate("camera"),
+          image: iconRegistry["camera"],
+        },
+      ]
+    }, [])
+
     return (
       <DropdownMenu
         disabled={!isEnabled}
-        style={{
-          margin: theme.spacing.xxxs,
-          alignSelf: "flex-end",
-        }}
+        style={themed($dropdownMenu)}
         onPress={onDropdownMenuPress}
-        actions={[
-          {
-            id: "mediaLibrary",
-            title: translate("photo_library"),
-            image: iconRegistry["photos"],
-          },
-          {
-            id: "camera",
-            title: translate("camera"),
-            image: iconRegistry["camera"],
-          },
-        ]}
+        actions={dropdownMenuActions}
       >
-        <Center
-          style={{
-            height: 36, // Value from Figma
-            width: 36, // Value from Figma
-            backgroundColor: theme.colors.fill.minimal,
-            borderRadius: 36,
-          }}
-        >
+        <Center style={themed($button)}>
           <Icon
             color={theme.colors.text.secondary}
             icon="plus"
@@ -224,3 +206,15 @@ export const ConversationComposerAddAttachmentButton = memo(
     )
   },
 )
+
+const $dropdownMenu: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  margin: spacing.xxxs,
+  alignSelf: "flex-end",
+})
+
+const $button: ThemedStyle<ViewStyle> = ({ colors }) => ({
+  height: 36, // Value from Figma
+  width: 36, // Value from Figma
+  backgroundColor: colors.fill.minimal,
+  borderRadius: 36,
+})

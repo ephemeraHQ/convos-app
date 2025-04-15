@@ -124,7 +124,6 @@
     "fast-text-encoding": "^1.0.6",
     "i18n-js": "3.9.2",
     "match-sorter": "^8.0.0",
-    "mime": "^4.0.4",
     "permissionless": "^0.2.35",
     "pretty-bytes": "^6.1.0",
     "react": "18.3.1",

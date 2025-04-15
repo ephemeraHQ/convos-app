@@ -6,6 +6,7 @@ import prettyBytes from "pretty-bytes"
 import { memo } from "react"
 import { Image } from "@/design-system/image"
 import { AttachmentLoading } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-loading"
+import { useConversationAttachmentStyles } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.styles"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { IConversationMessageRemoteAttachmentContent } from "../conversation-message/conversation-message.types"
@@ -28,6 +29,8 @@ export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
   const { xmtpMessageId, remoteMessageContent, fitAspectRatio, containerProps } = props
 
   const { theme } = useAppTheme()
+
+  const { borderRadius } = useConversationAttachmentStyles()
 
   const {
     data: attachment,
@@ -103,6 +106,7 @@ export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
         style={{
           width: "100%",
           height: "100%",
+          borderRadius,
         }}
       />
     </ConversationMessageAttachmentContainer>

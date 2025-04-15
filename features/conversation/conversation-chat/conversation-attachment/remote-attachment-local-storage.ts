@@ -1,5 +1,4 @@
 import { DecryptedLocalAttachment } from "@xmtp/react-native-sdk"
-import mime from "mime"
 import RNFS from "react-native-fs"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -9,7 +8,7 @@ import { getImageSize, isImageMimetype } from "@/utils/media"
 import { LocalAttachmentMetadata } from "./conversation-attachments.types"
 import { createAttachmentFolder, getAttachmentPaths } from "./conversation-attachments.utils"
 
-export const getStoredRemoteAttachment = async (messageId: string) => {
+export const getStoredRemoteAttachment = async (messageId: IXmtpMessageId) => {
   const { metadata: metadataPath } = getAttachmentPaths({ messageId })
 
   try {
@@ -46,15 +45,6 @@ export const storeRemoteAttachment = async (args: {
 
   // Get filename from attachment or extract from URI as fallback
   let filename = originalFilename || fileUri.split("/").slice(-1)[0]
-
-  // Add extension if missing but we know the mime type
-  if (mimeType) {
-    const extension = mime.getExtension(mimeType)
-    const hasExtension = filename.includes(".")
-    if (extension && !hasExtension) {
-      filename = `${filename}.${extension}`
-    }
-  }
 
   // Get paths
   const { file: destinationPath, metadata: metadataPath } = getAttachmentPaths({

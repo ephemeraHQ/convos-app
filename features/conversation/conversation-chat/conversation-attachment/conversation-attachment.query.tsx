@@ -4,7 +4,7 @@ import {
   getStoredRemoteAttachment,
   storeRemoteAttachment,
 } from "@/features/conversation/conversation-chat/conversation-attachment/remote-attachment-local-storage"
-import { decryptAttachment } from "@/features/xmtp/xmtp-codecs/xmtp-codecs-attachments"
+import { decryptXmtpAttachment } from "@/features/xmtp/xmtp-codecs/xmtp-codecs-attachments"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { IConversationMessageRemoteAttachmentContent } from "../conversation-message/conversation-message.types"
 
@@ -23,7 +23,7 @@ export function getRemoteAttachmentQueryOptions(args: {
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ["remote-attachment", args.xmtpMessageId, args.content.url],
     queryFn: () => fetchRemoteAttachment(args),
-    enabled: !!args.xmtpMessageId,
+    enabled: !!args.xmtpMessageId && !!args.content.url,
   })
 }
 
@@ -44,7 +44,7 @@ async function fetchRemoteAttachment(args: {
     url: content.url,
   })
 
-  const decryptedAttachment = await decryptAttachment({
+  const decryptedAttachment = await decryptXmtpAttachment({
     encryptedLocalFileUri: encryptedLocalFileUri,
     metadata: content,
   })

@@ -8,7 +8,7 @@ import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export const MAX_AUTOMATIC_DOWNLOAD_ATTACHMENT_SIZE = 10000000 // 10MB
 
-export const encryptAttachment = async (args: {
+export const encryptXmtpAttachment = async (args: {
   fileUri: string
   mimeType: string | undefined
   clientInboxId?: IXmtpInboxId
@@ -36,7 +36,7 @@ export const encryptAttachment = async (args: {
   return encryptedAttachment
 }
 
-export const decryptAttachment = async (args: {
+export const decryptXmtpAttachment = async (args: {
   encryptedLocalFileUri: string
   metadata: RemoteAttachmentMetadata
   clientInboxId?: IXmtpInboxId

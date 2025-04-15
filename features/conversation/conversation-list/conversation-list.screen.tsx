@@ -21,8 +21,6 @@ import { usePinnedConversations } from "@/features/conversation/conversation-lis
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
-import { IDm } from "@/features/dm/dm.types"
-import { IGroup } from "@/features/groups/group.types"
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useEffectWhenCondition } from "@/hooks/use-effect-once"
@@ -109,7 +107,9 @@ export const ConversationListScreen = memo(function ConversationListScreen(
             // Little hack because we want ConversationListEmpty to be full screen when we have no conversations
             paddingBottom: conversationsIds && conversationsIds.length > 0 ? insets.bottom : 0,
           }}
-          renderConversation={({ item }) => <ConversationListItem xmtpConversationId={item} />}
+          renderConversation={({ item, index }) => {
+            return <ConversationListItem xmtpConversationId={item} />
+          }}
         />
       )}
     </Screen>
@@ -134,19 +134,19 @@ const ConversationListItem = memo(function ConversationListItem(props: {
   }
 
   if (isConversationGroup(conversation)) {
-    return <ConversationListItemGroupWrapper group={conversation} />
+    return <ConversationListItemGroupWrapper xmtpConversationId={conversation.xmtpId} />
   }
 
-  return <ConversationListItemDmWrapper dm={conversation} />
+  return <ConversationListItemDmWrapper xmtpConversationId={conversation.xmtpId} />
 })
 
 const ConversationListItemDmWrapper = memo(function ConversationListItemDmWrapper(props: {
-  dm: IDm
+  xmtpConversationId: IXmtpConversationId
 }) {
-  const { dm } = props
+  const { xmtpConversationId } = props
 
   const contextMenuProps = useDmConversationContextMenuViewProps({
-    xmtpConversationId: dm.xmtpId,
+    xmtpConversationId,
   })
 
   return (
@@ -163,19 +163,19 @@ const ConversationListItemDmWrapper = memo(function ConversationListItemDmWrappe
         }}
         {...contextMenuProps}
       >
-        <ConversationListItemDm xmtpConversationId={dm.xmtpId} />
+        <ConversationListItemDm xmtpConversationId={xmtpConversationId} />
       </ContextMenuView>
     </HStack>
   )
 })
 
 const ConversationListItemGroupWrapper = memo(function ConversationListItemGroupWrapper(props: {
-  group: IGroup
+  xmtpConversationId: IXmtpConversationId
 }) {
-  const { group } = props
+  const { xmtpConversationId } = props
 
   const contextMenuProps = useGroupConversationContextMenuViewProps({
-    xmtpConversationId: group.xmtpId,
+    xmtpConversationId,
   })
 
   return (
@@ -192,7 +192,7 @@ const ConversationListItemGroupWrapper = memo(function ConversationListItemGroup
         }}
         {...contextMenuProps}
       >
-        <ConversationListItemGroup xmtpConversationId={group.xmtpId} />
+        <ConversationListItemGroup xmtpConversationId={xmtpConversationId} />
       </ContextMenuView>
     </HStack>
   )
