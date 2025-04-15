@@ -27,8 +27,8 @@ const MIN_SCALE_THRESHOLD = 0.2
 const SPRING_CONFIG = {
   damping: 15,
   mass: 1,
-  stiffness: 150,
-  overshootClamping: false,
+  stiffness: 180,
+  overshootClamping: true,
 }
 const DISMISS_THRESHOLD = 120 // Distance to dismiss in pixels
 const TRANSITION_DURATION = 200
