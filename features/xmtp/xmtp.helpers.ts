@@ -3,6 +3,7 @@ import { config } from "@/config"
 import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
+import { xmtpLogger } from "@/utils/logger/logger"
 import { withTimeout } from "@/utils/promise-timeout"
 
 export function logErrorIfXmtpRequestTookTooLong(args: {
@@ -50,6 +51,8 @@ export async function wrapXmtpCallWithDuration<T>(
     // Record end time and calculate duration
     const endTime = Date.now()
     const durationMs = endTime - startTime
+
+    xmtpLogger.debug(`XMTP operation "${xmtpFunctionName}" took ${durationMs}ms`)
 
     // Log error if the request took too long
     logErrorIfXmtpRequestTookTooLong({ durationMs, xmtpFunctionName })

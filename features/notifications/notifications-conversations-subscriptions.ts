@@ -1,3 +1,4 @@
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import {
   ensureAllowedConsentConversationsQueryData,
@@ -7,8 +8,8 @@ import { ensureConversationQueryData } from "@/features/conversation/queries/con
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { userHasGrantedNotificationsPermissions } from "@/features/notifications/notifications.service"
-import { getXmtpConversationHmacKeys } from "@/features/xmtp/xmtp-hmac-keys/xmtp-hmac-keys"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { getXmtpHmacKeysForConversation } from "@/features/xmtp/xmtp-hmac-keys/xmtp-hmac-keys"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
@@ -19,24 +20,53 @@ import {
   unsubscribeFromNotificationTopics,
 } from "./notifications.api"
 
-// Global map to track observers by inbox ID
 const allowedConversationsObserversMap = new Map<
   IXmtpInboxId,
   ReturnType<typeof getAllowedConsentConversationsQueryObserver>
 >()
 
-// Global variable to track previous senders
 let previousSendersInboxIds: IXmtpInboxId[] = []
 
-// Store unsubscribe functions
-let notificationsPermissionsUnsubscribe: (() => void) | null = null
-let inboxStoreUnsubscribe: (() => void) | null = null
+let isSubscribedToMultiInboxStore = false
+let isSubscribedToNotificationsPermissions = false
+let isSubscribedToAuthenticationStore = false
 
 export async function setupConversationsNotificationsSubscriptions() {
-  // cleanupSubscriptions()
+  if (!isSubscribedToAuthenticationStore) {
+    useAuthenticationStore.subscribe(
+      (state) => state.status,
+      async (status, previousStatus) => {
+        if (status === previousStatus) {
+          return
+        }
 
-  // Set up subscription for notifications permissions changes
-  const permissionsObserver = createQueryObserverWithPreviousData({
+        if (status === "signedIn") {
+          // User just signed in, set up other subscriptions
+          await setupNotificationsPermissionsListener()
+          await setupMultiInboxListener()
+        } else if (previousStatus === "signedIn") {
+          // User just signed out, clean up
+          previousSendersInboxIds.map(async (inboxId) => {
+            await unsubscribeFromConversationsNotificationsForInbox(inboxId)
+            removeConversationsObserver(inboxId)
+          })
+        }
+      },
+      {
+        fireImmediately: true,
+      },
+    )
+
+    isSubscribedToAuthenticationStore = true
+  }
+}
+
+async function setupNotificationsPermissionsListener() {
+  if (isSubscribedToNotificationsPermissions) {
+    return
+  }
+
+  createQueryObserverWithPreviousData({
     queryOptions: getNotificationsPermissionsQueryConfig(),
     observerCallbackFn: async ({ data, previousData }) => {
       if (!data) {
@@ -44,8 +74,12 @@ export async function setupConversationsNotificationsSubscriptions() {
       }
 
       const isNewPermissionStatus = data.status !== previousData?.status
-
       if (!isNewPermissionStatus) {
+        return
+      }
+
+      const isUserSignedIn = useAuthenticationStore.getState().status === "signedIn"
+      if (!isUserSignedIn) {
         return
       }
 
@@ -54,22 +88,35 @@ export async function setupConversationsNotificationsSubscriptions() {
         const currentSenders = useMultiInboxStore.getState().senders
         const inboxIds = currentSenders.map((sender) => sender.inboxId)
         for (const inboxId of inboxIds) {
-          await setupAllowedConversationObserverForInbox(inboxId)
+          await setupAllowedConversationsObserverForInbox(inboxId)
         }
       } else {
         // Permission revoked or not granted
-        await unsubscribeAllConversationsNotifications()
+        previousSendersInboxIds.map(async (inboxId) => {
+          await unsubscribeFromConversationsNotificationsForInbox(inboxId)
+          removeConversationsObserver(inboxId)
+        })
       }
     },
   })
 
-  notificationsPermissionsUnsubscribe = permissionsObserver.unsubscribe
+  isSubscribedToNotificationsPermissions = true
+}
 
-  // Set up subscription for multi-inbox store changes
-  inboxStoreUnsubscribe = useMultiInboxStore.subscribe(
+async function setupMultiInboxListener() {
+  if (isSubscribedToMultiInboxStore) {
+    return
+  }
+
+  useMultiInboxStore.subscribe(
     (state) => state.senders,
     async (senders, previousSenders) => {
       if (senders.length === previousSenders.length) {
+        return
+      }
+
+      const isUserSignedIn = useAuthenticationStore.getState().status === "signedIn"
+      if (!isUserSignedIn) {
         return
       }
 
@@ -89,12 +136,15 @@ export async function setupConversationsNotificationsSubscriptions() {
 
       // Handle unsubscriptions
       if (inboxIdsToUnsubscribe.length > 0) {
-        await unsubscribeConversationsForInboxes(inboxIdsToUnsubscribe)
+        for (const inboxId of inboxIdsToUnsubscribe) {
+          await unsubscribeFromConversationsNotificationsForInbox(inboxId)
+          removeConversationsObserver(inboxId)
+        }
       }
 
       // Handle subscriptions
       for (const inboxId of inboxIdsToSubscribe) {
-        await setupAllowedConversationObserverForInbox(inboxId)
+        await setupAllowedConversationsObserverForInbox(inboxId)
       }
 
       // Update our tracking of previous senders
@@ -104,53 +154,34 @@ export async function setupConversationsNotificationsSubscriptions() {
       fireImmediately: true,
     },
   )
+
+  isSubscribedToMultiInboxStore = true
 }
 
-// function cleanupSubscriptions() {
-//   notificationsLogger.debug("Cleaned up notifications subscriptions and observers")
+async function unsubscribeFromConversationsNotificationsForInbox(inboxId: IXmtpInboxId) {
+  const conversationIds = await ensureAllowedConsentConversationsQueryData({
+    clientInboxId: inboxId,
+    caller: "removeSenderListeners",
+  })
+  unsubscribeFromConversationsNotifications({
+    conversationIds,
+    clientInboxId: inboxId,
+  })
+}
 
-//   // Unsubscribe from notifications permissions observer
-//   if (notificationsPermissionsUnsubscribe) {
-//     notificationsPermissionsUnsubscribe()
-//     notificationsPermissionsUnsubscribe = null
-//   }
-
-//   // Unsubscribe from multi-inbox store
-//   if (inboxStoreUnsubscribe) {
-//     inboxStoreUnsubscribe()
-//     inboxStoreUnsubscribe = null
-//   }
-
-//   // Clean up all conversation observers
-//   allowedConversationsObserversMap.forEach((observer) => {
-//     observer.destroy()
-//   })
-//   allowedConversationsObserversMap.clear()
-
-//   // Reset previous senders
-//   previousSendersInboxIds = []
-// }
-
-/**
- * Removes observers and unsubscribes for multiple inbox IDs
- */
-async function unsubscribeConversationsForInboxes(inboxIds: IXmtpInboxId[]) {
-  notificationsLogger.debug(`Removing observers for ${inboxIds.length} inboxes`)
-
-  for (const inboxId of inboxIds) {
-    const observer = allowedConversationsObserversMap.get(inboxId)
-    if (observer) {
-      observer.destroy()
-      allowedConversationsObserversMap.delete(inboxId)
-    }
+function removeConversationsObserver(inboxId: IXmtpInboxId) {
+  const observer = allowedConversationsObserversMap.get(inboxId)
+  if (observer) {
+    observer.destroy()
+    allowedConversationsObserversMap.delete(inboxId)
   }
 }
 
 /**
  * Sets up a query observer for a each client inbox ID
  */
-function setupAllowedConversationObserverForInbox(clientInboxId: IXmtpInboxId) {
-  if (allowedConversationsObserversMap.has(clientInboxId)) {
+function setupAllowedConversationsObserverForInbox(inboxId: IXmtpInboxId) {
+  if (allowedConversationsObserversMap.has(inboxId)) {
     return
   }
 
@@ -158,11 +189,16 @@ function setupAllowedConversationObserverForInbox(clientInboxId: IXmtpInboxId) {
   let previousConversationIds: IXmtpConversationId[] = []
 
   // Create observer for the inbox
-  const observer = getAllowedConsentConversationsQueryObserver({ clientInboxId })
+  const observer = getAllowedConsentConversationsQueryObserver({ clientInboxId: inboxId })
 
   // Set up subscription for query changes
   observer.subscribe((query) => {
     if (!query.data) {
+      return
+    }
+
+    const isUserSignedIn = useAuthenticationStore.getState().status === "signedIn"
+    if (!isUserSignedIn) {
       return
     }
 
@@ -182,7 +218,7 @@ function setupAllowedConversationObserverForInbox(clientInboxId: IXmtpInboxId) {
     if (conversationsToUnsubscribe.length > 0) {
       unsubscribeFromConversationsNotifications({
         conversationIds: conversationsToUnsubscribe,
-        clientInboxId,
+        clientInboxId: inboxId,
       }).catch(captureError)
     }
 
@@ -190,7 +226,7 @@ function setupAllowedConversationObserverForInbox(clientInboxId: IXmtpInboxId) {
     if (conversationsToSubscribe.length > 0) {
       subscribeToConversationsNotifications({
         conversationIds: conversationsToSubscribe,
-        clientInboxId,
+        clientInboxId: inboxId,
       }).catch(captureError)
     }
 
@@ -199,38 +235,9 @@ function setupAllowedConversationObserverForInbox(clientInboxId: IXmtpInboxId) {
   })
 
   // Store the observer in our map for tracking
-  allowedConversationsObserversMap.set(clientInboxId, observer)
+  allowedConversationsObserversMap.set(inboxId, observer)
 
-  notificationsLogger.debug(`New allowed conversation observer setup for ${clientInboxId}`)
-}
-
-async function unsubscribeAllConversationsNotifications() {
-  notificationsLogger.debug("Notifications not granted, clearing observers and unsubscribing")
-
-  const senders = useMultiInboxStore.getState().senders
-
-  await Promise.all(
-    senders.map(async (sender) => {
-      const conversationIds = await ensureAllowedConsentConversationsQueryData({
-        clientInboxId: sender.inboxId,
-        caller: "unsubscribeAllConversationsNotifications",
-      })
-
-      await unsubscribeFromConversationsNotifications({
-        conversationIds,
-        clientInboxId: sender.inboxId,
-      })
-    }),
-  )
-
-  previousSendersInboxIds = []
-
-  allowedConversationsObserversMap.forEach((observer) => {
-    observer.destroy()
-  })
-  allowedConversationsObserversMap.clear()
-
-  notificationsLogger.debug("Unsubscribed from all conversations notifications")
+  notificationsLogger.debug(`New allowed conversation observer setup for ${inboxId}`)
 }
 
 async function subscribeToConversationsNotifications(args: {
@@ -242,11 +249,6 @@ async function subscribeToConversationsNotifications(args: {
   notificationsLogger.debug(`Subscribing to ${conversationIds.length} conversations...`)
 
   try {
-    // Get installation ID once for all conversations
-    const installationId = await ensureXmtpInstallationQueryData({
-      inboxId: clientInboxId,
-    })
-
     // Collect subscription data for all conversations
     const subscriptionsData = await Promise.all(
       conversationIds.map(async (conversationId) => {
@@ -261,15 +263,18 @@ async function subscribeToConversationsNotifications(args: {
             throw new Error(`Conversation not found: ${conversationId}`)
           }
 
-          const hmacKeys = await getXmtpConversationHmacKeys({
+          const conversationHmacKeys = await getXmtpHmacKeysForConversation({
             clientInboxId,
-            conversationId,
+            conversationTopic: conversation.xmtpTopic,
           })
 
           return {
-            topic: hmacKeys.topic,
+            topic: conversation.xmtpTopic,
             isSilent: true,
-            hmacKeys: hmacKeys.hmacKeys,
+            hmacKeys: conversationHmacKeys.values.map((key) => ({
+              thirtyDayPeriodsSinceEpoch: key.thirtyDayPeriodsSinceEpoch,
+              key: Buffer.from(key.hmacKey).toString("hex"),
+            })),
           }
         } catch (error) {
           captureError(
@@ -291,9 +296,13 @@ async function subscribeToConversationsNotifications(args: {
       return
     }
 
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
     // Make a single API call with all subscriptions
     await subscribeToNotificationTopicsWithMetadata({
-      installationId,
+      installationId: client.installationId,
       subscriptions: validSubscriptions,
     })
 
@@ -316,68 +325,46 @@ async function unsubscribeFromConversationsNotifications(args: {
 }) {
   const { conversationIds, clientInboxId } = args
 
-  notificationsLogger.debug(`Unsubscribing from ${conversationIds.length} conversations`)
+  if (conversationIds.length === 0) {
+    return
+  }
 
   try {
-    // Get installation ID once for all conversations
-    const installationId = await ensureXmtpInstallationQueryData({
+    notificationsLogger.debug(`Unsubscribing from ${conversationIds.length} conversations...`)
+
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
-    // Collect topics for all conversations
-    const topicsData = await Promise.all(
-      conversationIds.map(async (conversationId) => {
-        try {
-          const conversation = await ensureConversationQueryData({
-            clientInboxId,
-            xmtpConversationId: conversationId,
-            caller: "unsubscribeFromConversationsNotifications",
-          })
-
-          if (!conversation) {
-            throw new Error(`Conversation not found: ${conversationId}`)
-          }
-
-          const hmacKeys = await getXmtpConversationHmacKeys({
-            clientInboxId,
-            conversationId,
-          })
-
-          return hmacKeys.topic
-        } catch (error) {
-          captureError(
-            new NotificationError({
-              error,
-              additionalMessage: `Failed to get topic for conversation ${conversationId}`,
-            }),
-          )
-          return null
-        }
+    const conversationTopics = await Promise.all(
+      conversationIds.map(async (id) => {
+        const conversation = await ensureConversationQueryData({
+          clientInboxId,
+          xmtpConversationId: id,
+          caller: "unsubscribeFromConversationsNotifications",
+        })
+        return conversation?.xmtpTopic
       }),
     )
 
-    // Filter out nulls
-    const validTopics = topicsData.filter(Boolean)
-
-    if (validTopics.length === 0) {
-      notificationsLogger.debug("No valid topics to unsubscribe from")
+    if (conversationTopics.length === 0) {
       return
     }
 
     // Make a single API call to unsubscribe from all topics
     await unsubscribeFromNotificationTopics({
-      installationId,
-      topics: validTopics,
+      installationId: client.installationId,
+      topics: conversationTopics,
     })
 
     notificationsLogger.debug(
-      `Successfully unsubscribed from ${validTopics.length} conversations in batch`,
+      `Successfully unsubscribed from ${conversationTopics.length} conversations`,
     )
   } catch (error) {
     captureError(
       new NotificationError({
         error,
-        additionalMessage: `Failed to unsubscribe from conversations batch for inbox ${clientInboxId}`,
+        additionalMessage: `Failed to unsubscribe from conversations for inbox ${clientInboxId}`,
       }),
     )
   }

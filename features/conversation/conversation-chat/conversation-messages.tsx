@@ -83,7 +83,13 @@ export const ConversationMessages = memo(function ConversationMessages() {
         return
       }
       logger.debug("Refetching messages because we're now focused again on the conversation...")
-      refetchMessages().catch(captureError)
+      refetchMessages()
+        .then(() => {
+          logger.debug(
+            "Done refetching messages because we're now focused again on the conversation",
+          )
+        })
+        .catch(captureError)
     }, [refetchMessages, xmtpConversationId]),
   )
 
@@ -258,7 +264,6 @@ export const ConversationMessages = memo(function ConversationMessages() {
         height: theme.layout.screen.height,
         width: theme.layout.screen.width,
       }}
-      // extraData={latestXmtpMessageIdFromCurrentSender}
 
       // LEGEND LIST PROPS
       // initialScrollIndex={messageIdsReversed.length - 1}

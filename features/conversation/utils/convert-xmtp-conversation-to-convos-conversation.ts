@@ -6,25 +6,16 @@ import { convertXmtpGroupMemberToConvosMember } from "@/features/groups/utils/co
 import { isXmtpConversationGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationWithCodecs, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { entify } from "@/utils/entify"
-import { convertXmtpMessageToConvosMessage } from "../conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 
 export async function convertXmtpConversationToConvosConversation(
   xmtpConversation: IXmtpConversationWithCodecs,
 ): Promise<IConversation> {
   // Group conversation
   if (isXmtpConversationGroup(xmtpConversation)) {
-    const [members, creatorInboxId, consentState, lastMessage] = await Promise.all([
+    const [members, creatorInboxId, consentState] = await Promise.all([
       xmtpConversation.members(),
       xmtpConversation.creatorInboxId() as unknown as IXmtpInboxId,
       xmtpConversation.consentState(),
-      xmtpConversation.lastMessage ||
-        xmtpConversation
-          .messages({
-            limit: 1,
-          })
-          .then((messages) => {
-            return messages[0]
-          }),
     ])
 
     const addedByInboxId = xmtpConversation.addedByInboxId as unknown as IXmtpInboxId
@@ -44,22 +35,13 @@ export async function convertXmtpConversationToConvosConversation(
       creatorInboxId: creatorInboxId,
       addedByInboxId,
       createdAt: xmtpConversation.createdAt,
-      lastMessage: lastMessage ? convertXmtpMessageToConvosMessage(lastMessage) : undefined,
     } satisfies IGroup
   }
 
   // DM conversations
-  const [peerInboxId, consentState, lastMessage] = await Promise.all([
+  const [peerInboxId, consentState] = await Promise.all([
     xmtpConversation.peerInboxId() as unknown as IXmtpInboxId,
     xmtpConversation.consentState(),
-    xmtpConversation.lastMessage ||
-      xmtpConversation
-        .messages({
-          limit: 1,
-        })
-        .then((messages) => {
-          return messages[0]
-        }),
   ])
 
   return {
@@ -69,6 +51,5 @@ export async function convertXmtpConversationToConvosConversation(
     createdAt: xmtpConversation.createdAt,
     xmtpTopic: xmtpConversation.topic,
     consentState: convertConsentStateToXmtpConsentState(consentState),
-    lastMessage: lastMessage ? convertXmtpMessageToConvosMessage(lastMessage) : undefined,
   } satisfies IDm
 }

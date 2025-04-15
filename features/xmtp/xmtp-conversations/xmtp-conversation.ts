@@ -14,7 +14,6 @@ import {
   publishPreparedMessages,
 } from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 
@@ -72,11 +71,11 @@ export async function publishXmtpConversationMessages(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
-    await publishPreparedMessages(installationId, conversationId)
+    await publishPreparedMessages(client.installationId, conversationId)
   } catch (error) {
     throw new XMTPError({
       error,

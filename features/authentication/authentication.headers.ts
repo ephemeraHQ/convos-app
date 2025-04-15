@@ -1,6 +1,6 @@
 import { toHex } from "thirdweb"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { signWithXmtpInstallationId } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { ensureJwtQueryData } from "./jwt.query"
 
@@ -35,8 +35,8 @@ export async function getConvosAuthenticationHeaders(): Promise<XmtpApiHeaders> 
   //   );
   // }
 
-  const [installationId, rawAppCheckTokenSignature] = await Promise.all([
-    ensureXmtpInstallationQueryData({
+  const [client, rawAppCheckTokenSignature] = await Promise.all([
+    getXmtpClientByInboxId({
       inboxId: currentSender.inboxId,
     }),
     signWithXmtpInstallationId({
@@ -48,7 +48,7 @@ export async function getConvosAuthenticationHeaders(): Promise<XmtpApiHeaders> 
   const appCheckTokenSignatureHexString = toHex(rawAppCheckTokenSignature)
 
   return {
-    [XMTP_INSTALLATION_ID_HEADER_KEY]: installationId,
+    [XMTP_INSTALLATION_ID_HEADER_KEY]: client.installationId,
     [XMTP_INBOX_ID_HEADER_KEY]: currentSender.inboxId,
     [XMTP_SIGNATURE_HEADER_KEY]: appCheckTokenSignatureHexString,
     [FIREBASE_APP_CHECK_HEADER_KEY]: appCheckToken, // Disabled for now until we go live and it works with bun

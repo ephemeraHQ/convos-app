@@ -1,5 +1,4 @@
 import { ConsentState, syncAllConversations, syncConversation } from "@xmtp/react-native-sdk"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { XMTPError } from "@/utils/error"
@@ -34,12 +33,12 @@ export async function syncAllXmtpConversations(args: {
   const { clientInboxId, consentStates = ["allowed", "unknown", "denied"] } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     await wrapXmtpCallWithDuration("syncAllConversations", () =>
-      syncAllConversations(installationId, consentStates),
+      syncAllConversations(client.installationId, consentStates),
     )
   } catch (error) {
     throw new XMTPError({

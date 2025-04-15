@@ -1,6 +1,6 @@
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
@@ -18,7 +18,7 @@ export async function hydrateAuth() {
   }
 
   try {
-    await ensureXmtpInstallationQueryData({
+    await getXmtpClientByInboxId({
       inboxId: currentSender.inboxId,
     })
 
@@ -27,6 +27,7 @@ export async function hydrateAuth() {
       inboxId: currentSender.inboxId,
     })
       .then((isValid) => {
+        authLogger.debug(`XMTP installation is valid: ${isValid}`)
         if (!isValid) {
           authLogger.debug("Invalid XMTP installation while hydrating auth so signing out...")
           useAuthenticationStore.getState().actions.setStatus("signedOut")

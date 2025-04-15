@@ -1,7 +1,10 @@
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IExpoBackgroundNotificationData } from "@/features/notifications/notifications.types"
+import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
@@ -35,9 +38,18 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       backgroundNotificationData,
     })
 
+    const conversationTopic = backgroundNotificationData.body.contentTopic as IXmtpConversationTopic
+
+    // To make sure we have the latest messages
+    refetchConversationMessagesInfiniteQuery({
+      clientInboxId: getSafeCurrentSender().inboxId,
+      xmtpConversationId: getXmtpConversationIdFromXmtpTopic(conversationTopic),
+      caller: "background-notifications-handler",
+    }).catch(captureError)
+
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage: backgroundNotificationData.body.encryptedMessage,
-      topic: backgroundNotificationData.body.contentTopic as IXmtpConversationTopic,
+      conversationTopic: conversationTopic,
     })
   } catch (error) {
     captureError(

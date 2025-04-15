@@ -64,7 +64,7 @@ async function handleNotification(notification: Notifications.Notification) {
     if (isNotificationXmtpNewMessageNotification(notification)) {
       await maybeDisplayLocalNewMessageNotification({
         encryptedMessage: notification.request.trigger.payload.encryptedMessage,
-        topic: notification.request.trigger.payload.topic,
+        conversationTopic: notification.request.trigger.payload.topic,
       })
 
       // Prevent the original notification from showing
@@ -78,7 +78,7 @@ async function handleNotification(notification: Notifications.Notification) {
     if (isNotificationExpoNewMessageNotification(notification)) {
       await maybeDisplayLocalNewMessageNotification({
         encryptedMessage: notification.request.content.data.idempotencyKey,
-        topic: notification.request.content.data.contentTopic,
+        conversationTopic: notification.request.content.data.contentTopic,
       })
 
       // Prevent the original notification from showing

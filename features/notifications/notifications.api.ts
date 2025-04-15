@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { ValidationError } from "@/utils/error"
@@ -40,7 +41,7 @@ export type IRegisterInstallationResponse = z.infer<typeof RegisterInstallationR
 // Schema for subscription without metadata
 const SubscribeRequestSchema = z.object({
   installationId: z.string(),
-  topics: z.array(z.string()),
+  topics: z.array(z.custom<IXmtpConversationTopic>()),
 })
 
 export type ISubscribeRequest = z.infer<typeof SubscribeRequestSchema>
@@ -53,7 +54,7 @@ const HmacKeySchema = z.object({
 
 // Schema for subscription with metadata
 const SubscriptionSchema = z.object({
-  topic: z.string(),
+  topic: z.custom<IXmtpConversationTopic>(),
   isSilent: z.boolean().optional().default(false),
   hmacKeys: z.array(HmacKeySchema),
 })
@@ -70,7 +71,7 @@ export type ISubscribeWithMetadataRequest = z.infer<typeof SubscribeWithMetadata
 // Schema for unsubscribe request
 const UnsubscribeRequestSchema = z.object({
   installationId: z.string(),
-  topics: z.array(z.string()),
+  topics: z.array(z.custom<IXmtpConversationTopic>()),
 })
 
 export type IUnsubscribeRequest = z.infer<typeof UnsubscribeRequestSchema>

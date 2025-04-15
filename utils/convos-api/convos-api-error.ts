@@ -66,11 +66,21 @@ export class ConvosApiError extends BaseError {
     // Fallback to our message
     return this.message
   }
+
+  /**
+   * Checks if this error represents a 404 Not Found error
+   */
+  is404Error(): boolean {
+    return this.origError instanceof AxiosError && this.origError.response?.status === 404
+  }
 }
 
 export function isConvosApi404Error(error: unknown): boolean {
   if (error instanceof AxiosError) {
     return error.response?.status === 404
+  }
+  if (error instanceof ConvosApiError) {
+    return error.is404Error()
   }
   return false
 }

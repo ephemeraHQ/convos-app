@@ -1,5 +1,5 @@
 import { getInboxState, signWithInstallationKey } from "@xmtp/react-native-sdk"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpClientWithCodecs, IXmtpInboxId, IXmtpSigner } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
@@ -20,10 +20,19 @@ export async function getOtherInstallations(args: { client: IXmtpClientWithCodec
 
 export async function validateXmtpInstallation(args: { inboxId: IXmtpInboxId }) {
   const { inboxId } = args
-  const installationId = await ensureXmtpInstallationQueryData({ inboxId })
-  const inboxState = await getInboxState(installationId, true)
-  const installationsIds = inboxState.installations.map((i) => i.id)
-  return installationsIds.includes(installationId)
+  try {
+    const client = await getXmtpClientByInboxId({ inboxId })
+    const inboxState = await wrapXmtpCallWithDuration("getInboxState", () =>
+      getInboxState(client.installationId, true),
+    )
+    const installationsIds = inboxState.installations.map((i) => i.id)
+    return installationsIds.includes(client.installationId)
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "Failed to validate XMTP installation",
+    })
+  }
 }
 
 export async function revokeOtherInstallations(args: {
@@ -62,10 +71,10 @@ export async function signWithXmtpInstallationId(args: {
   const { clientInboxId, message } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({ inboxId: clientInboxId })
+    const client = await getXmtpClientByInboxId({ inboxId: clientInboxId })
 
     const signature = await wrapXmtpCallWithDuration("signWithInstallationKey", () =>
-      signWithInstallationKey(installationId, message),
+      signWithInstallationKey(client.installationId, message),
     )
 
     return signature

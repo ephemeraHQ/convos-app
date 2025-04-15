@@ -14,8 +14,8 @@ export async function streamConversations(args: {
   })
 
   xmtpLogger.debug(`Started streaming conversations for ${inboxId}`)
-
   await client.conversations.stream(onNewConversation)
+  xmtpLogger.debug(`Successfully started streaming conversations for ${inboxId}`)
 }
 
 export async function stopStreamingConversations(args: { inboxId: IXmtpInboxId }) {
@@ -25,10 +25,10 @@ export async function stopStreamingConversations(args: { inboxId: IXmtpInboxId }
     inboxId,
   })
 
+  xmtpLogger.debug(`Stopping streaming conversations for ${inboxId}...`)
   await wrapXmtpCallWithDuration("cancelConversationStream", async () => {
     await client.conversations.cancelStream()
     return Promise.resolve()
   })
-
   xmtpLogger.debug(`Stopped streaming conversations for ${inboxId}`)
 }

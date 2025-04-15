@@ -1,5 +1,4 @@
 import React, { memo } from "react"
-import { FlatList, Platform } from "react-native"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
@@ -65,39 +64,31 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
         // Shouldn't need this provider here but for now we need it because we use ConversationMessageGestures inside ConversationMessage
         <ConversationMessageContextMenuStoreProvider>
           <ConversationStoreProvider xmtpConversationId={xmtpConversationId}>
-            {/* Using basic Flatlist instead of the Animated one to try to fix the context menu crashes https://github.com/dominicstop/react-native-ios-context-menu/issues/70 */}
-            <FlatList
-              style={$globalStyles.flex1}
-              inverted={true}
-              keyboardDismissMode="interactive"
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
-              keyExtractor={keyExtractor}
-              // 15 is enough
-              data={messageIds?.slice(0, 15)}
-              renderItem={({ item, index }) => {
-                const messageId = item
+            <VStack
+              style={{
+                flex: 1,
+                flexDirection: "column-reverse",
+              }}
+            >
+              {messageIds.slice(0, 15).map((messageId, index) => {
                 const previousMessageId = messageIds[index + 1]
                 const nextMessageId = messageIds[index - 1]
 
                 return (
                   <MessageWrapper
+                    key={messageId}
                     messageId={messageId}
                     previousMessageId={previousMessageId}
                     nextMessageId={nextMessageId}
                   />
                 )
-              }}
-            />
+              })}
+            </VStack>
           </ConversationStoreProvider>
         </ConversationMessageContextMenuStoreProvider>
       )}
     </VStack>
   )
-}
-
-function keyExtractor(messageId: IXmtpMessageId) {
-  return messageId
 }
 
 const MessageWrapper = memo(function MessageWrapper({

@@ -1,5 +1,4 @@
 import { IConsentState } from "@/features/consent/consent.types"
-import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
 import { IXmtpConversationId, IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
@@ -21,7 +20,6 @@ export type IConversationBase = {
   xmtpTopic: IConversationTopic
   xmtpId: IXmtpConversationId
   consentState: IConsentState
-  lastMessage: IConversationMessage | undefined
 }
 
 export type IConversation = IGroup | IDm

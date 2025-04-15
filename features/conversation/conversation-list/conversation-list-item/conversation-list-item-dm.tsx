@@ -71,7 +71,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   // No need for timeToShow variable anymore
   const subtitle = !messageText
     ? ""
-    : `${getCompactRelativeTime(timestamp)} ${MIDDLE_DOT} ${messageText}`
+    : `${getCompactRelativeTime(timestamp)} ${MIDDLE_DOT} ${messageText.trim()}`
 
   const leftActionsBackgroundColor = useMemo(
     () => (isDeleted ? theme.colors.fill.tertiary : theme.colors.fill.caution),

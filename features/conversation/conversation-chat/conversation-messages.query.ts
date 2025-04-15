@@ -53,7 +53,11 @@ const conversationMessagesInfiniteQueryFn = async (
   args: IArgs & { pageParam: IInfiniteMessagesPageParam },
 ) => {
   const { clientInboxId, xmtpConversationId, pageParam } = args
-  const { cursorNs, direction } = pageParam
+  const { cursorNs, direction } = pageParam || {
+    // For some reason I've been seeing some "Cannot read property 'cursorNs' of undefined"
+    cursorNs: undefined,
+    direction: "next",
+  }
 
   if (!clientInboxId) {
     throw new Error("clientInboxId is required")
@@ -361,13 +365,15 @@ export function invalidateConversationMessagesInfiniteMessagesQuery(args: IArgs)
   return reactQueryClient.invalidateQueries({ queryKey })
 }
 
-export function refetchConversationMessagesInfiniteQuery(args: IArgs) {
-  const { clientInboxId, xmtpConversationId } = args
-  const queryKey = getConversationMessagesInfiniteQueryOptions({
-    clientInboxId,
-    xmtpConversationId,
-  }).queryKey
-  return reactQueryClient.refetchQueries({ queryKey })
+export function refetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
+  const { clientInboxId, xmtpConversationId, caller } = args
+  return reactQueryClient.refetchQueries(
+    getConversationMessagesInfiniteQueryOptions({
+      clientInboxId,
+      xmtpConversationId,
+      caller,
+    }),
+  )
 }
 export function getConversationMessagesInfiniteQueryData(args: IArgs) {
   const { clientInboxId, xmtpConversationId } = args
@@ -484,4 +490,10 @@ export function prefetchConversationMessagesInfiniteQuery(args: IArgsWithCaller)
 
 export function ensureConversationMessagesInfiniteQueryData(args: IArgsWithCaller) {
   return reactQueryClient.ensureInfiniteQueryData(getConversationMessagesInfiniteQueryOptions(args))
+}
+
+export function refetchInfiniteConversationMessages(args: IArgsWithCaller) {
+  return reactQueryClient.refetchQueries({
+    queryKey: getConversationMessagesInfiniteQueryOptions(args).queryKey,
+  })
 }

@@ -108,13 +108,13 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
     const conversations = await wrapXmtpCallWithDuration("listConversations", () =>
       client.conversations.list(
         {
-          isActive: true,
           addedByInboxId: true,
           name: true,
           imageUrl: true,
-          consentState: true,
-          lastMessage: true,
           description: true,
+          // isActive: true,
+          // consentState: true,
+          // lastMessage: true,
         },
         limit,
         consentStates,

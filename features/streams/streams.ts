@@ -1,9 +1,9 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useEffect } from "react"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { stopStreamingConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-stream"
 import { stopStreamingAllMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-stream"
-import { stopStreamingConsent } from "@/features/xmtp/xmtp-preferences/xmtp-preferences-stream"
 import { useAppStore } from "@/stores/app-store"
 import { useAppStateStore } from "@/stores/use-app-state-store"
 import { captureError } from "@/utils/capture-error"
@@ -35,6 +35,11 @@ export function useSetupStreamingSubscriptions() {
     const unsubscribeAppStateStore = useAppStateStore.subscribe(
       (state) => state.currentState,
       (currentState, previousState) => {
+        const isSignedIn = useAuthenticationStore.getState().status === "signedIn"
+        if (!isSignedIn) {
+          return
+        }
+
         const senders = useMultiInboxStore.getState().senders
         const inboxIds = senders.map((sender) => sender.inboxId)
 
@@ -59,6 +64,11 @@ export function useSetupStreamingSubscriptions() {
     const unsubscribeMultiInboxStore = useMultiInboxStore.subscribe(
       (state) => [state.senders] as const,
       ([senders], [previousSenders]) => {
+        const isSignedIn = useAuthenticationStore.getState().status === "signedIn"
+        if (!isSignedIn) {
+          return
+        }
+
         const { isInternetReachable } = useAppStore.getState()
         const { currentState } = useAppStateStore.getState()
 
@@ -92,26 +102,67 @@ export function useSetupStreamingSubscriptions() {
       },
     )
 
+    // Handle authentication state changes
+    const unsubscribeAuthStore = useAuthenticationStore.subscribe(
+      (state) => state.status,
+      (status, previousStatus) => {
+        const { currentState } = useAppStateStore.getState()
+
+        // Only handle if app is active
+        if (currentState !== "active") {
+          return
+        }
+
+        if (status === "signedIn") {
+          // Start streaming when signed in
+          const senders = useMultiInboxStore.getState().senders
+          const inboxIds = senders.map((sender) => sender.inboxId)
+
+          if (inboxIds.length > 0) {
+            startStreaming(inboxIds).catch(captureError)
+          }
+        } else if (previousStatus === "signedIn") {
+          // Stop streaming when signed out
+          const senders = useMultiInboxStore.getState().senders
+          const inboxIds = senders.map((sender) => sender.inboxId)
+
+          if (inboxIds.length > 0) {
+            stopStreaming(inboxIds).catch(captureError)
+          }
+        }
+      },
+      {
+        fireImmediately: true,
+      },
+    )
+
     return () => {
       unsubscribeAppStateStore()
       unsubscribeMultiInboxStore()
+      unsubscribeAuthStore()
     }
   }, [])
 }
 
 async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   const store = useStreamingStore.getState()
+  const isSignedIn = useAuthenticationStore.getState().status === "signedIn"
+
+  if (!isSignedIn) {
+    return
+  }
 
   for (const inboxId of inboxIdsToStream) {
     const streamingState = store.accountStreamingStates[inboxId]
 
     if (!streamingState?.isStreamingConversations) {
-      streamLogger.debug(`Starting conversation stream for ${inboxId}...`)
       try {
+        streamLogger.debug(`Starting conversation stream for ${inboxId}...`)
         await startConversationStreaming({ clientInboxId: inboxId })
         store.actions.updateStreamingState(inboxId, {
           isStreamingConversations: true,
         })
+        streamLogger.debug(`Successfully started conversation stream for ${inboxId}`)
       } catch (error) {
         store.actions.updateStreamingState(inboxId, {
           isStreamingConversations: false,
@@ -123,12 +174,13 @@ async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
     }
 
     if (!streamingState?.isStreamingMessages) {
-      streamLogger.debug(`Starting messages stream for ${inboxId}...`)
       try {
+        streamLogger.debug(`Starting messages stream for ${inboxId}...`)
         await startMessageStreaming({ clientInboxId: inboxId })
         store.actions.updateStreamingState(inboxId, {
           isStreamingMessages: true,
         })
+        streamLogger.debug(`Successfully started messages stream for ${inboxId}`)
       } catch (error) {
         store.actions.updateStreamingState(inboxId, {
           isStreamingMessages: false,
@@ -162,14 +214,39 @@ async function stopStreaming(inboxIds: IXmtpInboxId[]) {
 
   await Promise.all(
     inboxIds.map(async (inboxId) => {
+      const streamingState = store.accountStreamingStates[inboxId]
+
+      // Skip if there's no streaming state for this inbox
+      if (!streamingState) {
+        return
+      }
+
       try {
-        streamLogger.debug(`Stopping streams for ${inboxId}`)
-        await Promise.all([
-          stopStreamingAllMessage({ inboxId }),
-          stopStreamingConversations({ inboxId }),
-          // stopStreamingConsent({ inboxId }),
-        ])
-        streamLogger.debug(`Stopped streams for ${inboxId}`)
+        streamLogger.debug(`Stopping streams for ${inboxId}...`)
+
+        const stopPromises = []
+
+        // Only stop message streaming if it's active
+        if (streamingState.isStreamingMessages) {
+          stopPromises.push(stopStreamingAllMessage({ inboxId }))
+        }
+
+        // Only stop conversation streaming if it's active
+        if (streamingState.isStreamingConversations) {
+          stopPromises.push(stopStreamingConversations({ inboxId }))
+        }
+
+        // Only stop consent streaming if it's active (commented out for now)
+        // if (streamingState.isStreamingConsent) {
+        //   stopPromises.push(stopStreamingConsent({ inboxId }))
+        // }
+
+        if (stopPromises.length > 0) {
+          await Promise.all(stopPromises)
+          streamLogger.debug(`Stopped streams for ${inboxId}`)
+        } else {
+          streamLogger.debug(`No active streams to stop for ${inboxId}`)
+        }
       } catch (error) {
         captureError(
           new StreamError({

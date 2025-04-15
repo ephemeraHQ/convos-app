@@ -5,7 +5,6 @@ import {
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { updateConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
   addGroupMemberToGroupQueryData,
@@ -49,9 +48,11 @@ async function handleNewMessage(args: {
 
   streamLogger.debug(`New message:`, message)
 
+  // Process reaction messages
   if (isReactionMessage(message)) {
     processReactionConversationMessages({ clientInboxId, reactionMessages: [message] })
   } else {
+    // Set the message query data
     setConversationMessageQueryData({
       clientInboxId,
       xmtpMessageId: message.xmtpId,
@@ -73,7 +74,7 @@ async function handleNewMessage(args: {
     }
   }
 
-  // Add the message in the list!
+  // Add the message in conversation messages list
   try {
     addMessageToConversationMessagesInfiniteQueryData({
       clientInboxId,
@@ -82,24 +83,6 @@ async function handleNewMessage(args: {
     })
   } catch (error) {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))
-  }
-
-  // Update the conversation last message
-  try {
-    // We don't want group update message as last message
-    if (!isGroupUpdatedMessage(message)) {
-      updateConversationQueryData({
-        clientInboxId,
-        xmtpConversationId: message.xmtpConversationId,
-        conversationUpdate: {
-          lastMessage: message,
-        },
-      })
-    }
-  } catch (error) {
-    captureError(
-      new StreamError({ error, additionalMessage: "Error updating conversation query data" }),
-    )
   }
 }
 

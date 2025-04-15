@@ -55,7 +55,8 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
   const timestamp = lastMessage?.sentNs ?? 0
   const timeToShow = getCompactRelativeTime(timestamp)
   const messageText = useMessageContentStringValue(lastMessage)
-  const subtitle = timeToShow && messageText ? `${timeToShow} ${MIDDLE_DOT} ${messageText}` : ""
+  const subtitle =
+    timeToShow && messageText ? `${timeToShow} ${MIDDLE_DOT} ${messageText.trim()}` : ""
 
   const { toggleReadStatusAsync } = useToggleReadStatus({
     xmtpConversationId,

@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { memo } from "react"
+import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Center } from "@/design-system/Center"
@@ -92,8 +93,10 @@ const Content = memo(function Content() {
           <ConversationKeyboardFiller />
         </VStack>
       </VStack>
-      <ConversationMessageContextMenu />
-      <MessageReactionsDrawer />
+      <IsReadyWrapper>
+        <ConversationMessageContextMenu />
+        <MessageReactionsDrawer />
+      </IsReadyWrapper>
     </>
   )
 })

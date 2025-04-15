@@ -16,8 +16,8 @@ import { ensureNotificationsPermissions } from "@/features/notifications/notific
 import { registerNotificationInstallation } from "@/features/notifications/notifications.api"
 import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
 import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { getCurrentRoute } from "@/navigation/navigation.utils"
@@ -67,7 +67,7 @@ export async function registerPushNotifications() {
     })
 
     const currentSender = getSafeCurrentSender()
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: currentSender.inboxId,
     })
     // Re-fetch the device token here, as it might have been updated or the previous call might be outside this scope's assurance
@@ -75,7 +75,7 @@ export async function registerPushNotifications() {
     const freshDeviceToken = await getDevicePushNotificationsToken()
 
     await registerNotificationInstallation({
-      installationId,
+      installationId: client.installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           case: "apnsDeviceToken",
@@ -185,7 +185,7 @@ export function displayLocalNotification(args: Notifications.NotificationRequest
 
 export async function maybeDisplayLocalNewMessageNotification(args: {
   encryptedMessage: string
-  topic: IXmtpConversationTopic
+  conversationTopic: IXmtpConversationTopic
 }) {
   const TIMEOUT_MS = 45000 // 45 seconds
 
@@ -197,9 +197,9 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
     })
 
     const processNotificationPromise = (async () => {
-      const { encryptedMessage, topic } = args
-      notificationsLogger.debug("Processing notification with topic:", topic)
-      const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(topic)
+      const { encryptedMessage, conversationTopic } = args
+      notificationsLogger.debug("Processing notification with topic:", conversationTopic)
+      const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
       notificationsLogger.debug("Extracted conversation ID:", xmtpConversationId)
 
       const clientInboxId = getSafeCurrentSender().inboxId
@@ -288,7 +288,7 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
   } catch (error) {
     throw new NotificationError({
       error,
-      additionalMessage: "Failed to display fallback notification",
+      additionalMessage: "Failed to display local notification",
     })
   }
 }

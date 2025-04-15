@@ -123,6 +123,7 @@ async function buildXmtpClientInstance(args: {
           ethAddress: lowercaseEthAddress(ethereumAddress),
         })
 
+        xmtpLogger.debug(`Building XMTP client for address: ${ethereumAddress}...`)
         const client = await wrapXmtpCallWithDuration("buildXmtpClient", () =>
           XmtpClient.build<ISupportedXmtpCodecs>(
             new PublicIdentity(ethereumAddress, "ETHEREUM"),
@@ -137,6 +138,7 @@ async function buildXmtpClientInstance(args: {
             inboxId,
           ),
         )
+        xmtpLogger.debug(`Built XMTP client for address: ${ethereumAddress}`)
 
         return client as IXmtpClientWithCodecs
       } finally {
@@ -147,8 +149,6 @@ async function buildXmtpClientInstance(args: {
 
     // Store the promise in cache
     buildPromisesCache.set(ethereumAddress, buildPromise)
-
-    xmtpLogger.debug(`Building XMTP client for address: ${ethereumAddress}`)
 
     return buildPromise
   } catch (error) {
