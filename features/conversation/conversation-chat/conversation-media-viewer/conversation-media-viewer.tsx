@@ -18,6 +18,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler'
+import { logger } from "@/utils/logger/logger"
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
@@ -33,6 +34,7 @@ const SPRING_CONFIG = {
 }
 const DISMISS_THRESHOLD = 120 // Distance to dismiss in pixels
 const TRANSITION_DURATION = 220
+const CONTROLS_FADE_DURATION = 150
 
 export type IMediaViewerProps = {
   visible: boolean
@@ -45,10 +47,13 @@ export type IMediaViewerProps = {
 
 export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
   const { visible, onClose, uri, sender, timestamp, formatTimestamp } = props
+
+  logger.debug(`Sender: ${sender} Timestamp: ${timestamp}`)
   
   const { theme, themed } = useAppTheme()
 
   const [modalVisible, setModalVisible] = useState(false)
+  const [controlsVisible, setControlsVisible] = useState(true)
 
   // Shared animation values
   const scale = useSharedValue(1)
@@ -58,6 +63,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
   const savedTranslateX = useSharedValue(0)
   const savedTranslateY = useSharedValue(0)
   const backgroundOpacity = useSharedValue(0) // Start transparent
+  const controlsOpacity = useSharedValue(0)   // Start with controls not visible
   
   // Transition animation values
   const transitionProgress = useSharedValue(0)
@@ -73,13 +79,15 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     savedTranslateX.value = 0
     savedTranslateY.value = 0
     backgroundOpacity.value = 0 // Start transparent
+    controlsOpacity.value = 0   // Start with controls not visible
     transitionProgress.value = 0
     isAnimatingTransition.value = true
-  }, [scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY, backgroundOpacity, transitionProgress, isAnimatingTransition])
+  }, [scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY, backgroundOpacity, controlsOpacity, transitionProgress, isAnimatingTransition])
 
   useEffect(() => {
     if (visible) {
       setModalVisible(true)
+      setControlsVisible(false)
       resetAnimationValues()
       
       // Animate transition from bubble to fullscreen
@@ -116,6 +124,13 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       runOnJS(onClose)()
     })
   }
+
+  // Toggle controls visibility
+  const toggleControls = useCallback(() => {
+    const newVisibility = !controlsVisible
+    setControlsVisible(newVisibility)
+    controlsOpacity.value = withTiming(newVisibility ? 1 : 0, { duration: CONTROLS_FADE_DURATION })
+  }, [controlsVisible, controlsOpacity])
 
   // Pinch gesture for zooming with focal point
   const pinchGesture = Gesture.Pinch()
@@ -347,33 +362,20 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       }
     })
 
-  // Double tap gesture to zoom out
-  const doubleTapGesture = Gesture.Tap()
-    .numberOfTaps(2)
+  // Single tap gesture to toggle controls
+  const singleTapGesture = Gesture.Tap()
     .maxDuration(300)
     .onEnd(() => {
       'worklet';
-      // Only reset zoom if already zoomed in
-      if (scale.value > 1) {
-        // Animate back to scale 1 with smooth spring animation
-        scale.value = withSpring(1, SPRING_CONFIG)
-        translateX.value = withSpring(0, SPRING_CONFIG)
-        translateY.value = withSpring(0, SPRING_CONFIG)
-        
-        // Update saved values
-        savedScale.value = 1
-        savedTranslateX.value = 0
-        savedTranslateY.value = 0
-      }
+      console.log('singleTap worklet running')
+      runOnJS(toggleControls)();
     })
 
-  // Combined gestures - don't allow gestures during transition
-  const combinedGestures = Gesture.Race(
-    doubleTapGesture,
-    Gesture.Simultaneous(
-      pinchGesture,
-      panGesture
-    )
+  // Combine gestures with single tap only triggering when other gestures don't
+  const combinedGestures = Gesture.Simultaneous(
+    Gesture.Exclusive(singleTapGesture),
+    pinchGesture,
+    panGesture
   )
 
   // Gesture state based on transition
@@ -416,9 +418,9 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     };
   });
 
-  // Pre-calculate the info container animated style to avoid conditional hook calls
-  const infoContainerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: backgroundOpacity.value
+  // Control elements animated styles that use controlsOpacity
+  const controlsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: controlsOpacity.value * backgroundOpacity.value
   }))
 
   // Fix animated view styling
@@ -427,11 +429,6 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     height: '100%',
     overflow: 'hidden',
   }
-
-  // Update closeButton opacity
-  const closeButtonAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: backgroundOpacity.value
-  }))
 
   // Convert themed styles to ensure they're ViewStyle not ImageStyle
   // TODO Rework this
@@ -469,7 +466,7 @@ const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
             </Animated.View>
           </Animated.View>
           
-          <Animated.View style={[closeButtonStyle, closeButtonAnimatedStyle]}>
+          <Animated.View style={[closeButtonStyle, controlsAnimatedStyle]}>
             <TouchableOpacity
               onPress={handleClose}
               hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
@@ -479,7 +476,7 @@ const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
           </Animated.View>
           
           {(sender || timestamp) && (
-            <Animated.View style={[infoContainerStyle, infoContainerAnimatedStyle]}>
+            <Animated.View style={[infoContainerStyle, controlsAnimatedStyle]}>
               {sender && (
                 <Text preset="body" weight="bold" color="primary">
                   {sender}
@@ -521,7 +518,7 @@ const $image: ImageStyle = {
 
 const $closeButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: 'absolute',
-  top: 40,
+  top: 64,
   right: 20,
   width: 40,
   height: 40,
