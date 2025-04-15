@@ -3,6 +3,7 @@ import { config } from "@/config"
 import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
+import { withTimeout } from "@/utils/promise-timeout"
 
 export function logErrorIfXmtpRequestTookTooLong(args: {
   durationMs: number
@@ -39,8 +40,12 @@ export async function wrapXmtpCallWithDuration<T>(
   })
 
   try {
-    // Execute the actual XMTP call
-    const result = await xmtpCall()
+    // Execute the actual XMTP call with a 30-second timeout
+    const result = await withTimeout({
+      promise: xmtpCall(),
+      timeoutMs: 30000,
+      errorMessage: `XMTP operation "${xmtpFunctionName}" timed out after 30 seconds`,
+    })
 
     // Record end time and calculate duration
     const endTime = Date.now()

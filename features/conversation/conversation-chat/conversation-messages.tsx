@@ -100,7 +100,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     if (messageIds.length === 0) {
       return
     }
-    // markAsReadAsync().catch(captureError)
+    markAsReadAsync().catch(captureError)
   }, [markAsReadAsync, xmtpConversationId, messageIds.length])
 
   // Scroll to message when we select one in the store
