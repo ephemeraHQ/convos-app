@@ -17,7 +17,7 @@ export const ReactQueryPersistProvider = memo(function ReactQueryPersistProvider
       persistOptions={{
         persister: reactQueryPersister,
         maxAge: DEFAULT_GC_TIME,
-        buster: config.reactQueryPersistCacheIsEnabled ? "v4" : undefined,
+        buster: config.reactQueryPersistCacheIsEnabled ? "v5" : undefined,
         dehydrateOptions: {
           // Determines which queries should be persisted to storage
           shouldDehydrateQuery(query) {
