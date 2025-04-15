@@ -23,6 +23,7 @@ import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { prefetchImageUrl } from "@/utils/image"
+import { logger } from "@/utils/logger/logger"
 
 export const ConversationComposerAddAttachmentButton = memo(
   function ConversationComposerAddAttachmentButton() {
@@ -105,20 +106,31 @@ export const ConversationComposerAddAttachmentButton = memo(
 
     const pickMedia = useCallback(async () => {
       try {
+        logger.debug("[pickMedia] Picking multiple media from library")
         const assets = await pickMultipleMediaFromLibrary()
 
         if (!assets) {
+          logger.debug("[pickMedia] No assets selected")
           return
         }
 
+        logger.debug("[pickMedia] Processing assets", { count: assets.length })
         const results = await Promise.allSettled(assets.map(handleAsset))
 
         const failedResults = results.filter((result) => result.status === "rejected")
         const failedCount = failedResults.length
+        const successCount = results.length - failedCount
+
+        logger.debug("[pickMedia] Finished processing assets", {
+          total: results.length,
+          success: successCount,
+          failed: failedCount,
+        })
 
         if (failedCount > 0) {
           // Capture errors from failed results
           failedResults.forEach((result) => {
+            logger.error("[pickMedia] Failed to process attachment", { error: result.reason })
             captureError(
               new GenericError({
                 error: result.reason,

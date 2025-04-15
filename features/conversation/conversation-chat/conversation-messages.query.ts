@@ -375,6 +375,7 @@ export function refetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) 
     }),
   )
 }
+
 export function getConversationMessagesInfiniteQueryData(args: IArgs) {
   const { clientInboxId, xmtpConversationId } = args
   const queryKey = getConversationMessagesInfiniteQueryOptions({

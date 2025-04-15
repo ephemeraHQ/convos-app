@@ -1,5 +1,5 @@
 import { InfiniteQueryObserver, useQueries } from "@tanstack/react-query"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
@@ -13,7 +13,10 @@ import { getConversationQueryData } from "@/features/conversation/queries/conver
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
+import { ObjectTyped } from "@/utils/object-typed"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+
+const lastMessageIdQueryObservers: Record<IXmtpConversationId, () => void> = {}
 
 export const useConversationListConversations = () => {
   const currentSender = useSafeCurrentSender()
@@ -44,12 +47,10 @@ export const useConversationListConversations = () => {
     return record
   })
 
-  const lastMessageIdQueryObserversRef = useRef<Record<IXmtpConversationId, () => void>>({})
-
   useEffect(() => {
     conversationIds.forEach((conversationId) => {
       // Don't create a new observer if one already exists
-      if (lastMessageIdQueryObserversRef.current[conversationId]) {
+      if (lastMessageIdQueryObservers[conversationId]) {
         return
       }
 
@@ -71,16 +72,17 @@ export const useConversationListConversations = () => {
         }))
       })
 
-      lastMessageIdQueryObserversRef.current[conversationId] = unsubscribe
+      lastMessageIdQueryObservers[conversationId] = unsubscribe
     })
   }, [conversationIds, currentSender.inboxId, setLastMessageIdForConversationMap])
 
+  // Cleanup
   useEffect(() => {
     return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      Object.values(lastMessageIdQueryObserversRef.current).forEach((unsubscribe) => unsubscribe())
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      lastMessageIdQueryObserversRef.current = {}
+      ObjectTyped.entries(lastMessageIdQueryObservers).forEach(([conversationId, unsubscribe]) => {
+        unsubscribe()
+        delete lastMessageIdQueryObservers[conversationId]
+      })
     }
   }, [])
 

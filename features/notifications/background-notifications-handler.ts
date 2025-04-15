@@ -1,14 +1,13 @@
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IExpoBackgroundNotificationData } from "@/features/notifications/notifications.types"
-import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
+import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
+import { waitUntilPromise } from "@/utils/wait-until-promise"
 import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
 
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND_NOTIFICATION_TASK"
@@ -38,14 +37,17 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       backgroundNotificationData,
     })
 
-    const conversationTopic = backgroundNotificationData.body.contentTopic as IXmtpConversationTopic
+    // Wait until the internet is reachable
+    if (!useAppStore.getState().isInternetReachable) {
+      notificationsLogger.debug("Internet is not reachable, waiting until it is...")
+      await waitUntilPromise({
+        checkFn: () => useAppStore.getState().isInternetReachable,
+        intervalMs: 200,
+      })
+      notificationsLogger.debug("Internet is now reachable")
+    }
 
-    // To make sure we have the latest messages
-    refetchConversationMessagesInfiniteQuery({
-      clientInboxId: getSafeCurrentSender().inboxId,
-      xmtpConversationId: getXmtpConversationIdFromXmtpTopic(conversationTopic),
-      caller: "background-notifications-handler",
-    }).catch(captureError)
+    const conversationTopic = backgroundNotificationData.body.contentTopic as IXmtpConversationTopic
 
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage: backgroundNotificationData.body.encryptedMessage,
