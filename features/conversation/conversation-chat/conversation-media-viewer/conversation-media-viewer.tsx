@@ -23,7 +23,8 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 // Constants for animations
 const MAX_SCALE = 4
-const MIN_SCALE_THRESHOLD = 0.2
+const MIN_SCALE_THRESHOLD = 0.1
+const CLOSING_THRESHOLD = 0.5
 const SPRING_CONFIG = {
   damping: 15,
   mass: 1,
@@ -31,7 +32,7 @@ const SPRING_CONFIG = {
   overshootClamping: true,
 }
 const DISMISS_THRESHOLD = 120 // Distance to dismiss in pixels
-const TRANSITION_DURATION = 200
+const TRANSITION_DURATION = 220
 
 export type IMediaViewerProps = {
   visible: boolean
@@ -40,17 +41,10 @@ export type IMediaViewerProps = {
   sender?: string
   timestamp?: string
   formatTimestamp?: (timestamp: string) => string
-  // Source position for transition animation
-  sourcePosition?: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }
 }
 
 export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
-  const { visible, onClose, uri, sender, timestamp, formatTimestamp, sourcePosition } = props
+  const { visible, onClose, uri, sender, timestamp, formatTimestamp } = props
   
   const { theme, themed } = useAppTheme()
 
@@ -90,14 +84,14 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       
       // Animate transition from bubble to fullscreen
       transitionProgress.value = withTiming(1, {
-        duration: 300,
+        duration: TRANSITION_DURATION,
         easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       }, () => {
         isAnimatingTransition.value = false;
       })
       
       // Fade in the background
-      backgroundOpacity.value = withTiming(1, { duration: 300 })
+      backgroundOpacity.value = withTiming(1, { duration: TRANSITION_DURATION })
     }
   }, [visible, resetAnimationValues, backgroundOpacity, transitionProgress, isAnimatingTransition])
 
@@ -112,7 +106,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     
     // Animate back to source position
     transitionProgress.value = withTiming(0, {
-      duration: 300,
+      duration: TRANSITION_DURATION,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1), 
     })
     
@@ -123,7 +117,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     })
   }
 
-  // Pinch gesture for zooming with focal point - defined without refs to improve performance
+  // Pinch gesture for zooming with focal point
   const pinchGesture = Gesture.Pinch()
     .onStart(() => {
       'worklet';
@@ -181,7 +175,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       savedTranslateY.value = translateY.value;
       
       // If below threshold, close the modal
-      if (scale.value < MIN_SCALE_THRESHOLD) {
+      if (scale.value <= CLOSING_THRESHOLD) {
         runOnJS(handleClose)()
         return
       }
@@ -389,60 +383,9 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     };
   });
 
-  // Image container transition animation
-  const containerTransitionStyle = useAnimatedStyle(() => {
-    if (!sourcePosition) return {};
-    
-    // Start values (from bubble)
-    const startX = sourcePosition.x - sourcePosition.width / 2;
-    const startY = sourcePosition.y - sourcePosition.height / 2;
-    const startWidth = sourcePosition.width;
-    const startHeight = sourcePosition.height;
-    
-    // End values (fullscreen)
-    const endX = 0;
-    const endY = 0;
-    const endWidth = SCREEN_WIDTH;
-    const endHeight = SCREEN_HEIGHT;
-    
-    // Interpolate all values based on progress
-    const x = interpolate(
-      transitionProgress.value,
-      [0, 1],
-      [startX, endX]
-    );
-    
-    const y = interpolate(
-      transitionProgress.value,
-      [0, 1],
-      [startY, endY]
-    );
-    
-    const width = interpolate(
-      transitionProgress.value,
-      [0, 1],
-      [startWidth, endWidth]
-    );
-    
-    const height = interpolate(
-      transitionProgress.value,
-      [0, 1],
-      [startHeight, endHeight]
-    );
-    
-    return {
-      position: 'absolute',
-      left: x,
-      top: y,
-      width: width,
-      height: height,
-    };
-  });
-
   // Image scale during transition
   const imageTransitionStyle = useAnimatedStyle(() => {
-    if (isAnimatingTransition.value && !sourcePosition) {
-      // If no source position, use simple scale animation
+    if (isAnimatingTransition.value) {
       return {
         opacity: transitionProgress.value,
         transform: [
@@ -467,7 +410,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
 
   // Animated styles for background opacity
   const animatedBackgroundStyles = useAnimatedStyle(() => {
-    const opacity = backgroundOpacity.value * 0.9;
+    const opacity = backgroundOpacity.value;
     return {
       backgroundColor: `rgba(0, 0, 0, ${Math.max(0, opacity)})`,
     };
@@ -507,8 +450,7 @@ const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Animated.View style={[themed($container), animatedBackgroundStyles]}>
-          {/* Container with position transition */}
-          <Animated.View style={sourcePosition ? containerTransitionStyle : $imageContainer}>
+          <Animated.View style={themed($imageContainer)}>
             {/* Gesture handling container */}
             <Animated.View style={[animatedImageStyle, gestureEnabled]}>
               <GestureDetector gesture={combinedGestures}>

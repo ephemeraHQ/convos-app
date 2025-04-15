@@ -61,8 +61,6 @@ const MediaViewerPortal = memo(function MediaViewerPortal() {
 
 /**
  * MediaViewerHost component
- * 
- * Add this component to your app once at the navigator level or screen where you want to use the media viewer
  */
 export const MediaViewerHost = memo(function MediaViewerHost() {
   return <MediaViewerPortal />
