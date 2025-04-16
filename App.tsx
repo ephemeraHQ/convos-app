@@ -44,6 +44,10 @@ preventSplashScreenAutoHide()
 const chainOverride = addRpcUrlOverrideToChain(base, config.evm.rpcEndpoint)
 const supportedChains = [chainOverride] as [Chain, ...Chain[]]
 
+sentryInit()
+registerBackgroundNotificationTask().catch(captureError)
+configureForegroundNotificationBehavior()
+
 export function App() {
   useMonitorNetworkConnectivity()
   useReactQueryDevTools(reactQueryClient)
@@ -52,11 +56,8 @@ export function App() {
   useCoinbaseWalletListener()
 
   useEffect(() => {
-    sentryInit()
     setupConvosApi()
-    configureForegroundNotificationBehavior()
     setupConversationsNotificationsSubscriptions().catch(captureError)
-    registerBackgroundNotificationTask().catch(captureError)
   }, [])
 
   // Seems to be slowing the app. Need to investigate

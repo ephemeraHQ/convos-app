@@ -1,7 +1,6 @@
+import { registerRootComponent } from "expo"
 import "./polyfills"
 import "./wdyr"
-import { registerRootComponent } from "expo"
-// import { SlimApp } from "./SlimApp";
 import { App } from "./App"
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);
