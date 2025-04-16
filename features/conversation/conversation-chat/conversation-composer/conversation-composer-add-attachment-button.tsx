@@ -24,6 +24,7 @@ import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { prefetchImageUrl } from "@/utils/image"
 import { logger } from "@/utils/logger/logger"
+import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
 
 export const ConversationComposerAddAttachmentButton = memo(
   function ConversationComposerAddAttachmentButton() {
@@ -115,7 +116,7 @@ export const ConversationComposerAddAttachmentButton = memo(
         }
 
         logger.debug("[pickMedia] Processing assets", { count: assets.length })
-        const results = await Promise.allSettled(assets.map(handleAsset))
+        const results = await customPromiseAllSettled(assets.map(handleAsset))
 
         const failedResults = results.filter((result) => result.status === "rejected")
         const failedCount = failedResults.length

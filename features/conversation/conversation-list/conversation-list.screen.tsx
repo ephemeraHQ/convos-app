@@ -1,4 +1,3 @@
-import { useNavigation } from "@react-navigation/native"
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { memo, useCallback, useEffect } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -7,7 +6,6 @@ import { ContextMenuView } from "@/design-system/context-menu/context-menu"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { prefetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ConversationListItemDm } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-dm"
 import { ConversationListItemGroup } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-group"
 import { ConversationListLoading } from "@/features/conversation/conversation-list/conversation-list-loading"
@@ -20,10 +18,8 @@ import {
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
-import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useEffectWhenCondition } from "@/hooks/use-effect-once"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -40,15 +36,11 @@ type IConversationListProps = NativeStackScreenProps<NavigationParamList, "Chats
 export const ConversationListScreen = memo(function ConversationListScreen(
   props: IConversationListProps,
 ) {
-  const currentSender = useSafeCurrentSender()
-
   const {
     data: conversationsIds,
     refetch: refetchConversations,
     isLoading: isLoadingConversations,
   } = useConversationListConversations()
-
-  const navigation = useNavigation()
 
   const insets = useSafeAreaInsets()
 
@@ -57,30 +49,6 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   useEffect(() => {
     registerPushNotifications().catch(captureError)
   }, [])
-
-  // Let's prefetch the messages for all the conversations
-  useEffectWhenCondition(
-    () => {
-      // For now let's only prefetch the first 5 conversations
-      for (const conversationId of conversationsIds.slice(0, 5)) {
-        if (isTmpConversation(conversationId)) {
-          return
-        }
-        // Preload the conversation messages
-        prefetchConversationMessagesInfiniteQuery({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
-          caller: "useConversationListConversations",
-        }).catch(captureError)
-
-        // Preload the conversation screen
-        navigation.preload("Conversation", {
-          xmtpConversationId: conversationId,
-        })
-      }
-    },
-    Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
-  )
 
   const handleRefresh = useCallback(async () => {
     try {

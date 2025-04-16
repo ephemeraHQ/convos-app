@@ -3,7 +3,7 @@ import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmt
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { DateUtils } from "@/utils/time.utils"
+import { TimeUtils } from "@/utils/time.utils"
 
 type IArgs = {
   clientInboxId: IXmtpInboxId
@@ -51,8 +51,8 @@ export function getConversationSyncAllQueryOptions(args: IArgs) {
         }
       : skipToken,
     refetchIntervalInBackground: true,
-    refetchInterval: DateUtils.minutes(10).toMilliseconds(), // Sync every 10 minutes
-    staleTime: DateUtils.seconds(10).toMilliseconds(), // Consider data stale after 10 seconds
+    refetchInterval: TimeUtils.minutes(10).toMilliseconds(), // Sync every 10 minutes
+    staleTime: TimeUtils.seconds(10).toMilliseconds(), // Consider data stale after 10 seconds
   })
 }
 

@@ -3,7 +3,8 @@ import { memo, useCallback, useMemo } from "react"
 import { Avatar } from "@/components/avatar"
 import { ISwipeableRenderActionsArgs } from "@/components/swipeable"
 import { MIDDLE_DOT } from "@/design-system/middle-dot"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { isCurrentSender, useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { isTextMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { ConversationListItemSwipeable } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable"
 import { RestoreSwipeableAction } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable-restore-action"
 import { useConversationIsDeleted } from "@/features/conversation/conversation-list/hooks/use-conversation-is-deleted"
@@ -16,7 +17,6 @@ import { useConversationLastMessage } from "@/features/conversation/hooks/use-co
 import { useDmQuery } from "@/features/dm/dm.query"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useFocusRerender } from "@/hooks/use-focus-rerender"
 import { navigate } from "@/navigation/navigation.utils"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
@@ -33,9 +33,6 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   xmtpConversationId,
 }: IConversationListItemDmProps) {
   const { theme } = useAppTheme()
-
-  // Need this so the timestamp is updated on every focus
-  useFocusRerender()
 
   const currentSender = useSafeCurrentSender()
 
@@ -66,12 +63,26 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     xmtpConversationId,
   })
 
-  const timestamp = lastMessage?.sentNs ?? 0
+  // Subtitle with sender info for non-text messages
+  const subtitle = useMemo(() => {
+    if (!lastMessage || !messageText) return ""
 
-  // No need for timeToShow variable anymore
-  const subtitle = !messageText
-    ? ""
-    : `${getCompactRelativeTime(timestamp)} ${MIDDLE_DOT} ${messageText.trim()}`
+    const timestamp = lastMessage.sentNs ?? 0
+    const timeToShow = getCompactRelativeTime(timestamp)
+    if (!timeToShow) return ""
+
+    // For text messages, don't show sender name (it's obvious in a DM)
+    if (isTextMessage(lastMessage)) {
+      return `${timeToShow} ${MIDDLE_DOT} ${messageText.trim()}`
+    }
+
+    // For non-text messages (attachments, reactions, etc.), show who sent it
+    const isCurrentUserSender =
+      lastMessage.senderInboxId && isCurrentSender({ inboxId: lastMessage.senderInboxId })
+    const senderPrefix = isCurrentUserSender ? "You " : displayName ? `${displayName} ` : ""
+
+    return `${timeToShow} ${MIDDLE_DOT} ${senderPrefix}${messageText.trim()}`
+  }, [lastMessage, messageText, displayName])
 
   const leftActionsBackgroundColor = useMemo(
     () => (isDeleted ? theme.colors.fill.tertiary : theme.colors.fill.caution),

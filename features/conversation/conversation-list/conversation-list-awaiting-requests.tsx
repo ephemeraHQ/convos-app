@@ -7,20 +7,15 @@ import { Image } from "@/design-system/image"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
-  getConversationMessagesInfiniteQueryOptions,
-  IConversationMessagesInfiniteQueryData,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
-import {
   ConversationListItem,
   ConversationListItemSubtitle,
   ConversationListItemTitle,
 } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { useConversationRequestsListItem } from "@/features/conversation/conversation-requests-list/use-conversation-requests-list-items"
+import { useConversationLastMessageIds } from "@/features/conversation/hooks/use-conversations-last-message-ids"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
-import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { useAppTheme } from "@/theme/use-app-theme"
 
 export const ConversationListAwaitingRequests = memo(function ConversationListAwaitingRequests() {
@@ -28,17 +23,8 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
   const navigation = useNavigation()
   const currentSender = useSafeCurrentSender()
 
-  const {
-    likelyNotSpamConversationIds,
-    isLoading: isLoadingUknownConversations,
-    refetch,
-  } = useConversationRequestsListItem()
-
-  useBetterFocusEffect(
-    useCallback(() => {
-      refetch()
-    }, [refetch]),
-  )
+  const { likelyNotSpamConversationIds, isLoading: isLoadingUknownConversations } =
+    useConversationRequestsListItem()
 
   // Fetch metadata queries
   const conversationsMetadataQueryResult = useQueries({
@@ -61,39 +47,28 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     })),
   })
 
-  const lastMessageIdQueries = useQueries({
-    // @ts-ignore queries doesn't work great with infiniteQueryOptions
-    queries: (likelyNotSpamConversationIds ?? []).map((conversationId) => {
-      const queryOptions = getConversationMessagesInfiniteQueryOptions({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-        caller: "ConversationListAwaitingRequests",
-      })
-
-      return {
-        ...queryOptions,
-        select: (data: IConversationMessagesInfiniteQueryData) => {
-          return data.pages[0]?.messageIds[0]
-        },
-      }
-    }),
+  const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
+    conversationIds: likelyNotSpamConversationIds,
   })
 
   const lastMessageQueries = useQueries({
-    queries: lastMessageIdQueries.map((query) => ({
-      ...getConversationMessageQueryOptions({
-        clientInboxId: currentSender.inboxId,
-        xmtpMessageId: query.data as IXmtpMessageId | undefined,
-        caller: "ConversationListAwaitingRequests",
-      }),
-    })),
+    queries: Object.values(lastMessageIdForConversationMap)
+      .filter(Boolean)
+      .map((messageId) => ({
+        ...getConversationMessageQueryOptions({
+          clientInboxId: currentSender.inboxId,
+          xmtpMessageId: messageId,
+          caller: "ConversationListAwaitingRequests",
+        }),
+      })),
   })
 
   // Combine the results
   const { numberOfRequestsLikelyNotSpam, hasUnreadMessages } = useMemo(() => {
     const numberOfRequestsLikelyNotSpam = likelyNotSpamConversationIds.length
 
-    const hasUnreadMessages = conversationsMetadataQueryResult.some((metadataQuery, index) => {
+    const hasUnreadMessages = likelyNotSpamConversationIds.some((conversationId, index) => {
+      const metadataQuery = conversationsMetadataQueryResult[index]
       if (!metadataQuery.data) {
         return false
       }
@@ -104,7 +79,9 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
         return false
       }
 
-      const lastMessage = lastMessageQueries[index].data
+      const lastMessage = lastMessageQueries.find(
+        (query) => query.data?.xmtpConversationId === conversationId,
+      )?.data
 
       return conversationIsUnreadForInboxId({
         lastMessageSentAt: lastMessage?.sentNs ?? null,

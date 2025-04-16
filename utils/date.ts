@@ -1,4 +1,4 @@
-import { isToday as _isToday, isYesterday } from "date-fns"
+import { isToday as _isToday, differenceInHours, isYesterday } from "date-fns"
 import differenceInCalendarDays from "date-fns/differenceInCalendarDays"
 import format from "date-fns/format"
 // Long term we should only import used locales
@@ -132,4 +132,8 @@ export function getRelativeDate(timestamp: number): string {
 
   // For older messages
   return format(date, "MMM d", { locale }) // Returns "Jan 15" format
+}
+
+export function getHoursSinceTimestamp(timestamp: number) {
+  return differenceInHours(Date.now(), timestamp)
 }

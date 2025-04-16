@@ -2,10 +2,7 @@ import { getInboxState, signWithInstallationKey } from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpClientWithCodecs, IXmtpInboxId, IXmtpSigner } from "@/features/xmtp/xmtp.types"
-import { translate } from "@/i18n"
-import { awaitableAlert } from "@/utils/alert"
 import { XMTPError } from "@/utils/error"
-import { logger } from "@/utils/logger/logger"
 
 export async function getOtherInstallations(args: { client: IXmtpClientWithCodecs }) {
   const { client } = args
@@ -40,28 +37,27 @@ export async function revokeOtherInstallations(args: {
   client: IXmtpClientWithCodecs
   otherInstallationsCount: number
 }) {
-  const { client, otherInstallationsCount } = args
-
-  if (otherInstallationsCount === 0) return false
-  logger.warn(`Inbox ${client.inboxId} has ${otherInstallationsCount} installations to revoke`)
-  // We're on a mobile wallet so we need to ask the user first
-  const doRevoke = await awaitableAlert(
-    translate("other_installations_count", {
-      count: otherInstallationsCount,
-    }),
-    translate("revoke_description"),
-    "Yes",
-    "No",
-  )
-  if (!doRevoke) {
-    logger.debug(`[Onboarding] User decided not to revoke`)
-    return false
-  }
-  logger.debug(`[Onboarding] User decided to revoke ${otherInstallationsCount} installation`)
-  // TODO
-  // await client.revokeAllOtherInstallations(ethersSignerToXmtpSigner(signer));
-  logger.debug(`[Onboarding] Installations revoked.`)
-  return true
+  // const { client, otherInstallationsCount } = args
+  // if (otherInstallationsCount === 0) return false
+  // logger.warn(`Inbox ${client.inboxId} has ${otherInstallationsCount} installations to revoke`)
+  // // We're on a mobile wallet so we need to ask the user first
+  // const doRevoke = await awaitableAlert(
+  //   translate("other_installations_count", {
+  //     count: otherInstallationsCount,
+  //   }),
+  //   translate("revoke_description"),
+  //   "Yes",
+  //   "No",
+  // )
+  // if (!doRevoke) {
+  //   logger.debug(`[Onboarding] User decided not to revoke`)
+  //   return false
+  // }
+  // logger.debug(`[Onboarding] User decided to revoke ${otherInstallationsCount} installation`)
+  // // TODO
+  // // await client.revokeAllOtherInstallations(ethersSignerToXmtpSigner(signer));
+  // logger.debug(`[Onboarding] Installations revoked.`)
+  // return true
 }
 
 export async function signWithXmtpInstallationId(args: {

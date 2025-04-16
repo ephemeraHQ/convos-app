@@ -34,7 +34,6 @@ import { isConversationDm } from "@/features/conversation/utils/is-conversation-
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { convertNanosecondsToMilliseconds } from "@/utils/date"
@@ -74,24 +73,9 @@ export const ConversationMessages = memo(function ConversationMessages() {
     ...(settings?.retentionDurationInNs && {
       refetchInterval: convertNanosecondsToMilliseconds(settings.retentionDurationInNs) * 0.5,
     }),
+    refetchOnWindowFocus: "always",
+    refetchOnMount: "always",
   })
-
-  // Refetch messages when we focus again
-  useBetterFocusEffect(
-    useCallback(() => {
-      if (isTmpConversation(xmtpConversationId)) {
-        return
-      }
-      logger.debug("Refetching messages because we're now focused again on the conversation...")
-      refetchMessages()
-        .then(() => {
-          logger.debug(
-            "Done refetching messages because we're now focused again on the conversation",
-          )
-        })
-        .catch(captureError)
-    }, [refetchMessages, xmtpConversationId]),
-  )
 
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
     xmtpConversationId,

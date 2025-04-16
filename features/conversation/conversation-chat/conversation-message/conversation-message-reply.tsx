@@ -36,6 +36,7 @@ import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-p
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useSelect } from "@/stores/stores.utils"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { Haptics } from "@/utils/haptics"
 import {
   IConversationMessage,
   IConversationMessageReply,
@@ -172,6 +173,7 @@ const MessageReplyReference = memo(function MessageReplyReference(props: {
 
   const tapGesture = Gesture.Tap()
     .onBegin(() => {
+      Haptics.softImpactAsync()
       conversationStore.setState({
         highlightedXmtpMessageId: referenceMessageId,
         scrollToXmtpMessageId: referenceMessageId,
@@ -223,10 +225,15 @@ const MessageReplyReferenceContent = memo(function ReplyMessageReferenceMessageC
   const { theme } = useAppTheme()
   const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
 
-  const attachmentStyle = {
+  const attachmentContainerStyle = {
     height: theme.avatarSize.md,
     width: theme.avatarSize.md,
     marginBottom: theme.spacing.xxxs,
+    borderRadius:
+      theme.borderRadius.message.attachment - theme.spacing.message.replyMessage.horizontalPadding,
+  }
+
+  const attachmentImageStyle = {
     borderRadius:
       theme.borderRadius.message.attachment - theme.spacing.message.replyMessage.horizontalPadding,
   }
@@ -243,7 +250,8 @@ const MessageReplyReferenceContent = memo(function ReplyMessageReferenceMessageC
       <AttachmentRemoteImage
         xmtpMessageId={replyMessage.xmtpId}
         remoteMessageContent={content}
-        containerProps={{ style: attachmentStyle, inverted: fromMe }}
+        containerProps={{ style: attachmentContainerStyle, inverted: fromMe }}
+        imageProps={{ style: attachmentImageStyle }}
       />
     )
   }
@@ -303,7 +311,7 @@ const MessageReplyReferenceContent = memo(function ReplyMessageReferenceMessageC
         <AttachmentRemoteImage
           xmtpMessageId={replyMessage.xmtpId}
           remoteMessageContent={content}
-          containerProps={{ style: attachmentStyle }}
+          containerProps={{ style: attachmentContainerStyle }}
         />
       )
     }

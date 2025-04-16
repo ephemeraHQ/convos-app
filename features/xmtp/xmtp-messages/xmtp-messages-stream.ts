@@ -16,7 +16,6 @@ export const streamAllMessages = async (args: {
   })
 
   try {
-    xmtpLogger.debug(`Starting to stream messages for ${inboxId}...`)
     // Not wrapping the stream initiation itself as it's long-running
     await client.conversations.streamAllMessages((newMessage) => {
       if (!isSupportedXmtpMessage(newMessage)) {
@@ -25,7 +24,6 @@ export const streamAllMessages = async (args: {
       }
       return onNewMessage(newMessage)
     })
-    xmtpLogger.debug(`Successfully started streaming messages for ${inboxId}`)
   } catch (error) {
     throw new XMTPError({
       error,
@@ -42,14 +40,10 @@ export const stopStreamingAllMessage = async (args: { inboxId: IXmtpInboxId }) =
       inboxId,
     })
 
-    xmtpLogger.debug(`Stopping streaming messages for ${inboxId}...`)
-
     await wrapXmtpCallWithDuration("cancelStreamAllMessages", async () => {
       await client.conversations.cancelStreamAllMessages()
       return Promise.resolve()
     })
-
-    xmtpLogger.debug(`Stopped streaming messages for ${inboxId}`)
   } catch (error) {
     throw new XMTPError({
       error,

@@ -78,6 +78,7 @@ function keyExtractor(id: IXmtpConversationId) {
   return id
 }
 
+// Custom refresh handler for now since FlashList one isn't good
 function useRefreshHandler(args: { onRefetch?: () => Promise<void> }) {
   const { onRefetch } = args
 

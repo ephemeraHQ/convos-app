@@ -74,3 +74,24 @@ export const useAppStateHandler = (settings?: IAppStateHandlerSettings) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onChange, onForeground, onBackground, onInactive, ...deps])
 }
+
+export const waitUntilAppActive = async () => {
+  // If app is active, return immediately
+  if (useAppStateStore.getState().currentState === "active") {
+    return
+  }
+
+  logger.debug(`Waiting until app is back into active state...`)
+
+  return new Promise<void>((resolve) => {
+    const unsubscribe = useAppStateStore.subscribe(
+      (state) => state.currentState,
+      (currentState) => {
+        if (currentState === "active") {
+          unsubscribe()
+          resolve()
+        }
+      },
+    )
+  })
+}

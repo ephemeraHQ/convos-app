@@ -1,6 +1,6 @@
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { searchProfiles } from "@/features/profiles/profiles.search.api"
-import { DateUtils } from "@/utils/time.utils"
+import { TimeUtils } from "@/utils/time.utils"
 import { reactQueryClient } from "../../utils/react-query/react-query.client"
 
 const profileSearchQueryConfig = (args: { query?: string }) => {
@@ -9,8 +9,8 @@ const profileSearchQueryConfig = (args: { query?: string }) => {
     enabled,
     queryKey: ["profile-search", args.query],
     queryFn: enabled ? () => searchProfiles({ searchQuery: args.query! }) : skipToken,
-    gcTime: DateUtils.minutes(5).toMilliseconds(),
-    staleTime: DateUtils.minutes(5).toMilliseconds(),
+    gcTime: TimeUtils.minutes(5).toMilliseconds(),
+    staleTime: TimeUtils.minutes(5).toMilliseconds(),
   })
 }
 

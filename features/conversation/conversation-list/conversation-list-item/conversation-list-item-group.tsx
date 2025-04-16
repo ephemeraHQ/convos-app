@@ -3,6 +3,8 @@ import { memo, useCallback, useMemo } from "react"
 import { GroupAvatar } from "@/components/group-avatar"
 import { ISwipeableRenderActionsArgs } from "@/components/swipeable"
 import { MIDDLE_DOT } from "@/design-system/middle-dot"
+import { isCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { isTextMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { ConversationListItemSwipeable } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable"
 import { useConversationIsUnread } from "@/features/conversation/conversation-list/hooks/use-conversation-is-unread"
 import { useDeleteGroup } from "@/features/conversation/conversation-list/hooks/use-delete-group"
@@ -10,8 +12,8 @@ import { useMessageContentStringValue } from "@/features/conversation/conversati
 import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
 import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
+import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useFocusRerender } from "@/hooks/use-focus-rerender"
 import { useRouter } from "@/navigation/use-navigation"
 import { ConversationListItem } from "./conversation-list-item"
 import { DeleteSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-delete-action"
@@ -26,9 +28,6 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 }: IConversationListItemGroupProps) {
   const router = useRouter()
 
-  // Need this so the timestamp is updated on every focus
-  useFocusRerender()
-
   const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId,
   })
@@ -41,6 +40,10 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     xmtpConversationId,
   })
 
+  const { displayName: senderDisplayName } = usePreferredDisplayInfo({
+    inboxId: lastMessage?.senderInboxId,
+  })
+
   const onPress = useCallback(() => {
     router.navigate("Conversation", {
       xmtpConversationId,
@@ -50,12 +53,28 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
   // Title
   const title = groupName
 
-  // Subtitle
-  const timestamp = lastMessage?.sentNs ?? 0
-  const timeToShow = getCompactRelativeTime(timestamp)
   const messageText = useMessageContentStringValue(lastMessage)
-  const subtitle =
-    timeToShow && messageText ? `${timeToShow} ${MIDDLE_DOT} ${messageText.trim()}` : ""
+
+  // Subtitle with sender info
+  const subtitle = useMemo(() => {
+    if (!lastMessage) return ""
+
+    const timestamp = lastMessage.sentNs ?? 0
+    const timeToShow = getCompactRelativeTime(timestamp)
+    if (!timeToShow || !messageText) return ""
+
+    let senderPrefix = ""
+    const isCurrentUserSender =
+      lastMessage.senderInboxId && isCurrentSender({ inboxId: lastMessage.senderInboxId })
+
+    if (isCurrentUserSender) {
+      senderPrefix = "You: "
+    } else if (senderDisplayName) {
+      senderPrefix = isTextMessage(lastMessage) ? `${senderDisplayName}: ` : `${senderDisplayName} `
+    }
+
+    return `${timeToShow} ${MIDDLE_DOT} ${senderPrefix}${messageText.trim()}`
+  }, [lastMessage, messageText, senderDisplayName])
 
   const { toggleReadStatusAsync } = useToggleReadStatus({
     xmtpConversationId,

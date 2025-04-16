@@ -1,22 +1,15 @@
-import { InfiniteQueryObserver, useQueries } from "@tanstack/react-query"
-import { useCallback, useEffect, useState } from "react"
+import { useQueries } from "@tanstack/react-query"
+import { useCallback } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import {
-  getConversationMessagesInfiniteQueryData,
-  getConversationMessagesInfiniteQueryOptions,
-  refetchInfiniteConversationMessages,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { refetchInfiniteConversationMessages } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { useConversationLastMessageIds } from "@/features/conversation/hooks/use-conversations-last-message-ids"
 import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
-import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
-import { ObjectTyped } from "@/utils/object-typed"
-import { reactQueryClient } from "@/utils/react-query/react-query.client"
-
-const lastMessageIdQueryObservers: Record<IXmtpConversationId, () => void> = {}
 
 export const useConversationListConversations = () => {
   const currentSender = useSafeCurrentSender()
@@ -30,63 +23,11 @@ export const useConversationListConversations = () => {
     caller: "useConversationListConversations",
   })
 
-  /**
-   * Add to do this weird useState, useEffect and InfiniteQueryObserver logic because react-query doesn't support useInfiniteQueries correctly
-   */
-  const [lastMessageIdForConversationMap, setLastMessageIdForConversationMap] = useState<
-    Record<IXmtpConversationId, IXmtpMessageId | undefined>
-  >(() => {
-    const record: Record<IXmtpConversationId, IXmtpMessageId | undefined> = {}
-    for (const conversationId of conversationIds) {
-      const firstMessageId = getConversationMessagesInfiniteQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-      })?.pages[0]?.messageIds[0]
-      record[conversationId] = firstMessageId
-    }
-    return record
+  const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
+    conversationIds,
   })
 
-  useEffect(() => {
-    conversationIds.forEach((conversationId) => {
-      // Don't create a new observer if one already exists
-      if (lastMessageIdQueryObservers[conversationId]) {
-        return
-      }
-
-      const observer = new InfiniteQueryObserver(
-        reactQueryClient,
-        getConversationMessagesInfiniteQueryOptions({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
-          caller: "useConversationListConversations",
-        }),
-      )
-
-      const unsubscribe = observer.subscribe(({ data }) => {
-        const lastMessageId = data?.pages[0]?.messageIds[0]
-
-        setLastMessageIdForConversationMap((prev) => ({
-          ...prev,
-          [conversationId]: lastMessageId,
-        }))
-      })
-
-      lastMessageIdQueryObservers[conversationId] = unsubscribe
-    })
-  }, [conversationIds, currentSender.inboxId, setLastMessageIdForConversationMap])
-
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      ObjectTyped.entries(lastMessageIdQueryObservers).forEach(([conversationId, unsubscribe]) => {
-        unsubscribe()
-        delete lastMessageIdQueryObservers[conversationId]
-      })
-    }
-  }, [])
-
-  const lastMessageIds = Object.values(lastMessageIdForConversationMap)
+  const lastMessageIds = Object.values(lastMessageIdForConversationMap).filter(Boolean)
 
   const lastMessageQueries = useQueries({
     queries: lastMessageIds.map((messageId) => ({

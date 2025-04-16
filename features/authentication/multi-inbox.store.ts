@@ -1,6 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { create } from "zustand"
 import { createJSONStorage, persist, subscribeWithSelector } from "zustand/middleware"
+import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -164,6 +165,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
             logger.debug(
               `Multi-inbox store hydrated successfully: ${JSON.stringify(state, null, 2)}`,
             )
+            useAppStore.getState().actions.setMultiInboxIsHydrated(true)
           }
         },
       },

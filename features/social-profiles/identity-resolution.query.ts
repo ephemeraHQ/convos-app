@@ -6,7 +6,7 @@ import {
   isValidUnstoppableDomainName,
 } from "@/features/social-profiles/name-validation.utils"
 import { IEthereumAddress } from "@/utils/evm/address"
-import { DateUtils } from "@/utils/time.utils"
+import { TimeUtils } from "@/utils/time.utils"
 
 export function useEnsNameResolution(name: string | undefined) {
   const isValid = isValidEnsName(name)
@@ -16,7 +16,7 @@ export function useEnsNameResolution(name: string | undefined) {
     queryFn: async () =>
       (await identityResolutionApi.resolveEnsName({ name: name! })) as IEthereumAddress,
     enabled: Boolean(name) && isValid,
-    staleTime: DateUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
   })
 }
 
@@ -28,7 +28,7 @@ export function useBaseNameResolution(name: string | undefined) {
     queryFn: async () =>
       (await identityResolutionApi.resolveBaseName({ name: name! })) as IEthereumAddress,
     enabled: Boolean(name) && isValid,
-    staleTime: DateUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
   })
 }
 
@@ -42,6 +42,6 @@ export function useUnstoppableDomainNameResolution(name: string | undefined) {
         name: name!,
       })) as IEthereumAddress,
     enabled: Boolean(name) && isValid,
-    staleTime: DateUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
   })
 }

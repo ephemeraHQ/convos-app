@@ -1,12 +1,13 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
+import { Nullable } from "@/types/general"
 import { normalizeTimestampToMs } from "@/utils/date"
 
 export function conversationIsUnreadForInboxId(args: {
-  lastMessageSentAt: number | null
-  lastMessageSenderInboxId: IXmtpInboxId | null
   consumerInboxId: IXmtpInboxId
-  markedAsUnread: boolean | null
-  readUntil: number | null
+  lastMessageSentAt: Nullable<number>
+  lastMessageSenderInboxId: Nullable<IXmtpInboxId>
+  markedAsUnread: Nullable<boolean>
+  readUntil: Nullable<number>
 }) {
   const {
     lastMessageSentAt,

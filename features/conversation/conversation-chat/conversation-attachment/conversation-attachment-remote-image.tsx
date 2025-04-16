@@ -4,7 +4,7 @@ import { Text } from "@design-system/Text"
 import { translate } from "@i18n"
 import prettyBytes from "pretty-bytes"
 import { memo } from "react"
-import { Image } from "@/design-system/image"
+import { IImageProps, Image } from "@/design-system/image"
 import { AttachmentLoading } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-loading"
 import { useConversationAttachmentStyles } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.styles"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
@@ -21,12 +21,13 @@ type IAttachmentRemoteImageProps = {
   remoteMessageContent: IConversationMessageRemoteAttachmentContent
   fitAspectRatio?: boolean
   containerProps?: IConversationMessageAttachmentContainerProps
+  imageProps?: IImageProps
 }
 
 export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
   props: IAttachmentRemoteImageProps,
 ) {
-  const { xmtpMessageId, remoteMessageContent, fitAspectRatio, containerProps } = props
+  const { xmtpMessageId, remoteMessageContent, fitAspectRatio, containerProps, imageProps } = props
 
   const { theme } = useAppTheme()
 
@@ -97,17 +98,22 @@ export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
       : undefined
 
   const { style, ...rest } = containerProps || {}
+  const { style: imageStyle, ...restImageProps } = imageProps || {}
 
   return (
     <ConversationMessageAttachmentContainer style={[{ aspectRatio }, style]} {...rest}>
       <Image
         source={{ uri: attachment.mediaURL }}
         contentFit="cover"
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius,
-        }}
+        style={[
+          {
+            width: "100%",
+            height: "100%",
+            borderRadius,
+          },
+          imageStyle,
+        ]}
+        {...restImageProps}
       />
     </ConversationMessageAttachmentContainer>
   )

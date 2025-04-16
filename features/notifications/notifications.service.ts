@@ -20,7 +20,7 @@ import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
-import { getCurrentRoute } from "@/navigation/navigation.utils"
+import { useAppStateStore } from "@/stores/use-app-state-store"
 import { NotificationError, UserCancelledError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { ensureMessageContentStringValue } from "../conversation/conversation-list/hooks/use-message-content-string-value"
@@ -237,15 +237,8 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
       notificationsLogger.debug("Message content:", messageContentString)
       notificationsLogger.debug("Sender display name:", senderDisplayName)
 
-      // Check if the user is already in this conversation
-      const currentRoute = getCurrentRoute()
-      if (
-        currentRoute?.name === "Conversation" &&
-        currentRoute.params.xmtpConversationId === xmtpConversationId
-      ) {
-        notificationsLogger.debug(
-          "User is already in this conversation, don't display local notification",
-        )
+      if (useAppStateStore.getState().currentState === "active") {
+        notificationsLogger.debug("Skipping showing notification, app is active")
         return
       }
 

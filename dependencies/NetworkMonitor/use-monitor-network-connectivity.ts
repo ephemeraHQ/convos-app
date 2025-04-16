@@ -17,8 +17,12 @@ export function useMonitorNetworkConnectivity() {
       const currentReachable = useAppStore.getState().isInternetReachable
 
       if (reachable !== currentReachable) {
-        logger.debug(`Internet reachable: ${reachable}`)
-        useAppStore.getState().setIsInternetReachable(reachable)
+        logger.debug(
+          `Internet connectivity changed: was ${currentReachable ? "reachable" : "not reachable"}, now ${
+            reachable ? "reachable" : "not reachable"
+          }`,
+        )
+        useAppStore.getState().actions.setIsInternetReachable(reachable)
       }
     })
 

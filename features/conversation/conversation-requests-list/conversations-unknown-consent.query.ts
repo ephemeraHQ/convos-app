@@ -1,6 +1,6 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken } from "@tanstack/react-query"
-import { refetchConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
+import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
@@ -17,7 +17,7 @@ async function getUnknownConversationsQueryFn(args: { inboxId: IXmtpInboxId }) {
     throw new Error("InboxId is required")
   }
 
-  await refetchConversationSyncAllQuery({
+  await ensureConversationSyncAllQuery({
     clientInboxId: inboxId,
   })
 
@@ -107,6 +107,7 @@ export function getUnknownConsentConversationsQueryOptions(args: {
     meta: {
       caller,
     },
+    refetchOnWindowFocus: "always", // Because we don't want to miss any new requests
     queryKey: ["unknown-consent-conversations", inboxId],
     queryFn: enabled
       ? async () =>

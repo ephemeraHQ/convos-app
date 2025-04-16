@@ -192,29 +192,29 @@ export function getConversationMessagesInfiniteQueryOptions(
       Boolean(clientInboxId) &&
       Boolean(xmtpConversationId) &&
       !isTmpConversation(xmtpConversationId),
-    // Not sure we need this anymore
-    // select: (data) => {
-    //   const seenMessageIds = new Set<IXmtpMessageId>()
-
-    //   const deduplicatedPages = data.pages.map((page, pageIndex) => {
-    //     const uniqueMessageIds = page.messageIds.filter((id) => {
-    //       if (seenMessageIds.has(id)) {
-    //         return false
-    //       }
-    //       seenMessageIds.add(id)
-    //       return true
-    //     })
-
-    //     return {
-    //       ...page,
-    //       messageIds: uniqueMessageIds,
-    //     }
+    // Staletime depending on when was the last message sent at. If the last message was sent >24h we can
+    // put a big staletime becacuse it means the converastion isn't that active
+    // otherwise we can put a small staletime
+    // staleTime: (query) => {
+    //   const lastMessageId = query.state.data?.pages[0]?.messageIds[0]
+    //   const lastMessage = getConversationMessageQueryData({
+    //     clientInboxId,
+    //     xmtpMessageId: lastMessageId,
     //   })
 
-    //   return {
-    //     pages: deduplicatedPages,
-    //     pageParams: data.pageParams,
+    //   if (!lastMessage) {
+    //     return TimeUtils.days(1).toMilliseconds()
     //   }
+
+    //   const hoursSinceLastMessage = getHoursSinceTimestamp(lastMessage?.sentMs ?? 0)
+
+    //   if (hoursSinceLastMessage <= 24) {
+    //     // 1 Minute
+    //     return TimeUtils.minutes(1).toMilliseconds()
+    //   }
+
+    //   // 1 Day
+    //   return TimeUtils.days(1).toMilliseconds()
     // },
   })
 }

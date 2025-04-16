@@ -13,23 +13,18 @@ type UseConversationIsUnreadArgs = {
 export const useConversationIsUnread = ({ xmtpConversationId }: UseConversationIsUnreadArgs) => {
   const currentSender = useSafeCurrentSender()
 
-  const { data: conversationMetadata, isLoading: isLoadingConversationMetadata } = useQuery(
+  const { data: conversationMetadata } = useQuery(
     getConversationMetadataQueryOptions({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
     }),
   )
 
-  const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationLastMessage({
+  const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId,
   })
 
   const isUnread = useMemo(() => {
-    // By default we consider the conversation read if we haven't loaded the conversation metadata
-    if (isLoadingConversationMetadata) {
-      return false
-    }
-
     // For now, if we don't have conversation metadata, we consider the conversation read because we don't want to be dependent on the BE
     if (!conversationMetadata) {
       return false
@@ -44,10 +39,9 @@ export const useConversationIsUnread = ({ xmtpConversationId }: UseConversationI
         ? new Date(conversationMetadata.readUntil).getTime()
         : null,
     })
-  }, [lastMessage, conversationMetadata, isLoadingConversationMetadata, currentSender])
+  }, [lastMessage, conversationMetadata, currentSender])
 
   return {
     isUnread,
-    isLoading: isLoadingConversationMetadata || isLoadingLastMessage,
   }
 }

@@ -1,26 +1,34 @@
 import { create } from "zustand"
-import { createJSONStorage, persist, subscribeWithSelector } from "zustand/middleware"
-import { zustandMMKVStorage } from "@/utils/zustand/zustand"
+import { subscribeWithSelector } from "zustand/middleware"
 
 type AppStoreType = {
+  // State
+  reactQueryIsHydrated: boolean
+  multiInboxIsHydrated: boolean
   isInternetReachable: boolean
-  setIsInternetReachable: (reachable: boolean) => void
+
+  // Actions
+  actions: {
+    setReactQueryIsHydrated: (isHydrated: boolean) => void
+    setMultiInboxIsHydrated: (isHydrated: boolean) => void
+    setIsInternetReachable: (reachable: boolean) => void
+  }
 }
 
 export const useAppStore = create<AppStoreType>()(
-  subscribeWithSelector(
-    persist(
-      (set) => ({
-        isInternetReachable: false,
-        setIsInternetReachable: (reachable) => set(() => ({ isInternetReachable: reachable })),
-      }),
-      {
-        name: "store-app",
-        storage: createJSONStorage(() => zustandMMKVStorage),
-        partialize: (state) => ({
-          isInternetReachable: state.isInternetReachable,
-        }),
-      },
-    ),
-  ),
+  subscribeWithSelector((set) => ({
+    // State
+    reactQueryIsHydrated: false,
+    multiInboxIsHydrated: false,
+    isInternetReachable: false,
+
+    // Actions
+    actions: {
+      setReactQueryIsHydrated: (isHydrated) => set(() => ({ reactQueryIsHydrated: isHydrated })),
+
+      setMultiInboxIsHydrated: (isHydrated) => set(() => ({ multiInboxIsHydrated: isHydrated })),
+
+      setIsInternetReachable: (reachable) => set(() => ({ isInternetReachable: reachable })),
+    },
+  })),
 )

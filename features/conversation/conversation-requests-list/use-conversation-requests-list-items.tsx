@@ -3,12 +3,13 @@ import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { getConversationSpamQueryOptions } from "@/features/conversation/conversation-requests-list/conversation-spam.query"
 import { getUnknownConsentConversationsQueryOptions } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 
 export function useConversationRequestsListItem() {
   const currentSender = useSafeCurrentSender()
 
   const {
-    data: unknownConsentConversationIds,
+    data: unknownConsentConversationIds = [],
     isLoading: isLoadingUnknownConsentConversationIds,
     refetch: refetchUnknownConsentConversationIds,
   } = useQuery({
@@ -39,30 +40,33 @@ export function useConversationRequestsListItem() {
   const isLoading =
     isLoadingUnknownConsentConversationIds ||
     spamQueries.some((q) => q.isLoading) ||
-    metadataQueries.some((q) => q.isLoading && !q.data)
+    metadataQueries.some((q) => q.isLoading)
 
-  // Filter and prepare results, checking both spam status and metadata
-  const processedResults =
-    unknownConsentConversationIds?.map((conversationId, i) => {
-      const isSpam = spamQueries[i].data ?? true
-      const metadata = metadataQueries[i].data
-      const isDeleted = metadata?.deleted ?? false
+  const likelySpamConversationIds: IXmtpConversationId[] = []
+  const likelyNotSpamConversationIds: IXmtpConversationId[] = []
 
-      return {
-        conversationId,
-        isSpam,
-        isDeleted,
-      }
-    }) ?? []
+  unknownConsentConversationIds.map((conversationId, i) => {
+    const spamQuery = spamQueries[i]
+    const metadataQuery = metadataQueries[i]
 
-  // Filter out deleted conversations
-  const nonDeletedResults = processedResults.filter((r) => !r.isDeleted)
+    if (metadataQuery.isLoading || spamQuery.isLoading) {
+      return
+    }
+
+    if (metadataQuery.data?.deleted) {
+      return
+    }
+
+    if (spamQuery.data) {
+      likelySpamConversationIds.push(conversationId)
+    } else {
+      likelyNotSpamConversationIds.push(conversationId)
+    }
+  })
 
   return {
-    likelyNotSpamConversationIds:
-      nonDeletedResults.filter((r) => !r.isSpam).map((r) => r.conversationId) ?? [],
-    likelySpamConversationIds:
-      nonDeletedResults.filter((r) => r.isSpam).map((r) => r.conversationId) ?? [],
+    likelyNotSpamConversationIds,
+    likelySpamConversationIds,
     isLoading,
     refetch: refetchUnknownConsentConversationIds,
   }

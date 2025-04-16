@@ -2,7 +2,7 @@ import { Optional, queryOptions, skipToken, useQuery } from "@tanstack/react-que
 import { IEthereumAddress, isEthereumAddress } from "@/utils/evm/address"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { DateUtils } from "@/utils/time.utils"
+import { TimeUtils } from "@/utils/time.utils"
 import { fetchSocialProfilesForAddress } from "./social-profiles.api"
 
 type IArgs = {
@@ -40,7 +40,7 @@ const getSocialProfilesForAddressQueryOptions = (args: Optional<IArgsWithCaller,
             })
           }
         : skipToken,
-    staleTime: DateUtils.days(30).toMilliseconds(), // 30 days, it's very rare that this should change
+    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that this should change
   })
 }
 

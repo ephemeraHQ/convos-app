@@ -28,7 +28,7 @@ export const nowNano = () => {
 // Re-export the functions we need
 // This gives us a central place to manage time utilities
 // and we can easily add our own helpers if needed
-export const DateUtils = {
+export const TimeUtils = {
   seconds: createSeconds,
   days: createDays,
   hours: createHours,
