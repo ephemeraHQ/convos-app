@@ -3,6 +3,7 @@ import { Modal, TouchableOpacity, View, Dimensions, ViewStyle, ImageStyle } from
 import { Image } from "expo-image"
 import { Text } from "@/design-system/Text"
 import { Icon } from "@/design-system/Icon/Icon"
+import { HStack } from "@/design-system/HStack"
 import { useAppTheme, ThemedStyle } from "@/theme/use-app-theme"
 import Animated, {
   useSharedValue,
@@ -19,6 +20,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler'
 import { logger } from "@/utils/logger/logger"
+import { getRelativeDateTime, normalizeTimestampToMs } from "@/utils/date"
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
@@ -41,14 +43,13 @@ export type IMediaViewerProps = {
   onClose: () => void
   uri: string
   sender?: string
-  timestamp?: string
-  formatTimestamp?: (timestamp: string) => string
+  timestamp?: number
 }
 
 export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
-  const { visible, onClose, uri, sender, timestamp, formatTimestamp } = props
+  const { visible, onClose, uri, sender, timestamp } = props
 
-  logger.debug(`Sender: ${sender} Timestamp: ${timestamp}`)
+  logger.debug(`MediaViewer component - Sender: "${sender || 'unknown'}" Timestamp: "${timestamp || 'none'}"`)
   
   const { theme, themed } = useAppTheme()
 
@@ -364,10 +365,9 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
 
   // Single tap gesture to toggle controls
   const singleTapGesture = Gesture.Tap()
-    .maxDuration(300)
+    .maxDuration(100)
     .onEnd(() => {
       'worklet';
-      console.log('singleTap worklet running')
       runOnJS(toggleControls)();
     })
 
@@ -476,18 +476,20 @@ const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
           </Animated.View>
           
           {(sender || timestamp) && (
-            <Animated.View style={[infoContainerStyle, controlsAnimatedStyle]}>
-              {sender && (
-                <Text preset="body" weight="bold" color="primary">
-                  {sender}
-                </Text>
-              )}
-              {timestamp && (
-                <Text preset="small" color="primary">
-                  {formatTimestamp ? formatTimestamp(timestamp) : timestamp}
-                </Text>
-              )}
-            </Animated.View>
+            <>
+              <Animated.View style={[infoContainerStyle, controlsAnimatedStyle]}>
+                {sender && (
+                  <Text preset="body" weight="bold" color="primary">
+                    {sender}
+                  </Text>
+                )}
+                {timestamp && (
+                  <Text preset="small" color="primary">
+                    {getRelativeDateTime(normalizeTimestampToMs(timestamp))}
+                  </Text>
+                )}
+              </Animated.View>
+            </>
           )}
         </Animated.View>
       </GestureHandlerRootView>
@@ -531,7 +533,7 @@ const $closeButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
 
 const $infoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   position: 'absolute',
-  bottom: 40,
+  top: 64,
   left: 0,
   right: 0,
   padding: spacing.md,

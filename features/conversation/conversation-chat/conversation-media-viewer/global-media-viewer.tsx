@@ -1,5 +1,6 @@
 import React, { memo, useState, useEffect } from 'react'
 import { MediaViewer } from './conversation-media-viewer'
+import { logger } from "@/utils/logger/logger"
 
 // Global event-based media viewer handler
 type MediaViewerParams = {
@@ -8,22 +9,45 @@ type MediaViewerParams = {
   timestamp?: number;
 }
 
-// Simple event-based singleton
-let eventCallbacks: Array<(params: MediaViewerParams) => void> = []
+type MediaViewerCallback = (params: MediaViewerParams) => void;
 
-export const openMediaViewer = (params: MediaViewerParams): void => {
-  // Trigger all registered event callbacks
-  eventCallbacks.forEach(callback => callback(params))
+// Media Viewer Manager Singleton
+class MediaViewerManager {
+  private callbacks: MediaViewerCallback[] = [];
+
+  // Register a callback for when the media viewer should be opened
+  registerCallback(callback: MediaViewerCallback) {
+    this.callbacks.push(callback);
+    
+    // Return unregister function
+    return () => {
+      this.callbacks = this.callbacks.filter(cb => cb !== callback);
+    };
+  }
+
+  // Trigger the media viewer to open
+  openMediaViewer(params: MediaViewerParams) {
+    logger.debug('MediaViewerManager.openMediaViewer called with:', params);
+    
+    // Ensure there's always a sender value
+    const enhancedParams = {
+      ...params,
+      sender: params.sender || 'Unknown sender',
+    };
+    
+    // Notify all registered callbacks
+    this.callbacks.forEach(callback => callback(enhancedParams));
+  }
 }
 
-export const mediaViewerManager = {
-  openMediaViewer,
-  registerCallback: (callback: (params: MediaViewerParams) => void) => {
-    eventCallbacks.push(callback)
-    return () => {
-      eventCallbacks = eventCallbacks.filter(cb => cb !== callback)
-    }
-  }
+// Export singleton instance
+export const mediaViewerManager = new MediaViewerManager();
+
+/**
+ * Helper function to open the media viewer directly
+ */
+export function openMediaViewer(params: MediaViewerParams) {
+  mediaViewerManager.openMediaViewer(params);
 }
 
 /**
@@ -38,6 +62,7 @@ const MediaViewerPortal = memo(function MediaViewerPortal() {
   useEffect(() => {
     // Register for media viewer events
     const unregister = mediaViewerManager.registerCallback((params) => {
+      logger.debug('MediaViewerPortal received callback with params:', params);
       setMediaParams(params)
       setVisible(true)
     })
@@ -54,7 +79,7 @@ const MediaViewerPortal = memo(function MediaViewerPortal() {
       onClose={() => setVisible(false)}
       uri={mediaParams.uri}
       sender={mediaParams.sender}
-      timestamp={mediaParams.timestamp?.toString()}
+      timestamp={mediaParams.timestamp}
     />
   )
 })

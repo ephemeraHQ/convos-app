@@ -1,24 +1,15 @@
 import React, { useState, useCallback, useEffect } from "react"
-import { format } from "date-fns"
 import { MediaViewer } from "./conversation-media-viewer"
 import { mediaViewerManager } from "./global-media-viewer"
-
-type IUseMediaViewerOptions = {
-  formatTimestamp?: (timestamp: number) => string
-}
+import { logger } from "@/utils/logger/logger"
 
 // Standalone MediaViewer component with Portal (to be used at screen level)
 export function MediaViewerPortal() {
   const [isVisible, setIsVisible] = useState(false)
   const [uri, setUri] = useState("")
   const [sender, setSender] = useState("")
-  const [timestamp, setTimestamp] = useState("")
+  const [timestamp, setTimestamp] = useState<number | null>(null)
   
-  const formatTimestampFn = useCallback(
-    (ts: number) => format(new Date(ts), "MMM d, yyyy h:mm a"),
-    []
-  )
-
   // Register to receive media viewer open events
   useEffect(() => {
     // Handler function
@@ -27,16 +18,10 @@ export function MediaViewerPortal() {
       sender?: string
       timestamp?: number
     }) => {
-      console.log("MediaViewerPortal received event:", params.uri)
+      logger.debug("MediaViewerPortal received event with params:", params)
       setUri(params.uri)
       setSender(params.sender || "")
-      
-      if (params.timestamp) {
-        setTimestamp(formatTimestampFn(params.timestamp))
-      } else {
-        setTimestamp("")
-      }
-      
+      setTimestamp(params.timestamp || null)
       setIsVisible(true)
     }
     
@@ -45,7 +30,7 @@ export function MediaViewerPortal() {
     
     // Cleanup on unmount
     return unregister
-  }, [formatTimestampFn])
+  }, [])
 
   const handleClose = useCallback(() => {
     setIsVisible(false)
@@ -57,22 +42,7 @@ export function MediaViewerPortal() {
       visible={isVisible}
       onClose={handleClose}
       sender={sender}
-      timestamp={timestamp}
+      timestamp={timestamp || undefined}
     />
   )
 }
-
-// Hook for components that want to trigger the media viewer
-export function useMediaViewer(options?: IUseMediaViewerOptions) {
-  const openMediaViewer = useCallback(
-    (params: { uri: string; sender?: string; timestamp?: number }) => {
-      console.log("openMediaViewer called with URI:", params.uri)
-      mediaViewerManager.openMediaViewer(params)
-    },
-    []
-  )
-
-  return {
-    openMediaViewer,
-  }
-} 

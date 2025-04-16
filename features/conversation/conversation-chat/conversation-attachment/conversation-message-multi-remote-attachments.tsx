@@ -5,6 +5,7 @@ import { ConversationMessageGestures } from "@/features/conversation/conversatio
 import { IConversationMessageMultiRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 
 type IMessageMultiRemoteAttachmentProps = {
   message: IConversationMessageMultiRemoteAttachment
@@ -19,13 +20,14 @@ export const MessageMultiRemoteAttachment = memo(function MessageMultiRemoteAtta
 
   const content = message.content
 
+  const { displayName } = usePreferredDisplayInfo({
+    inboxId: message.senderInboxId,
+  })
+
   if (typeof content === "string") {
     // TODO
     return null
   }
-
-  // TODO: remove this - used to test media viewer
-  return;
 
   return (
     <VStack
@@ -46,6 +48,8 @@ export const MessageMultiRemoteAttachment = memo(function MessageMultiRemoteAtta
             xmtpMessageId={message.xmtpId}
             remoteMessageContent={attachment}
             fitAspectRatio
+            senderName={fromMe ? "You" : displayName || "Sender"}
+            sentTimestamp={message.sentMs}
           />
         </ConversationMessageGestures>
       ))}
