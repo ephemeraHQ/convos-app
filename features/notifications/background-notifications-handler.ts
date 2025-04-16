@@ -1,6 +1,7 @@
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
+import { IExpoBackgroundNotificationData } from "@/features/notifications/notifications.types"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
@@ -10,46 +11,15 @@ import { maybeDisplayLocalNewMessageNotification } from "./notifications.service
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND_NOTIFICATION_TASK"
 
 /**
- * Extracts essential notification data (contentTopic and encryptedMessage)
- * regardless of whether it's in XMTP or Expo format
+ * Checks if the data conforms to our expected notification format
  */
-function extractNotificationData(data: any) {
-  // Handle case where data is nested under backgroundNotificationData
-  if (data.backgroundNotificationData) {
-    return extractNotificationData(data.backgroundNotificationData)
-  }
-
-  // Handle XMTP format with UIApplicationLaunchOptionsRemoteNotificationKey
-  if (data.UIApplicationLaunchOptionsRemoteNotificationKey) {
-    const xmtpData = data.UIApplicationLaunchOptionsRemoteNotificationKey
-
-    // If it has body structure
-    if (xmtpData.body?.contentTopic && xmtpData.body?.encryptedMessage) {
-      return {
-        contentTopic: xmtpData.body.contentTopic,
-        encryptedMessage: xmtpData.body.encryptedMessage,
-      }
-    }
-
-    // Handle case where values are at root level of XMTP data
-    if (xmtpData.topic && xmtpData.encryptedMessage) {
-      return {
-        contentTopic: xmtpData.topic,
-        encryptedMessage: xmtpData.encryptedMessage,
-      }
-    }
-  }
-
-  // Handle standard Expo format
-  if (data.body?.contentTopic && data.body?.encryptedMessage) {
-    return {
-      contentTopic: data.body.contentTopic,
-      encryptedMessage: data.body.encryptedMessage,
-    }
-  }
-
-  // Return empty object if no matching format found
-  return {}
+function isExpoBackgroundNotification(data: any): data is IExpoBackgroundNotificationData {
+  return (
+    data &&
+    data.body &&
+    typeof data.body.contentTopic === "string" &&
+    typeof data.body.encryptedMessage === "string"
+  )
 }
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
@@ -70,30 +40,18 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       data,
     })
 
-    // Extract only the needed notification data regardless of format
-    const { contentTopic, encryptedMessage } = extractNotificationData(data)
-
-    notificationsLogger.debug("Extracted notification data", {
-      contentTopic,
-      hasEncryptedMessage: !!encryptedMessage,
-    })
-
-    // Skip if missing required data
-    if (!contentTopic || !encryptedMessage) {
-      notificationsLogger.debug("Missing required notification data, skipping", {
-        hasContentTopic: !!contentTopic,
-        hasEncryptedMessage: !!encryptedMessage,
-      })
+    // Skip if not in expected format
+    if (!isExpoBackgroundNotification(data)) {
+      notificationsLogger.debug("Ignoring notification - not in expected format")
       return
     }
 
-    notificationsLogger.debug("Processing background notification")
-
-    const conversationTopic = contentTopic as IXmtpConversationTopic
+    const contentTopic = data.body.contentTopic as IXmtpConversationTopic
+    const encryptedMessage = data.body.encryptedMessage
 
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage,
-      conversationTopic,
+      conversationTopic: contentTopic,
     })
   } catch (error) {
     captureError(
