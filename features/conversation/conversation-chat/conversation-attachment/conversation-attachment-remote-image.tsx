@@ -59,12 +59,6 @@ export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
   // Handler for opening the media viewer - will be called by the tap handler
   const handleOpenMediaViewer = useCallback(() => {
     if (attachment?.mediaURL) {
-      console.log("[RemoteImage] Opening media viewer with:", {
-        uri: attachment.mediaURL,
-        sender: senderName,
-        timestamp: sentTimestamp
-      });
-      
       openMediaViewer({
         uri: attachment.mediaURL,
         sender: senderName,
