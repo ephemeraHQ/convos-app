@@ -19,34 +19,14 @@ permissions:
   id-token: write
 
 jobs:
-  check-changes:
+  merge-main-into-production:
     runs-on: ubuntu-latest
-    outputs:
-      has_native_changes: ${{ steps.check-changes.outputs.has_native_changes }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Need full history to compare branches
           token: ${{ secrets.PAT_GITHUB }}
-
-      - name: Check for native changes
-        id: check-changes
-        run: |
-          if [[ "${{ github.event.inputs.force_native_build }}" == "true" ]]; then
-            echo "has_native_changes=true" >> $GITHUB_OUTPUT
-          else
-            # Get the merge base between main and production
-            MERGE_BASE=$(git merge-base origin/main origin/production)
-            
-            # Check for native changes between merge base and main
-            if git diff --name-only $MERGE_BASE origin/main | grep -E "package.json|app.config.ts|patches/|google-services/|yarn.lock|eas.json"; then
-              echo "has_native_changes=true" >> $GITHUB_OUTPUT
-            else
-              echo "has_native_changes=false" >> $GITHUB_OUTPUT
-            fi
-          fi
 
       - name: Merge main into production
         run: |
@@ -58,10 +38,8 @@ jobs:
           git push origin production
 
   ios-build:
-    needs: [check-changes]
-    if: needs.check-changes.outputs.has_native_changes == 'true'
+    needs: [merge-main-into-production]
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -94,95 +72,3 @@ jobs:
       - name: Build iOS production
         run: |
           eas build --platform ios --profile production --non-interactive --auto-submit --environment=production
-
-      # - name: Resolve Sentry Issues
-      #   run: |
-      #     eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
-
-  android-build:
-    needs: [check-changes]
-    if: needs.check-changes.outputs.has_native_changes == 'true'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT_GITHUB }}
-          ref: production
-
-      - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: "yarn"
-          cache-dependency-path: yarn.lock
-        env:
-          SKIP_YARN_COREPACK_CHECK: "1"
-      - run: corepack enable
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: yarn
-          eas-cache: true
-          patch-watchers: true
-
-      - name: Build Android production
-        run: |
-          eas build --platform android --profile production --non-interactive --auto-submit --environment=production
-
-      # - name: Resolve Sentry Issues
-      #   run: |
-      #     eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'
-
-  ota-update:
-    needs: [check-changes]
-    if: needs.check-changes.outputs.has_native_changes == 'false'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT_GITHUB }}
-          ref: production
-
-      - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: "yarn"
-          cache-dependency-path: yarn.lock
-        env:
-          SKIP_YARN_COREPACK_CHECK: "1"
-      - run: corepack enable
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: yarn
-          eas-cache: true
-          patch-watchers: true
-
-      - name: Run EAS Update
-        run: |
-          eas update --channel=production --message "Production deployment" --non-interactive --environment=production
-
-      - name: Upload Sourcemaps to Sentry
-        run: |
-          eas env:exec --environment production 'npx sentry-expo-upload-sourcemaps dist'
-
-      # - name: Resolve Sentry Issues
-      #   run: |
-      #     eas env:exec --environment production 'sentry-cli issues resolve --all --project convos-app-react-native --org converse'

@@ -1,4 +1,3 @@
-import { useIsFocused } from "@react-navigation/native"
 import { InfiniteQueryObserver } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -8,10 +7,7 @@ import {
   getConversationMessagesInfiniteQueryData,
   getConversationMessagesInfiniteQueryOptions,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { getConversationMetadataQueryData } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
-import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { Haptics } from "@/utils/haptics"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 
 /**
@@ -21,8 +17,7 @@ export function useConversationLastMessageIds(args: { conversationIds: IXmtpConv
   const { conversationIds } = args
 
   const currentSender = useSafeCurrentSender()
-  const isFocused = useIsFocused()
-  const prevMessageIdsRef = useRef<Record<IXmtpConversationId, IXmtpMessageId | undefined>>({})
+
   const lastMessageIdQueryObserversRef = useRef<Record<IXmtpConversationId, () => void>>({})
 
   const [lastMessageIdForConversationMap, setLastMessageIdForConversationMap] = useState<
@@ -35,7 +30,6 @@ export function useConversationLastMessageIds(args: { conversationIds: IXmtpConv
         xmtpConversationId: conversationId,
       })?.pages[0]?.messageIds?.[0]
       initialData[conversationId] = firstMessageId
-      prevMessageIdsRef.current[conversationId] = firstMessageId
     }
     return initialData
   })
@@ -63,41 +57,6 @@ export function useConversationLastMessageIds(args: { conversationIds: IXmtpConv
           })
           return message && !isReactionMessage(message)
         })
-        const prevMessageId = prevMessageIdsRef.current[conversationId]
-
-        // Haptic for new message when we are in the conversation list screen and the conversation was unread
-        const conversationMetadata = getConversationMetadataQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
-        })
-        const lastMessage = getConversationMessageQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: lastMessageId,
-        })
-        if (
-          isFocused &&
-          prevMessageId &&
-          lastMessageId &&
-          prevMessageId !== lastMessageId &&
-          conversationMetadata &&
-          conversationIsUnreadForInboxId({
-            lastMessageSentAt: lastMessage?.sentMs,
-            lastMessageSenderInboxId: lastMessage?.senderInboxId,
-            consumerInboxId: currentSender.inboxId,
-            markedAsUnread: !!conversationMetadata.unread,
-            readUntil: conversationMetadata.readUntil
-              ? new Date(conversationMetadata.readUntil).getTime()
-              : null,
-          })
-        ) {
-          Haptics.softImpactAsync()
-        }
-
-        // Update the ref with current message ID
-        if (lastMessageId) {
-          prevMessageIdsRef.current[conversationId] = lastMessageId
-        }
-
         setLastMessageIdForConversationMap((prev) => ({
           ...prev,
           [conversationId]: lastMessageId,
@@ -106,7 +65,7 @@ export function useConversationLastMessageIds(args: { conversationIds: IXmtpConv
 
       lastMessageIdQueryObserversRef.current[conversationId] = unsubscribe
     })
-  }, [conversationIds, currentSender.inboxId, isFocused, setLastMessageIdForConversationMap])
+  }, [conversationIds, currentSender.inboxId, setLastMessageIdForConversationMap])
 
   // Cleanup
   useEffect(() => {

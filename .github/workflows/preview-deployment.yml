@@ -102,9 +102,6 @@ jobs:
           eas-cache: true
           patch-watchers: true # Prevents ENOSPC errors on Ubuntu runners
 
-      - name: Install Sentry CLI
-        run: npm install -g @sentry/cli
-
       - name: Build and submit to store
         run: |
           eas build --platform ios --profile preview --non-interactive --auto-submit
