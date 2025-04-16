@@ -183,21 +183,25 @@ export function displayLocalNotification(args: Notifications.NotificationRequest
   return Notifications.scheduleNotificationAsync(args)
 }
 
+const TIMEOUT_MS = 45000 // 45 seconds
+const TIMEOUT_SECONDS = TIMEOUT_MS / 1000
+
 export async function maybeDisplayLocalNewMessageNotification(args: {
   encryptedMessage: string
   conversationTopic: IXmtpConversationTopic
 }) {
-  const TIMEOUT_MS = 20000 // 20 seconds
-
   try {
+    let timeoutId: NodeJS.Timeout | undefined
+
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error("Notification processing timed out after 45 seconds"))
+      timeoutId = setTimeout(() => {
+        reject(new Error(`Notification processing timed out after ${TIMEOUT_SECONDS} seconds`))
       }, TIMEOUT_MS)
     })
 
     const processNotificationPromise = (async () => {
       const { encryptedMessage, conversationTopic } = args
+
       notificationsLogger.debug("Processing notification with topic:", conversationTopic)
       const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
       notificationsLogger.debug("Extracted conversation ID:", xmtpConversationId)
@@ -277,7 +281,14 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
       notificationsLogger.debug("Local notification displayed")
     })()
 
-    await Promise.race([processNotificationPromise, timeoutPromise])
+    try {
+      await Promise.race([processNotificationPromise, timeoutPromise])
+    } finally {
+      // Clear the timeout to prevent memory leaks
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
   } catch (error) {
     throw new NotificationError({
       error,

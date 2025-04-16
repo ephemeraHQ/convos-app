@@ -30,11 +30,17 @@ export const ConversationComposerAddAttachmentButton = memo(
   function ConversationComposerAddAttachmentButton() {
     const { theme, themed } = useAppTheme()
 
-    const store = useConversationComposerStore()
+    const conversationComposerStore = useConversationComposerStore()
     const isEnabled = useConversationComposerIsEnabled()
 
     const handleAsset = useCallback(
       async (asset: ImagePicker.ImagePickerAsset) => {
+        logger.debug("[ConversationComposerAddAttachmentButton] Creating media preview", {
+          uri: asset.uri,
+          mimeType: asset.mimeType,
+          dimensions: { width: asset.width, height: asset.height },
+        })
+
         const mediaPreview: IComposerAttachmentPicked = {
           status: "picked",
           mediaURI: asset.uri,
@@ -46,10 +52,16 @@ export const ConversationComposerAddAttachmentButton = memo(
         }
 
         try {
-          store.getState().addComposerAttachment(mediaPreview)
+          logger.debug(
+            "[ConversationComposerAddAttachmentButton] Adding composer attachment",
+            mediaPreview,
+          )
+          conversationComposerStore.getState().addComposerAttachment(mediaPreview)
 
-          // Update status to uploading
-          store.getState().updateComposerAttachment({
+          logger.debug(
+            "[ConversationComposerAddAttachmentButton] Updating attachment status to uploading",
+          )
+          conversationComposerStore.getState().updateComposerAttachment({
             mediaURI: mediaPreview.mediaURI,
             attachment: {
               status: "uploading",
@@ -82,7 +94,7 @@ export const ConversationComposerAddAttachmentButton = memo(
           prefetchImageUrl(publicUrl).catch(captureError)
 
           // Add uploaded attachment
-          store.getState().updateComposerAttachment({
+          conversationComposerStore.getState().updateComposerAttachment({
             mediaURI: mediaPreview.mediaURI,
             attachment: {
               url: publicUrl,
@@ -98,11 +110,11 @@ export const ConversationComposerAddAttachmentButton = memo(
             },
           })
         } catch (error) {
-          store.getState().removeComposerAttachment(mediaPreview.mediaURI)
+          conversationComposerStore.getState().removeComposerAttachment(mediaPreview.mediaURI)
           throw new GenericError({ error, additionalMessage: "Failed to process attachment" })
         }
       },
-      [store],
+      [conversationComposerStore],
     )
 
     const pickMedia = useCallback(async () => {
@@ -116,7 +128,12 @@ export const ConversationComposerAddAttachmentButton = memo(
         }
 
         logger.debug("[pickMedia] Processing assets", { count: assets.length })
-        const results = await customPromiseAllSettled(assets.map(handleAsset))
+        const results = await customPromiseAllSettled(
+          assets.map((asset) => {
+            return handleAsset(asset)
+          }),
+        )
+        logger.debug("[pickMedia] Results", results)
 
         const failedResults = results.filter((result) => result.status === "rejected")
         const failedCount = failedResults.length

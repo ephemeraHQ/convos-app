@@ -88,7 +88,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
       defaultValue={inputDefaultValue}
       placeholder="Message"
       autoCorrect={true}
-      spellCheck={false}
       placeholderTextColor={theme.colors.text.tertiary}
     />
   )

@@ -2,7 +2,6 @@ import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { IExpoBackgroundNotificationData } from "@/features/notifications/notifications.types"
-import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -46,7 +45,7 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       return
     }
 
-    const contentTopic = data.body.contentTopic as IXmtpConversationTopic
+    const contentTopic = data.body.contentTopic
     const encryptedMessage = data.body.encryptedMessage
 
     await maybeDisplayLocalNewMessageNotification({

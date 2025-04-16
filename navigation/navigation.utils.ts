@@ -34,11 +34,6 @@ export async function navigate<T extends keyof NavigationParamList>(
     }
 
     if (!navigationRef.isReady()) {
-      captureError(
-        new NavigationError({
-          error: "Navigation navigator is not ready, so we're waiting...",
-        }),
-      )
       await waitUntilNavigationReady({
         // After 10 seconds, the UX will feel very broken from a user perspective...
         timeoutMs: 10000,
