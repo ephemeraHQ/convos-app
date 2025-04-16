@@ -189,6 +189,10 @@ export default () => {
           NSAllowsLocalNetworking: true, // Not sure why
         },
         UIBackgroundModes: ["remote-notification", "fetch", "processing"],
+        BGTaskSchedulerPermittedIdentifiers: [
+          "com.convos.background-fetch",
+          "com.convos.background-processing",
+        ],
       },
     },
     android: {
