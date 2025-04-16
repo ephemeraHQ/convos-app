@@ -187,7 +187,7 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
   encryptedMessage: string
   conversationTopic: IXmtpConversationTopic
 }) {
-  const TIMEOUT_MS = 45000 // 45 seconds
+  const TIMEOUT_MS = 20000 // 20 seconds
 
   try {
     const timeoutPromise = new Promise((_, reject) => {

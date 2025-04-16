@@ -188,7 +188,7 @@ export default () => {
         NSAppTransportSecurity: {
           NSAllowsLocalNetworking: true, // Not sure why
         },
-        UIBackgroundModes: ["remote-notification"],
+        UIBackgroundModes: ["remote-notification", "fetch", "processing"],
       },
     },
     android: {

@@ -1,16 +1,56 @@
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
-import { IExpoBackgroundNotificationData } from "@/features/notifications/notifications.types"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
-import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
-import { waitUntilPromise } from "@/utils/wait-until-promise"
 import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
 
 const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND_NOTIFICATION_TASK"
+
+/**
+ * Extracts essential notification data (contentTopic and encryptedMessage)
+ * regardless of whether it's in XMTP or Expo format
+ */
+function extractNotificationData(data: any) {
+  // Handle case where data is nested under backgroundNotificationData
+  if (data.backgroundNotificationData) {
+    return extractNotificationData(data.backgroundNotificationData)
+  }
+
+  // Handle XMTP format with UIApplicationLaunchOptionsRemoteNotificationKey
+  if (data.UIApplicationLaunchOptionsRemoteNotificationKey) {
+    const xmtpData = data.UIApplicationLaunchOptionsRemoteNotificationKey
+
+    // If it has body structure
+    if (xmtpData.body?.contentTopic && xmtpData.body?.encryptedMessage) {
+      return {
+        contentTopic: xmtpData.body.contentTopic,
+        encryptedMessage: xmtpData.body.encryptedMessage,
+      }
+    }
+
+    // Handle case where values are at root level of XMTP data
+    if (xmtpData.topic && xmtpData.encryptedMessage) {
+      return {
+        contentTopic: xmtpData.topic,
+        encryptedMessage: xmtpData.encryptedMessage,
+      }
+    }
+  }
+
+  // Handle standard Expo format
+  if (data.body?.contentTopic && data.body?.encryptedMessage) {
+    return {
+      contentTopic: data.body.contentTopic,
+      encryptedMessage: data.body.encryptedMessage,
+    }
+  }
+
+  // Return empty object if no matching format found
+  return {}
+}
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
   try {
@@ -26,32 +66,34 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       })
     }
 
-    const backgroundNotificationData = data as IExpoBackgroundNotificationData
+    notificationsLogger.debug("Received background notification data", {
+      data,
+    })
 
-    // Not handling other types of background notifications for now
-    if (!backgroundNotificationData.body?.contentTopic) {
+    // Extract only the needed notification data regardless of format
+    const { contentTopic, encryptedMessage } = extractNotificationData(data)
+
+    notificationsLogger.debug("Extracted notification data", {
+      contentTopic,
+      hasEncryptedMessage: !!encryptedMessage,
+    })
+
+    // Skip if missing required data
+    if (!contentTopic || !encryptedMessage) {
+      notificationsLogger.debug("Missing required notification data, skipping", {
+        hasContentTopic: !!contentTopic,
+        hasEncryptedMessage: !!encryptedMessage,
+      })
       return
     }
 
-    notificationsLogger.debug("New background notification received", {
-      backgroundNotificationData,
-    })
+    notificationsLogger.debug("Processing background notification")
 
-    // Wait until the internet is reachable
-    if (!useAppStore.getState().isInternetReachable) {
-      notificationsLogger.debug("Internet is not reachable, waiting until it is...")
-      await waitUntilPromise({
-        checkFn: () => useAppStore.getState().isInternetReachable,
-        intervalMs: 200,
-      })
-      notificationsLogger.debug("Internet is now reachable")
-    }
-
-    const conversationTopic = backgroundNotificationData.body.contentTopic as IXmtpConversationTopic
+    const conversationTopic = contentTopic as IXmtpConversationTopic
 
     await maybeDisplayLocalNewMessageNotification({
-      encryptedMessage: backgroundNotificationData.body.encryptedMessage,
-      conversationTopic: conversationTopic,
+      encryptedMessage,
+      conversationTopic,
     })
   } catch (error) {
     captureError(
