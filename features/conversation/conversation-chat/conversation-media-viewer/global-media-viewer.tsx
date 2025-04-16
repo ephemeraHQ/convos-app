@@ -1,13 +1,10 @@
 import React, { memo, useState, useEffect } from 'react'
 import { MediaViewer } from './conversation-media-viewer'
 import { logger } from "@/utils/logger/logger"
+import { IMediaViewerProps } from './conversation-media-viewer.types'
 
 // Global event-based media viewer handler
-type MediaViewerParams = {
-  uri: string;
-  sender?: string;
-  timestamp?: number;
-}
+type MediaViewerParams = Omit<IMediaViewerProps, 'visible' | 'onClose'>
 
 type MediaViewerCallback = (params: MediaViewerParams) => void;
 

@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { Modal, TouchableOpacity, View, Dimensions, ViewStyle, ImageStyle } from 'react-native'
 import { Image } from "expo-image"
 import { Text } from "@/design-system/Text"
 import { Icon } from "@/design-system/Icon/Icon"
-import { HStack } from "@/design-system/HStack"
 import { useAppTheme, ThemedStyle } from "@/theme/use-app-theme"
 import Animated, {
   useSharedValue,
@@ -12,6 +11,7 @@ import Animated, {
   runOnJS,
   withSpring,
   interpolate,
+  interpolateColor,
   Easing,
 } from 'react-native-reanimated'
 import {
@@ -21,6 +21,7 @@ import {
 } from 'react-native-gesture-handler'
 import { logger } from "@/utils/logger/logger"
 import { getRelativeDateTime, normalizeTimestampToMs } from "@/utils/date"
+import { IMediaViewerProps } from './conversation-media-viewer.types'
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
@@ -36,26 +37,15 @@ const SPRING_CONFIG = {
 }
 const DISMISS_THRESHOLD = 120 // Distance to dismiss in pixels
 const TRANSITION_DURATION = 220
-const CONTROLS_FADE_DURATION = 150
-
-export type IMediaViewerProps = {
-  visible: boolean
-  onClose: () => void
-  uri: string
-  sender?: string
-  timestamp?: number
-}
 
 export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
   const { visible, onClose, uri, sender, timestamp } = props
-
-  logger.debug(`MediaViewer component - Sender: "${sender || 'unknown'}" Timestamp: "${timestamp || 'none'}"`)
   
   const { theme, themed } = useAppTheme()
 
   const [modalVisible, setModalVisible] = useState(false)
-  const [controlsVisible, setControlsVisible] = useState(true)
-
+  const [controlsVisible, setControlsVisible] = useState(false)
+  
   // Shared animation values
   const scale = useSharedValue(1)
   const savedScale = useSharedValue(1)
@@ -63,27 +53,30 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
   const translateY = useSharedValue(0)
   const savedTranslateX = useSharedValue(0)
   const savedTranslateY = useSharedValue(0)
-  const backgroundOpacity = useSharedValue(0) // Start transparent
-  const controlsOpacity = useSharedValue(0)   // Start with controls not visible
-  
+  const backgroundOpacity = useSharedValue(0) // For fade in/out of entire modal
+  const controlsOpacity = useSharedValue(0)   // For controls visibility
+  const isDismissing = useSharedValue(false)
+  const dismissAnimation = useSharedValue(0)
+
   // Transition animation values
   const transitionProgress = useSharedValue(0)
   const isAnimatingTransition = useSharedValue(false)
   
   // Reset animation values when opening the viewer
   const resetAnimationValues = useCallback(() => {
-    // Reset all animation values to their initial state
     scale.value = 1
     savedScale.value = 1
     translateX.value = 0
     translateY.value = 0
     savedTranslateX.value = 0
     savedTranslateY.value = 0
-    backgroundOpacity.value = 0 // Start transparent
-    controlsOpacity.value = 0   // Start with controls not visible
+    backgroundOpacity.value = 0
+    controlsOpacity.value = 0
     transitionProgress.value = 0
     isAnimatingTransition.value = true
-  }, [scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY, backgroundOpacity, controlsOpacity, transitionProgress, isAnimatingTransition])
+    dismissAnimation.value = 0
+    isDismissing.value = false
+  }, [scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY, backgroundOpacity, controlsOpacity, transitionProgress, isAnimatingTransition, dismissAnimation, isDismissing])
 
   useEffect(() => {
     if (visible) {
@@ -104,11 +97,28 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     }
   }, [visible, resetAnimationValues, backgroundOpacity, transitionProgress, isAnimatingTransition])
 
+  // Toggle controls visibility
+  const toggleControls = useCallback(() => {
+    const newVisibility = !controlsVisible
+    setControlsVisible(newVisibility)
+    // Use withTiming with proper easing for smoother transition
+    controlsOpacity.value = withTiming(newVisibility ? 1 : 0, { 
+      duration: TRANSITION_DURATION,
+      easing: Easing.bezier(0.22, 1, 0.36, 1)
+    })
+  }, [controlsVisible, controlsOpacity])
+
   // Handle closing the modal with animation
   const handleClose = () => {
     isAnimatingTransition.value = true;
     
-    // Reset any zoom first
+    // Hide controls immediately if visible
+    if (controlsVisible) {
+      setControlsVisible(false);
+      controlsOpacity.value = 0;
+    }
+    
+    // Reset zoom and position
     scale.value = withTiming(1, { duration: TRANSITION_DURATION })
     translateX.value = withTiming(0, { duration: TRANSITION_DURATION })
     translateY.value = withTiming(0, { duration: TRANSITION_DURATION })
@@ -125,13 +135,6 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       runOnJS(onClose)()
     })
   }
-
-  // Toggle controls visibility
-  const toggleControls = useCallback(() => {
-    const newVisibility = !controlsVisible
-    setControlsVisible(newVisibility)
-    controlsOpacity.value = withTiming(newVisibility ? 1 : 0, { duration: CONTROLS_FADE_DURATION })
-  }, [controlsVisible, controlsOpacity])
 
   // Pinch gesture for zooming with focal point
   const pinchGesture = Gesture.Pinch()
@@ -190,10 +193,21 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
       
-      // If below threshold, close the modal
-      if (scale.value <= CLOSING_THRESHOLD) {
-        runOnJS(handleClose)()
-        return
+      // If below threshold, trigger dismissal animation
+      if (scale.value <= CLOSING_THRESHOLD && !isDismissing.value) {
+        // Mark as dismissing to prevent multiple dismiss animations
+        isDismissing.value = true;
+        
+        // Use a separate animation value for the dismissal
+        dismissAnimation.value = withTiming(1, { 
+          duration: TRANSITION_DURATION,
+          easing: Easing.out(Easing.ease) 
+        }, () => {
+          runOnJS(setModalVisible)(false);
+          runOnJS(onClose)();
+        });
+        
+        return;
       }
       
       // Spring back to 1 if scale is between threshold and 1
@@ -365,7 +379,7 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
 
   // Single tap gesture to toggle controls
   const singleTapGesture = Gesture.Tap()
-    .maxDuration(100)
+    .maxDuration(120)
     .onEnd(() => {
       'worklet';
       runOnJS(toggleControls)();
@@ -385,8 +399,21 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     };
   });
 
-  // Image scale during transition
+  // Modify the image animation style to enhance the dismissal effect
   const imageTransitionStyle = useAnimatedStyle(() => {
+    // When dismissing via pinch, apply dismissal animation
+    if (isDismissing.value) {
+      // More dramatic dismissal animation
+      return {
+        opacity: interpolate(dismissAnimation.value, [0, 0.7, 1], [1, 0.7, 0]),
+        transform: [
+          { translateY: interpolate(dismissAnimation.value, [0, 1], [0, -80]) },
+          { scale: interpolate(dismissAnimation.value, [0, 0.5, 1], [scale.value, scale.value * 0.7, 0]) }
+        ]
+      };
+    }
+    
+    // During entry/exit transitions
     if (isAnimatingTransition.value) {
       return {
         opacity: transitionProgress.value,
@@ -396,32 +423,49 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       };
     }
     
-    // Normal image transforms for pinch/zoom when not transitioning
-    if (!isAnimatingTransition.value) {
-      return {
-        transform: [
-          { translateX: translateX.value },
-          { translateY: translateY.value },
-          { scale: scale.value }
-        ]
-      };
-    }
-    
-    return {};
-  });
-
-  // Animated styles for background opacity
-  const animatedBackgroundStyles = useAnimatedStyle(() => {
-    const opacity = backgroundOpacity.value;
+    // During normal interactions (pinch/pan)
     return {
-      backgroundColor: `rgba(0, 0, 0, ${Math.max(0, opacity)})`,
+      opacity: 1,
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value }
+      ]
     };
   });
 
-  // Control elements animated styles that use controlsOpacity
+  // Enhance the background animation for a more dramatic transition
+  const animatedBackgroundStyles = useAnimatedStyle(() => {
+    // When dismissing via pinch
+    if (isDismissing.value) {
+      // Fade to black then disappear
+      const backgroundColor = interpolateColor(
+        dismissAnimation.value,
+        [0, 0.5, 1],
+        ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.7)', 'rgba(0, 0, 0, 0)']
+      );
+      
+      return {
+        opacity: 1,
+        backgroundColor,
+      };
+    }
+    
+    // Normal background opacity
+    return {
+      opacity: backgroundOpacity.value,
+    };
+  });
+
+  // Animation styles for controls
   const controlsAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: controlsOpacity.value * backgroundOpacity.value
-  }))
+    opacity: controlsOpacity.value
+  }));
+
+  // Background color style - black by default, surfaceless when toggled
+  const backgroundStyle = { 
+    backgroundColor: controlsVisible ? theme.colors.background.surfaceless : theme.colors.global.black,
+  };
 
   // Fix animated view styling
   const animatedImageStyle: ViewStyle = {
@@ -429,12 +473,6 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
     height: '100%',
     overflow: 'hidden',
   }
-
-  // Convert themed styles to ensure they're ViewStyle not ImageStyle
-  // TODO Rework this
-  const closeButtonStyle = useMemo(() => themed($closeButton), [themed])
-  
-const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
 
   return (
     <Modal
@@ -446,12 +484,15 @@ const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
       presentationStyle="overFullScreen"
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Animated.View style={[themed($container), animatedBackgroundStyles]}>
-          <Animated.View style={themed($imageContainer)}>
-            {/* Gesture handling container */}
+        <Animated.View style={[
+          $container,
+          backgroundStyle,
+          animatedBackgroundStyles
+        ]}>
+          {/* Image container */}
+          <View style={$imageContainer}>
             <Animated.View style={[animatedImageStyle, gestureEnabled]}>
               <GestureDetector gesture={combinedGestures}>
-                {/* Image with scale/transform animations */}
                 <Animated.View style={imageTransitionStyle}>
                   <Image
                     source={{ uri }}
@@ -464,32 +505,37 @@ const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
                 </Animated.View>
               </GestureDetector>
             </Animated.View>
-          </Animated.View>
+          </View>
           
-          <Animated.View style={[closeButtonStyle, controlsAnimatedStyle]}>
-            <TouchableOpacity
-              onPress={handleClose}
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          {/* Controls container - only render when needed */}
+          {(controlsVisible || controlsOpacity.value > 0) && (
+            <Animated.View 
+              style={[
+                themed($infoContainer), 
+                controlsAnimatedStyle,
+              ]}
             >
-              <Icon icon="xmark" size={24} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-          </Animated.View>
-          
-          {(sender || timestamp) && (
-            <>
-              <Animated.View style={[infoContainerStyle, controlsAnimatedStyle]}>
-                {sender && (
-                  <Text preset="body" weight="bold" color="primary">
-                    {sender}
-                  </Text>
-                )}
-                {timestamp && (
-                  <Text preset="small" color="primary">
-                    {getRelativeDateTime(normalizeTimestampToMs(timestamp))}
-                  </Text>
-                )}
-              </Animated.View>
-            </>
+              {sender && (
+                <Text preset="body">
+                  {sender}
+                </Text>
+              )}
+              {timestamp && (
+                <Text
+                  preset="smaller"
+                  color="secondary"
+                >
+                  {getRelativeDateTime(normalizeTimestampToMs(timestamp))}
+                </Text>
+              )}
+              <TouchableOpacity
+                style={themed($closeButton)}
+                onPress={handleClose}
+                hitSlop={20}
+              >
+                <Icon icon="xmark" size={24} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </Animated.View>
           )}
         </Animated.View>
       </GestureHandlerRootView>
@@ -497,46 +543,45 @@ const infoContainerStyle = useMemo(() => themed($infoContainer), [themed])
   )
 }
 
-// Convert styles to themed styles with $ prefix
-const $container: ThemedStyle<ViewStyle> = ({ colors }) => ({
+// Styles
+const $container: ViewStyle = {
   flex: 1,
   justifyContent: 'center',
   alignItems: 'center',
-  backgroundColor: 'transparent', // Start transparent for smooth fade in
-})
+};
 
 const $imageContainer: ViewStyle = {
   width: SCREEN_WIDTH,
   height: SCREEN_HEIGHT,
   justifyContent: 'center',
   alignItems: 'center',
-}
+};
 
-// Separate image style
 const $image: ImageStyle = {
   width: '100%',
   height: '100%',
-}
+};
 
 const $closeButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: 'absolute',
-  top: 64,
-  right: 20,
+  top: 0,
+  right: 0,
+  margin: spacing.sm,
   width: 40,
   height: 40,
   borderRadius: 20,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  backgroundColor: colors.background.surfaceless,
   justifyContent: 'center',
   alignItems: 'center',
   zIndex: 10,
-})
+});
 
-const $infoContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $infoContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: 'absolute',
   top: 64,
   left: 0,
   right: 0,
   padding: spacing.md,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  alignItems: 'center',
-})
+  backgroundColor: colors.background.surfaceless,
+  alignItems: 'flex-start',
+});
