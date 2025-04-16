@@ -27,14 +27,14 @@ export const $animatedImageContainer: ViewStyle = {
   overflow: 'hidden',
 }
 
-export const $closeButton: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
+export const $closeButton: ThemedStyle<ViewStyle> = ({ colors, spacing, iconSize, borderRadius }) => ({
   position: 'absolute',
   top: 0,
   right: 0,
   margin: spacing.sm,
-  width: 40,
-  height: 40,
-  borderRadius: 20,
+  width: iconSize.lg,
+  height: iconSize.lg,
+  borderRadius: borderRadius.md,
   backgroundColor: colors.background.surfaceless,
   justifyContent: 'center',
   alignItems: 'center',
