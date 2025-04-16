@@ -5,6 +5,7 @@ import {
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { invalidateDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
   addGroupMemberToGroupQueryData,
@@ -128,6 +129,18 @@ function handleNewGroupUpdatedMessage(args: {
 
   // Process metadata changes (e.g., group name, image, description)
   if (message.content.metadataFieldsChanged.length > 0) {
+    const disappearingMessageFields = message.content.metadataFieldsChanged.filter(
+      (field) => field.fieldName === "message_disappear_in_ns",
+    )
+
+    if (disappearingMessageFields.length > 0) {
+      invalidateDisappearingMessageSettings({
+        clientInboxId: inboxId,
+        conversationId: message.xmtpConversationId,
+        caller: "handleNewGroupUpdatedMessage",
+      }).catch(captureError)
+    }
+
     const groupUpdateFields = message.content.metadataFieldsChanged.filter(
       (field) => field.fieldName !== "message_disappear_in_ns",
     )

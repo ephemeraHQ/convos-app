@@ -72,7 +72,7 @@ export const getCompactRelativeTime = (unnormalizedDate: number) => {
   if (days > 0) return `${days}d`
   if (hours > 0) return `${hours}h`
   if (minutes > 0) return `${minutes}m`
-  if (seconds === 0) return "0s"
+  if (seconds === 0) return "Now"
   return `${Math.max(seconds, 0)}s`
 }
 

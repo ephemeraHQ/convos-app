@@ -47,12 +47,12 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       return
     }
 
-    const contentTopic = data.body.contentTopic
+    const conversationTopic = data.body.contentTopic
     const encryptedMessage = data.body.encryptedMessage
 
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage,
-      conversationTopic: contentTopic,
+      conversationTopic,
     })
   } catch (error) {
     captureError(

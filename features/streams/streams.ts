@@ -47,10 +47,6 @@ export function useSetupStreamingSubscriptions() {
           return
         }
 
-        if (currentState !== previousState) {
-          streamLogger.debug(`App state changed from '${previousState}' to '${currentState}'`)
-        }
-
         if (currentState === "active") {
           streamLogger.debug("App became active, restarting streams")
           startStreaming(inboxIds).catch(captureError)

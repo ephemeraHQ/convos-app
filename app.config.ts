@@ -186,14 +186,10 @@ export default () => {
           "app.phantom",
         ],
         NSAppTransportSecurity: {
-          NSAllowsLocalNetworking: true, // Not sure why
+          // For local development
+          NSAllowsLocalNetworking: true,
         },
-        UIBackgroundModes: ["remote-notification", "fetch", "processing"],
-        BGTaskSchedulerPermittedIdentifiers: [
-          "com.convos.background-notification",
-          "com.convos.background-fetch",
-          "com.convos.background-processing",
-        ],
+        UIBackgroundModes: ["remote-notification"],
       },
     },
     android: {

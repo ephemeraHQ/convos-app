@@ -107,12 +107,17 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
   )
   const isLastMessage = useConversationMessageContextSelector((s) => s.isLastMessage)
   const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
+  const isGroupUpdate = useConversationMessageContextSelector((s) => s.isGroupUpdateMessage)
 
   const containerStyle = useMemo(() => {
     const marginBottom = (() => {
       if (isLastMessage && !fromMe) {
         // Random value, we just wanted this for now since we don't want the last message to be too close to the reply message
         return messageStyles.spaceBetweenMessageFromDifferentUserOrType / 2
+      }
+
+      if (isGroupUpdate) {
+        return 0
       }
 
       if (!hasNextMessageInSeries && !fromMe) {
@@ -133,7 +138,7 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
     return {
       marginBottom,
     } satisfies StyleProp<ViewStyle>
-  }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage, fromMe])
+  }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage, fromMe, isGroupUpdate])
 
   return (
     <AnimatedVStack

@@ -65,11 +65,12 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
 
   // Subtitle with sender info for non-text messages
   const subtitle = useMemo(() => {
-    if (!lastMessage || !messageText) return ""
+    if (!lastMessage || !messageText) {
+      return ""
+    }
 
     const timestamp = lastMessage.sentNs ?? 0
     const timeToShow = getCompactRelativeTime(timestamp)
-    if (!timeToShow) return ""
 
     // For text messages, don't show sender name (it's obvious in a DM)
     if (isTextMessage(lastMessage)) {
