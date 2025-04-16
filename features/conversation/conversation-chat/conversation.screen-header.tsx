@@ -10,7 +10,7 @@ import { Pressable } from "@/design-system/Pressable"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
+import { useConversationStoreContext } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { useDmPeerInboxId } from "@/features/conversation/hooks/use-dm-peer-inbox-id"
 import { DisappearingMessagesHeaderAction } from "@/features/disappearing-messages/disappearing-messages-header-action"
@@ -25,12 +25,14 @@ import { copyToClipboard } from "@/utils/clipboard"
 
 export function useConversationScreenHeader() {
   const navigation = useRouter()
-  const conversationStore = useConversationStore()
-  const isCreatingNewConversation = conversationStore.getState().isCreatingNewConversation
   const currentSender = useSafeCurrentSender()
+  const isCreatingNewConversation = useConversationStoreContext(
+    (state) => state.isCreatingNewConversation,
+  )
+  const xmtpConversationId = useConversationStoreContext((state) => state.xmtpConversationId)
   const { data: conversationType } = useConversationType({
     clientInboxId: currentSender.inboxId,
-    xmtpConversationId: conversationStore.getState().xmtpConversationId!,
+    xmtpConversationId: xmtpConversationId!,
     caller: "useConversationScreenHeader",
   })
 
@@ -41,8 +43,6 @@ export function useConversationScreenHeader() {
       onBack,
       safeAreaEdges: ["top" as ExtendedEdge],
     }
-
-    const xmtpConversationId = conversationStore.getState().xmtpConversationId
 
     if (isCreatingNewConversation) {
       return {
@@ -75,7 +75,7 @@ export function useConversationScreenHeader() {
     }
 
     return baseConfig
-  }, [conversationType, isCreatingNewConversation, onBack, conversationStore])
+  }, [conversationType, isCreatingNewConversation, onBack, xmtpConversationId])
 
   useHeader(headerConfig, [headerConfig])
 }
