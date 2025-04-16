@@ -7,7 +7,9 @@ import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
 
-const BACKGROUND_NOTIFICATION_TASK = "BACKGROUND_NOTIFICATION_TASK"
+const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
+
+notificationsLogger.debug("Inside registering background notification task")
 
 /**
  * Checks if the data conforms to our expected notification format

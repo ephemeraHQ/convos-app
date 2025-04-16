@@ -9,8 +9,6 @@ import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
 
-// Track processed notification IDs to prevent duplicate handling
-
 export function configureForegroundNotificationBehavior() {
   Notifications.setNotificationHandler({
     handleNotification,
@@ -21,6 +19,7 @@ export function configureForegroundNotificationBehavior() {
   configureAndroidNotificationChannel()
 }
 
+// Track processed notification IDs to prevent duplicate handling
 const processedNotificationIds = new Set<string>()
 
 async function handleNotification(notification: Notifications.Notification) {

@@ -47,10 +47,16 @@ export function useSetupStreamingSubscriptions() {
           return
         }
 
+        if (currentState !== previousState) {
+          streamLogger.debug(`App state changed from '${previousState}' to '${currentState}'`)
+        }
+
         if (currentState === "active") {
           streamLogger.debug("App became active, restarting streams")
           startStreaming(inboxIds).catch(captureError)
-        } else if (currentState === "background") {
+        }
+        // We were active and went to background
+        else if (currentState === "background" && previousState === "active") {
           streamLogger.debug("App went to background, stopping streams")
           stopStreaming(inboxIds).catch(captureError)
         }

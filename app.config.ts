@@ -190,6 +190,7 @@ export default () => {
         },
         UIBackgroundModes: ["remote-notification", "fetch", "processing"],
         BGTaskSchedulerPermittedIdentifiers: [
+          "com.convos.background-notification",
           "com.convos.background-fetch",
           "com.convos.background-processing",
         ],
