@@ -1,6 +1,6 @@
 import { Gesture } from 'react-native-gesture-handler'
 import { Dimensions } from 'react-native'
-import { withSpring, withTiming, runOnJS, Easing } from 'react-native-reanimated'
+import { withSpring, withTiming, runOnJS, Easing, interpolate } from 'react-native-reanimated'
 import { IGestureHandlerProps, VIEWER_CONSTANTS } from './conversation-media-viewer.types'
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
@@ -289,17 +289,4 @@ export function useGestureHandlers(props: IGestureHandlerProps) {
   )
 
   return { combinedGestures }
-}
-
-// Helper function to handle interpolation
-function interpolate(value: number, inputRange: number[], outputRange: number[]) {
-  'worklet';
-  const inRange = [inputRange[0], inputRange[1]]
-  const outRange = [outputRange[0], outputRange[1]]
-  
-  if (value <= inRange[0]) return outRange[0]
-  if (value >= inRange[1]) return outRange[1]
-  
-  const progress = (value - inRange[0]) / (inRange[1] - inRange[0])
-  return outRange[0] + progress * (outRange[1] - outRange[0])
 }
