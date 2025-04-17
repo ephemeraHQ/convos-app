@@ -53,6 +53,78 @@ export async function navigate<T extends keyof NavigationParamList>(
     )
   }
 }
+
+/**
+ * Resets the navigation state to go to the root
+ */
+export async function resetNavigation() {
+  try {
+    if (!navigationRef || !navigationRef.isReady()) {
+      await waitUntilNavigationReady({
+        timeoutMs: 10000,
+      })
+    }
+
+    logger.debug("[Navigation] Resetting navigation to root")
+    
+    navigationRef.resetRoot({
+      index: 0,
+      routes: [{ name: "Chats" }],
+    })
+  } catch (error) {
+    captureError(
+      new NavigationError({
+        error,
+        additionalMessage: "Error resetting navigation",
+      }),
+    )
+  }
+}
+
+/**
+ * Resets navigation to root and then navigates to the specified screen
+ * Use this for deep links to ensure we navigate from a consistent starting point
+ */
+export async function navigateWithReset<T extends keyof NavigationParamList>(
+  screen: T,
+  params?: NavigationParamList[T],
+) {
+  try {
+    if (!navigationRef || !navigationRef.isReady()) {
+      await waitUntilNavigationReady({
+        timeoutMs: 10000,
+      })
+    }
+
+    logger.debug(`[Navigation] Navigating with reset to ${screen} ${params ? JSON.stringify(params) : ""}`)
+    
+    // If we're navigating to the root Chats screen, just do a simple reset
+    if (screen === "Chats" as T) {
+      navigationRef.resetRoot({
+        index: 0,
+        routes: [{ name: screen, params }],
+      })
+      return
+    }
+    
+    // For other screens, reset to Chats and then add our target screen
+    navigationRef.resetRoot({
+      index: 1, // Set index to 1 to focus on the new screen
+      routes: [
+        { name: "Chats" },
+        { name: screen as string, params },
+      ],
+    })
+  } catch (error) {
+    captureError(
+      new NavigationError({
+        error,
+        additionalMessage: "Error navigating with reset",
+      }),
+    )
+  }
+}
+
 export const getSchemedURLFromUniversalURL = (url: string) => {
   // Handling universal links by saving a schemed URI
   for (const prefix of config.app.universalLinks) {
