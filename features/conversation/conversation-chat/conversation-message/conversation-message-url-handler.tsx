@@ -19,6 +19,7 @@ type TextSegment = {
 type UrlSegment = {
   type: 'url'
   content: string
+  displayText: string
   isVanity: boolean
 }
 
@@ -27,6 +28,7 @@ type Segment = TextSegment | UrlSegment
 /**
  * Component that renders message text with clickable URLs
  * Detects URLs including vanity URLs (username.convos.org or convos.org/username)
+ * Displays vanity URLs as @username for better readability
  */
 export const ConversationMessageUrlHandler = memo(function ConversationMessageUrlHandler(
   props: IConversationMessageUrlHandlerProps
@@ -105,11 +107,19 @@ export const ConversationMessageUrlHandler = memo(function ConversationMessageUr
         })
       }
       
+      // Check if it's a vanity URL and extract username
+      const username = extractUsernameFromVanityUrl(matchText)
+      const isVanity = username !== null
+      
+      // Set display text based on whether it's a vanity URL
+      const displayText = isVanity && username ? `@${username}` : matchText
+      
       // Add the URL
       result.push({
         type: 'url',
         content: matchText,
-        isVanity: extractUsernameFromVanityUrl(matchText) !== null
+        displayText,
+        isVanity
       })
       
       lastIndex = matchIndex + matchText.length
@@ -149,7 +159,7 @@ export const ConversationMessageUrlHandler = memo(function ConversationMessageUr
             ]}
             onPress={() => handleUrlPress(segment.content)}
           >
-            {segment.content}
+            {segment.displayText}
           </Text>
         )
       })}
