@@ -2,9 +2,11 @@ import { useAuthenticationStore } from "@/features/authentication/authentication
 import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
+import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
+import { retryWithBackoff } from "@/utils/retryWithBackoff"
 
 export async function hydrateAuth() {
   authLogger.debug("Hydrating auth...")
@@ -18,8 +20,17 @@ export async function hydrateAuth() {
   }
 
   try {
-    await getXmtpClientByInboxId({
-      inboxId: currentSender.inboxId,
+    const isInternetReachable = useAppStore.getState().isInternetReachable
+
+    authLogger.debug("Is internet reachable: ", isInternetReachable)
+
+    await retryWithBackoff({
+      fn: () =>
+        getXmtpClientByInboxId({
+          inboxId: currentSender.inboxId,
+        }),
+      retries: 2,
+      delay: 500,
     })
 
     // Don't do it with await because we prefer doing it in the background and letting user continue

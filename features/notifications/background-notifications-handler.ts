@@ -1,7 +1,7 @@
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
-import { IExpoBackgroundNotificationData } from "@/features/notifications/notifications.types"
+import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -10,15 +10,54 @@ import { maybeDisplayLocalNewMessageNotification } from "./notifications.service
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
 
 /**
- * Checks if the data conforms to our expected notification format
+ * Extracts the essential notification data (contentTopic and encryptedMessage)
+ * from different notification formats.
+ *
+ * Handles the following notification formats:
+ * 1. Standard Expo format with data.body.contentTopic
+ * 2. XMTP format with UIApplicationLaunchOptionsRemoteNotificationKey
+ * 3. XMTP format with topic/encryptedMessage at root level
  */
-function isExpoBackgroundNotification(data: any): data is IExpoBackgroundNotificationData {
-  return (
-    data &&
-    data.body &&
-    typeof data.body.contentTopic === "string" &&
-    typeof data.body.encryptedMessage === "string"
-  )
+function extractNotificationData(
+  data: any,
+): { conversationTopic: IConversationTopic; encryptedMessage: string } | null {
+  // Handle standard Expo format
+  if (data?.body?.contentTopic && data?.body?.encryptedMessage) {
+    notificationsLogger.debug("Detected standard Expo notification format")
+    return {
+      conversationTopic: data.body.contentTopic as IConversationTopic,
+      encryptedMessage: data.body.encryptedMessage,
+    }
+  }
+
+  // Handle XMTP format with UIApplicationLaunchOptionsRemoteNotificationKey
+  if (
+    data?.UIApplicationLaunchOptionsRemoteNotificationKey?.body?.contentTopic &&
+    data?.UIApplicationLaunchOptionsRemoteNotificationKey?.body?.encryptedMessage
+  ) {
+    notificationsLogger.debug("Detected XMTP notification format with nested body")
+    return {
+      conversationTopic: data.UIApplicationLaunchOptionsRemoteNotificationKey.body
+        .contentTopic as IConversationTopic,
+      encryptedMessage: data.UIApplicationLaunchOptionsRemoteNotificationKey.body.encryptedMessage,
+    }
+  }
+
+  // Handle possible format with direct UIApplicationLaunchOptionsRemoteNotificationKey properties
+  if (
+    data?.UIApplicationLaunchOptionsRemoteNotificationKey?.topic &&
+    data?.UIApplicationLaunchOptionsRemoteNotificationKey?.encryptedMessage
+  ) {
+    notificationsLogger.debug("Detected XMTP notification format with direct properties")
+    return {
+      conversationTopic: data.UIApplicationLaunchOptionsRemoteNotificationKey
+        .topic as IConversationTopic,
+      encryptedMessage: data.UIApplicationLaunchOptionsRemoteNotificationKey.encryptedMessage,
+    }
+  }
+
+  notificationsLogger.debug("No supported notification format detected")
+  return null
 }
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
@@ -39,14 +78,16 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       data,
     })
 
+    // Extract data from notification regardless of format
+    const notificationData = extractNotificationData(data)
+
     // Skip if not in expected format
-    if (!isExpoBackgroundNotification(data)) {
+    if (!notificationData) {
       notificationsLogger.debug("Ignoring notification - not in expected format")
       return
     }
 
-    const conversationTopic = data.body.contentTopic
-    const encryptedMessage = data.body.encryptedMessage
+    const { conversationTopic, encryptedMessage } = notificationData
 
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage,
