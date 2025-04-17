@@ -1,13 +1,9 @@
 name: Production Deployment
 
 on:
-  workflow_dispatch:
-    inputs:
-      force_native_build:
-        description: "Force native build"
-        type: boolean
-        default: false
-        required: true
+  push:
+    branches:
+      - production
 
 # Ensure only one workflow runs at a time
 concurrency:
@@ -19,32 +15,12 @@ permissions:
   id-token: write
 
 jobs:
-  merge-main-into-production:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Need full history to compare branches
-          token: ${{ secrets.PAT_GITHUB }}
-
-      - name: Merge main into production
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git checkout production
-          git pull origin production
-          git merge origin/main -m "feat: Merge main into production for deployment"
-          git push origin production
-
   ios-build:
-    needs: [merge-main-into-production]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT_GITHUB }}
           ref: production
 
       - name: Setup node
