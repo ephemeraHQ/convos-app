@@ -55,9 +55,7 @@ async function handleNewMessage(args: {
   // Process reaction messages
   if (isReactionMessage(message)) {
     processReactionConversationMessages({ clientInboxId, reactionMessages: [message] })
-  }
-  // Only set the message query data if it's not already there. If it's already there, it means we have a more up to date version of the message.
-  else if (!getConversationMessageQueryData({ clientInboxId, xmtpMessageId: message.xmtpId })) {
+  } else {
     setConversationMessageQueryData({
       clientInboxId,
       xmtpMessageId: message.xmtpId,
@@ -84,7 +82,7 @@ async function handleNewMessage(args: {
     addMessageToConversationMessagesInfiniteQueryData({
       clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
-      message,
+      messageId: message.xmtpId,
     })
   } catch (error) {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))

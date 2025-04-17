@@ -3,11 +3,13 @@ import * as Notifications from "expo-notifications"
 import { Platform } from "react-native"
 import { config } from "@/config"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   messageContentIsMultiRemoteAttachment,
   messageContentIsRemoteAttachment,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
+import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { ensureCurrentUserQueryData } from "@/features/current-user/current-user.query"
 import { updateDevice } from "@/features/devices/devices.api"
@@ -106,7 +108,13 @@ export async function getExpoPushNotificationsToken() {
       projectId: config.expo.projectId,
     })
 
-    return data.data as string
+    const expoToken = data.data as string
+
+    if (__DEV__) {
+      notificationsLogger.debug("Expo token:", expoToken)
+    }
+
+    return expoToken
   } catch (error) {
     throw new NotificationError({
       error,
@@ -135,6 +143,11 @@ export async function getDevicePushNotificationsToken() {
     // data.data is string for native platforms per DevicePushToken type
     // https://docs.expo.dev/versions/latest/sdk/notifications/#devicepushtoken
     token = data.data as string
+
+    if (__DEV__) {
+      notificationsLogger.debug("Device token:", token)
+    }
+
     return token
   } catch (error) {
     throw new NotificationError({
@@ -241,8 +254,20 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
       notificationsLogger.debug("Message content:", messageContentString)
       notificationsLogger.debug("Sender display name:", senderDisplayName)
 
+      setConversationMessageQueryData({
+        clientInboxId,
+        xmtpMessageId: xmtpDecryptedMessage.id,
+        message: convoMessage,
+      })
+
+      addMessageToConversationMessagesInfiniteQueryData({
+        clientInboxId,
+        xmtpConversationId,
+        messageId: xmtpDecryptedMessage.id,
+      })
+
       if (useAppStateStore.getState().currentState === "active") {
-        notificationsLogger.debug("Skipping showing notification, app is active")
+        notificationsLogger.debug("Skipping showing notification because app is active")
         return
       }
 
