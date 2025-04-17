@@ -9,8 +9,6 @@ import { maybeDisplayLocalNewMessageNotification } from "./notifications.service
 
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
 
-notificationsLogger.debug("Inside registering background notification task")
-
 /**
  * Checks if the data conforms to our expected notification format
  */

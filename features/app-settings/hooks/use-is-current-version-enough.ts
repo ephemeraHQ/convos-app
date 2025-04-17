@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { queryOptions, useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo } from "react"
 import { Alert, Platform } from "react-native"
 import { config } from "@/config"
 import { getAppSettingsQueryOptions } from "@/features/app-settings/app-settings.query"
@@ -34,8 +34,8 @@ function isVersionGreaterOrEqual(args: VersionComparisonArgs) {
 }
 
 export function useIsCurrentVersionEnough() {
-  const { data: currentVersionIsEnough, isFetching: isCheckingIfCurrentVersionIsEnough } = useQuery(
-    {
+  const queryOpts = useMemo(() => {
+    return queryOptions({
       ...getAppSettingsQueryOptions(),
       select: (backendConfig) => {
         const minimumVersion = Platform.select({
@@ -48,8 +48,11 @@ export function useIsCurrentVersionEnough() {
           minimumVersion,
         })
       },
-    },
-  )
+    })
+  }, [])
+
+  const { data: currentVersionIsEnough, isFetching: isCheckingIfCurrentVersionIsEnough } =
+    useQuery(queryOpts)
 
   useEffect(() => {
     const shouldShowUpdateAlert =

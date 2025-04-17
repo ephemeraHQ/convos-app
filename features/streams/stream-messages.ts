@@ -1,5 +1,8 @@
 import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
-import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import {
+  getConversationMessageQueryData,
+  setConversationMessageQueryData,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   isGroupUpdatedMessage,
   isReactionMessage,
@@ -52,8 +55,9 @@ async function handleNewMessage(args: {
   // Process reaction messages
   if (isReactionMessage(message)) {
     processReactionConversationMessages({ clientInboxId, reactionMessages: [message] })
-  } else {
-    // Set the message query data
+  }
+  // Only set the message query data if it's not already there. If it's already there, it means we have a more up to date version of the message.
+  else if (!getConversationMessageQueryData({ clientInboxId, xmtpMessageId: message.xmtpId })) {
     setConversationMessageQueryData({
       clientInboxId,
       xmtpMessageId: message.xmtpId,

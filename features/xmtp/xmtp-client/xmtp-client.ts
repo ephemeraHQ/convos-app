@@ -228,6 +228,8 @@ function getXmtpLocalUrl() {
     })
   }
 
+  xmtpLogger.debug(`Getting XMTP local URL for host IP: ${hostIp}`)
+
   // XMTP SDK actually wants the host IP and not the full url
   return hostIp
 }

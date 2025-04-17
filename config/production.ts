@@ -4,7 +4,7 @@ import { shared } from "./shared"
 
 export const productionConfig: IConfig = {
   ...shared,
-  debugMenu: false,
+  debugMenu: true,
   app: {
     ...shared.app,
     storeUrl: Platform.select({
