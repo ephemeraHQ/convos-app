@@ -1,5 +1,5 @@
-import React, { memo, useCallback } from "react"
-import { Alert, Linking } from "react-native"
+import React, { memo, useCallback, useMemo } from "react"
+import { Alert, Linking, StyleSheet } from "react-native"
 import { Text, ITextProps } from "@/design-system/Text"
 import { URL_REGEX } from "@/utils/regex"
 import { deepLinkLogger } from "@/utils/logger/logger"
@@ -11,8 +11,21 @@ type IConversationMessageUrlHandlerProps = {
   text: string
 } & ITextProps
 
+type TextSegment = {
+  type: 'text'
+  content: string
+}
+
+type UrlSegment = {
+  type: 'url'
+  content: string
+  isVanity: boolean
+}
+
+type Segment = TextSegment | UrlSegment
+
 /**
- * Component that renders message text and handles URL detection and clicks
+ * Component that renders message text with clickable URLs
  * Detects URLs including vanity URLs (username.convos.org or convos.org/username)
  */
 export const ConversationMessageUrlHandler = memo(function ConversationMessageUrlHandler(
@@ -29,13 +42,11 @@ export const ConversationMessageUrlHandler = memo(function ConversationMessageUr
         return
       }
       
-      // Not a vanity URL, open as normal link
+      // Open as regular link
       deepLinkLogger.info(`Opening regular URL: ${url}`)
       
       // Make sure the URL has a protocol
       const urlWithProtocol = url.startsWith("http") ? url : `https://${url}`
-      
-      // Handle external URL
       await Linking.openURL(urlWithProtocol)
     } catch (error) {
       captureError(
@@ -52,63 +63,102 @@ export const ConversationMessageUrlHandler = memo(function ConversationMessageUr
     }
   }, [])
   
-  // Process the text to find URLs and format them
-  const renderText = useCallback(() => {
-    const parts: JSX.Element[] = []
+  // Extract text color from style props
+  const textColor = useMemo(() => {
+    if (!textProps.style) return undefined
+
+    if (Array.isArray(textProps.style)) {
+      for (const style of textProps.style) {
+        if (style && typeof style === 'object' && 'color' in style) {
+          return style.color
+        }
+      }
+    } 
+    else if (typeof textProps.style === 'object' && 'color' in textProps.style) {
+      return textProps.style.color
+    }
+
+    return undefined
+  }, [textProps.style])
+  
+  // Parse text into segments (regular text and URLs)
+  const segments = useMemo<Segment[]>(() => {
+    if (!text) return []
+    
+    const result: Segment[] = []
     let lastIndex = 0
     
-    // Reset the regex state
+    // Reset regex state
     URL_REGEX.lastIndex = 0
     
+    // Find all URLs in the text
     let match
     while ((match = URL_REGEX.exec(text)) !== null) {
       const matchText = match[0]
       const matchIndex = match.index
       
-      // Add the text before the URL
+      // Add text before the URL
       if (matchIndex > lastIndex) {
-        parts.push(
-          <Text key={`text-${lastIndex}`} {...textProps}>
-            {text.substring(lastIndex, matchIndex)}
-          </Text>
-        )
+        result.push({
+          type: 'text',
+          content: text.substring(lastIndex, matchIndex)
+        })
       }
       
-      // Check if it's a vanity URL
-      const isVanityUrl = extractUsernameFromVanityUrl(matchText) !== null
-      
-      // Add the URL with special styling
-      parts.push(
-        <Text
-          key={`url-${matchIndex}`}
-          {...textProps}
-          onPress={() => handleUrlPress(matchText)}
-          style={[
-            textProps.style, // Inherit text color from parent
-            {
-              textDecorationLine: "underline",
-              color: isVanityUrl ? "#FF9500" : textProps.style?.color, // Orange for vanity URLs, parent text color for others
-            },
-          ]}
-        >
-          {matchText}
-        </Text>
-      )
+      // Add the URL
+      result.push({
+        type: 'url',
+        content: matchText,
+        isVanity: extractUsernameFromVanityUrl(matchText) !== null
+      })
       
       lastIndex = matchIndex + matchText.length
     }
     
-    // Add the remaining text
+    // Add remaining text
     if (lastIndex < text.length) {
-      parts.push(
-        <Text key={`text-${lastIndex}`} {...textProps}>
-          {text.substring(lastIndex)}
-        </Text>
-      )
+      result.push({
+        type: 'text',
+        content: text.substring(lastIndex)
+      })
     }
     
-    return parts.length > 0 ? parts : <Text {...textProps}>{text}</Text>
-  }, [text, textProps, handleUrlPress])
+    return result
+  }, [text])
   
-  return <>{renderText()}</>
+  // If no URLs found, just render the plain text
+  if (segments.length === 0) {
+    return <Text {...textProps}>{text}</Text>
+  }
+  
+  // Render text with URL spans
+  return (
+    <Text {...textProps}>
+      {segments.map((segment, index) => {
+        if (segment.type === 'text') {
+          return segment.content
+        }
+        
+        // URL segment
+        return (
+          <Text
+            key={`url-${index}`}
+            style={[
+              styles.link,
+              { color: segment.isVanity ? "#FF9500" : textColor }
+            ]}
+            onPress={() => handleUrlPress(segment.content)}
+          >
+            {segment.content}
+          </Text>
+        )
+      })}
+    </Text>
+  )
+})
+
+const styles = StyleSheet.create({
+  link: {
+    textDecorationLine: "underline"
+  }
 })
