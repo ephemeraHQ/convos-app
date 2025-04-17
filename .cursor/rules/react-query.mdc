@@ -1,0 +1,114 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This file contains rules about using React Query in. Each rule is followed by a small example showing good and bad practices.
+
+- Always reuse the queryOptions function instead of defining queries inline.
+
+```typescript
+// ❌options inline
+function UserProfile() {
+  const { dqueryKey: ["user", id],
+    queryFn: ()   })
+
+  return <View>{data && <Texew>
+}
+
+// ✅ Good: Using shared queryOts
+export const getUserQueryOptions = (args: { id: string }) => {
+  const { id } = args
+  const enabled = Boolean(id)
+
+  return queryOptions({
+    queryKey: ["user", id],
+    queryFn: enabled ? () => fetchUser({ id }) : skipToken,
+    enabled,
+  })
+}
+
+// In component
+function UserProfile(props: { id: string }) {
+  const { id } = props
+  const { data } = useQuery(getUserQueryOptions({ id }))
+
+  return <View>{data && <Text>{data.name}</Text>}</View>
+}
+```
+
+- Use the utility function to generate consistent query keys.
+
+```typescript
+// ❌ Bad: Manually creating query keys
+const queryKey = ["messages", conversationId, "unread"]
+
+// ✅ Good: Using the getReactQueryKey utility
+import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
+
+const queryKey = getReactQueryKey({
+  baseStr: "messages",
+  conversationId,
+  type: "unread",
+})
+```
+
+- Use the helper functions for custom query patterns.
+
+```typescript
+// ✅ Good: Using helper functions
+import {
+  fetchOnlyIfMissingQuery,
+  fetchOnlyIfStaleQuery,
+} from "@/utils/react-query/react-query.helpers"
+
+// ❌ Bad: Custom fetch logic
+const fetchData = async () => {
+  const cachedData = reactQueryClient.getQueryData(queryKey)
+  if (cachedData && !isStale) {
+    return cachedData
+  }
+  return reactQueryClient.fetchQuery(queryOptions)
+}
+
+// Only fetch if data is stale
+const data = await fetchOnlyIfStaleQuery(queryOptions)
+
+// Only fetch if data doesn't exist in cache
+const cachedData = await fetchOnlyIfMissingQuery(queryOptions)
+
+// Fetch without duplicating in-flight requests
+const nonDuplicatedData = await fetchWithoutDuplicatesQuery(queryOptions)
+```
+
+- Always use the reactQueryClient from react-query.client.ts for all direct client operations.
+
+```typescript
+// ✅ Good: Using the shared reactQueryClient
+import { reactQueryClient } from "@/utils/react-query/react-query.client"
+
+// ❌ Bad: Creating a new QueryClient instance
+const queryClient = new QueryClient()
+queryClient.invalidateQueries(queryKey)
+
+// ✅ Good: Using the shared reactQueryClient
+reactQueryClient.invalidateQueries(queryKey)
+reactQueryClient.setQueryData(queryKey, newData)
+reactQueryClient.ensureQueryData(queryOptions)
+```
+
+- Our app persists all queries by default using our persister implementation.
+
+```typescript
+// All queries are persisted by default
+// To opt out of persistence for specific queries:
+export const getEphemeralDataQueryOptions = (args: { id: string }) => {
+  return queryOptions({
+    queryKey: ["ephemeral", args.id],
+    queryFn: () => fetchEphemeralData(args),
+    meta: {
+      persist: false, // This will prevent this query from being persisted
+    },
+  })
+}
+```

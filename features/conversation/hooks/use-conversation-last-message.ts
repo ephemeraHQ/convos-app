@@ -1,4 +1,5 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   getConversationMessageQueryData,
@@ -16,24 +17,26 @@ export function useConversationLastMessage(args: IArgs) {
   const { xmtpConversationId } = args
   const currentSender = useSafeCurrentSender()
 
-  const { data: lastMessageId } = useInfiniteQuery({
-    ...getConversationMessagesInfiniteQueryOptions({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-      caller: "useConversationLastMessage",
-    }),
-    refetchOnWindowFocus: "always",
-    refetchOnMount: "always",
-    select: (data) => {
-      return data.pages[0].messageIds.find((messageId) => {
-        const message = getConversationMessageQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: messageId,
+  const queryOptions = useMemo(() => {
+    return infiniteQueryOptions({
+      ...getConversationMessagesInfiniteQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+        caller: "useConversationLastMessage",
+      }),
+      select: (data) => {
+        return data.pages[0].messageIds.find((messageId) => {
+          const message = getConversationMessageQueryData({
+            clientInboxId: currentSender.inboxId,
+            xmtpMessageId: messageId,
+          })
+          return message && !isReactionMessage(message)
         })
-        return message && !isReactionMessage(message)
-      })
-    },
-  })
+      },
+    })
+  }, [currentSender.inboxId, xmtpConversationId])
+
+  const { data: lastMessageId } = useInfiniteQuery(queryOptions)
 
   const { data: lastMessage } = useConversationMessageQuery({
     clientInboxId: currentSender.inboxId,

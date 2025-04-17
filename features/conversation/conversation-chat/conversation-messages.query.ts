@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
+import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
@@ -192,9 +193,18 @@ export function getConversationMessagesInfiniteQueryOptions(
       Boolean(clientInboxId) &&
       Boolean(xmtpConversationId) &&
       !isTmpConversation(xmtpConversationId),
-    // Staletime depending on when was the last message sent at. If the last message was sent >24h we can
-    // put a big staletime becacuse it means the converastion isn't that active
-    // otherwise we can put a small staletime
+    refetchOnMount: (query) => {
+      return conversationHasRecentActivities({
+        clientInboxId,
+        xmtpConversationId,
+      })
+    },
+    refetchOnWindowFocus: (query) => {
+      return conversationHasRecentActivities({
+        clientInboxId,
+        xmtpConversationId,
+      })
+    },
     // staleTime: (query) => {
     //   const lastMessageId = query.state.data?.pages[0]?.messageIds[0]
     //   const lastMessage = getConversationMessageQueryData({
@@ -235,9 +245,9 @@ export function useConversationMessagesInfiniteQueryAllMessageIds(args: IArgsWit
 export const addMessageToConversationMessagesInfiniteQueryData = (args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
-  message: IConversationMessage
+  messageId: IXmtpMessageId
 }) => {
-  const { clientInboxId, xmtpConversationId, message } = args
+  const { clientInboxId, xmtpConversationId, messageId } = args
 
   // Get or initialize pages array
   const currentData = getConversationMessagesInfiniteQueryData({
@@ -253,11 +263,11 @@ export const addMessageToConversationMessagesInfiniteQueryData = (args: {
   }
 
   // Check if the message already exists in any page
-  const messageAlreadyExists = pages.some((page) => page.messageIds.includes(message.xmtpId))
+  const messageAlreadyExists = pages.some((page) => page.messageIds.includes(messageId))
 
   if (messageAlreadyExists) {
     queryLogger.debug(
-      `Message ${message.xmtpId} already exists in conversation ${xmtpConversationId} cache, skipping add`,
+      `Message ${messageId} already exists in conversation ${xmtpConversationId} cache, skipping add`,
     )
     return
   }
@@ -265,13 +275,13 @@ export const addMessageToConversationMessagesInfiniteQueryData = (args: {
   // Add the message ID to the first page
   const updatedFirstPage = {
     ...firstPage,
-    messageIds: [message.xmtpId, ...firstPage.messageIds],
+    messageIds: [messageId, ...firstPage.messageIds],
   }
 
   const updatedPages = pages.length ? [updatedFirstPage, ...pages.slice(1)] : [updatedFirstPage]
 
   queryLogger.debug(
-    `Message ${message.xmtpId} added to conversation messages ${xmtpConversationId} infinite query cache`,
+    `Message ${messageId} added to conversation messages ${xmtpConversationId} infinite query cache`,
   )
 
   // Set the updated data back to the cache

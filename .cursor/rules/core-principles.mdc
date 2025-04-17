@@ -1,0 +1,93 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This file contains core principles for writing code in our codebase. Each principle is followed by a small example showing good and bad practices.
+
+- Write concise TypeScript code.
+
+```typescript
+// ❌ Bad: Verbose implementation
+async function getUserData(userId: string): Promise<IUserData | null> {
+  try {
+    const response = await fetch(`/api/users/${userId}`)
+    if (!response.ok) {
+      throw new Error("Failed to fetch user")
+    }
+    const data = await response.json()
+    return data as IUserData
+  } catch (error) {
+    console.error("Error fetching user:", error)
+    return null
+  }
+}
+
+// ✅ Good: Concise implementation
+async function getUserData(args: { userId: string }) {
+  const { userId } = args
+  try {
+    return api.getUser(userId)
+  } catch (error) {
+    throw new AppError({
+      error,
+      additionalMessage: "Failed to fetch user data",
+    })
+  }
+}
+```
+
+- Use functional programming patterns.
+
+```typescript
+// ❌ Bad: Imperative code
+const results = []
+for (let i = 0; i < items.length; i++) {
+  if (items[i].active) {
+    const processed = processItem(items[i])
+    results.push(processed)
+  }
+}
+
+// ✅ Good: Functional patterns
+const results = items.filter((item) => item.active).map((item) => processItem(item))
+```
+
+- Prefer clean, readable code over compact code.
+
+```typescript
+// ❌ Bad: Hard to read one-liner
+const getInitials = (name) =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+
+// ✅ Good: Clear, readable code
+function getInitials(args: { name: string }) {
+  const { name } = args
+
+  const parts = name.split(" ")
+  const firstLetters = parts.map((part) => part[0])
+  const initials = firstLetters.join("")
+
+  return initials.toUpperCase()
+}
+```
+
+- Use descriptive variable names with auxiliary verbs.
+
+```typescript
+// ❌ Bad
+const loading = true
+const error = false
+const user = null
+const valid = checkValid()
+
+// ✅ Good
+const isLoading = true
+const hasError = false
+const currentUser = null
+const isValid = checkValid()
+```

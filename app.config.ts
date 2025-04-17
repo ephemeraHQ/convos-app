@@ -189,7 +189,11 @@ export default () => {
           // For local development
           NSAllowsLocalNetworking: true,
         },
-        UIBackgroundModes: ["remote-notification"],
+        UIBackgroundModes: ["remote-notification", "fetch"],
+        BGTaskSchedulerPermittedIdentifiers: [
+          "com.convos.background-notification",
+          "com.convos.background-fetch",
+        ],
       },
     },
     android: {

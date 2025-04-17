@@ -1,0 +1,80 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ # Zustand Store Best Practices
+
+- Use Zustand stores to centralize state, especially when we're starting to pass many props/arguments between components/functions/hooks/etc
+- Structure stores with a clear separation between state and actions.
+- Prefer using the store directly in components over prop drilling.
+- Prefer using the store directly in hooks over passing arguments.
+- Use selectors to minimize re-renders.
+
+## Store Structure
+
+```typescript
+// ✅ Good: Clear separation of state and actions
+export const useCounterStore = create<ICounterStore>((set) => ({
+  // State
+  count: 0,
+  isLoading: false,
+
+  // Actions
+  actions: {
+    increment: () => set((state) => ({ count: state.count + 1 })),
+    decrement: () => set((state) => ({ count: state.count - 1 })),
+    reset: () => set({ count: 0 }),
+    fetchCount: async () => {
+      set({ isLoading: true })
+      try {
+        const count = await api.getCount()
+        set({ count, isLoading: false })
+      } catch (error) {
+        set({ isLoading: false })
+        throw new AppError({
+          error,
+          additionalMessage: "Failed to fetch count",
+        })
+      }
+    },
+  },
+}))
+```
+
+## Component Usage
+
+```typescript
+// ❌ Bad: Prop drilling
+function ParentComponent() {
+  const count = useCounterStore((state) => state.count);
+  const increment = useCounterStore((state) => state.actions.increment);
+
+  return <ChildComponent count={count} increment={increment} />;
+}
+
+// ✅ Good: Direct store usage
+function ChildComponent() {
+  const count = useCounterStore((state) => state.count);
+  const { increment } = useCounterStore((state) => state.actions);
+
+  return (
+    <Button onPress={increment}>
+      Count: {count}
+    </Button>
+  );
+}
+```
+
+## Selector Usage
+
+```typescript
+// ❌ Bad: Getting the entire store
+const { count, actions } = useCounterStore()
+
+// ✅ Good: Using selectors for specific values
+const count = useCounterStore((state) => state.count)
+const { increment } = useCounterStore((state) => state.actions)
+```
+
+@stores/index.ts

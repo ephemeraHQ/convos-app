@@ -134,7 +134,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
         addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: variables.xmtpConversationId,
-          message: sentMessage,
+          messageId: sentMessage.xmtpId,
         })
       }
     },

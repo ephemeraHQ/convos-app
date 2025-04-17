@@ -1,0 +1,122 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This file contains rules about React components in our codebase. Each rule is followed by a small example showing good and bad practices.
+
+- Prefer early returns over ternaries.
+
+```typescript
+// ❌ Bad
+function Component() {
+  return (
+    <View>
+      {isLoading ? (
+        <LoadingIndicator />
+      ) : isError ? (
+        <ErrorMessage />
+      ) : (
+        <Content />
+      )}
+    </View>
+  )
+}
+
+// ✅ Good
+function Component() {
+  if (isLoading) {
+    return <LoadingIndicator />
+  }
+
+  if (isError) {
+    return <ErrorMessage />
+  }
+
+  return <Content />
+}
+```
+
+- Minimize useEffect usage.
+
+```typescript
+// ❌ Bad: Unnecessary effect
+function Counter() {
+  const [count, setCount] = useState(0)
+  const [doubled, setDoubled] = useState(0)
+
+  useEffect(() => {
+    setDoubled(count * 2)
+  }, [count])
+
+  return <Text>{doubled}</Text>
+}
+
+// ✅ Good: Computed value
+function Counter() {
+  const [count, setCount] = useState(0)
+  const doubled = count * 2
+
+  return <Text>{doubled}</Text>
+}
+```
+
+- Wrap components in memo() for performance.
+
+```typescript
+// ❌ Bad
+export function ExpensiveComponent() {
+  // Implementation
+}
+
+// ✅ Good
+export const ExpensiveComponent = memo(function ExpensiveComponent() {
+  // Implementation
+})
+```
+
+- Avoid using render functions within components.
+
+```typescript
+// ❌ Bad
+function ProfileScreen() {
+  const renderHeader = () => (
+    <Header title="Profile" />
+  )
+
+  return (
+    <Screen>
+      {renderHeader()}
+      <Content />
+    </Screen>
+  )
+}
+
+// ✅ Good
+function ProfileScreen() {
+  return (
+    <Screen>
+      <ProfileHeader />
+      <Content />
+    </Screen>
+  )
+}
+
+const ProfileHeader = memo(function ProfileHeader() {
+  return <Header title="Profile" />
+})
+```
+
+- Use named exports.
+
+```typescript
+// ❌ Bad
+export default function Button() {
+  return <TouchableOpacity><Text>Click me</Text></TouchableOpacity>
+}
+
+// ✅ Good
+export const Button = memo(function Button() {
+  return <TouchableOpacity><Text>Click me</Text></TouchableOpacity>
+})
+```

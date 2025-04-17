@@ -14,7 +14,7 @@ import { useMessageContentStringValue } from "@/features/conversation/conversati
 import { useRestoreConversation } from "@/features/conversation/conversation-list/hooks/use-restore-conversation"
 import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
 import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
-import { useDmQuery } from "@/features/dm/dm.query"
+import { useDmPeerInboxId } from "@/features/conversation/hooks/use-dm-peer-inbox-id"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
@@ -36,25 +36,22 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
 
   const currentSender = useSafeCurrentSender()
 
-  // Conversation related hooks
-  const { data: dm } = useDmQuery({
+  const { data: peerInboxId } = useDmPeerInboxId({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "ConversationListItemDm",
   })
 
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
-    inboxId: dm?.peerInboxId,
+    inboxId: peerInboxId,
   })
 
-  // Status hooks
   const { isUnread } = useConversationIsUnread({ xmtpConversationId })
   const { isDeleted } = useConversationIsDeleted({ xmtpConversationId })
 
   const { data: lastMessage } = useConversationLastMessage({ xmtpConversationId })
   const messageText = useMessageContentStringValue(lastMessage)
 
-  // Action hooks
   const deleteDm = useDeleteDm({ xmtpConversationId })
   const { restoreConversationAsync } = useRestoreConversation({
     xmtpConversationId,
@@ -63,7 +60,6 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     xmtpConversationId,
   })
 
-  // Subtitle with sender info for non-text messages
   const subtitle = useMemo(() => {
     if (!lastMessage || !messageText) {
       return ""
@@ -90,7 +86,6 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     [isDeleted, theme],
   )
 
-  // Handlers
   const handleOnPress = useCallback(() => {
     navigate("Conversation", { xmtpConversationId }).catch(captureError)
   }, [xmtpConversationId])

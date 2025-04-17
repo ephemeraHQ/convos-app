@@ -60,7 +60,6 @@ export function useMessageContextMenuItems(args: {
       onPress: () => {
         const messageStringContent = getMessageContentStringValue({
           messageContent: message.content,
-          initiatorDisplayName: "Someone",
         })
         if (!!messageStringContent) {
           Clipboard.setString(messageStringContent)

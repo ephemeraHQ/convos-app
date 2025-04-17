@@ -1,0 +1,79 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This file contains rules about code organization within files in our codebase. Each rule is followed by a small example showing good and bad practices.
+
+- Place exported functions, components, and variables at the top of the file.
+
+```typescript
+// ❌ Bad: Helper function above exported function
+function formatName(name) {
+  return name.toUpperCase()
+}
+
+export function ProfileCard() {
+  /* implementation */
+}
+
+// ✅ Good: Exported function at the top
+export function ProfileCard() {
+  /* implementation */
+}
+
+function formatName(name) {
+  return name.toUpperCase()
+}
+```
+
+- Place helper functions and non-exported components below the exported items.
+
+```typescript
+// ✅ Good organization
+export function UserProfile() {
+  return (
+    <View>
+      <DisplayName name="John" />
+    </View>
+  )
+}
+
+// Helper component used only within this file
+const DisplayName = memo(function DisplayName(props: { name: string }) {
+  return <Text>{formatName(props.name)}</Text>
+})
+
+// Helper function
+function formatName(name: string) {
+  return name.toUpperCase()
+}
+```
+
+- Define types close to their implementation.
+
+```typescript
+// ❌ Bad: Type far from its usage
+type IButtonProps = { onPress: () => void; label: string }
+
+// Many lines of code...
+
+export function Button(props: IButtonProps) {
+  /* implementation */
+}
+
+// ✅ Good: Type near its usage
+export function Button(props: { onPress: () => void; label: string }) {
+  /* implementation */
+}
+
+// For reused types, define them above all components
+type IUser = { id: string; name: string }
+
+export function UserList() {
+  /* implementation using IUser */
+}
+export function UserProfile() {
+  /* implementation using IUser */
+}
+```

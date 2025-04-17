@@ -1,0 +1,115 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This file contains rules about TypeScript usage in our codebase. Each rule is followed by a small example showing good and bad practices.
+
+- Use types over interfaces, prefixed with 'I'.
+
+```typescript
+// ❌ Bad
+interface User {
+  id: string
+  name: string
+}
+
+// ✅ Good
+type IUser = {
+  id: string
+  name: string
+}
+```
+
+- Never use 'any'.
+
+```typescript
+// ❌ Bad
+function processData(data: any) {
+  return data.items
+}
+
+// ✅ Good
+function processData(args: { data: { items: unknownnst { data } = args
+  return data.items
+}
+```
+
+- , use string literals instead.
+
+```typescript
+// ❌ Bad
+enum MessageStatus {
+  SENT = "sent",
+  DELIVERED = "delivered",
+  READ = "read",
+}
+
+// ✅ Good
+type IMessageStatus = "sent" | "delivered" | "read"
+```
+
+- Prefer type inference when possible.
+
+```typescript
+// ❌ Bad
+const items: string[] = ["apple", "banana"]
+const count: number = items.length
+
+// ✅ Good
+const items = ["apple", "banana"]
+const count = items.length
+```
+
+- Avoid explicit Promise return types - let TypeScript infer them.
+
+```typescript
+// ❌ Bad
+async function fetchUser(id: string): Promise<IUser> {
+  return api.getUser(id)
+}
+
+// ✅ Good
+async function fetchUser(args: { id: string }) {
+  const { id } = args
+  return api.getUser(id)
+}
+```
+
+- Prefer type assertions on return objects over function return type annotations.
+
+```typescript
+// ❌ Bad
+function createConfig(): IConfig {
+  return {
+    theme: "dark",
+    notifications: true,
+    timeout: 30,
+  }
+}
+
+// ✅ Good
+function createConfig() {
+  return {
+    theme: "dark",
+    notifications: true,
+    timeout: 30,
+  } satisfies IConfig
+}
+```
+
+- Avoid explicit return types on functions.
+
+```typescript
+// ❌ Bad
+function formatName(args: { first: string; last: string }): string {
+  const { first, last } = args
+  return `${first} ${last}`
+}
+
+// ✅ Good
+function formatName(args: { first: string; last: string }) {
+  const { first, last } = args
+  return `${first} ${last}`
+}
+```

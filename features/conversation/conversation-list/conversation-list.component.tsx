@@ -1,10 +1,12 @@
 import { FlashList, FlashListProps, ListRenderItem } from "@shopify/flash-list"
 import { memo, useCallback, useRef } from "react"
 import { NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
+import { useHeaderHeight } from "@/design-system/Header/Header.utils"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationListItemDm } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-dm"
 import { ConversationListItemGroup } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-group"
+import { useConversationListItemStyle } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item.styles"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -20,6 +22,8 @@ export const ConversationList = memo(function ConversationList(props: IConversat
   const { conversationsIds, renderConversation, onRefetch, ...rest } = props
 
   const { theme } = useAppTheme()
+  const headerHeight = useHeaderHeight()
+  const { listItemHeight } = useConversationListItemStyle()
 
   const { onScroll } = useRefreshHandler({
     onRefetch,
@@ -30,7 +34,11 @@ export const ConversationList = memo(function ConversationList(props: IConversat
       onScroll={onScroll}
       data={conversationsIds}
       keyExtractor={keyExtractor}
-      estimatedItemSize={100}
+      estimatedItemSize={listItemHeight}
+      estimatedListSize={{
+        height: theme.layout.screen.height - listItemHeight - headerHeight,
+        width: theme.layout.screen.width,
+      }}
       renderItem={(args) => {
         return (
           <AnimatedVStack

@@ -1,0 +1,98 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This file contains rules about using our design system components. Each rule is followed by a small example showing good and bad practices.
+
+- Use design system components instead of native components whenever possible.
+
+```typescript
+// ❌ Bad
+<View style={{ padding: 16 }}>
+  <Text>Hello</Text>
+</View>
+
+// ✅ Good
+<VStack style={{ padding: theme.spacing.md }}>
+  <Text preset="body">Hello</Text>
+</VStack>
+```
+
+- Prefer specialized layout components over generic View components.
+
+```typescript
+// ❌ Bad
+<View style={{ flexDirection: "column" }}>
+  <View style={{ flexDirection: "row" }}>
+    <Text>Label</Text>
+  </View>
+</View>
+
+// ✅ Good
+<VStack>
+  <HStack>
+    <Text>Label</Text>
+  </HStack>
+</VStack>
+```
+
+- Use `VStack` instead of `View` with `flexDirection: "column"`.
+
+```typescript
+// ❌ Bad
+<View style={{ flexDirection: "column", gap: 8 }}>
+
+// ✅ Good
+<VStack style={{ gap: 8 }}>
+```
+
+- Use `HStack` instead of `View` with `flexDirection: "row"`.
+
+```typescript
+// ❌ Bad
+<View style={{ flexDirection: "row", alignItems: "center" }}>
+
+// ✅ Good
+<HStack style={{ alignItems: "center" }}>
+```
+
+- Use `Center` instead of manually setting alignment and justification.
+
+```typescript
+// ❌ Bad
+<View style={{ alignItems: "center", justifyContent: "center" }}>
+
+// ✅ Good
+<Center>
+```
+
+- Use `AnimatedVStack`, `AnimatedHStack`, and `AnimatedCenter` for animated components.
+
+```typescript
+// ❌ Bad
+<Animated.View style={{ flexDirection: "column", opacity }}>
+
+// ✅ Good
+<AnimatedVStack style={{ opacity }}>
+```
+
+- Use the Text component's built-in presets instead of manually specifying font size, line height, or weight.
+
+```typescript
+// ❌ Bad
+<Text style={{ fontSize: 16, fontWeight: "bold" }}>Hello</Text>
+
+// ✅ Good
+<Text preset="body" weight="bold">Hello</Text>
+```
+
+- Use the color prop to set text color instead of style overrides.
+
+```typescript
+// ❌ Bad
+<Text style={{ color: colors.text.primary }}>Hello</Text>
+
+// ✅ Good
+<Text color="primary">Hello</Text>
+```

@@ -73,8 +73,6 @@ export const ConversationMessages = memo(function ConversationMessages() {
     ...(settings?.retentionDurationInNs && {
       refetchInterval: convertNanosecondsToMilliseconds(settings.retentionDurationInNs) * 0.5,
     }),
-    refetchOnWindowFocus: "always",
-    refetchOnMount: "always",
   })
 
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
@@ -134,8 +132,9 @@ export const ConversationMessages = memo(function ConversationMessages() {
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
 
       const contentOffsetY = contentOffset.y
+
       const listHeight = layoutMeasurement.height
-      const listContentHeight = contentSize.height - listHeight
+      const listContentHeight = contentSize.height > listHeight ? listHeight : contentSize.height
       const distanceFromTop = listContentHeight - contentOffsetY
       const isPastTopThreshold = distanceFromTop < listHeight * 0.2
 
@@ -158,7 +157,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       }
 
       // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
-      const isPastBottomThreshold = contentOffsetY < 50
+      const isPastBottomThreshold = contentOffsetY < -50
 
       if (isPastBottomThreshold && !hasPulledToRefreshRef.current) {
         // Only refetch if we haven't already refreshed during this pull-down gesture
@@ -232,7 +231,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
     <FlashList
       data={messageIds}
       renderItem={renderItem}
-      estimatedItemSize={50} // Random value for now
+      drawDistance={50} // Smaller because rendering messages is expensive
+      estimatedItemSize={100} // Random value for now but big enough so that if we have big messages we don't have to render a lot of them
       inverted
       initialScrollIndex={0}
       keyExtractor={keyExtractor}
