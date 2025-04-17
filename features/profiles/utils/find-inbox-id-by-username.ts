@@ -1,26 +1,26 @@
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { logger } from "@/utils/logger/logger"
 import { captureError } from "@/utils/capture-error"
-import { GenericError } from "@/utils/error"
-import { config } from "@/config"
+import { ValidationError, GenericError } from "@/utils/error"
+import { convosPublicApi } from "@/utils/convos-api/convos-api-instance"
+import { AxiosError } from "axios"
+import { z } from "zod"
+import { IEthereumAddress } from "@/utils/evm/address"
 
-type IProfileResponse = {
-  name: string
-  username: string
-  description: string
-  avatar: string | null
-  xmtpId: string
-  privyAddress: string
-}
+// Schema for the public profile response
+const PublicProfileResponseSchema = z.object({
+  name: z.string(),
+  username: z.string(),
+  description: z.string(),
+  avatar: z.string().nullable(),
+  xmtpId: z.custom<IXmtpInboxId>(),
+  privyAddress: z.custom<IEthereumAddress>(),
+})
 
-type IErrorResponse = {
-  error: string
-}
+type IPublicProfileResponse = z.infer<typeof PublicProfileResponseSchema>
 
 /**
  * Finds a user's inbox ID by their username
- * @param username The username to search for
- * @returns The inbox ID if found, null otherwise
  */
 export async function findInboxIdByUsername(username: string): Promise<IXmtpInboxId | null> {
   try {
@@ -31,28 +31,34 @@ export async function findInboxIdByUsername(username: string): Promise<IXmtpInbo
     logger.info(`Finding inbox ID by username: ${username}`)
     
     // Make the API request to find the user's profile by username
-    const response = await fetch(`${config.app.apiUrl}/api/v1/profiles/public/${encodeURIComponent(username)}`)
+    const { data } = await convosPublicApi.get<IPublicProfileResponse>(
+      `/api/v1/profiles/public/${encodeURIComponent(username)}`
+    )
     
-    if (!response.ok) {
-      if (response.status === 404) {
-        logger.info(`No profile found for username: ${username}`)
-        return null
-      }
-      
-      throw new Error(`Failed to find profile by username: ${response.status} ${response.statusText}`)
-    }
+    // Validate the response data
+    const result = PublicProfileResponseSchema.safeParse(data)
     
-    const data = await response.json() as IProfileResponse | IErrorResponse
-    
-    // Check if the response contains an error
-    if ('error' in data) {
-      logger.info(`Error finding profile: ${data.error}`)
+    if (!result.success) {
+      captureError(new ValidationError({ error: result.error }))
       return null
     }
     
     // Extract the xmtpId which is the inbox ID we need
-    return data.xmtpId as IXmtpInboxId
+    return result.data.xmtpId
   } catch (error) {
+    // Handle 404 (not found) errors
+    if (error instanceof AxiosError && error.response?.status === 404) {
+      logger.info(`No profile found for username: ${username}`)
+      return null
+    }
+    
+    // Handle error response with error message
+    if (error instanceof AxiosError && error.response?.data?.error) {
+      logger.info(`Error finding profile: ${error.response.data.error}`)
+      return null
+    }
+    
+    // Handle other errors
     captureError(
       new GenericError({
         error,
