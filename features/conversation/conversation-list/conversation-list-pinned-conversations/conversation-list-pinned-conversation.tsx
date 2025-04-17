@@ -68,7 +68,7 @@ export const ConversationListPinnedConversation: FC<IConversationListPinnedConve
           menuWillShowRef.current = false
         }}
       >
-        <Pressable onPress={handlePress} delayLongPress={100}>
+        <Pressable onPress={handlePress} delayLongPress={100} onLongPress={() => {}}>
           <Center
             style={{
               borderRadius: 999,

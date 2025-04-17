@@ -47,4 +47,4 @@ jobs:
 
       - name: Build iOS production
         run: |
-          eas build --platform ios --profile production --non-interactive --auto-submit --environment=production
+          eas build --platform ios --profile production --non-interactive --auto-submit
