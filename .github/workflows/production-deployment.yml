@@ -3,7 +3,7 @@ name: Production Deployment
 on:
   push:
     branches:
-      - production
+      - main
 
 # Ensure only one workflow runs at a time
 concurrency:
@@ -15,13 +15,25 @@ permissions:
   id-token: write
 
 jobs:
-  ios-build:
+  merge-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: production
+          token: ${{ secrets.PAT_GITHUB }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Rebase production with main
+        run: |
+          git checkout production
+          git rebase main
+          git push origin production --force
 
       - name: Setup node
         uses: actions/setup-node@v4

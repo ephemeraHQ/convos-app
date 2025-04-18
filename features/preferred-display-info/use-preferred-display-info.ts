@@ -11,14 +11,14 @@ import {
 } from "@/features/preferred-display-info/preferred-display-info.utils"
 import {
   ensureProfileQueryData,
+  getProfileQueryConfig,
   getProfileQueryData,
-  useProfileQuery,
 } from "@/features/profiles/profiles.query"
-import { useSocialProfilesForInboxIdQuery } from "@/features/social-profiles/social-profiles-for-inbox-id.query"
+import { getSocialProfilesForInboxIdQueryOptions } from "@/features/social-profiles/social-profiles-for-inbox-id.query"
 import {
   ensureSocialProfilesForAddressQuery,
   getSocialProfilesForEthAddressQueryData,
-  useSocialProfilesForAddressQuery,
+  getSocialProfilesForEthAddressQueryOptions,
 } from "@/features/social-profiles/social-profiles.query"
 import {
   ensureEthAddressesForXmtpInboxIdQueryData,
@@ -32,9 +32,12 @@ import {
 } from "@/features/xmtp/xmtp-inbox-id/xmtp-inbox-id-from-eth-address.query"
 import { mergeArraysObjects } from "@/utils/array"
 import { IEthereumAddress } from "@/utils/evm/address"
+import { reactQueryFreshDataQueryOptions } from "@/utils/react-query/react-query.constants"
 
 // At least one of these properties must be defined
-type PreferredDisplayInfoArgs =
+type PreferredDisplayInfoArgs = {
+  freshData?: boolean
+} & (
   | {
       inboxId: IXmtpInboxId | undefined
       ethAddress?: IEthereumAddress
@@ -43,9 +46,10 @@ type PreferredDisplayInfoArgs =
       inboxId?: IXmtpInboxId
       ethAddress: IEthereumAddress | undefined
     }
+)
 
 export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
-  const { inboxId: inboxIdArg, ethAddress: ethAddressArg } = args
+  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData } = args
 
   const currentSender = useSafeCurrentSender()
 
@@ -55,6 +59,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
       targetEthAddress: ethAddressArg!, // ! because we check enabled
     }),
     enabled: !!ethAddressArg,
+    ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
   const inboxId = inboxIdArg ?? inboxIdFromEthAddress
@@ -63,28 +68,36 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
     clientInboxId: currentSender.inboxId,
     inboxId,
     caller: "usePreferredDisplayInfo",
+    ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
   // Get Convos profile data
-  const { data: profile, isLoading: isLoadingProfile } = useProfileQuery({
-    xmtpId: inboxId,
-    caller: "usePreferredDisplayInfo",
+  const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    ...getProfileQueryConfig({ xmtpId: inboxId, caller: "usePreferredDisplayInfo" }),
+    ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
   // Get social profiles data
-  const { data: socialProfilesForInboxId, isLoading: isLoadingSocialProfilesForInboxId } =
-    useSocialProfilesForInboxIdQuery({
-      inboxId,
-      clientInboxId: currentSender.inboxId,
-      caller: "usePreferredDisplayInfo",
-    })
+  const { data: socialProfilesForInboxId, isLoading: isLoadingSocialProfilesForInboxId } = useQuery(
+    {
+      ...getSocialProfilesForInboxIdQueryOptions({
+        inboxId,
+        clientInboxId: currentSender.inboxId,
+        caller: "usePreferredDisplayInfo",
+      }),
+      ...(freshData && { ...reactQueryFreshDataQueryOptions }),
+    },
+  )
 
   const ethAddress = ethAddressArg || ethAddressesForXmtpInboxId?.[0]
 
   const { data: socialProfilesForEthAddress, isLoading: isLoadingSocialProfilesForEthAddress } =
-    useSocialProfilesForAddressQuery({
-      ethAddress,
-      caller: "usePreferredDisplayInfo",
+    useQuery({
+      ...getSocialProfilesForEthAddressQueryOptions({
+        ethAddress,
+        caller: "usePreferredDisplayInfo",
+      }),
+      ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     })
 
   const socialProfiles = mergeArraysObjects({

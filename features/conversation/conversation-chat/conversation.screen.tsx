@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
-import React, { memo } from "react"
+import React, { memo, useEffect } from "react"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
@@ -16,6 +16,7 @@ import { useConversationScreenHeader } from "@/features/conversation/conversatio
 import { ConversationCreateListResults } from "@/features/conversation/conversation-create/conversation-create-list-results"
 import { ConversationCreateSearchInput } from "@/features/conversation/conversation-create/conversation-create-search-input"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
+import { clearNotificationsForConversation } from "@/features/notifications/notifications.service"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { ConversationMessages } from "./conversation-messages"
@@ -66,6 +67,12 @@ const Content = memo(function Content() {
   })
 
   useConversationScreenHeader()
+
+  useEffect(() => {
+    if (xmtpConversationId) {
+      clearNotificationsForConversation({ xmtpConversationId })
+    }
+  }, [xmtpConversationId])
 
   if (isLoadingConversation) {
     return (

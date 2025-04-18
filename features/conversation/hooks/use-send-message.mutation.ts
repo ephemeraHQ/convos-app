@@ -1,7 +1,7 @@
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
-  getConversationMessageQueryData,
+  invalidateConversationMessageQuery,
   setConversationMessageQueryData,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
@@ -19,7 +19,7 @@ import {
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
-import { GenericError } from "@/utils/error"
+import { GenericError, ReactQueryError } from "@/utils/error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import {
   IConversationMessage,
@@ -125,26 +125,13 @@ export const getSendMessageMutationOptions = (): MutationOptions<
     onSuccess: async (sentMessages, variables) => {
       const currentSender = getSafeCurrentSender()
 
-      // Message were well prepared, now send them to the network!
-      publishXmtpConversationMessages({
-        clientInboxId: currentSender.inboxId,
-        conversationId: variables.xmtpConversationId,
-      }).catch(captureError)
-
+      // Add messages to the query cache
       for (const sentMessage of sentMessages) {
-        const currentMessage = getConversationMessageQueryData({
+        setConversationMessageQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpMessageId: sentMessage.xmtpId,
+          message: sentMessage,
         })
-
-        // Can happen if the stream was so fast that we already have this message in the cache... don't overwrite it
-        if (!currentMessage) {
-          setConversationMessageQueryData({
-            clientInboxId: currentSender.inboxId,
-            xmtpMessageId: sentMessage.xmtpId,
-            message: sentMessage,
-          })
-        }
 
         addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
@@ -152,6 +139,45 @@ export const getSendMessageMutationOptions = (): MutationOptions<
           messageId: sentMessage.xmtpId,
         })
       }
+
+      // Message were well prepared, now send them to the network!
+      publishXmtpConversationMessages({
+        clientInboxId: currentSender.inboxId,
+        conversationId: variables.xmtpConversationId,
+      })
+        .then(async () => {
+          // Update the query cache with the full message
+          for (const sentMessage of sentMessages) {
+            try {
+              const xmtpMessage = await getXmtpConversationMessage({
+                messageId: sentMessage.xmtpId,
+                clientInboxId: currentSender.inboxId,
+              })
+              if (!xmtpMessage) {
+                throw new Error("Couldn't get the full xmtp message after sending")
+              }
+              const convosMessage = convertXmtpMessageToConvosMessage(xmtpMessage)
+              setConversationMessageQueryData({
+                clientInboxId: currentSender.inboxId,
+                xmtpMessageId: sentMessage.xmtpId,
+                message: convosMessage,
+              })
+            } catch (error) {
+              captureError(new ReactQueryError({ error }))
+              invalidateConversationMessageQuery({
+                clientInboxId: currentSender.inboxId,
+                xmtpMessageId: sentMessage.xmtpId,
+              }).catch(captureError)
+            }
+          }
+        })
+        .catch((error) => {
+          invalidateConversationMessagesInfiniteMessagesQuery({
+            clientInboxId: currentSender.inboxId,
+            xmtpConversationId: variables.xmtpConversationId,
+          }).catch(captureError)
+          captureError(new ReactQueryError({ error }))
+        })
     },
     onError: (_, variables, context) => {
       if (!context) {

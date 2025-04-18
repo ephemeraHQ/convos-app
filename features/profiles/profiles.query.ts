@@ -4,6 +4,7 @@ import { fetchProfile } from "@/features/profiles/profiles.api"
 import { Optional } from "@/types/general"
 import { isConvosApi404Error } from "@/utils/convos-api/convos-api-error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 
 type IProfileQueryData = Awaited<ReturnType<typeof fetchProfile>>
 
@@ -24,7 +25,10 @@ export const getProfileQueryConfig = (args: Optional<IArgsWithCaller, "caller">)
       caller,
     },
     enabled,
-    queryKey: ["profile", xmtpId],
+    queryKey: getReactQueryKey({
+      baseStr: "profile",
+      xmtpId,
+    }),
     queryFn: enabled
       ? async () => {
           try {

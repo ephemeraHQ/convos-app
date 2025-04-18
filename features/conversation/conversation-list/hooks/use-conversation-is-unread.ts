@@ -30,6 +30,10 @@ export const useConversationIsUnread = ({ xmtpConversationId }: UseConversationI
       return false
     }
 
+    if (!lastMessage) {
+      return false
+    }
+
     return conversationIsUnreadForInboxId({
       lastMessageSentAt: lastMessage?.sentNs ?? null,
       lastMessageSenderInboxId: lastMessage?.senderInboxId ?? null,

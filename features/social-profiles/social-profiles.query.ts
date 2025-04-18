@@ -21,7 +21,9 @@ type IStrictArgsWithCaller = IStrictArgs & {
   caller: string
 }
 
-const getSocialProfilesForAddressQueryOptions = (args: Optional<IArgsWithCaller, "caller">) => {
+export const getSocialProfilesForEthAddressQueryOptions = (
+  args: Optional<IArgsWithCaller, "caller">,
+) => {
   const { ethAddress, caller } = args
   return queryOptions({
     queryKey: getReactQueryKey({
@@ -45,11 +47,11 @@ const getSocialProfilesForAddressQueryOptions = (args: Optional<IArgsWithCaller,
 }
 
 export const useSocialProfilesForAddressQuery = (args: IArgsWithCaller) => {
-  return useQuery(getSocialProfilesForAddressQueryOptions(args))
+  return useQuery(getSocialProfilesForEthAddressQueryOptions(args))
 }
 
 export const ensureSocialProfilesForAddressQuery = async (args: IStrictArgsWithCaller) => {
-  return reactQueryClient.ensureQueryData(getSocialProfilesForAddressQueryOptions(args))
+  return reactQueryClient.ensureQueryData(getSocialProfilesForEthAddressQueryOptions(args))
 }
 
 export async function ensureSocialProfilesForAddressesQuery(args: {
@@ -60,7 +62,7 @@ export async function ensureSocialProfilesForAddressesQuery(args: {
     await Promise.all(
       args.ethAddresses.map((ethAddress) =>
         reactQueryClient.fetchQuery(
-          getSocialProfilesForAddressQueryOptions({ ethAddress, caller: args.caller }),
+          getSocialProfilesForEthAddressQueryOptions({ ethAddress, caller: args.caller }),
         ),
       ),
     )
@@ -68,5 +70,5 @@ export async function ensureSocialProfilesForAddressesQuery(args: {
 }
 
 export function getSocialProfilesForEthAddressQueryData(args: IStrictArgs) {
-  return reactQueryClient.getQueryData(getSocialProfilesForAddressQueryOptions(args).queryKey)
+  return reactQueryClient.getQueryData(getSocialProfilesForEthAddressQueryOptions(args).queryKey)
 }
