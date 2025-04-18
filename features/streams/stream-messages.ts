@@ -1,8 +1,5 @@
 import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
-import {
-  getConversationMessageQueryData,
-  setConversationMessageQueryData,
-} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   isGroupUpdatedMessage,
   isReactionMessage,
@@ -55,13 +52,14 @@ async function handleNewMessage(args: {
   // Process reaction messages
   if (isReactionMessage(message)) {
     processReactionConversationMessages({ clientInboxId, reactionMessages: [message] })
-  } else {
-    setConversationMessageQueryData({
-      clientInboxId,
-      xmtpMessageId: message.xmtpId,
-      message,
-    })
+    return
   }
+
+  setConversationMessageQueryData({
+    clientInboxId,
+    xmtpMessageId: message.xmtpId,
+    message,
+  })
 
   // Handle group update messages
   if (isGroupUpdatedMessage(message)) {

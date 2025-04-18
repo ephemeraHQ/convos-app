@@ -110,6 +110,9 @@ export function processReactionConversationMessages(args: {
       byReactionContent: { ...currentReactions.byReactionContent },
     }
 
+    // Sort messages chronologically to ensure correct add/remove sequence
+    messagesToProcess.sort((a, b) => a.sentNs - b.sentNs)
+
     // Process each reaction message
     for (const reactionMessage of messagesToProcess) {
       if (!isReactionMessage(reactionMessage)) {
