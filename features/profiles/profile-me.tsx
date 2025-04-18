@@ -192,7 +192,7 @@ const EditableUsernameInput = memo(function EditableUsernameInput({
   return (
     <VStack style={{ rowGap: theme.spacing.xxs }}>
       <TextField
-        label="convos.xyz/"
+        label="convos.org/"
         defaultValue={usernameDefaultTextValue}
         onChangeText={handleUsernameChange}
         helper={translate("Your unique sharable link")}

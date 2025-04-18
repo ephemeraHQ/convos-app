@@ -64,7 +64,7 @@ export const en = {
       username: {
         placeholder: "Username",
       },
-      usernameSuffix: ".converse.xyz",
+      usernameSuffix: ".convos.org",
       displayName: {
         placeholder: "Enter your name",
         errors: {
@@ -282,7 +282,7 @@ export const en = {
     "Identity {{identity}} took too long to resolve. Please check your connection and try again",
   identity_not_yet_xmtp_title: "Not yet using XMTP",
   identity_not_yet_xmtp:
-    "{{identity}} is not yet using XMTP. Tell them to download the app at converse.xyz and log in with their wallet",
+    "{{identity}} is not yet using XMTP. Tell them to download the app at convos.org and log in with their wallet",
 
   attachment_not_found: "Couldn't find attachment",
   // Conversation Context Menu

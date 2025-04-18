@@ -53,7 +53,7 @@ export const fr = {
       username: {
         placeholder: "Nom d'utilisateur",
       },
-      usernameSuffix: ".convos.xyz",
+      usernameSuffix: ".convos.org",
       displayName: {
         placeholder: "Entrez votre nom",
         errors: {
@@ -277,7 +277,7 @@ export const fr = {
     "La résolution de l'identité {{identity}} a pris trop de temps. Veuillez vérifier votre connexion et réessayer",
   identity_not_yet_xmtp_title: "N'utilise pas encore XMTP",
   identity_not_yet_xmtp:
-    "{{identity}} n'utilise pas encore XMTP. Dites-lui de télécharger l'application sur convos.xyz et de se connecter avec son portefeuille",
+    "{{identity}} n'utilise pas encore XMTP. Dites-lui de télécharger l'application sur convos.org et de se connecter avec son portefeuille",
 
   attachment_not_found: "Impossible de trouver la pièce jointe",
   // Conversation Context Menu
