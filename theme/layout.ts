@@ -5,6 +5,9 @@ export const window = {
   height: Dimensions.get("window").height,
 }
 
+export const SCREEN_HEIGHT = window.height
+export const SCREEN_WIDTH = window.width
+
 export const layout = {
   screen: {
     width: window.width,

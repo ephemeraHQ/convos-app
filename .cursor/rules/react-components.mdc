@@ -120,3 +120,30 @@ export const Button = memo(function Button() {
   return <TouchableOpacity><Text>Click me</Text></TouchableOpacity>
 })
 ```
+
+- Prefer derived state over redundant state.
+
+```typescript
+// ❌ Bad: Using separate state for derived value
+function MediaViewerPortal() {
+  const mediaParams = useStore((state) => state.mediaParams)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    setVisible(!!mediaParams)
+  }, [mediaParams])
+
+  if (!visible) return null
+  // ... rest of component using mediaParams
+}
+
+// ✅ Good: Calculating derived value directly
+function MediaViewerPortal() {
+  const mediaParams = useStore((state) => state.mediaParams)
+  const visible = !!mediaParams // Derived directly
+
+  if (!visible) return null
+  // ... rest of component using mediaParams
+}
+```
+

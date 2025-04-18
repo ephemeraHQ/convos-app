@@ -1,4 +1,5 @@
 import { queryOptions, useQuery } from "@tanstack/react-query"
+import { RemoteAttachmentMetadata } from "@xmtp/react-native-sdk"
 import { downloadRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/download-remote-attachment"
 import {
   getStoredRemoteAttachment,
@@ -6,32 +7,28 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-attachment/remote-attachment-local-storage"
 import { decryptXmtpAttachment } from "@/features/xmtp/xmtp-codecs/xmtp-codecs-attachments"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { IConversationMessageRemoteAttachmentContent } from "../conversation-message/conversation-message.types"
 
-export function useRemoteAttachmentQuery(args: {
+type IArgs = {
   xmtpMessageId: IXmtpMessageId
-  content: IConversationMessageRemoteAttachmentContent
-}) {
+  url: string
+  metadata: RemoteAttachmentMetadata
+}
+
+export function useRemoteAttachmentQuery(args: IArgs) {
   return useQuery(getRemoteAttachmentQueryOptions(args))
 }
 
-export function getRemoteAttachmentQueryOptions(args: {
-  xmtpMessageId: IXmtpMessageId
-  content: IConversationMessageRemoteAttachmentContent
-}) {
+function getRemoteAttachmentQueryOptions(args: IArgs) {
   return queryOptions({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: ["remote-attachment", args.xmtpMessageId, args.content.url],
+    queryKey: ["remote-attachment", args.xmtpMessageId, args.url],
     queryFn: () => fetchRemoteAttachment(args),
-    enabled: !!args.xmtpMessageId && !!args.content.url,
+    enabled: !!args.xmtpMessageId && !!args.url,
   })
 }
 
-async function fetchRemoteAttachment(args: {
-  xmtpMessageId: IXmtpMessageId
-  content: IConversationMessageRemoteAttachmentContent
-}) {
-  const { xmtpMessageId, content } = args
+async function fetchRemoteAttachment(args: IArgs) {
+  const { xmtpMessageId, url, metadata } = args
 
   // Check local cache first
   const storedAttachment = await getStoredRemoteAttachment(xmtpMessageId)
@@ -41,12 +38,12 @@ async function fetchRemoteAttachment(args: {
   }
 
   const encryptedLocalFileUri = await downloadRemoteAttachment({
-    url: content.url,
+    url,
   })
 
   const decryptedAttachment = await decryptXmtpAttachment({
     encryptedLocalFileUri: encryptedLocalFileUri,
-    metadata: content,
+    metadata,
   })
 
   return storeRemoteAttachment({

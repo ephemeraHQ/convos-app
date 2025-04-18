@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { memo, useEffect } from "react"
+import { GlobalMediaViewerPortal } from "@/components/global-media-viewer/global-media-viewer"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
@@ -49,6 +50,7 @@ export const ConversationScreen = memo(function ConversationScreen(
           </ConversationComposerStoreProvider>
         </ConversationMessageContextMenuStoreProvider>
       </ConversationStoreProvider>
+      <GlobalMediaViewerPortal />
     </Screen>
   )
 })
