@@ -1,6 +1,9 @@
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import {
+  getConversationMessageQueryData,
+  setConversationMessageQueryData,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import {
@@ -29,6 +32,10 @@ export type ISendMessageOptimisticallyParams = {
   contents: IConversationMessageContent[] // Array because we can send text at same time as attachments for example
 }
 
+type ISentOptimisticMessage = IConversationMessage & {
+  status: "sending"
+}
+
 export type ISendMessageReturnType = Awaited<ReturnType<typeof sendMessageOptimistically>>
 
 export async function sendMessageOptimistically(args: ISendMessageOptimisticallyParams) {
@@ -36,7 +43,7 @@ export async function sendMessageOptimistically(args: ISendMessageOptimistically
 
   const currentSender = getSafeCurrentSender()
 
-  const sentMessages: IConversationMessage[] = []
+  const sentMessages: ISentOptimisticMessage[] = []
 
   // Send each content as a separate message
   for (const content of contents) {
@@ -91,7 +98,7 @@ export async function sendMessageOptimistically(args: ISendMessageOptimistically
       continue
     }
 
-    sentMessages.push(convertXmtpMessageToConvosMessage(sentXmtpMessage))
+    sentMessages.push(convertXmtpMessageToConvosMessage(sentXmtpMessage) as ISentOptimisticMessage)
   }
 
   if (sentMessages.length === 0) {
@@ -118,18 +125,26 @@ export const getSendMessageMutationOptions = (): MutationOptions<
     onSuccess: async (sentMessages, variables) => {
       const currentSender = getSafeCurrentSender()
 
-      // Send the messages to the network
+      // Message were well prepared, now send them to the network!
       publishXmtpConversationMessages({
         clientInboxId: currentSender.inboxId,
         conversationId: variables.xmtpConversationId,
       }).catch(captureError)
 
       for (const sentMessage of sentMessages) {
-        setConversationMessageQueryData({
+        const currentMessage = getConversationMessageQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpMessageId: sentMessage.xmtpId,
-          message: sentMessage,
         })
+
+        // Can happen if the stream was so fast that we already have this message in the cache... don't overwrite it
+        if (!currentMessage) {
+          setConversationMessageQueryData({
+            clientInboxId: currentSender.inboxId,
+            xmtpMessageId: sentMessage.xmtpId,
+            message: sentMessage,
+          })
+        }
 
         addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,

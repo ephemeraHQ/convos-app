@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
-import { useCallback } from "react"
+import { queryOptions as reactQueryOptions, useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
@@ -10,16 +10,16 @@ export function useConversationMessageStatus(props: {
 }) {
   const { xmtpMessageId, clientInboxId } = props
 
-  const select = useCallback((data: IConversationMessage | null) => {
-    return data?.status
-  }, [])
+  const queryOptions = useMemo(() => {
+    return reactQueryOptions({
+      ...getConversationMessageQueryOptions({
+        xmtpMessageId,
+        clientInboxId,
+        caller: "ConversationMessageStatus",
+      }),
+      select: (data: IConversationMessage | null) => data?.status,
+    })
+  }, [xmtpMessageId, clientInboxId])
 
-  return useQuery({
-    ...getConversationMessageQueryOptions({
-      xmtpMessageId,
-      clientInboxId,
-      caller: "ConversationMessageStatus",
-    }),
-    select,
-  })
+  return useQuery(queryOptions)
 }
