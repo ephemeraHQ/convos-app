@@ -73,6 +73,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
     ...(settings?.retentionDurationInNs && {
       refetchInterval: convertNanosecondsToMilliseconds(settings.retentionDurationInNs) * 0.5,
     }),
+    refetchOnWindowFocus: "always",
+    refetchOnMount: "always",
   })
 
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({

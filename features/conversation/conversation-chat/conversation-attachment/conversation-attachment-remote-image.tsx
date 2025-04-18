@@ -9,6 +9,7 @@ import { AttachmentLoading } from "@/features/conversation/conversation-chat/con
 import { useConversationAttachmentStyles } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.styles"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { logJson } from "@/utils/logger/logger"
 import { IConversationMessageRemoteAttachmentContent } from "../conversation-message/conversation-message.types"
 import { useRemoteAttachmentQuery } from "./conversation-attachment.query"
 import {
@@ -72,30 +73,31 @@ export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
     )
   }
 
-  if (attachment.mediaType === "UNSUPPORTED") {
-    return (
-      <PressableScale
-        onPress={() => {
-          // openInWebview
-        }}
-      >
-        <ConversationMessageAttachmentContainer {...containerProps}>
-          <Text
-            style={{
-              textDecorationLine: "underline",
-            }}
-          >
-            {translate("attachment_message_view_in_browser")}
-          </Text>
-        </ConversationMessageAttachmentContainer>
-      </PressableScale>
-    )
-  }
+  // TODO: FIX
+  // if (attachment.mediaType === "UNSUPPORTED") {
+  //   return (
+  //     <PressableScale
+  //       onPress={() => {
+  //         // Open in browser
+  //       }}
+  //     >
+  //       <ConversationMessageAttachmentContainer {...containerProps}>
+  //         <Text
+  //           style={{
+  //             textDecorationLine: "underline",
+  //           }}
+  //         >
+  //           {translate("attachment_message_view_in_browser")}
+  //         </Text>
+  //       </ConversationMessageAttachmentContainer>
+  //     </PressableScale>
+  //   )
+  // }
 
   const aspectRatio =
     fitAspectRatio && attachment.imageSize
       ? attachment.imageSize.width / attachment.imageSize.height
-      : undefined
+      : 1
 
   const { style, ...rest } = containerProps || {}
   const { style: imageStyle, ...restImageProps } = imageProps || {}

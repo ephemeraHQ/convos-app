@@ -1,5 +1,5 @@
 import { Haptics } from "@utils/haptics"
-import { memo, useCallback, useRef } from "react"
+import { forwardRef, useCallback, useRef } from "react"
 import {
   GestureResponderEvent,
   Pressable as RNPressable,
@@ -13,7 +13,8 @@ export type IPressableProps = RNPressableProps & {
   preventDoubleTap?: boolean
 }
 
-export const Pressable = memo(function Pressable(props: IPressableProps) {
+// IMPORTANT: Can't have memo here otherwise it breaks the component
+export const Pressable = forwardRef<any, IPressableProps>(function Pressable(props, ref) {
   const { withHaptics, onPress: onPressProps, preventDoubleTap = false, ...rest } = props
 
   const { theme } = useAppTheme()
@@ -49,9 +50,11 @@ export const Pressable = memo(function Pressable(props: IPressableProps) {
       // By default we love a bigger hit area
       hitSlop={theme.spacing.sm}
       onPress={onPress}
+      ref={ref}
       {...rest}
     />
   )
 })
 
 export const AnimatedPressable = Animated.createAnimatedComponent(Pressable)
+AnimatedPressable.displayName = "AnimatedPressable"

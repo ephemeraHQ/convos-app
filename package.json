@@ -21,6 +21,8 @@
     "ios:preview:clean": "EXPO_ENV=preview yarn env:pull:preview && yarn platform:clean:ios && yarn ios:preview",
     "ios:preview:device": "EXPO_ENV=preview expo run:ios --device",
     "ios:preview:device:clean": "EXPO_ENV=preview yarn env:pull:preview && yarn platform:clean:ios && yarn ios:preview:device",
+    "ios:prod": "EXPO_ENV=production expo run:ios",
+    "ios:prod:clean": "EXPO_ENV=production yarn env:pull:prod && yarn platform:clean:ios && yarn ios:prod",
     "lint": "eslint --max-warnings 2500",
     "lint:errors": "eslint --quiet",
     "platform:clean:ios": "rm -rf ios",

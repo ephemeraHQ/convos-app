@@ -1,4 +1,5 @@
 import { saveFile } from "@/utils/file-system/file-system"
+import { logJson } from "@/utils/logger/logger"
 import { getImageSize, isImageMimetype } from "@/utils/media"
 import { LocalAttachmentMetadata } from "./conversation-attachments.types"
 import { getAttachmentPaths } from "./conversation-attachments.utils"

@@ -64,7 +64,6 @@ export const ConversationListScreen = memo(function ConversationListScreen(
           xmtpConversationId,
         }),
       )) {
-        console.log("preload")
         // Preload the conversation screen
         router.preload("Conversation", {
           xmtpConversationId: conversationId,
