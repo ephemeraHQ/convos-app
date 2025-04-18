@@ -1,10 +1,10 @@
-import { useAnimatedStyle, interpolate, interpolateColor } from 'react-native-reanimated'
-import { IAnimationState } from './conversation-media-viewer.types'
+import { interpolate, interpolateColor, useAnimatedStyle } from "react-native-reanimated"
+import { IAnimationState } from "./conversation-media-viewer.types"
 
 /**
  * Custom hook for creating all animated styles needed for the media viewer
  */
-export function useAnimatedStyles(animState: IAnimationState) {
+export function useConversationMediaViewAnimatedStyles(animState: IAnimationState) {
   const {
     scale,
     translateX,
@@ -14,7 +14,7 @@ export function useAnimatedStyles(animState: IAnimationState) {
     transitionProgress,
     isAnimatingTransition,
     isDismissing,
-    dismissAnimation
+    dismissAnimation,
   } = animState
 
   // Image animation style with handling for different states
@@ -26,29 +26,33 @@ export function useAnimatedStyles(animState: IAnimationState) {
         opacity: interpolate(dismissAnimation.value, [0, 0.7, 1], [1, 0.7, 0]),
         transform: [
           { translateY: interpolate(dismissAnimation.value, [0, 1], [0, -80]) },
-          { scale: interpolate(dismissAnimation.value, [0, 0.5, 1], [scale.value, scale.value * 0.7, 0]) }
-        ]
+          {
+            scale: interpolate(
+              dismissAnimation.value,
+              [0, 0.5, 1],
+              [scale.value, scale.value * 0.7, 0],
+            ),
+          },
+        ],
       }
     }
-    
+
     // During entry/exit transitions
     if (isAnimatingTransition.value) {
       return {
         opacity: transitionProgress.value,
-        transform: [
-          { scale: interpolate(transitionProgress.value, [0, 1], [0.5, 1]) }
-        ]
+        transform: [{ scale: interpolate(transitionProgress.value, [0, 1], [0.5, 1]) }],
       }
     }
-    
+
     // During normal interactions (pinch/pan)
     return {
       opacity: 1,
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
-        { scale: scale.value }
-      ]
+        { scale: scale.value },
+      ],
     }
   })
 
@@ -60,15 +64,15 @@ export function useAnimatedStyles(animState: IAnimationState) {
       const backgroundColor = interpolateColor(
         dismissAnimation.value,
         [0, 0.5, 1],
-        ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.7)', 'rgba(0, 0, 0, 0)']
+        ["rgba(0, 0, 0, 1)", "rgba(0, 0, 0, 0.7)", "rgba(0, 0, 0, 0)"],
       )
-      
+
       return {
         opacity: 1,
         backgroundColor,
       }
     }
-    
+
     // Normal background opacity
     return {
       opacity: backgroundOpacity.value,
@@ -77,18 +81,18 @@ export function useAnimatedStyles(animState: IAnimationState) {
 
   // Animation styles for controls
   const controlsAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: controlsOpacity.value
+    opacity: controlsOpacity.value,
   }))
 
   // Gesture enabled state based on transition
   const gestureEnabledStyle = useAnimatedStyle(() => ({
-    pointerEvents: isAnimatingTransition.value ? 'none' : 'auto',
+    pointerEvents: isAnimatingTransition.value ? "none" : "auto",
   }))
 
   return {
     imageTransitionStyle,
     backgroundAnimatedStyle,
     controlsAnimatedStyle,
-    gestureEnabledStyle
+    gestureEnabledStyle,
   }
 }

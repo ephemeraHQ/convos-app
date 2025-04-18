@@ -1,73 +1,39 @@
-import { Icon } from "@design-system/Icon/Icon"
-import { PressableScale } from "@design-system/pressable-scale"
 import { Text } from "@design-system/Text"
 import { translate } from "@i18n"
-import prettyBytes from "pretty-bytes"
+import React, { memo } from "react"
 import { IImageProps, Image } from "@/design-system/image"
-import React, { memo, useCallback } from "react"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { AttachmentLoading } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-loading"
+import { useRemoteAttachmentQuery } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.query"
 import { useConversationAttachmentStyles } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.styles"
+import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { IConversationMessageRemoteAttachmentContent } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { useAppTheme } from "@/theme/use-app-theme"
-import { logJson } from "@/utils/logger/logger"
-import { IConversationMessageRemoteAttachmentContent } from "../conversation-message/conversation-message.types"
-import { useRemoteAttachmentQuery } from "./conversation-attachment.query"
+import { Nullable } from "@/types/general"
 import {
   ConversationMessageAttachmentContainer,
   IConversationMessageAttachmentContainerProps,
 } from "./conversation-message-attachment-container"
-import { openMediaViewer } from "../conversation-media-viewer/global-media-viewer"
-import { ConversationMessageGestures } from "../conversation-message/conversation-message-gestures"
 
-type IAttachmentRemoteImageProps = {
-  xmtpMessageId: IXmtpMessageId
-  remoteMessageContent: IConversationMessageRemoteAttachmentContent
+type IConversationAttachmentRemoteImageProps = {
+  imageUrl: Nullable<string>
+  error: Nullable<Error>
+  isLoading?: boolean
   fitAspectRatio?: boolean
+  imageSize?: { width: number; height: number }
   containerProps?: IConversationMessageAttachmentContainerProps
   imageProps?: IImageProps
-  senderName?: string
-  sentTimestamp?: number
 }
 
-export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
-  props: IAttachmentRemoteImageProps,
+export const ConversationAttachmentRemoteImage = memo(function ConversationAttachmentRemoteImage(
+  props: IConversationAttachmentRemoteImageProps,
 ) {
-  const { 
-    xmtpMessageId, 
-    remoteMessageContent, 
-    fitAspectRatio, 
-    containerProps,
-    imageProps,
-    senderName = "",
-    sentTimestamp,
-  } = props
-
-  const { theme } = useAppTheme()
+  const { imageUrl, isLoading, error, fitAspectRatio, containerProps, imageProps, imageSize } =
+    props
 
   const { borderRadius } = useConversationAttachmentStyles()
 
-  const {
-    data: attachment,
-    isLoading: attachmentLoading,
-    error: attachmentError,
-    refetch: refetchAttachment,
-  } = useRemoteAttachmentQuery({
-    xmtpMessageId,
-    content: remoteMessageContent,
-  })
-
-  // Handler for opening the media viewer - will be called by the tap handler
-  const handleOpenMediaViewer = useCallback(() => {
-    if (attachment?.mediaURL) {
-      openMediaViewer({
-        uri: attachment.mediaURL,
-        sender: senderName,
-        timestamp: sentTimestamp,
-      })
-    }
-  }, [attachment, senderName, sentTimestamp])
-
-  if (!attachment && attachmentLoading) {
+  if (isLoading) {
     return (
       <ConversationMessageAttachmentContainer {...containerProps}>
         <AttachmentLoading />
@@ -75,7 +41,7 @@ export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
     )
   }
 
-  if (attachmentError || !attachment) {
+  if (error || !imageUrl) {
     return (
       <ConversationMessageAttachmentContainer {...containerProps}>
         <Text>{translate("attachment_message_error_download")}</Text>
@@ -83,70 +49,67 @@ export const AttachmentRemoteImage = memo(function AttachmentRemoteImage(
     )
   }
 
-  if (!attachment.mediaURL) {
-    return (
-      <PressableScale onPress={() => refetchAttachment()}>
-        <ConversationMessageAttachmentContainer {...containerProps}>
-          <Icon icon="arrow.down" size={14} color={theme.colors.fill.primary} />
-          <Text inverted weight="bold">
-            {prettyBytes(attachment.contentLength)}
-          </Text>
-        </ConversationMessageAttachmentContainer>
-      </PressableScale>
-    )
-  }
-
-  // TODO: FIX
-  // if (attachment.mediaType === "UNSUPPORTED") {
-  //   return (
-  //     <PressableScale
-  //       onPress={() => {
-  //         // Open in browser
-  //       }}
-  //     >
-  //       <ConversationMessageAttachmentContainer {...containerProps}>
-  //         <Text
-  //           style={{
-  //             textDecorationLine: "underline",
-  //           }}
-  //         >
-  //           {translate("attachment_message_view_in_browser")}
-  //         </Text>
-  //       </ConversationMessageAttachmentContainer>
-  //     </PressableScale>
-  //   )
-  // }
-
-  const aspectRatio =
-    fitAspectRatio && attachment.imageSize
-      ? attachment.imageSize.width / attachment.imageSize.height
-      : 1
+  const aspectRatio = fitAspectRatio && imageSize ? imageSize.width / imageSize.height : 1
 
   const { style, ...rest } = containerProps || {}
   const { style: imageStyle, ...restImageProps } = imageProps || {}
 
   return (
-    <ConversationMessageGestures 
-      contextMenuExtra={{
-        attachmentUrl: attachment.mediaURL,
-        openAttachmentViewer: handleOpenMediaViewer,
-      }}
-    >
-      <ConversationMessageAttachmentContainer style={[{ aspectRatio }, style]} {...rest}>
-        <Image
-          source={{ uri: attachment.mediaURL }}
-          contentFit="cover"
-          style={[
-            {
-              width: "100%",
-              height: "100%",
-              borderRadius,
-            },
-            imageStyle,
-          ]}
-          {...restImageProps}
-        />
-      </ConversationMessageAttachmentContainer>
-    </ConversationMessageGestures>
+    <ConversationMessageAttachmentContainer style={[{ aspectRatio }, style]} {...rest}>
+      <Image
+        source={{ uri: imageUrl }}
+        contentFit="cover"
+        style={[
+          {
+            width: "100%",
+            height: "100%",
+            borderRadius,
+          },
+          imageStyle,
+        ]}
+        {...restImageProps}
+      />
+    </ConversationMessageAttachmentContainer>
   )
 })
+
+export const ConversationAttachmentRemoteImageSmart = memo(
+  function ConversationAttachmentRemoteImageSmart(
+    props: {
+      xmtpMessageId: IXmtpMessageId
+    } & Partial<IConversationAttachmentRemoteImageProps>,
+  ) {
+    const { xmtpMessageId, ...rest } = props
+
+    const currentSender = useSafeCurrentSender()
+
+    const { data: conversationMessage } = useConversationMessageQuery({
+      xmtpMessageId,
+      clientInboxId: currentSender.inboxId,
+      caller: "ConversationAttachmentRemoteImageSmart",
+    })
+
+    const { url, ...metadata } =
+      conversationMessage?.content as IConversationMessageRemoteAttachmentContent
+
+    const {
+      data: attachment,
+      error: attachmentError,
+      isLoading: attachmentLoading,
+    } = useRemoteAttachmentQuery({
+      xmtpMessageId,
+      url,
+      metadata,
+    })
+
+    return (
+      <ConversationAttachmentRemoteImage
+        fitAspectRatio
+        imageUrl={attachment?.mediaURL}
+        error={attachmentError}
+        isLoading={attachmentLoading}
+        {...rest}
+      />
+    )
+  },
+)

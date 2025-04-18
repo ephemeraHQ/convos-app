@@ -5,7 +5,7 @@ import { VStack } from "@design-system/VStack"
 import { memo } from "react"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { AttachmentRemoteImage } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-remote-image"
+import { ConversationAttachmentRemoteImageSmart } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-remote-image"
 import {
   BubbleContainer,
   BubbleContentContainer,
@@ -98,10 +98,8 @@ const MessageReplyContent = memo(function MessageReplyContent(props: {
           marginBottom: theme.spacing.xxxs,
         }}
       >
-        <AttachmentRemoteImage
-          fitAspectRatio
+        <ConversationAttachmentRemoteImageSmart
           xmtpMessageId={replyMessageContent.reference}
-          remoteMessageContent={replyMessageContent.content}
           containerProps={{
             style: {
               width: "100%",
@@ -245,11 +243,9 @@ const MessageReplyReferenceContent = memo(function ReplyMessageReferenceMessageC
 
   // Handle remote attachment messages
   if (isRemoteAttachmentMessage(replyMessage)) {
-    const content = replyMessage.content
     return (
-      <AttachmentRemoteImage
+      <ConversationAttachmentRemoteImageSmart
         xmtpMessageId={replyMessage.xmtpId}
-        remoteMessageContent={content}
         containerProps={{ style: attachmentContainerStyle, inverted: fromMe }}
         imageProps={{ style: attachmentImageStyle }}
       />
@@ -308,9 +304,8 @@ const MessageReplyReferenceContent = memo(function ReplyMessageReferenceMessageC
     // Handle remote attachment in the reply
     if (messageContentIsRemoteAttachment(content)) {
       return (
-        <AttachmentRemoteImage
+        <ConversationAttachmentRemoteImageSmart
           xmtpMessageId={replyMessage.xmtpId}
-          remoteMessageContent={content}
           containerProps={{ style: attachmentContainerStyle }}
         />
       )
@@ -360,7 +355,7 @@ const RenderNestedReplyContent = memo(function RenderNestedReplyContent(props: {
   content: IConversationMessageReplyContent
 }) {
   const { content } = props
-  const { theme } = useAppTheme()
+
   const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
 
   const nestedContent = content.content

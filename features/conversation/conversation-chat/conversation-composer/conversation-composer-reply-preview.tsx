@@ -6,7 +6,6 @@ import { AnimatedVStack, VStack } from "@design-system/VStack"
 import { Haptics } from "@utils/haptics"
 import { memo, useCallback, useEffect, useState } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { AttachmentRemoteImage } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-remote-image"
 import {
   isGroupUpdatedMessage,
   isReactionMessage,
@@ -28,10 +27,10 @@ import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { ConversationAttachmentRemoteImageSmart } from "../conversation-attachment/conversation-attachment-remote-image"
 import { ensureConversationMessageQueryData } from "../conversation-message/conversation-message.query"
 import {
   IConversationMessage,
-  IConversationMessageRemoteAttachment,
   IConversationMessageReply,
   IConversationMessageStaticAttachment,
 } from "../conversation-message/conversation-message.types"
@@ -183,9 +182,8 @@ const ReplyPreviewEndContent = memo(function ReplyPreviewEndContent(props: {
 
     if (messageContentIsRemoteAttachment(content.content)) {
       return (
-        <AttachmentRemoteImage
+        <ConversationAttachmentRemoteImageSmart
           xmtpMessageId={content.reference as IXmtpMessageId}
-          remoteMessageContent={content.content}
           containerProps={{
             style: {
               height: theme.avatarSize.md,
@@ -199,18 +197,9 @@ const ReplyPreviewEndContent = memo(function ReplyPreviewEndContent(props: {
   }
 
   if (isRemoteAttachmentMessage(replyMessage)) {
-    const messageTyped = replyMessage as IConversationMessageRemoteAttachment
-
-    const content = messageTyped.content
-
-    if (typeof content === "string") {
-      return null
-    }
-
     return (
-      <AttachmentRemoteImage
-        xmtpMessageId={messageTyped.xmtpId}
-        remoteMessageContent={content}
+      <ConversationAttachmentRemoteImageSmart
+        xmtpMessageId={replyMessage.xmtpId}
         containerProps={{
           style: {
             height: theme.avatarSize.md,

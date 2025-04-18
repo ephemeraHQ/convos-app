@@ -1,6 +1,5 @@
 import { memo, useCallback, useMemo } from "react"
 import { Modal, Platform, StyleSheet } from "react-native"
-import Animated from "react-native-reanimated"
 import { useDropdownMenuCustomStyles } from "@/design-system/dropdown-menu/dropdown-menu-custom"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -153,7 +152,7 @@ const Content = memo(function Content(props: {
         animationType="fade"
         statusBarTranslucent={Platform.OS === "android"}
       >
-        <Animated.View style={StyleSheet.absoluteFill}>
+        <AnimatedVStack style={StyleSheet.absoluteFill}>
           <MessageContextMenuBackdrop handlePressBackdrop={handlePressBackdrop}>
             <AnimatedVStack style={StyleSheet.absoluteFill}>
               {!!reactions && <MessageContextMenuReactors reactors={reactions.bySender} />}
@@ -199,7 +198,7 @@ const Content = memo(function Content(props: {
               </MessageContextMenuContainer>
             </AnimatedVStack>
           </MessageContextMenuBackdrop>
-        </Animated.View>
+        </AnimatedVStack>
       </Modal>
       <MessageContextMenuEmojiPicker onSelectReaction={handleSelectReaction} />
     </>

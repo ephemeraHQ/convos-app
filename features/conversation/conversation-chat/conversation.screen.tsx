@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import React, { memo, useEffect } from "react"
+import { GlobalMediaViewerPortal } from "@/components/global-media-viewer/global-media-viewer"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
@@ -12,7 +13,6 @@ import { ConversationKeyboardFiller } from "@/features/conversation/conversation
 import { ConversationMessageContextMenu } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu"
 import { ConversationMessageContextMenuStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.store-context"
 import { MessageReactionsDrawer } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions/conversation-message-reaction-drawer/conversation-message-reaction-drawer"
-import { MediaViewerHost } from "@/features/conversation/conversation-chat/conversation-media-viewer/global-media-viewer"
 import { useConversationScreenHeader } from "@/features/conversation/conversation-chat/conversation.screen-header"
 import { ConversationCreateListResults } from "@/features/conversation/conversation-create/conversation-create-list-results"
 import { ConversationCreateSearchInput } from "@/features/conversation/conversation-create/conversation-create-search-input"
@@ -50,7 +50,7 @@ export const ConversationScreen = memo(function ConversationScreen(
           </ConversationComposerStoreProvider>
         </ConversationMessageContextMenuStoreProvider>
       </ConversationStoreProvider>
-      <MediaViewerHost />
+      <GlobalMediaViewerPortal />
     </Screen>
   )
 })
