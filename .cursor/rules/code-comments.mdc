@@ -5,13 +5,7 @@ alwaysApply: true
 ---
 The following contains rules about how to write comments in our codebase. Each rule is followed by a small example showing good and bad practices.
 
-- Keep comments minimal and focused on complex logic only.
-
-```typescript
-// Only add a comment here because this is non-obvious:
-const reversedId = id.split("").reverse().join("") // Reversed for legacy compatibility
-```
-
+- Add VERY minimal comments. Like almost 0 except if i tell you to do so.
 - Don't add comments for obvious code or document parameters and return types that are already clear from the function signature.
 
 ```typescript
@@ -28,13 +22,6 @@ function add(args: { a: number; b: number }) {
   const { a, b } = args
   return a + b
 }
-```
-
-- Add clear, concise comments to explain non-obvious logic or implementation decisions.
-
-```typescript
-// We're using this approach instead of the API call because it's more reliable
-const exists = await db.query("SELECT EXISTS...")
 ```
 
 - Use comments to explain "why" rather than "what" when the code itself clearly shows what it's doing.
@@ -69,7 +56,7 @@ async function getUser(args: { userId: string }) {
 }
 ```
 
-- Place comments directly above the specific line or block they explain.
+- If you add comments, place them directly above the specific line or block they explain.
 
 ```typescript
 // ❌ Bad

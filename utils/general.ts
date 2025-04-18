@@ -17,3 +17,7 @@ export function chunk<T>(array: T[], size: number): T[][] {
 export function hasProperty<T>(obj: unknown, prop: KeyOf<T>): obj is T {
   return !!obj && typeof obj === "object" && prop in obj
 }
+
+export function getFirstDefined<T>(values: (T | undefined | null)[]): T | null | undefined {
+  return values.find((value) => value !== undefined)
+}

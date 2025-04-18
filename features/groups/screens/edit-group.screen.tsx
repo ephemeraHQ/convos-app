@@ -15,14 +15,14 @@ import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useUpdateGroup } from "@/features/groups/mutations/update-group.mutation"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
-import { useAddPfp } from "@/hooks/use-add-pfp"
+import { useAddOrRemovePfp } from "@/hooks/use-add-pfp"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
 import { useRouteParams, useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
-import { GenericError } from "@/utils/error"
+import { GenericError, UserCancelledError } from "@/utils/error"
 
 export const EditGroupScreen = memo(function EditGroupScreen(
   props: NativeStackScreenProps<NavigationParamList, "EditGroup">,
@@ -138,14 +138,33 @@ export const EditGroupScreen = memo(function EditGroupScreen(
 const GroupAvatarEditor = memo(function GroupAvatarEditor() {
   const { theme } = useAppTheme()
   const { xmtpConversationId } = useRouteParams<"EditGroup">()
+  const currentSender = useSafeCurrentSender()
 
-  const { addPFP, asset } = useAddPfp()
+  const imageUrl = useEditGroupStore((state) => state.imageUrl)
+
+  const { data: group } = useGroupQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+  })
+
+  // Pass arguments to useAddPfp hook
+  const { addPFP, asset, reset } = useAddOrRemovePfp({
+    currentImageUri: imageUrl || group?.imageUrl,
+    onRemove: () => {
+      reset()
+      useEditGroupStore.getState().actions.imageUrl(null)
+    },
+  })
 
   const handleAvatarPress = useCallback(async () => {
     try {
+      // No arguments needed since they're passed to the hook
       const url = await addPFP()
       useEditGroupStore.getState().actions.imageUrl(url)
     } catch (error) {
+      if (error instanceof UserCancelledError) {
+        return // Ignore cancel errors
+      }
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error adding group avatar" }),
       )
@@ -217,13 +236,13 @@ const GroupDescriptionCharacterCounter = memo(function GroupDescriptionCharacter
 type IEditGroupState = {
   name?: string
   description?: string
-  imageUrl?: string
+  imageUrl?: string | null
 }
 
 type IEditGroupActions = {
   setName: (name: string) => void
   setDescription: (description: string) => void
-  imageUrl: (imageUrl: string) => void
+  imageUrl: (imageUrl: string | null) => void
   reset: () => void
 }
 

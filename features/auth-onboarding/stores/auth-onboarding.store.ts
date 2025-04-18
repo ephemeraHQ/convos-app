@@ -25,7 +25,7 @@ type IAuthOnboardingActions = {
   setName: (name: string) => void
   setUsername: (username: string) => void
   setNameValidationError: (nameValidationError: string) => void
-  setAvatar: (avatar: string) => void
+  setAvatar: (avatar: string | null) => void
   setIsAvatarUploading: (isUploading: boolean) => void
 }
 
@@ -61,7 +61,7 @@ export const useAuthOnboardingStore = create<IAuthOnboardingStore>((set) => ({
       })),
     setUsername: (username: string) => set({ username }),
     setNameValidationError: (nameValidationError: string) => set({ nameValidationError }),
-    setAvatar: (avatar: string) => set({ avatar }),
+    setAvatar: (avatar: string | null) => set({ avatar }),
     setIsAvatarUploading: (isAvatarUploading: boolean) => set({ isAvatarUploading }),
     reset: () => set(initialState),
   },

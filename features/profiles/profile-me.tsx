@@ -17,12 +17,13 @@ import { ProfileSocialsNames } from "@/features/profiles/components/profile-soci
 import { useProfileMeScreenHeader } from "@/features/profiles/profile-me.screen-header"
 import { useProfileMeStore, useProfileMeStoreValue } from "@/features/profiles/profile-me.store"
 import { useProfileQuery } from "@/features/profiles/profiles.query"
-import { useAddPfp } from "@/hooks/use-add-pfp"
+import { useAddOrRemovePfp } from "@/hooks/use-add-pfp"
 import { translate } from "@/i18n"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError, UserCancelledError } from "@/utils/error"
+import { getFirstDefined } from "@/utils/general"
 import { useCurrentSender } from "../authentication/multi-inbox.store"
 
 export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
@@ -253,13 +254,24 @@ const EditableProfileContactCardAvatar = memo(function EditableProfileContactCar
 }: {
   inboxId: IXmtpInboxId
 }) {
-  const { addPFP, asset, isUploading } = useAddPfp()
   const profileMeStore = useProfileMeStore(inboxId)
   const { data: profile } = useProfileQuery({ xmtpId: inboxId, caller: "ProfileMe" })
   const storeAvatar = useProfileMeStoreValue(inboxId, (state) => state.avatarUri)
 
-  // Priority: local asset (during upload) > store avatar > profile avatar
-  const avatarUri = asset?.uri || storeAvatar || profile?.avatar
+  // Get current avatar URI to pass to the hook
+  const currentAvatarUri = getFirstDefined([storeAvatar, profile?.avatar])
+
+  // Use the hook with arguments
+  const { addPFP, asset, isUploading, reset } = useAddOrRemovePfp({
+    currentImageUri: currentAvatarUri,
+    onRemove: () => {
+      reset()
+      profileMeStore.getState().actions.setAvatarUri(null)
+    },
+  })
+
+  // Priority for display: local asset (during upload) > store avatar > profile avatar
+  const avatarUri = getFirstDefined([asset?.uri, storeAvatar, profile?.avatar])
 
   useEffect(() => {
     profileMeStore.getState().actions.setIsAvatarUploading(isUploading)

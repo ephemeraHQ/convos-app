@@ -138,14 +138,14 @@ const DoneAction = memo(function DoneAction({ inboxId }: { inboxId: IXmtpInboxId
       avatar: state.avatarUri,
     }
 
+    // Reset store immediately since we expect success most of the time
+    profileMeStore.getState().actions.reset()
+
     try {
-      // Use the saveProfile function from the hook
       await saveProfile({
         profileUpdates: profileUpdate,
         inboxId,
       })
-
-      profileMeStore.getState().actions.reset()
     } catch (error) {
       const apiError = new ConvosApiError({
         error,

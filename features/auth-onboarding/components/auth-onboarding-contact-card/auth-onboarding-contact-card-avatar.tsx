@@ -1,13 +1,22 @@
 import React, { memo, useCallback, useEffect } from "react"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { ProfileContactCardEditableAvatar } from "@/features/profiles/components/profile-contact-card/profile-contact-card-editable-avatar"
-import { useAddPfp } from "@/hooks/use-add-pfp"
+import { useAddOrRemovePfp } from "@/hooks/use-add-pfp"
+import { captureErrorWithToast } from "@/utils/capture-error"
+import { GenericError, UserCancelledError } from "@/utils/error"
 
 export const AuthOnboardingContactCardAvatar = memo(function AuthOnboardingContactCardAvatar() {
-  const { addPFP, asset, isUploading } = useAddPfp()
-
   const name = useAuthOnboardingStore((state) => state.name)
   const avatar = useAuthOnboardingStore((state) => state.avatar)
+
+  // Pass arguments to useAddPfp hook
+  const { addPFP, asset, isUploading, reset } = useAddOrRemovePfp({
+    currentImageUri: avatar,
+    onRemove: () => {
+      reset()
+      useAuthOnboardingStore.getState().actions.setAvatar("")
+    },
+  })
 
   // Update upload status in the store
   useEffect(() => {
@@ -15,9 +24,17 @@ export const AuthOnboardingContactCardAvatar = memo(function AuthOnboardingConta
   }, [isUploading])
 
   const addAvatar = useCallback(async () => {
-    const url = await addPFP()
-    if (url) {
-      useAuthOnboardingStore.getState().actions.setAvatar(url)
+    try {
+      // No arguments needed since they're passed to the hook
+      const url = await addPFP()
+      if (url) {
+        useAuthOnboardingStore.getState().actions.setAvatar(url)
+      }
+    } catch (error) {
+      if (error instanceof UserCancelledError) {
+        return // Ignore cancel errors
+      }
+      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error adding avatar" }))
     }
   }, [addPFP])
 

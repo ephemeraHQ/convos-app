@@ -17,6 +17,11 @@ import { logger } from "@/utils/logger/logger"
 
 type ImageSource = "camera" | "library"
 
+type ActionSheetOption = {
+  label: string
+  onPress?: () => void
+}
+
 /**
  * Uploads an image asset to the server
  * Handles compression, getting presigned URL, and uploading
@@ -57,7 +62,11 @@ async function uploadImage(imageAsset: ImagePickerAsset): Promise<string> {
   return publicUrl
 }
 
-export function useAddPfp() {
+export function useAddOrRemovePfp(args?: {
+  currentImageUri?: string | null
+  onRemove?: () => void
+}) {
+  const { currentImageUri, onRemove } = args ?? {}
   const [asset, setAsset] = useState<ImagePickerAsset>()
 
   const {
@@ -73,68 +82,106 @@ export function useAddPfp() {
    * Shows an action sheet and lets the user pick a profile picture
    * Returns a promise that resolves with the uploaded image URL
    */
-  const addPFP = useCallback(() => {
-    return new Promise<string>((resolve, reject) => {
-      const showOptions = () => {
-        showActionSheet({
-          options: {
-            options: [
-              translate("userProfile.mediaOptions.takePhoto"),
-              translate("userProfile.mediaOptions.chooseFromLibrary"),
-              translate("userProfile.mediaOptions.cancel"),
-            ],
-            cancelButtonIndex: 2,
-          },
-          callback: async (selectedIndex?: number) => {
-            try {
-              let source: ImageSource | undefined
+  const addPFP = useCallback(
+    () => {
+      return new Promise<string>((resolve, reject) => {
+        const showOptions = () => {
+          const defaultOptions: ActionSheetOption[] = [
+            { label: translate("userProfile.mediaOptions.takePhoto") },
+            { label: translate("userProfile.mediaOptions.chooseFromLibrary") },
+          ]
 
-              switch (selectedIndex) {
-                case 0:
+          // Check if we have either imageUri or asset.uri to determine if we should show remove option
+          const hasImage = Boolean(currentImageUri) || Boolean(asset?.uri)
+          const removeOption: ActionSheetOption | undefined =
+            hasImage && onRemove ? { label: translate("Remove"), onPress: onRemove } : undefined
+
+          // Combine all options: default, dynamic remove, and cancel
+          const allOptionItems: ActionSheetOption[] = [
+            ...defaultOptions,
+            ...(removeOption ? [removeOption] : []),
+          ]
+
+          const allOptionsLabels = [
+            ...allOptionItems.map((o) => o.label),
+            translate("userProfile.mediaOptions.cancel"), // Add cancel label
+          ]
+
+          showActionSheet({
+            options: {
+              options: allOptionsLabels,
+              cancelButtonIndex: allOptionsLabels.length - 1,
+            },
+            callback: async (selectedIndex?: number) => {
+              if (selectedIndex === undefined || selectedIndex === allOptionsLabels.length - 1) {
+                // User cancelled
+                reject(new UserCancelledError({ error: "Action sheet cancelled" }))
+                return
+              }
+
+              try {
+                let source: ImageSource | undefined
+                const selectedOptionItem = allOptionItems[selectedIndex]
+
+                // Handle default options
+                if (selectedIndex === 0) {
                   source = "camera"
-                  break
-                case 1:
+                } else if (selectedIndex === 1) {
                   source = "library"
-                  break
-                default:
-                  // User canceled
+                } else {
+                  // Handle dynamic remove option
+                  if (selectedOptionItem?.onPress) {
+                    selectedOptionItem.onPress()
+                    // Indicate that an action was taken but no image is being uploaded
+                    // Rejecting here prevents the calling code from expecting a URL
+                    reject(new UserCancelledError({ error: "Custom action selected" }))
+                    return
+                  } else {
+                    // Should not happen if options are structured correctly
+                    reject(new Error("Invalid option selected: No onPress handler"))
+                    return
+                  }
+                }
+
+                if (!source) {
+                  // Should not happen if logic above is correct
+                  reject(new Error("No source selected"))
                   return
+                }
+
+                const options: ImagePickerOptions = {
+                  allowsEditing: true,
+                  aspect: [1, 1],
+                }
+
+                // Get image from selected source
+                const pickedAsset =
+                  source === "camera"
+                    ? await takePictureFromCamera(options)
+                    : await pickSingleMediaFromLibrary(options)
+
+                if (!pickedAsset) {
+                  reject(new UserCancelledError({ error: "No image selected" }))
+                  return
+                }
+
+                // Update state and upload
+                setAsset(pickedAsset)
+                const uploadedUrl = await uploadImageAsync(pickedAsset)
+                resolve(uploadedUrl)
+              } catch (error) {
+                // Reject with the caught error (could be UserCancelledError or upload error)
+                reject(error)
               }
+            },
+          })
+        }
 
-              if (!source) {
-                return
-              }
-
-              const options: ImagePickerOptions = {
-                allowsEditing: true,
-                aspect: [1, 1],
-              }
-
-              // Get image from selected source
-              const pickedAsset =
-                source === "camera"
-                  ? await takePictureFromCamera(options)
-                  : await pickSingleMediaFromLibrary(options)
-
-              if (!pickedAsset) {
-                reject(new UserCancelledError({ error: "No image selected" }))
-                return
-              }
-
-              // Update state and upload
-              setAsset(pickedAsset)
-              const uploadedUrl = await uploadImageAsync(pickedAsset)
-              resolve(uploadedUrl)
-            } catch (error) {
-              reject(error)
-            }
-          },
-        })
-      }
-
-      executeAfterKeyboardClosed(showOptions)
-    })
-  }, [uploadImageAsync])
+        executeAfterKeyboardClosed(showOptions)
+      })
+    },
+    [uploadImageAsync, currentImageUri, onRemove, asset], // Add asset to dependencies to check for its existence
+  )
 
   const reset = () => {
     setAsset(undefined)

@@ -371,7 +371,7 @@ export default () => {
       [
         "@sentry/react-native/expo",
         {
-          organization: "converse",
+          organization: "ephemera",
           project: "convos-app-react-native",
           url: "https://sentry.io/",
         },

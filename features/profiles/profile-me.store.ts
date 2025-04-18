@@ -8,7 +8,7 @@ type IProfileMeStoreState = {
   nameTextValue: string | undefined
   usernameTextValue: string | undefined
   descriptionTextValue: string | undefined
-  avatarUri?: string
+  avatarUri: string | undefined | null
   isAvatarUploading: boolean
 }
 
@@ -17,7 +17,7 @@ type IProfileMeStoreActions = {
   setNameTextValue: (nameTextValue: string) => void
   setUsernameTextValue: (usernameTextValue: string) => void
   setDescriptionTextValue: (descriptionTextValue: string) => void
-  setAvatarUri: (avatarUri?: string) => void
+  setAvatarUri: (avatarUri?: string | null) => void
   setIsAvatarUploading: (isUploading: boolean) => void
   reset: () => void
 }

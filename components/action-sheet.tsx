@@ -1,15 +1,20 @@
-import { ActionSheetOptions, useActionSheet } from "@expo/react-native-action-sheet"
+import {
+  ActionSheetOptions as ExpoActionSheetOptions,
+  useActionSheet as useExpoActionSheet,
+} from "@expo/react-native-action-sheet"
 import { useEffect } from "react"
 import { create } from "zustand"
+
+export type IActionSheetOptions = ExpoActionSheetOptions
 
 type ActionSheetCallback = (index?: number) => void | Promise<void>
 
 type IActionSheetState = {
   isShown: boolean
-  options: ActionSheetOptions | null
+  options: IActionSheetOptions | null
   callback: ActionSheetCallback | null
   actions: {
-    showActionSheet: (options: ActionSheetOptions, callback: ActionSheetCallback) => void
+    showActionSheet: (options: IActionSheetOptions, callback: ActionSheetCallback) => void
     hideActionSheet: () => void
   }
 }
@@ -45,7 +50,7 @@ const useActionSheetStore = create<IActionSheetState>((set) => ({
 }))
 
 export function ActionSheet() {
-  const { showActionSheetWithOptions } = useActionSheet()
+  const { showActionSheetWithOptions } = useExpoActionSheet()
   const { isShown, options, callback, actions } = useActionSheetStore()
 
   useEffect(() => {
@@ -61,7 +66,7 @@ export function ActionSheet() {
 }
 
 export function showActionSheet(args: {
-  options: ActionSheetOptions
+  options: IActionSheetOptions
   callback: ActionSheetCallback
 }) {
   useActionSheetStore.getState().actions.showActionSheet(args.options, args.callback)
