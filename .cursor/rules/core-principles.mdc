@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains core principles for writing code in our codebase. Each principle is followed by a small example showing good and bad practices.
+The following contains core principles for writing code in our codebase. Each principle is followed by a small example showing good and bad practices.
 
 - Write concise TypeScript code.
 

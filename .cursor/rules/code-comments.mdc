@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains rules about how to write comments in our codebase. Each rule is followed by a small example showing good and bad practices.
+The following contains rules about how to write comments in our codebase. Each rule is followed by a small example showing good and bad practices.
 
 - Keep comments minimal and focused on complex logic only.
 

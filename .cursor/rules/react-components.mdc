@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains rules about React components in our codebase. Each rule is followed by a small example showing good and bad practices.
+The following contains rules about React components in our codebase. Each rule is followed by a small example showing good and bad practices.
 
 - Prefer early returns over ternaries.
 

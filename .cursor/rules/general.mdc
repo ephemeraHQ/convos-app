@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains core principles for writing code in our codebase. Each principle is followed by a small example showing good and bad practices.
+The following contains core principles for writing code in our codebase. Each principle is followed by a small example showing good and bad practices.
 
 - This codebase uses React Native - follow all React Native best practices.
 - This project is a Chat app that uses the XMTP messaging protocol.

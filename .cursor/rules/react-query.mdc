@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains rules about using React Query in. Each rule is followed by a small example showing good and bad practices.
+The following contains rules about using React Query in. Each rule is followed by a small example showing good and bad practices.
 
 - Always reuse the queryOptions function instead of defining queries inline.
 

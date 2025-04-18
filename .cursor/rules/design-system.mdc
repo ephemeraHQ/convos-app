@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains rules about using our design system components. Each rule is followed by a small example showing good and bad practices.
+The following contains rules about using our design system components. Each rule is followed by a small example showing good and bad practices.
 
 - Use design system components instead of native components whenever possible.
 

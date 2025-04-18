@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains rules about styling components in our codebase. Each rule is followed by a small example showing good and bad practices.
+The following contains rules about styling components in our codebase. Each rule is followed by a small example showing good and bad practices.
 
 - It's okay to put inline style in the "style" props of a component. Only extract styles when it's starting to get chaotic.
 

@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains core principles for writing code in our codebase. Each principle is followed by a small example showing good and bad practices.
+The following contains core principles for writing code in our codebase. Each principle is followed by a small example showing good and bad practices.
 
 - Never assume the existence of functions, components, or features in third-party libraries.
 - Always verify API usage in the official documentation for the major version being used in [package.json](mdc:package.json)

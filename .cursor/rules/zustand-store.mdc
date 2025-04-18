@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
- # Zustand Store Best Practices
+The following contains rules about how we use Zustand in our codebase. Each rule is followed by a small example showing good and bad practices.
 
 - Use Zustand stores to centralize state, especially when we're starting to pass many props/arguments between components/functions/hooks/etc
 - Structure stores with a clear separation between state and actions.

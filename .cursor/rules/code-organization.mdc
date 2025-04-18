@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-This file contains rules about code organization within files in our codebase. Each rule is followed by a small example showing good and bad practices.
+The following contains rules about code organization within files in our codebase. Each rule is followed by a small example showing good and bad practices.
 
 - Place exported functions, components, and variables at the top of the file.
 
