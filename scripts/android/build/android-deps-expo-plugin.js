@@ -27,9 +27,6 @@ const setBouncyCastleVersion = (src) => {
         if (details.requested.name == 'bcprov-jdk15on') {
             details.useTarget group: details.requested.group, name: 'bcprov-jdk15to18', version: '1.78.1'
         }
-        if (details.requested.name == 'lifecycle-viewmodel-ktx') {
-            details.useTarget group: details.requested.group, name: 'lifecycle-viewmodel-ktx', version: '2.5.0'
-        }
     }
   }
   `
