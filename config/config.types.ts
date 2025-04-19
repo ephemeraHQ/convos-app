@@ -8,6 +8,7 @@ export type IConfig = {
   loggerLevel: LogLevel
   reactQueryPersistCacheIsEnabled: boolean
   debugMenu: boolean
+  debugEthAddresses: string[]
   app: {
     name: string
     version: string

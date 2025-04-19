@@ -1,8 +1,8 @@
 import { useNavigation } from "@react-navigation/native"
 import React, { useCallback } from "react"
-import { Alert } from "react-native"
 import { ViewStyle } from "react-native/Libraries/StyleSheet/StyleSheetTypes"
 import { Avatar } from "@/components/avatar"
+import { config } from "@/config"
 import { Center } from "@/design-system/Center"
 import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
 import { HStack } from "@/design-system/HStack"
@@ -16,19 +16,25 @@ import {
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { translate } from "@/i18n"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { shortAddress } from "@/utils/strings/shortAddress"
+
+function currentUserIsDebugUser() {
+  const senders = useMultiInboxStore.getState().senders
+  return senders.some((sender) => config.debugEthAddresses.includes(sender.ethereumAddress))
+}
 
 export function AccountSwitcher(props: { noAvatar?: boolean }) {
   const { noAvatar } = props
 
   const { theme, themed } = useAppTheme()
   const navigation = useNavigation()
-  const currentAccountInboxId = useSafeCurrentSender().inboxId
+  const currentSender = useSafeCurrentSender()
+  const currentAccountInboxId = currentSender.inboxId
   const { displayName } = usePreferredDisplayInfo({
     inboxId: currentAccountInboxId,
   })
+  const isDebugAddress = currentUserIsDebugUser()
 
   const senders = useMultiInboxStore((state) => state.senders)
   const preferredSendersDisplayInfos = usePreferredDisplayInfoBatch({
@@ -37,11 +43,7 @@ export function AccountSwitcher(props: { noAvatar?: boolean }) {
 
   const onDropdownPress = useCallback(
     (profileXmtpInboxId: string) => {
-      if (profileXmtpInboxId === "all-chats") {
-        Alert.alert("Coming soon")
-      } else if (profileXmtpInboxId === "new-account") {
-        alert("Under Construction - waiting on Privy for multiple embedded passkey support")
-      } else if (profileXmtpInboxId === "app-settings") {
+      if (profileXmtpInboxId === "app-settings") {
         navigation.navigate("AppSettings")
       } else {
         useMultiInboxStore.getState().actions.setCurrentSender({
@@ -51,6 +53,25 @@ export function AccountSwitcher(props: { noAvatar?: boolean }) {
     },
     [navigation],
   )
+
+  const navigateToProfile = useCallback(() => {
+    navigation.navigate("Profile", {
+      inboxId: currentAccountInboxId,
+    })
+  }, [navigation, currentAccountInboxId])
+
+  if (!isDebugAddress) {
+    return (
+      <HStack style={themed($titleContainer)}>
+        {!noAvatar && <ProfileAvatar />}
+        <Pressable onPress={navigateToProfile} hitSlop={theme.spacing.sm}>
+          <HStack style={themed($rowContainer)}>
+            <Text>{displayName}</Text>
+          </HStack>
+        </Pressable>
+      </HStack>
+    )
+  }
 
   return (
     <HStack style={themed($titleContainer)}>
@@ -66,14 +87,8 @@ export function AccountSwitcher(props: { noAvatar?: boolean }) {
           })),
           {
             displayInline: true,
-            id: "new-account",
-            title: translate("new_account") || "New Account",
-            image: iconRegistry["new-account-card"],
-          },
-          {
-            displayInline: true,
             id: "app-settings",
-            title: translate("app_settings") || "App Settings",
+            title: "Internal tools",
             image: iconRegistry["settings"],
           },
         ]}
