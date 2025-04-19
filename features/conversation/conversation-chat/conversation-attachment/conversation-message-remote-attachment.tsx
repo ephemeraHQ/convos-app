@@ -36,12 +36,14 @@ export const ConversationMessageRemoteAttachment = memo(
     })
 
     const handleTap = useCallback(() => {
-      useGlobalMediaViewerStore.getState().actions.openGlobalMediaViewer({
-        uri: url,
-        sender: displayName,
-        timestamp: message.sentMs,
-      })
-    }, [url, displayName, message.sentMs])
+      if (attachment?.mediaURL) {
+        useGlobalMediaViewerStore.getState().actions.openGlobalMediaViewer({
+          uri: attachment?.mediaURL,
+          sender: displayName,
+          timestamp: message.sentMs,
+        })
+      }
+    }, [attachment?.mediaURL, displayName, message.sentMs])
 
     return (
       <VStack

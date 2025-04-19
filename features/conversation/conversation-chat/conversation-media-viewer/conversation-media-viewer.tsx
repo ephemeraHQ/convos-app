@@ -5,7 +5,7 @@ import { GestureDetector } from "react-native-gesture-handler"
 import { Easing, runOnJS, useSharedValue, withTiming } from "react-native-reanimated"
 // Import from our separated files
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
-import { AnimatedHStack, HStack } from "@/design-system/HStack"
+import { AnimatedHStack } from "@/design-system/HStack"
 import { Text } from "@/design-system/Text"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { useAppTheme } from "@/theme/use-app-theme"

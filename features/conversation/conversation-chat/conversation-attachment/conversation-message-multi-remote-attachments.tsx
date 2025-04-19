@@ -75,15 +75,17 @@ const SingleAttachmentDisplay = memo(function SingleAttachmentDisplay({
   })
 
   const handleTap = useCallback(() => {
-    useGlobalMediaViewerStore.getState().actions.openGlobalMediaViewer({
-      uri: url,
-      sender: displayName,
-      timestamp: sentMs,
-    })
-  }, [url, displayName, sentMs])
+    if (attachment?.mediaURL) {
+      useGlobalMediaViewerStore.getState().actions.openGlobalMediaViewer({
+        uri: attachment?.mediaURL,
+        sender: displayName,
+        timestamp: sentMs,
+      })
+    }
+  }, [attachment?.mediaURL, displayName, sentMs])
 
   return (
-    <ConversationMessageGestures key={url} onTap={handleTap}>
+    <ConversationMessageGestures onTap={handleTap}>
       <ConversationAttachmentRemoteImage
         imageUrl={attachment?.mediaURL}
         fitAspectRatio
