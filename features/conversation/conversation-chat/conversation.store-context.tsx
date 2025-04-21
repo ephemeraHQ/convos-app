@@ -38,7 +38,7 @@ export const ConversationStoreProvider = memo(
 
     // Check searchSelectedUserInboxIds and update the xmtpConversationId if we can find a conversation with those inboxIds
     useEffect(() => {
-      storeRef.current?.subscribe(async (nextState, previousState) => {
+      const unsubscribe = storeRef.current?.subscribe(async (nextState, previousState) => {
         try {
           if (
             !nextState.searchSelectedUserInboxIds ||
@@ -62,6 +62,8 @@ export const ConversationStoreProvider = memo(
           captureError(new GenericError({ error, additionalMessage: "Error finding conversation" }))
         }
       })
+
+      return unsubscribe
     }, [])
 
     return (

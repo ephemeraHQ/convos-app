@@ -307,60 +307,64 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
   }
 }
 
-export async function clearNotificationsForConversation(args: {
-  xmtpConversationId: IXmtpConversationId
-}) {
-  try {
-    notificationsLogger.debug("Clearing notifications for conversation:", args.xmtpConversationId)
+// export async function clearNotificationsForConversation(args: {
+//   xmtpConversationId: IXmtpConversationId
+// }) {
+//   try {
+//     notificationsLogger.debug("Clearing notifications for conversation:", args.xmtpConversationId)
 
-    // Get all current notifications
-    const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
+//     // Get all current notifications
+//     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
 
-    if (presentedNotifications.length === 0) {
-      notificationsLogger.debug("No notifications to clear")
-      return
-    }
+//     console.log("presentedNotifications.length:", presentedNotifications.length)
 
-    // Find notifications related to this conversation
-    const notificationsToRemove = presentedNotifications.filter((notification) => {
-      // Check if notification has data and message
-      const data = notification.request.content.data as
-        | INotificationMessageDataConverted
-        | undefined
+//     if (presentedNotifications.length === 0) {
+//       notificationsLogger.debug("No notifications to clear")
+//       return
+//     }
 
-      if (!data || !data.message) {
-        return false
-      }
+//     return
 
-      // Check if the message's conversation ID matches
-      return data.message.xmtpConversationId === args.xmtpConversationId
-    })
+//     // Find notifications related to this conversation
+//     const notificationsToRemove = presentedNotifications.filter((notification) => {
+//       // Check if notification has data and message
+//       const data = notification.request.content.data as
+//         | INotificationMessageDataConverted
+//         | undefined
 
-    if (notificationsToRemove.length === 0) {
-      notificationsLogger.debug(
-        `No notifications to clear found for conversation ${args.xmtpConversationId}`,
-      )
-      return
-    }
+//       if (!data || !data.message) {
+//         return false
+//       }
 
-    notificationsLogger.debug(
-      `Found ${notificationsToRemove.length} notifications to clear for conversation ${args.xmtpConversationId}`,
-    )
+//       // Check if the message's conversation ID matches
+//       return data.message.xmtpConversationId === args.xmtpConversationId
+//     })
 
-    // Dismiss each notification
-    await Promise.all(
-      notificationsToRemove.map((notification) =>
-        Notifications.dismissNotificationAsync(notification.request.identifier),
-      ),
-    )
+//     if (notificationsToRemove.length === 0) {
+//       notificationsLogger.debug(
+//         `No notifications to clear found for conversation ${args.xmtpConversationId}`,
+//       )
+//       return
+//     }
 
-    notificationsLogger.debug(
-      `Successfully cleared ${notificationsToRemove.length} notifications for conversation ${args.xmtpConversationId}`,
-    )
-  } catch (error) {
-    throw new NotificationError({
-      error,
-      additionalMessage: `Failed to clear notifications for conversation ${args.xmtpConversationId}`,
-    })
-  }
-}
+//     notificationsLogger.debug(
+//       `Found ${notificationsToRemove.length} notifications to clear for conversation ${args.xmtpConversationId}`,
+//     )
+
+//     // Dismiss each notification
+//     await Promise.all(
+//       notificationsToRemove.map((notification) =>
+//         Notifications.dismissNotificationAsync(notification.request.identifier),
+//       ),
+//     )
+
+//     notificationsLogger.debug(
+//       `Successfully cleared ${notificationsToRemove.length} notifications for conversation ${args.xmtpConversationId}`,
+//     )
+//   } catch (error) {
+//     throw new NotificationError({
+//       error,
+//       additionalMessage: `Failed to clear notifications for conversation ${args.xmtpConversationId}`,
+//     })
+//   }
+// }

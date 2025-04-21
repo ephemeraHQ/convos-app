@@ -150,6 +150,8 @@ async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   const store = useStreamingStore.getState()
   const isSignedIn = useAuthenticationStore.getState().status === "signedIn"
 
+  return
+
   if (!isSignedIn) {
     return
   }

@@ -108,7 +108,7 @@ export const AppNavigator = memo(function AppNavigator() {
         linking={linking}
         ref={navigationRef}
       >
-        <DeepLinkHandler />
+        {/* <DeepLinkHandler /> */}
         <AppStacks />
       </NavigationContainer>
     </ThemeProvider>

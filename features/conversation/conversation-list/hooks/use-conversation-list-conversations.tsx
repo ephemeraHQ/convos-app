@@ -23,11 +23,11 @@ export const useConversationListConversations = () => {
     caller: "useConversationListConversations",
   })
 
-  const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
-    conversationIds,
-  })
+  // const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
+  //   conversationIds,
+  // })
 
-  const lastMessageIds = Object.values(lastMessageIdForConversationMap).filter(Boolean)
+  const lastMessageIds = [] //Object.values(lastMessageIdForConversationMap).filter(Boolean)
 
   const lastMessageQueries = useQueries({
     queries: lastMessageIds.map((messageId) => ({
@@ -49,67 +49,67 @@ export const useConversationListConversations = () => {
   })
 
   // Single pass to process conversations
-  const validConversationIds = conversationIds.reduce(
-    (acc, conversationId, index) => {
-      const conversationMetadataQuery = conversationMetadataQueries[index]
-      const conversation = getConversationQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-      })
-      const metadata = conversationMetadataQuery.data
+  // const validConversationIds = conversationIds.reduce(
+  //   (acc, conversationId, index) => {
+  //     const conversationMetadataQuery = conversationMetadataQueries[index]
+  //     const conversation = getConversationQueryData({
+  //       clientInboxId: currentSender.inboxId,
+  //       xmtpConversationId: conversationId,
+  //     })
+  //     const metadata = conversationMetadataQuery.data
 
-      // Skip conversations that don't meet criteria
-      if (
-        !conversation ||
-        !isConversationAllowed(conversation) ||
-        metadata?.pinned ||
-        metadata?.deleted ||
-        (conversationMetadataQuery.isLoading && !conversationMetadataQuery.isFetched)
-      ) {
-        return acc
-      }
+  //     // Skip conversations that don't meet criteria
+  //     if (
+  //       !conversation ||
+  //       !isConversationAllowed(conversation) ||
+  //       metadata?.pinned ||
+  //       metadata?.deleted ||
+  //       (conversationMetadataQuery.isLoading && !conversationMetadataQuery.isFetched)
+  //     ) {
+  //       return acc
+  //     }
 
-      // Get the last message for valid conversations
-      const messageId = lastMessageIdForConversationMap[conversationId]
-      const messageIndex = lastMessageIds.findIndex((id) => id === messageId)
-      const lastMessageQuery = messageIndex >= 0 ? lastMessageQueries[messageIndex] : undefined
-      const lastMessage = lastMessageQuery?.data
-      const timestamp = lastMessage?.sentMs ?? 0
+  //     // Get the last message for valid conversations
+  //     const messageId = lastMessageIdForConversationMap[conversationId]
+  //     const messageIndex = lastMessageIds.findIndex((id) => id === messageId)
+  //     const lastMessageQuery = messageIndex >= 0 ? lastMessageQueries[messageIndex] : undefined
+  //     const lastMessage = lastMessageQuery?.data
+  //     const timestamp = lastMessage?.sentMs ?? 0
 
-      // Add to accumulator with timestamp for sorting
-      acc.push({
-        conversationId,
-        timestamp,
-      })
+  //     // Add to accumulator with timestamp for sorting
+  //     acc.push({
+  //       conversationId,
+  //       timestamp,
+  //     })
 
-      return acc
-    },
-    [] as Array<{ conversationId: IXmtpConversationId; timestamp: number }>,
-  )
+  //     return acc
+  //   },
+  //   [] as Array<{ conversationId: IXmtpConversationId; timestamp: number }>,
+  // )
 
-  // Sort in descending order (newest first)
-  validConversationIds.sort((a, b) => b.timestamp - a.timestamp)
+  // // Sort in descending order (newest first)
+  // validConversationIds.sort((a, b) => b.timestamp - a.timestamp)
 
   // Extract just the conversation IDs for the final result
-  const result = validConversationIds.map((item) => item.conversationId)
+  // const result = validConversationIds.map((item) => item.conversationId)
 
-  const handleRefetch = useCallback(() => {
-    // Refetch all conversations
-    refetchConversations().catch(captureError)
-    // Refetch all metadata for all conversations
-    conversationMetadataQueries.forEach((query) => {
-      query.refetch().catch(captureError)
-    })
-    // Refetch all messages for all conversations
-    for (const conversationId of conversationIds) {
-      refetchInfiniteConversationMessages({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-        caller: "useConversationListConversations",
-      }).catch(captureError)
-    }
-    // eslint-disable-next-line @tanstack/query/no-unstable-deps
-  }, [conversationIds, currentSender.inboxId, conversationMetadataQueries, refetchConversations])
+  // const handleRefetch = useCallback(() => {
+  //   // Refetch all conversations
+  //   refetchConversations().catch(captureError)
+  //   // Refetch all metadata for all conversations
+  //   conversationMetadataQueries.forEach((query) => {
+  //     query.refetch().catch(captureError)
+  //   })
+  //   // Refetch all messages for all conversations
+  //   for (const conversationId of conversationIds) {
+  //     refetchInfiniteConversationMessages({
+  //       clientInboxId: currentSender.inboxId,
+  //       xmtpConversationId: conversationId,
+  //       caller: "useConversationListConversations",
+  //     }).catch(captureError)
+  //   }
+  //   // eslint-disable-next-line @tanstack/query/no-unstable-deps
+  // }, [conversationIds, currentSender.inboxId, conversationMetadataQueries, refetchConversations])
 
   const hasAnyLastMessageLoading = lastMessageQueries.some(
     (query) => query.isLoading && !query.data,
@@ -126,8 +126,8 @@ export const useConversationListConversations = () => {
     hasAnyLastMessageIdLoading
 
   return {
-    data: result,
-    refetch: handleRefetch,
+    data: [],
+    refetch: () => {},
     isLoading,
   }
 }

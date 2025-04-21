@@ -8,6 +8,7 @@ import { Pressable } from "@/design-system/Pressable"
 import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { isProd } from "@/utils/getEnv"
 
 // Internal component to handle rendering based on loading state
 const HeaderRenderer = memo(function HeaderRenderer(props: { headerProps: HeaderProps }) {
@@ -15,13 +16,15 @@ const HeaderRenderer = memo(function HeaderRenderer(props: { headerProps: Header
   const { theme } = useAppTheme()
   const router = useRouter()
 
-  // If we find at least one operation has been active for more than 3 seconds, we consider it loading
   const showXmtpLoaderInHeader = useXmtpActivityStore((state) =>
     Object.values(state.activeOperations).some((operation) => {
       if (!operation.startTime) {
         return false
       }
-      return Date.now() - operation.startTime > (__DEV__ ? 0 : 5000)
+      if (!isProd) {
+        return false
+      }
+      return Date.now() - operation.startTime > 5000
     }),
   )
 

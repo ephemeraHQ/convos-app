@@ -37,7 +37,7 @@ async function handleNewConversation(args: {
 }) {
   const { clientInboxId, conversation } = args
 
-  streamLogger.debug(`[Stream] Received new conversation for ${clientInboxId}:`, conversation)
+  // streamLogger.debug(`[Stream] Received new conversation for ${clientInboxId}:`, conversation)
 
   setConversationQueryData({
     clientInboxId,

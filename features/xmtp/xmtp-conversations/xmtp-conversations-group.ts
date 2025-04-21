@@ -1,7 +1,6 @@
 import {
   IXmtpConversationId,
   IXmtpDisappearingMessageSettings,
-  IXmtpGroupWithCodecs,
   IXmtpInboxId,
 } from "@features/xmtp/xmtp.types"
 import {

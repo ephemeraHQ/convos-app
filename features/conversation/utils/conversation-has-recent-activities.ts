@@ -27,5 +27,5 @@ export function conversationHasRecentActivities(args: {
 
   const hoursSinceLastMessage = getHoursSinceTimestamp(lastMessage?.sentMs ?? 0)
 
-  return hoursSinceLastMessage <= 48 // 2 days
+  return hoursSinceLastMessage <= 24 // 1 day
 }

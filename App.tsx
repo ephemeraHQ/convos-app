@@ -36,6 +36,7 @@ import { registerBackgroundNotificationTask } from "./features/notifications/bac
 import { setupConversationsNotificationsSubscriptions } from "./features/notifications/notifications-conversations-subscriptions"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
+import { QueryClientProvider } from "@tanstack/react-query"
 import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
@@ -45,26 +46,26 @@ const chainOverride = addRpcUrlOverrideToChain(base, config.evm.rpcEndpoint)
 const supportedChains = [chainOverride] as [Chain, ...Chain[]]
 
 sentryInit()
-registerBackgroundNotificationTask().catch(captureError)
-configureForegroundNotificationBehavior()
+// registerBackgroundNotificationTask().catch(captureError)
+// configureForegroundNotificationBehavior()
 
 export function App() {
-  useMonitorNetworkConnectivity()
-  useReactQueryDevTools(reactQueryClient)
-  useSetupStreamingSubscriptions()
-  useCachedResources()
-  useCoinbaseWalletListener()
+  // useMonitorNetworkConnectivity()
+  // useReactQueryDevTools(reactQueryClient)
+  // useSetupStreamingSubscriptions()
+  // useCachedResources()
+  // useCoinbaseWalletListener()
 
   useEffect(() => {
     setupConvosApi()
-    setupConversationsNotificationsSubscriptions().catch(captureError)
+    // setupConversationsNotificationsSubscriptions().catch(captureError)
   }, [])
 
   // Seems to be slowing the app. Need to investigate
   // useSyncQueries({ queryClient: reactQueryClient })
 
   return (
-    <ReactQueryPersistProvider>
+    <QueryClientProvider client={reactQueryClient}>
       <PrivyProvider
         appId={config.privy.appId}
         clientId={config.privy.clientId}
@@ -83,7 +84,7 @@ export function App() {
                       <BottomSheetModalProvider>
                         <AppNavigator />
                         {/* {__DEV__ && <DevToolsBubble />} */}
-                        <Handlers />
+                        {/* <Handlers /> */}
                         <Snackbars />
                         <ActionSheet />
                       </BottomSheetModalProvider>
@@ -95,7 +96,7 @@ export function App() {
           </ThirdwebProvider>
         </SmartWalletsProvider>
       </PrivyProvider>
-    </ReactQueryPersistProvider>
+    </QueryClientProvider>
   )
 }
 

@@ -31,13 +31,6 @@ export function getConversationMetadataQueryOptions({ xmtpConversationId, client
   })
 }
 
-export function prefetchConversationMetadataQuery(args: IArgs) {
-  const { xmtpConversationId, clientInboxId } = args
-  return reactQueryClient.prefetchQuery(
-    getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }),
-  )
-}
-
 export const getConversationMetadataQueryData = (args: IArgs) => {
   const { xmtpConversationId, clientInboxId } = args
   return reactQueryClient.getQueryData(

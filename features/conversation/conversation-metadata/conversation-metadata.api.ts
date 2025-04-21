@@ -25,6 +25,7 @@ export async function getConversationMetadata(args: IGetConversationMetadataArgs
   const { xmtpConversationId, clientInboxId } = args
 
   try {
+    throw new Error("Not implemented")
     const currentUser = await ensureCurrentUserQueryData({ caller: "getConversationMetadata" })
 
     if (!currentUser) {

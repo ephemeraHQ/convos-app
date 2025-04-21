@@ -32,7 +32,7 @@ const appConfigExtra = Constants.expoConfig?.extra as IExpoAppConfigExtra
 export const shared = {
   debugMenu: true,
   loggerColorScheme: (process.env.EXPO_PUBLIC_LOGGER_COLOR_SCHEME as ILoggerColorScheme) || "light",
-  loggerLevel: (process.env.EXPO_PUBLIC_LOGGER_LEVEL as LogLevel) || "debug",
+  loggerLevel: (process.env.EXPO_PUBLIC_LOGGER_LEVEL as LogLevel) || "info",
   reactQueryPersistCacheIsEnabled:
     process.env.EXPO_PUBLIC_ENABLE_REACT_QUERY_PERSIST_CACHE !== "false",
   debugEthAddresses: process.env.EXPO_PUBLIC_DEBUG_ETH_ADDRESSES?.split(",") || [],

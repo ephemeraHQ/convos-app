@@ -26,7 +26,7 @@ function createMMKVPersister(storage: MMKV): ReactQueryPersister {
         // Debug persisted queries after successful persistence
         if (__DEV__) {
           // Uncomment to debug persisted queries
-          // debugPersistedQueries()
+          debugPersistedQueries()
         }
       } catch (error) {
         captureError(
@@ -108,7 +108,7 @@ function debugPersistedQueries() {
         pendingQueries: pendingQueries.length,
         fetchingQueries: fetchingQueries.length,
         pausedQueries: pausedQueries.length,
-        queryKeys: client.clientState.queries.map((q) => q.queryKey),
+        // queryKeys: client.clientState.queries.map((q) => q.queryKey),
       })
 
       // Log any potentially problematic queries
