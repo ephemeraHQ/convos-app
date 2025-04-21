@@ -67,11 +67,9 @@ export const EditGroupScreen = memo(function EditGroupScreen(
       if (storeState.imageUrl !== undefined && storeState.imageUrl !== group?.imageUrl) {
         updatedFields.imageUrl = storeState.imageUrl
       }
-      if (Object.keys(updatedFields).length > 0) {        
-        await updateGroupAsync({
-          ...updatedFields,
-          imageUrl: updatedFields.imageUrl === undefined ? undefined : String(updatedFields.imageUrl)
-        })
+
+      if (Object.keys(updatedFields).length > 0) {
+        await updateGroupAsync(updatedFields)
         showSnackbar({
           message: "Group updated",
         })
