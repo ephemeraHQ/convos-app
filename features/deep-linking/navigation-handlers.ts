@@ -1,6 +1,6 @@
 import { getStateFromPath as defaultGetStateFromPath } from "@react-navigation/native"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { navigateWithReset } from "@/navigation/navigation.utils"
+import { navigateFromHome } from "@/navigation/navigation.utils"
 import { logger } from "@/utils/logger/logger"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
@@ -80,7 +80,7 @@ export const getStateFromPath = (
             logger.info(
               `Deep link handler: Found existing conversation, navigating to: ${conversation.xmtpId}`,
             )
-            navigateWithReset("Conversation", {
+            navigateFromHome("Conversation", {
               xmtpConversationId: conversation.xmtpId,
               isNew: false,
               composerTextPrefill,

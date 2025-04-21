@@ -1,7 +1,11 @@
 import { config } from "@/config"
-import { navigateWithReset } from "@/navigation/navigation.utils"
+import { navigateFromHome } from "@/navigation/navigation.utils"
 import { deepLinkLogger } from "@/utils/logger/logger"
+import { normalizeUrl } from "@/utils/general"
 import { findInboxIdByUsername } from "@/features/profiles/utils/find-inbox-id-by-username"
+import { captureError } from "@/utils/capture-error"
+import { NavigationError } from "@/utils/error"
+import { DEEP_LINK_RESERVED_PATHS } from "./deep-link.constants"
 
 /**
  * Checks if a URL matches a vanity profile URL pattern
@@ -10,11 +14,9 @@ import { findInboxIdByUsername } from "@/features/profiles/utils/find-inbox-id-b
  */
 export function extractUsernameFromVanityUrl(url: string): string | null {
   try {
-    // Make sure we have a valid URL
     if (!url) return null
-    
-    // Normalize URL to ensure it has a protocol
-    const normalizedUrl = url.startsWith("http") ? url : `https://${url}`
+
+    const normalizedUrl = normalizeUrl(url)
     
     let parsedUrl: URL
     try {
@@ -45,15 +47,19 @@ export function extractUsernameFromVanityUrl(url: string): string | null {
       const path = pathname.substring(1).split("/")[0]
       
       // Skip known deep link paths
-      const knownPaths = ["dm", "group", "group-invite", "coinbase", "conversation", "profile"]
-      if (path && path.length > 0 && !knownPaths.includes(path)) {
+      if (path && path.length > 0 && !DEEP_LINK_RESERVED_PATHS.includes(path)) {
         return path
       }
     }
     
     return null
   } catch (error) {
-    deepLinkLogger.warn(`Error extracting username from vanity URL: ${error}`)
+    captureError(
+      new NavigationError({
+        error,
+        additionalMessage: "Error extracting username from vanity URL",
+      })
+    )
     return null
   }
 }
@@ -83,14 +89,19 @@ export async function handleVanityUrl(url: string): Promise<boolean> {
     deepLinkLogger.info(`Found inbox ID for username ${username}: ${inboxId}`)
     
     // Navigate to the conversation with this user
-    await navigateWithReset("Conversation", {
+    await navigateFromHome("Conversation", {
       searchSelectedUserInboxIds: [inboxId],
       isNew: true,
     })
     
     return true
   } catch (error) {
-    deepLinkLogger.error(`Error handling vanity URL: ${error}`)
+    captureError(
+      new NavigationError({
+        error,
+        additionalMessage: "Error handling vanity URL",
+      })
+    )
     return false
   }
 }

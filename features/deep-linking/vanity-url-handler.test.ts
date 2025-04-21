@@ -1,6 +1,6 @@
 import { extractUsernameFromVanityUrl, handleVanityUrl } from "./vanity-url-handler"
 import { findInboxIdByUsername } from "@/features/profiles/utils/find-inbox-id-by-username"
-import { navigateWithReset } from "@/navigation/navigation.utils"
+import { navigateFromHome } from "@/navigation/navigation.utils"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 
 // Mock the dependencies
@@ -66,7 +66,7 @@ describe("Vanity URL Handler", () => {
       const result = await handleVanityUrl("invalid-url")
       expect(result).toBe(false)
       expect(findInboxIdByUsername).not.toHaveBeenCalled()
-      expect(navigateWithReset).not.toHaveBeenCalled()
+      expect(navigateFromHome).not.toHaveBeenCalled()
     })
 
     test("should return false if no inbox ID is found for username", async () => {
@@ -77,7 +77,7 @@ describe("Vanity URL Handler", () => {
       const result = await handleVanityUrl("username.convos.org")
       expect(result).toBe(false)
       expect(findInboxIdByUsername).toHaveBeenCalledWith("username")
-      expect(navigateWithReset).not.toHaveBeenCalled()
+      expect(navigateFromHome).not.toHaveBeenCalled()
     })
 
     test("should navigate to conversation and return true when inbox ID is found", async () => {
@@ -89,7 +89,7 @@ describe("Vanity URL Handler", () => {
       const result = await handleVanityUrl("username.convos.org")
       expect(result).toBe(true)
       expect(findInboxIdByUsername).toHaveBeenCalledWith("username")
-      expect(navigateWithReset).toHaveBeenCalledWith("Conversation", {
+      expect(navigateFromHome).toHaveBeenCalledWith("Conversation", {
         searchSelectedUserInboxIds: [mockInboxId],
         isNew: true,
       })
@@ -103,7 +103,7 @@ describe("Vanity URL Handler", () => {
       const result = await handleVanityUrl("username.convos.org")
       expect(result).toBe(false)
       expect(findInboxIdByUsername).toHaveBeenCalledWith("username")
-      expect(navigateWithReset).not.toHaveBeenCalled()
+      expect(navigateFromHome).not.toHaveBeenCalled()
     })
   })
 }) 

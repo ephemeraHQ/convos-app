@@ -1,6 +1,18 @@
 import { create } from "zustand"
 import { deepLinkLogger } from "@/utils/logger/logger"
 
+/**
+ * Deep Link Store handles two key aspects of deep linking:
+ * 
+ * 1. Deduplication: Prevents the same deep link from being processed multiple times
+ *    Example: When a user taps a notification that opens a conversation, we need
+ *    to ensure we don't create duplicate navigation actions if the link is handled
+ *    by multiple systems (universal links, app scheme, etc.)
+ * 
+ * 2. Pending links: Stores deep links that arrive when the user isn't authenticated
+ *    Example: User opens the app via a deep link but needs to sign in first. We
+ *    store the link and process it after authentication completes.
+ */
 type IDeepLinkStore = {
   // State
   pendingDeepLink: string | null
@@ -23,16 +35,16 @@ export const useDeepLinkStore = create<IDeepLinkStore>((set, get) => ({
   // Actions
   actions: {
     setPendingDeepLink: (deepLink) => {
-      deepLinkLogger.info(`Setting pending deep link: ${deepLink}`)
+      deepLinkLogger.debug(`Setting pending deep link: ${deepLink}`)
       set({ pendingDeepLink: deepLink })
     },
     clearPendingDeepLink: () => {
-      deepLinkLogger.info("Clearing pending deep link")
+      deepLinkLogger.debug("Clearing pending deep link")
       set({ pendingDeepLink: null })
     },
     markDeepLinkAsProcessed: (deepLink) => {
       const timestamp = Date.now()
-      deepLinkLogger.info(`Marking deep link as processed: ${deepLink}`)
+      deepLinkLogger.debug(`Marking deep link as processed: ${deepLink}`)
       set((state) => ({
         processedDeepLinks: {
           ...state.processedDeepLinks,
@@ -48,7 +60,7 @@ export const useDeepLinkStore = create<IDeepLinkStore>((set, get) => ({
       const isRecent = now - processedTimestamp < timeWindowMs
       
       if (isRecent) {
-        deepLinkLogger.info(`Skipping duplicate deep link that was processed ${now - processedTimestamp}ms ago: ${deepLink}`)
+        deepLinkLogger.debug(`Skipping duplicate deep link that was processed ${now - processedTimestamp}ms ago: ${deepLink}`)
       }
       
       return isRecent

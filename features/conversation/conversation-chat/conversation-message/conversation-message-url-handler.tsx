@@ -40,12 +40,12 @@ export const ConversationMessageUrlHandler = memo(function ConversationMessageUr
     try {
       // Check if it's a vanity URL 
       if (await handleVanityUrl(url)) {
-        deepLinkLogger.info(`Handled as vanity URL: ${url}`)
+        deepLinkLogger.debug(`Handled as vanity URL: ${url}`)
         return
       }
       
       // Open as regular link
-      deepLinkLogger.info(`Opening regular URL: ${url}`)
+      deepLinkLogger.debug(`Opening regular URL: ${url}`)
       
       // Make sure the URL has a protocol
       const urlWithProtocol = url.startsWith("http") ? url : `https://${url}`

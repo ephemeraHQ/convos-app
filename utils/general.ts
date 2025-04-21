@@ -21,3 +21,7 @@ export function hasProperty<T>(obj: unknown, prop: KeyOf<T>): obj is T {
 export function getFirstDefined<T>(values: (T | undefined | null)[]): T | null | undefined {
   return values.find((value) => value !== undefined)
 }
+
+export function normalizeUrl(url: string): string {
+  return url.startsWith("http") ? url : `https://${url}`
+}

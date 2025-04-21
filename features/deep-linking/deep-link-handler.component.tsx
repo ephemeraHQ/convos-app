@@ -6,7 +6,7 @@ import { parseURL } from "./link-parser"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { navigateWithReset } from "@/navigation/navigation.utils"
+import { navigateFromHome } from "@/navigation/navigation.utils"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useDeepLinkStore } from "./deep-link.store"
@@ -58,7 +58,7 @@ const deepLinkPatterns: IDeepLinkPattern[] = [
         if (conversation) {
           deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
 
-          await navigateWithReset("Conversation", {
+          await navigateFromHome("Conversation", {
             xmtpConversationId: conversation.xmtpId,
             isNew: false,
             composerTextPrefill: params.composerTextPrefill,
@@ -68,7 +68,7 @@ const deepLinkPatterns: IDeepLinkPattern[] = [
             `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
           )
 
-          await navigateWithReset("Conversation", {
+          await navigateFromHome("Conversation", {
             searchSelectedUserInboxIds: [inboxId],
             isNew: true,
             composerTextPrefill: params.composerTextPrefill,
@@ -115,12 +115,6 @@ function processDeepLink(url: string) {
     return
   }
 
-  // Clear any existing pending deep link
-  deepLinkStore.actions.clearPendingDeepLink()
-  
-  // Set the new deep link
-  deepLinkStore.actions.setPendingDeepLink(url)
-  
   // Mark this deep link as processed to prevent duplicate processing
   deepLinkStore.actions.markDeepLinkAsProcessed(url)
 
@@ -183,6 +177,8 @@ export function DeepLinkHandler() {
       if (pendingDeepLink) {
         deepLinkLogger.info(`Processing pending deep link after sign-in: ${pendingDeepLink}`)
         processDeepLink(pendingDeepLink)
+        // Clear the pending deep link after processing
+        useDeepLinkStore.getState().actions.clearPendingDeepLink()
       }
     }
   }, [authStatus])
