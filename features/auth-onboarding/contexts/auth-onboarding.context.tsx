@@ -39,6 +39,8 @@ const AuthOnboardingContext = createContext<IAuthOnboardingContextType>(
   {} as IAuthOnboardingContextType,
 )
 
+const smartWalletCreationTooLongErrorMessage = "Smart wallet took too long to create"
+
 export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps) => {
   const { children } = props
 
@@ -46,7 +48,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
   const { create: createEmbeddedWallet } = usePrivyEmbeddedEthereumWallet()
   const { loginWithPasskey: privyLoginWithPasskey } = usePrivyLoginWithPasskey()
   const { signupWithPasskey: privySignupWithPasskey } = usePrivySignupWithPasskey()
-  const { user: privyUser, isReady: isPrivyReady } = usePrivy()
+  const { user: privyUser, isReady: isPrivyReady, logout: privyLogout } = usePrivy()
 
   const { logout } = useLogout()
 
@@ -65,7 +67,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
   const { waitUntil: waitUntilSmartWalletClientIsReady } = useWaitUntil({
     thing: smartWalletClient,
     timeoutMs: 20000, // Yes unfortunately, this can sometimes take a while... Need to investigate our RPC
-    errorMessage: "Smart wallet took too long to create",
+    errorMessage: smartWalletCreationTooLongErrorMessage,
   })
 
   const login = useCallback(async () => {
@@ -73,9 +75,14 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
 
       // Step 1: Passkey login
-      authLogger.debug(`[Passkey Login] Starting passkey authentication`)
+      authLogger.debug(`Starting passkey authentication`)
 
       await waitUntilPrivyIsReady()
+
+      // Just to make sure because we often receive this error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
+      authLogger.debug(`Privy logging out...`)
+      await privyLogout()
+      authLogger.debug(`Privy logged out`)
 
       const { data: privyUser, error: passkeyLoginError } = await tryCatch(
         privyLoginWithPasskey({
@@ -132,8 +139,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
       await hydrateAuth()
     } catch (error) {
-      logout({ caller: "AuthContextProvider.login" }).catch(captureError)
-      useAuthOnboardingStore.getState().actions.reset()
       if (
         error instanceof Error &&
         (error.message.includes("UserCancelled") ||
@@ -143,15 +148,53 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
           ))
       ) {
         // User cancelled the passkey login
+      } else if (
+        error instanceof Error &&
+        (error.message.includes("Biometrics must be enabled") ||
+          error.message.includes("Calling the 'create' function has failed") ||
+          error.message.includes("Calling the 'get' function has failed"))
+      ) {
+        captureErrorWithToast(
+          new AuthenticationError({
+            error,
+            additionalMessage: "You must enable biometrics to use passkeys",
+          }),
+          {
+            message: "You must enable biometrics to use passkeys",
+          },
+        )
+      }
+      // We often see this weird error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
+      else if (error instanceof Error && error.message.includes("Already logged in")) {
+        captureErrorWithToast(
+          new AuthenticationError({
+            error,
+          }),
+          {
+            message: "You're already logged in. Please try again",
+          },
+        )
       } else {
         captureErrorWithToast(
           new AuthenticationError({ error, additionalMessage: "Failed to login with passkey" }),
+          {
+            message: "Failed to login with passkey",
+          },
         )
       }
+
+      logout({ caller: "AuthContextProvider.login" }).catch(captureError)
+      useAuthOnboardingStore.getState().actions.reset()
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [privyLoginWithPasskey, logout, waitUntilPrivyIsReady, waitUntilSmartWalletClientIsReady])
+  }, [
+    privyLoginWithPasskey,
+    privyLogout,
+    logout,
+    waitUntilPrivyIsReady,
+    waitUntilSmartWalletClientIsReady,
+  ])
 
   const signup = useCallback(async () => {
     try {
@@ -161,6 +204,11 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       authLogger.debug(`Waiting for Privy to be ready...`)
       await waitUntilPrivyIsReady()
       authLogger.debug(`Privy is ready`)
+
+      // Just to make sure because we often receive this error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
+      authLogger.debug(`Privy logging out...`)
+      await privyLogout()
+      authLogger.debug(`Privy logged out`)
 
       authLogger.debug(`Signing up with passkey...`)
       const { data: user, error: signupError } = await tryCatch(
@@ -225,8 +273,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         inboxId: xmtpClient.inboxId as IXmtpInboxId,
       })
     } catch (error) {
-      logout({ caller: "AuthContextProvider.signup" }).catch(captureError)
-      useAuthOnboardingStore.getState().actions.reset()
       if (
         error instanceof Error &&
         (error.message.includes("UserCancelled") ||
@@ -236,11 +282,35 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
           ))
       ) {
         // User cancelled the passkey registration
+      } else if (
+        error instanceof Error &&
+        (error.message.includes("Biometrics must be enabled") ||
+          error.message.includes("Calling the 'create' function has failed") ||
+          error.message.includes("Calling the 'get' function has failed"))
+      ) {
+        captureErrorWithToast(
+          new AuthenticationError({
+            error,
+            additionalMessage: "You must enable biometrics to use passkeys",
+          }),
+        )
+      }
+      // We often see this weird error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
+      else if (error instanceof Error && error.message.includes("Already logged in")) {
+        captureErrorWithToast(
+          new AuthenticationError({
+            error,
+            additionalMessage: "You're already logged in. Please try again",
+          }),
+        )
       } else {
         captureErrorWithToast(
           new AuthenticationError({ error, additionalMessage: "Failed to sign up with passkey" }),
         )
       }
+
+      logout({ caller: "AuthContextProvider.signup" }).catch(captureError)
+      useAuthOnboardingStore.getState().actions.reset()
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
@@ -250,6 +320,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     logout,
     waitUntilPrivyIsReady,
     waitUntilSmartWalletClientIsReady,
+    privyLogout,
   ])
 
   const value = useMemo(() => ({ login, signup, user: privyUser }), [login, signup, privyUser])

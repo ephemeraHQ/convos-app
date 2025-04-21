@@ -9,6 +9,7 @@ import { isTmpConversation } from "@/features/conversation/utils/tmp-conversatio
 import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { userHasGrantedNotificationsPermissions } from "@/features/notifications/notifications.service"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { getXmtpConversationTopicFromXmtpId } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpHmacKeysForConversation } from "@/features/xmtp/xmtp-hmac-keys/xmtp-hmac-keys"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -352,20 +353,7 @@ async function unsubscribeFromConversationsNotifications(args: {
       inboxId: clientInboxId,
     })
 
-    const conversationTopics = await Promise.all(
-      conversationIds.map(async (id) => {
-        const conversation = await ensureConversationQueryData({
-          clientInboxId,
-          xmtpConversationId: id,
-          caller: "unsubscribeFromConversationsNotifications",
-        })
-        return conversation?.xmtpTopic
-      }),
-    )
-
-    if (conversationTopics.length === 0) {
-      return
-    }
+    const conversationTopics = conversationIds.map(getXmtpConversationTopicFromXmtpId)
 
     // Make a single API call to unsubscribe from all topics
     await unsubscribeFromNotificationTopics({

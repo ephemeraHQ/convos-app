@@ -3,7 +3,7 @@ import { useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
 import { invalidateConversationMessagesInfiniteMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { getConversationForCurrentAccount } from "@/features/conversation/utils/get-conversation-for-current-account"
+import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import {
   getXmtpConversationTopicFromXmtpId,
   sendXmtpConversationMessageOptimistic,
@@ -22,13 +22,16 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
     mutationFn: async (variables: { reaction: IConversationMessageReactionContent }) => {
       const { reaction } = variables
 
-      const conversation = getConversationForCurrentAccount(xmtpConversationId)
+      const currentSender = getSafeCurrentSender()
+
+      const conversation = getConversationQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+      })
 
       if (!conversation) {
         throw new Error("Conversation not found when reacting on message")
       }
-
-      const currentSender = getSafeCurrentSender()
 
       await sendXmtpConversationMessageOptimistic({
         conversationId: conversation.xmtpId,
@@ -40,7 +43,10 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
     },
     onMutate: async (variables) => {
       const currentSender = getSafeCurrentSender()
-      const conversation = getConversationForCurrentAccount(xmtpConversationId)
+      const conversation = getConversationQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+      })
 
       if (conversation) {
         // Add the reaction to the message

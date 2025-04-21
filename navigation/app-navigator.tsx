@@ -138,6 +138,8 @@ const AppStacks = memo(function AppStacks() {
         // Since we handle with useHeader hook
         header: () => null,
       }}
+      // https://github.com/react-navigation/react-navigation/issues/11113#issuecomment-2102035739
+      initialRouteName={isUndetermined ? "Idle" : isSignedOut ? "Auth" : "Chats"}
     >
       {isUndetermined ? (
         // Show idle screen during restoration

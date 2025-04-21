@@ -60,6 +60,11 @@ const baseLogger = RNLogger.createLogger({
   levels: LOG_LEVELS,
   printLevel: !__DEV__, // Too verbose in dev but useful for other environments
   printDate: !__DEV__, // Too verbose in dev but useful for other environments
+  ...(!__DEV__ && {
+    dateFormat: (date) => {
+      return `${date.toLocaleDateString()} ${date.toLocaleTimeString()} `
+    },
+  }),
   enabled: true,
   transport: transports,
   transportOptions: {

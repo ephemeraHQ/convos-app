@@ -84,9 +84,9 @@ const settings: Record<Environment, EnvironmentConfig> = {
       ],
       googleServicesFile: "./google-services/google-services-ios-preview.plist",
       icon: {
-        dark: "./assets/icon-dark.png",
-        light: "./assets/icon-light.png",
-        tinted: "./assets/icon-tinted.png",
+        dark: "./assets/icon-preview-dark.png",
+        light: "./assets/icon-preview-dark.png",
+        tinted: "./assets/icon-preview-dark.png",
       },
     },
     android: {

@@ -22,7 +22,7 @@ export async function hydrateAuth() {
   try {
     const isInternetReachable = useAppStore.getState().isInternetReachable
 
-    authLogger.debug("Is internet reachable: ", isInternetReachable)
+    authLogger.debug(`Is internet reachable: ${isInternetReachable}`)
 
     await retryWithBackoff({
       fn: () =>

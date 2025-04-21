@@ -2,7 +2,7 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
-import { getConversationsFromIds } from "@/features/conversation/utils/get-conversations"
+import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { normalizeString } from "@/utils/str"
 
@@ -14,10 +14,15 @@ export async function searchExistingGroupsByGroupName(args: { searchQuery: strin
     clientInboxId: currentSender.inboxId,
   })
 
-  const conversations = getConversationsFromIds({
-    clientInboxId: currentSender.inboxId,
-    conversationIds: conversationsIds ?? [],
-  })
+  const conversations =
+    conversationsIds
+      ?.map((conversationId) =>
+        getConversationQueryData({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId: conversationId,
+        }),
+      )
+      .filter(Boolean) || []
 
   const groups = conversations.filter(isConversationGroup)
 

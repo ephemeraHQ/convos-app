@@ -20,14 +20,14 @@ import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 const defaultCreateGroupPermissionPolicySet: PermissionPolicySet = {
-  addMemberPolicy: "allow",
+  addMemberPolicy: "admin",
   removeMemberPolicy: "admin",
+  updateGroupNamePolicy: "admin",
+  updateGroupDescriptionPolicy: "admin",
+  updateGroupImagePolicy: "admin",
+  updateMessageDisappearingPolicy: "admin",
   addAdminPolicy: "superAdmin",
   removeAdminPolicy: "superAdmin",
-  updateGroupNamePolicy: "allow",
-  updateGroupDescriptionPolicy: "allow",
-  updateGroupImagePolicy: "allow",
-  updateMessageDisappearingPolicy: "allow",
 }
 
 export async function createXmtpGroup(args: {

@@ -1,6 +1,6 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { ensureAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
-import { getConversationsFromIds } from "@/features/conversation/utils/get-conversations"
+import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { isSameInboxId } from "@/features/xmtp/xmtp-inbox-id/xmtp-inbox-id.utils"
@@ -20,10 +20,11 @@ export async function findConversationByInboxIds(args: {
     caller: "findConversationByInboxIds",
   })
 
-  const conversations = getConversationsFromIds({
-    clientInboxId,
-    conversationIds: conversationsIds,
-  })
+  const conversations = conversationsIds
+    .map((conversationId) =>
+      getConversationQueryData({ clientInboxId, xmtpConversationId: conversationId }),
+    )
+    .filter(Boolean)
 
   const groups = conversations.filter(isConversationGroup)
   const dms = conversations.filter(isConversationDm)

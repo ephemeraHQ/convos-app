@@ -27,7 +27,6 @@ import { NotificationError, UserCancelledError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { ensureMessageContentStringValue } from "../conversation/conversation-list/hooks/use-message-content-string-value"
 
-// Full flow
 export async function registerPushNotifications() {
   try {
     const result = await requestNotificationsPermissions()
@@ -72,16 +71,13 @@ export async function registerPushNotifications() {
     const client = await getXmtpClientByInboxId({
       inboxId: currentSender.inboxId,
     })
-    // Re-fetch the device token here, as it might have been updated or the previous call might be outside this scope's assurance
-    // Alternatively, we could pass it down, but fetching again is simple.
-    const freshDeviceToken = await getDevicePushNotificationsToken()
 
     await registerNotificationInstallation({
       installationId: client.installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           case: "apnsDeviceToken",
-          value: freshDeviceToken,
+          value: deviceToken,
         },
       },
     })
@@ -98,10 +94,6 @@ export async function getExpoPushNotificationsToken() {
   try {
     if (!Device.isDevice) {
       throw new Error("Must use physical device for push notifications")
-    }
-
-    if (!(await userHasGrantedNotificationsPermissions())) {
-      throw new Error("Notifications permissions not granted")
     }
 
     const data = await Notifications.getExpoPushTokenAsync({
@@ -131,13 +123,6 @@ export async function getDevicePushNotificationsToken() {
 
     let token
 
-    // Check if permissions are granted
-    const hasPermissions = await userHasGrantedNotificationsPermissions()
-
-    if (!hasPermissions) {
-      throw new Error("Notifications permissions not granted")
-    }
-
     const data = await Notifications.getDevicePushTokenAsync()
 
     // data.data is string for native platforms per DevicePushToken type
@@ -160,6 +145,7 @@ export async function getDevicePushNotificationsToken() {
 export async function requestNotificationsPermissions(): Promise<{ granted: boolean }> {
   const hasGranted = await userHasGrantedNotificationsPermissions()
 
+  // Permissions already granted
   if (hasGranted) {
     return { granted: true }
   }
@@ -175,7 +161,6 @@ export async function requestNotificationsPermissions(): Promise<{ granted: bool
       allowAlert: true,
       allowBadge: true,
       allowSound: true,
-      allowCriticalAlerts: true,
     },
   })
 

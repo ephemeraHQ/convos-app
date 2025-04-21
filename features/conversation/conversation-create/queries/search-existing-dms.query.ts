@@ -2,7 +2,7 @@ import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
-import { getConversationsFromIds } from "@/features/conversation/utils/get-conversations"
+import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 import { ensureProfileQueryData } from "@/features/profiles/profiles.query"
 import { doesSocialProfilesMatchTextQuery } from "@/features/profiles/utils/does-social-profiles-match-text-query"
@@ -35,15 +35,20 @@ export function getSearchExistingDmsQueryOptions(args: {
 async function searchExistingDms(args: { searchQuery: string; inboxId: IXmtpInboxId }) {
   const { searchQuery } = args
   const currentSender = getSafeCurrentSender()
-  const conversationIds = getAllowedConsentConversationsQueryData({
-    clientInboxId: currentSender.inboxId,
-  })
+  const conversationIds =
+    getAllowedConsentConversationsQueryData({
+      clientInboxId: currentSender.inboxId,
+    }) || []
   const normalizedSearchQuery = searchQuery.toLowerCase().trim()
 
-  const conversations = getConversationsFromIds({
-    clientInboxId: currentSender.inboxId,
-    conversationIds: conversationIds ?? [],
-  })
+  const conversations = conversationIds
+    .map((conversationId) =>
+      getConversationQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+      }),
+    )
+    .filter(Boolean)
 
   const matchingXmtpConversationIds: IXmtpConversationId[] = []
   const dmConversations = conversations.filter(isConversationDm)

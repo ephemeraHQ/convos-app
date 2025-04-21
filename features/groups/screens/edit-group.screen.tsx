@@ -69,7 +69,10 @@ export const EditGroupScreen = memo(function EditGroupScreen(
       }
 
       if (Object.keys(updatedFields).length > 0) {
-        await updateGroupAsync(updatedFields)
+        await updateGroupAsync({
+          ...updatedFields,
+          imageUrl: updatedFields.imageUrl || undefined,
+        })
         showSnackbar({
           message: "Group updated",
         })

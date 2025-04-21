@@ -3,7 +3,7 @@ import { keepPreviousData, queryOptions, useQuery } from "@tanstack/react-query"
 import { matchSorter } from "match-sorter"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
-import { getConversationsFromIds } from "@/features/conversation/utils/get-conversations"
+import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { ensureProfileQueryData } from "@/features/profiles/profiles.query"
 import { doesSocialProfilesMatchTextQuery } from "@/features/profiles/utils/does-social-profiles-match-text-query"
@@ -24,10 +24,14 @@ export async function searchExistingGroupsByGroupMembers(args: {
     clientInboxId: currentSender.inboxId,
   })
 
-  const conversations = getConversationsFromIds({
-    clientInboxId: currentSender.inboxId,
-    conversationIds: conversationIds ?? [],
-  })
+  const conversations = conversationIds
+    ?.map((conversationId) =>
+      getConversationQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+      }),
+    )
+    .filter(Boolean)
 
   if (!conversations || !searchQuery) {
     return []
