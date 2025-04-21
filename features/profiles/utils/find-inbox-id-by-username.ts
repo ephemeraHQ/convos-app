@@ -3,9 +3,9 @@ import { logger } from "@/utils/logger/logger"
 import { captureError } from "@/utils/capture-error"
 import { ValidationError, GenericError } from "@/utils/error"
 import { convosPublicApi } from "@/utils/convos-api/convos-api-instance"
-import { AxiosError } from "axios"
 import { z } from "zod"
 import { IEthereumAddress } from "@/utils/evm/address"
+import { isConvosApi404Error } from "@/utils/convos-api/convos-api-error"
 
 // Schema for the public profile response
 const PublicProfileResponseSchema = z.object({
@@ -43,22 +43,15 @@ export async function findInboxIdByUsername(username: string): Promise<IXmtpInbo
       return null
     }
     
-    // Extract the xmtpId which is the inbox ID we need
     return result.data.xmtpId
   } catch (error) {
-    // Handle 404 (not found) errors
-    if (error instanceof AxiosError && error.response?.status === 404) {
+    // Handle 404 (not found) - this is an expected case, not an error
+    if (isConvosApi404Error(error)) {
       logger.info(`No profile found for username: ${username}`)
       return null
     }
     
-    // Handle error response with error message
-    if (error instanceof AxiosError && error.response?.data?.error) {
-      logger.info(`Error finding profile: ${error.response.data.error}`)
-      return null
-    }
-    
-    // Handle other errors
+    // Handle all other errors
     captureError(
       new GenericError({
         error,
