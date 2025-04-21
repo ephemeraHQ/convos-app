@@ -9,7 +9,7 @@ import { logger } from "../utils/logger/logger"
 import { NavigationParamList } from "./navigation.types"
 
 // https://reactnavigation.org/docs/navigating-without-navigation-prop/#usage
-export const navigationRef = createNavigationContainerRef()
+export const navigationRef = createNavigationContainerRef<NavigationParamList>()
 
 export function waitUntilNavigationReady(args: { timeoutMs?: number } = {}) {
   return waitUntilPromise({
@@ -17,6 +17,15 @@ export function waitUntilNavigationReady(args: { timeoutMs?: number } = {}) {
     intervalMs: 100,
     timeoutMs: args.timeoutMs,
   })
+}
+
+/**
+ * Ensures the navigation ref is ready before proceeding
+ */
+export async function ensureNavigationReady(timeoutMs = 10000): Promise<void> {
+  if (!navigationRef || !navigationRef.isReady()) {
+    await waitUntilNavigationReady({ timeoutMs })
+  }
 }
 
 export async function navigate<T extends keyof NavigationParamList>(
@@ -33,12 +42,7 @@ export async function navigate<T extends keyof NavigationParamList>(
       return
     }
 
-    if (!navigationRef.isReady()) {
-      await waitUntilNavigationReady({
-        // After 10 seconds, the UX will feel very broken from a user perspective...
-        timeoutMs: 10000,
-      })
-    }
+    await ensureNavigationReady()
 
     logger.debug(`[Navigation] Navigating to ${screen} ${params ? JSON.stringify(params) : ""}`)
 
@@ -53,6 +57,53 @@ export async function navigate<T extends keyof NavigationParamList>(
     )
   }
 }
+
+/**
+ * Resets navigation to home screen and then navigates to the specified screen
+ * Use this for deep links to ensure we navigate from a consistent starting point
+ * 
+ * Example:
+ *   When a user taps a message notification or a conversation link from outside the app,
+ *   we want to reset their navigation stack rather than adding the conversation screen
+ *   on top of whatever screens they had open before. This ensures a consistent experience
+ *   where pressing "back" from a deep-linked conversation always returns to Chats.
+ */
+export async function navigateFromHome<S extends keyof NavigationParamList>(
+  screen: S,
+  params?: NavigationParamList[S],
+) {
+  try {
+    await ensureNavigationReady()
+
+    logger.debug(`[Navigation] Navigating from home to ${screen} ${params ? JSON.stringify(params) : ""}`)
+    
+    // If we're navigating to the home screen, just do a simple reset
+    if (screen === "Chats") {
+      navigationRef.resetRoot({
+        index: 0,
+        routes: [{ name: screen, params }],
+      })
+      return
+    }
+    
+    // For other screens, reset to home and then add our target screen
+    navigationRef.resetRoot({
+      index: 1, // Set index to 1 to focus on the new screen
+      routes: [
+        { name: "Chats" },
+        { name: screen, params },
+      ],
+    })
+  } catch (error) {
+    captureError(
+      new NavigationError({
+        error,
+        additionalMessage: "Error navigating from home",
+      }),
+    )
+  }
+}
+
 export const getSchemedURLFromUniversalURL = (url: string) => {
   // Handling universal links by saving a schemed URI
   for (const prefix of config.app.universalLinks) {

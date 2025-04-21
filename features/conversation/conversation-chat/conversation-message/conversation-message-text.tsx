@@ -1,19 +1,22 @@
 import { memo } from "react"
 import { ClickableText } from "@/components/clickable-text"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { createVanityUrlParser } from "./conversation-message-parsers"
 
-type IMessageTextProps = {
-  children: React.ReactNode
+export const ConversationMessageText = memo(function ConversationMessageText({
+  children,
+  inverted,
+}: {
+  children: string
   inverted?: boolean
-}
-
-export const MessageText = memo(function MessageText(args: IMessageTextProps) {
-  const { children, inverted } = args
-
+}) {
   const { theme } = useAppTheme()
-
+  
+  const vanityUrlParser = createVanityUrlParser(theme.colors.global.orange)
+  
   return (
     <ClickableText
+      additionalParsers={[vanityUrlParser]}
       style={{
         color: inverted ? theme.colors.text.inverted.primary : theme.colors.text.primary,
       }}

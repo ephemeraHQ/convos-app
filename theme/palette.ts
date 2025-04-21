@@ -2,6 +2,7 @@ const paletteShared = {
   scrim: "rgba(0, 0, 0, 0.5)",
   red: "#E30C00",
   transparent: "transparent",
+  orange: "#FF9500",
 }
 
 export const lightPalette = {

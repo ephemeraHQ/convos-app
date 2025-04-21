@@ -6,9 +6,10 @@ import { parseURL } from "./link-parser"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { navigate } from "@/navigation/navigation.utils"
+import { navigateFromHome } from "@/navigation/navigation.utils"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { useDeepLinkStore } from "./deep-link.store"
 
 type IDeepLinkPattern = {
   pattern: string
@@ -57,7 +58,7 @@ const deepLinkPatterns: IDeepLinkPattern[] = [
         if (conversation) {
           deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
 
-          await navigate("Conversation", {
+          await navigateFromHome("Conversation", {
             xmtpConversationId: conversation.xmtpId,
             isNew: false,
             composerTextPrefill: params.composerTextPrefill,
@@ -67,7 +68,7 @@ const deepLinkPatterns: IDeepLinkPattern[] = [
             `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
           )
 
-          await navigate("Conversation", {
+          await navigateFromHome("Conversation", {
             searchSelectedUserInboxIds: [inboxId],
             isNew: true,
             composerTextPrefill: params.composerTextPrefill,
@@ -102,11 +103,20 @@ const deepLinkPatterns: IDeepLinkPattern[] = [
 
 function processDeepLink(url: string) {
   const { status: authStatus } = useAuthenticationStore.getState()
+  const deepLinkStore = useDeepLinkStore.getState()
 
   if (authStatus !== "signedIn") {
     deepLinkLogger.info(`Skipping deep link processing - not authenticated (auth: ${authStatus})`)
     return
   }
+
+  // Skip processing if this deep link was recently processed (prevents duplicates)
+  if (deepLinkStore.actions.hasProcessedRecentlyDeepLink(url)) {
+    return
+  }
+
+  // Mark this deep link as processed to prevent duplicate processing
+  deepLinkStore.actions.markDeepLinkAsProcessed(url)
 
   deepLinkLogger.info(`Processing deep link URL: ${url}`)
   const { segments, params } = parseURL(url)
@@ -159,6 +169,20 @@ function processDeepLink(url: string) {
 export function DeepLinkHandler() {
   const authStatus = useAuthenticationStore((state) => state.status)
 
+  // Handle authentication state changes for pending deep links
+  useEffect(() => {
+    // If we just signed in and have a pending deep link, process it
+    if (authStatus === "signedIn") {
+      const { pendingDeepLink } = useDeepLinkStore.getState()
+      if (pendingDeepLink) {
+        deepLinkLogger.info(`Processing pending deep link after sign-in: ${pendingDeepLink}`)
+        processDeepLink(pendingDeepLink)
+        // Clear the pending deep link after processing
+        useDeepLinkStore.getState().actions.clearPendingDeepLink()
+      }
+    }
+  }, [authStatus])
+
   useEffect(() => {
     // Handle initial URL when the app is first launched
     Linking.getInitialURL()
@@ -168,7 +192,9 @@ export function DeepLinkHandler() {
           if (authStatus === "signedIn") {
             processDeepLink(url)
           } else {
-            deepLinkLogger.info(`Waiting for auth before processing deep link`)
+            deepLinkLogger.info(`Waiting for auth before processing deep link, storing for later`)
+            // Store the deep link for when we're authenticated
+            useDeepLinkStore.getState().actions.setPendingDeepLink(url)
           }
         }
       })
@@ -184,7 +210,13 @@ export function DeepLinkHandler() {
     // Listen for URL events when the app is running
     const subscription = Linking.addEventListener("url", ({ url }) => {
       deepLinkLogger.info(`Received deep link while running: ${url}`)
-      processDeepLink(url)
+      if (authStatus === "signedIn") {
+        processDeepLink(url)
+      } else {
+        deepLinkLogger.info(`Waiting for auth before processing deep link, storing for later`)
+        // Store the deep link for when we're authenticated
+        useDeepLinkStore.getState().actions.setPendingDeepLink(url)
+      }
     })
 
     return () => subscription.remove()

@@ -65,6 +65,7 @@ export const colorsLight = {
     white: lightPalette.light,
     black: darkPalette.dark,
     green: lightPalette.green,
+    orange: lightPalette.orange,
     primary: lightPalette.light,
     primaryAlpha60: lightPalette.alpha60,
     caution: lightPalette.red,

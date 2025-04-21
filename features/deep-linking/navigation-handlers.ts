@@ -1,9 +1,10 @@
 import { getStateFromPath as defaultGetStateFromPath } from "@react-navigation/native"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { navigationRef } from "@/navigation/navigation.utils"
+import { navigateFromHome } from "@/navigation/navigation.utils"
 import { logger } from "@/utils/logger/logger"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { useDeepLinkStore } from "./deep-link.store"
 
 /**
  * Custom getStateFromPath function to handle deep links for the app
@@ -42,11 +43,26 @@ export const getStateFromPath = (
     const composerTextPrefill =
       typeof params.composerTextPrefill === "string" ? params.composerTextPrefill : undefined
 
+    // Construct the full URL for deduplication tracking
+    const fullUrl = `${path}${composerTextPrefill ? `?composerTextPrefill=${composerTextPrefill}` : ""}`
+    const deepLinkStore = useDeepLinkStore.getState()
+
+    // Skip processing if this deep link was recently processed
+    if (deepLinkStore.actions.hasProcessedRecentlyDeepLink(fullUrl)) {
+      return state
+    }
+
+    // Mark this URL as processed
+    deepLinkStore.actions.markDeepLinkAsProcessed(fullUrl)
+
     logger.info(
       `Deep link handler: Processing conversation for inboxId: ${inboxId}${
         composerTextPrefill ? ` with text: ${composerTextPrefill}` : ""
       }`,
     )
+
+    // Clear any existing pending deep link
+    useDeepLinkStore.getState().actions.clearPendingDeepLink()
 
     const storeState = useMultiInboxStore.getState()
     const activeInboxId = storeState.currentSender?.inboxId
@@ -64,7 +80,7 @@ export const getStateFromPath = (
             logger.info(
               `Deep link handler: Found existing conversation, navigating to: ${conversation.xmtpId}`,
             )
-            navigationRef.current?.navigate("Conversation", {
+            navigateFromHome("Conversation", {
               xmtpConversationId: conversation.xmtpId,
               isNew: false,
               composerTextPrefill,
