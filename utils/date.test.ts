@@ -196,6 +196,6 @@ describe("getMinimalDate", () => {
   })
 
   it("should not show future", () => {
-    expect(getCompactRelativeTime(now + 1)).toBe("0s")
+    expect(getCompactRelativeTime(now + 1)).toBe("Now")
   })
 })
