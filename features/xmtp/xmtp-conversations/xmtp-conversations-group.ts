@@ -1,12 +1,14 @@
 import {
   IXmtpConversationId,
   IXmtpDisappearingMessageSettings,
+  IXmtpGroupWithCodecs,
   IXmtpInboxId,
 } from "@features/xmtp/xmtp.types"
 import {
   addAdmin,
   addGroupMembers,
   addSuperAdmin,
+  permissionPolicySet,
   removeAdmin,
   removeGroupMembers,
   removeSuperAdmin,
@@ -274,6 +276,28 @@ export async function addSuperAdminToXmtpGroup(args: {
     throw new XMTPError({
       error,
       additionalMessage: "Failed to add super admin to group",
+    })
+  }
+}
+
+export async function getGroupPermissions(args: {
+  clientInboxId: IXmtpInboxId
+  conversationId: IXmtpConversationId
+}) {
+  const { clientInboxId, conversationId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    return await wrapXmtpCallWithDuration("getGroupPermissions", () =>
+      permissionPolicySet(client.installationId, conversationId),
+    )
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "Failed to get group permissions",
     })
   }
 }

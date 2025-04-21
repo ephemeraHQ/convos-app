@@ -12,6 +12,7 @@ import {
   updateConversationQueryData,
 } from "@/features/conversation/queries/conversation.query"
 import { IGroup, IGroupMember } from "@/features/groups/group.types"
+import { reactQueryClient } from "@/utils/react-query/react-query.client"
 
 type IArgs = {
   clientInboxId: IXmtpInboxId
@@ -52,7 +53,6 @@ export function setGroupQueryData(args: IArgs & { group: IGroup }) {
 
 export function getGroupQueryOptions(args: IArgsWithCaller) {
   const { clientInboxId, xmtpConversationId, caller } = args
-
   return queryOptions({
     ...(getConversationQueryOptions({
       clientInboxId,
@@ -142,4 +142,14 @@ export function invalidateGroupQuery(args: IArgs) {
 
 export async function ensureGroupQueryData(args: IArgsWithCaller) {
   return (await ensureConversationQueryData(args)) as IGroup | null
+}
+
+export function refetchGroupQuery(args: IArgsWithCaller) {
+  return reactQueryClient.refetchQueries({
+    queryKey: getGroupQueryOptions({
+      clientInboxId: args.clientInboxId,
+      xmtpConversationId: args.xmtpConversationId,
+      caller: args.caller,
+    }),
+  })
 }

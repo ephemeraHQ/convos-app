@@ -2,7 +2,11 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { getGroupQueryData, setGroupQueryData } from "@/features/groups/queries/group.query"
+import {
+  getGroupQueryData,
+  refetchGroupQuery,
+  setGroupQueryData,
+} from "@/features/groups/queries/group.query"
 import { addXmtpGroupMembers } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 import { captureError } from "@/utils/capture-error"
 import { IGroup } from "../group.types"
@@ -72,6 +76,13 @@ export function useAddGroupMembersMutation() {
     onSettled: (data, error, variables) => {
       // Let's make sure we are up to date
       refetchConversationMessagesInfiniteQuery({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: variables.group.xmtpId,
+        caller: "add-group-members-mutation",
+      }).catch(captureError)
+
+      // Revert to make sure we are up to date
+      refetchGroupQuery({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: variables.group.xmtpId,
         caller: "add-group-members-mutation",

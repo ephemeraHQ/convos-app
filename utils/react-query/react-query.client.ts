@@ -103,8 +103,8 @@ export const reactQueryClient = new QueryClient({
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
 
-      // Offers better performance by avoiding deep equality checks
-      structuralSharing: false,
+      // Put this to "false" if we see sloweness with react-query but otherwise
+      structuralSharing: true,
 
       // Handle errors during rehydration more gracefully
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),

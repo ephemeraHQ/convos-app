@@ -9,6 +9,7 @@ import { invalidateDisappearingMessageSettings } from "@/features/disappearing-m
 import { IGroup } from "@/features/groups/group.types"
 import {
   addGroupMemberToGroupQueryData,
+  invalidateGroupQuery,
   removeGroupMemberToGroupQuery,
   updateGroupQueryData,
 } from "@/features/groups/queries/group.query"
@@ -77,6 +78,11 @@ async function handleNewMessage(args: {
 
   // Add the message in conversation messages list
   try {
+    // XMTP sometimes send group updates that are emtpy
+    if (isGroupUpdatedMessage(message) && isEmptyGroupUpdatedMessage(message)) {
+      return
+    }
+
     addMessageToConversationMessagesInfiniteQueryData({
       clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
@@ -85,6 +91,14 @@ async function handleNewMessage(args: {
   } catch (error) {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))
   }
+}
+
+function isEmptyGroupUpdatedMessage(message: IConversationMessageGroupUpdated) {
+  return (
+    message.content.membersAdded.length === 0 &&
+    message.content.membersRemoved.length === 0 &&
+    message.content.metadataFieldsChanged.length === 0
+  )
 }
 
 // XMTP doesn't have typing yet
@@ -104,6 +118,15 @@ function handleNewGroupUpdatedMessage(args: {
   message: IConversationMessageGroupUpdated
 }) {
   const { inboxId, message } = args
+
+  // If no changes, just invalidate the group query data
+  if (isEmptyGroupUpdatedMessage(message)) {
+    invalidateGroupQuery({
+      clientInboxId: inboxId,
+      xmtpConversationId: message.xmtpConversationId,
+    }).catch(captureError)
+    return
+  }
 
   // Add new members
   for (const member of message.content.membersAdded) {

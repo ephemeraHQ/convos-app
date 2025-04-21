@@ -49,7 +49,7 @@ type PreferredDisplayInfoArgs = {
 )
 
 export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
-  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData } = args
+  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData = true } = args
 
   const currentSender = useSafeCurrentSender()
 

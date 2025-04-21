@@ -8,6 +8,7 @@ import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
 import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
+import { useGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import { GroupDetailsListItem } from "@/features/groups/ui/group-details.ui"
 import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -29,9 +30,33 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
     xmtpConversationId,
   })
 
+  const { data: groupPermissions } = useGroupPermissionsQuery({
+    clientInboxId: currentSenderInboxId,
+    xmtpConversationId,
+    caller: "GroupDetailsMembersList",
+  })
+
   const sortedMembers = useMemo(() => {
     return sortGroupMembers(Object.values(members?.byId || {}).filter(Boolean))
   }, [members])
+
+  const canAddMembers = useMemo(() => {
+    if (groupPermissions?.addMemberPolicy === "allow") {
+      return true
+    }
+
+    const currentSenderPermission = members?.byId[currentSenderInboxId]?.permission
+
+    if (groupPermissions?.addMemberPolicy === "admin") {
+      return currentSenderPermission === "admin"
+    }
+
+    if (groupPermissions?.addMemberPolicy === "superAdmin") {
+      return currentSenderPermission === "super_admin"
+    }
+
+    return false
+  }, [groupPermissions, members, currentSenderInboxId])
 
   const handleAddMembersPress = useCallback(() => {
     router.push("AddGroupMembers", { xmtpConversationId })
@@ -64,14 +89,16 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
         }}
       >
         <Text>Members</Text>
-        <IconButton
-          hitSlop={theme.spacing.sm}
-          iconWeight="medium"
-          iconName="plus"
-          variant="ghost"
-          size="md"
-          onPress={handleAddMembersPress}
-        />
+        {canAddMembers && (
+          <IconButton
+            hitSlop={theme.spacing.sm}
+            iconWeight="medium"
+            iconName="plus"
+            variant="ghost"
+            size="md"
+            onPress={handleAddMembersPress}
+          />
+        )}
       </HStack>
 
       {/* Members Grid */}

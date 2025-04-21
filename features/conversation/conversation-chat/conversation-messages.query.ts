@@ -122,7 +122,6 @@ const conversationMessagesInfiniteQueryFn = async (
   // Get message IDs (only from regular messages, not reactions)
   const messageIds = regularMessages.map((message) => message.xmtpId)
 
-  // CURSOR MANAGEMENT LOGIC
   let nextCursorNs: number | null = null
   let prevCursorNs: number | null = null
 
@@ -194,38 +193,19 @@ export function getConversationMessagesInfiniteQueryOptions(
       Boolean(xmtpConversationId) &&
       !isTmpConversation(xmtpConversationId),
     refetchOnMount: (query) => {
-      return conversationHasRecentActivities({
+      const isRecent = conversationHasRecentActivities({
         clientInboxId,
         xmtpConversationId,
       })
+      return isRecent ? "always" : true
     },
     refetchOnWindowFocus: (query) => {
-      return conversationHasRecentActivities({
+      const isRecent = conversationHasRecentActivities({
         clientInboxId,
         xmtpConversationId,
       })
+      return isRecent ? "always" : true
     },
-    // staleTime: (query) => {
-    //   const lastMessageId = query.state.data?.pages[0]?.messageIds[0]
-    //   const lastMessage = getConversationMessageQueryData({
-    //     clientInboxId,
-    //     xmtpMessageId: lastMessageId,
-    //   })
-
-    //   if (!lastMessage) {
-    //     return TimeUtils.days(1).toMilliseconds()
-    //   }
-
-    //   const hoursSinceLastMessage = getHoursSinceTimestamp(lastMessage?.sentMs ?? 0)
-
-    //   if (hoursSinceLastMessage <= 24) {
-    //     // 1 Minute
-    //     return TimeUtils.minutes(1).toMilliseconds()
-    //   }
-
-    //   // 1 Day
-    //   return TimeUtils.days(1).toMilliseconds()
-    // },
   })
 }
 

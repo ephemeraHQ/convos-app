@@ -2,7 +2,7 @@ import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
 import {
   getGroupQueryData,
-  invalidateGroupQuery,
+  refetchGroupQuery,
   setGroupQueryData,
   useGroupQuery,
 } from "@/features/groups/queries/group.query"
@@ -78,9 +78,12 @@ export const useRemoveGroupMembersFromGroupMutation = (args: {
         group: context.previousGroup,
       })
     },
-    onSuccess: () => {
-      // Invalidate the group query to refresh data
-      invalidateGroupQuery({ clientInboxId, xmtpConversationId }).catch(captureError)
+    onSettled: () => {
+      refetchGroupQuery({
+        clientInboxId,
+        xmtpConversationId,
+        caller: "remove-group-members-from-group-mutation",
+      }).catch(captureError)
     },
   })
 }

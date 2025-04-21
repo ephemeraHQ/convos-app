@@ -2,7 +2,6 @@ import { queryOptions, useQuery } from "@tanstack/react-query"
 import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { queryLogger } from "@/utils/logger/logger"
 import { mergeObjDeep } from "@/utils/objects"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
@@ -72,7 +71,6 @@ export function setConversationMessageQueryData(
   },
 ) {
   const { clientInboxId, xmtpMessageId, message } = args
-  queryLogger.debug(`Setting conversation message query data for ${xmtpMessageId}`, message)
   return reactQueryClient.setQueryData(
     getConversationMessageQueryOptions({
       clientInboxId,

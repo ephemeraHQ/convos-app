@@ -337,13 +337,14 @@ export async function clearNotificationsForConversation(args: {
     })
 
     if (notificationsToRemove.length === 0) {
-      notificationsLogger.debug("No notifications found for conversation:", args.xmtpConversationId)
+      notificationsLogger.debug(
+        `No notifications to clear found for conversation ${args.xmtpConversationId}`,
+      )
       return
     }
 
     notificationsLogger.debug(
-      `Found ${notificationsToRemove.length} notifications to clear for conversation:`,
-      args.xmtpConversationId,
+      `Found ${notificationsToRemove.length} notifications to clear for conversation ${args.xmtpConversationId}`,
     )
 
     // Dismiss each notification
@@ -354,8 +355,7 @@ export async function clearNotificationsForConversation(args: {
     )
 
     notificationsLogger.debug(
-      "Successfully cleared notifications for conversation:",
-      args.xmtpConversationId,
+      `Successfully cleared ${notificationsToRemove.length} notifications for conversation ${args.xmtpConversationId}`,
     )
   } catch (error) {
     throw new NotificationError({
