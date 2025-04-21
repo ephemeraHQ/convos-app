@@ -1,7 +1,16 @@
+import { InfiniteData } from "@tanstack/react-query"
 import { getConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { getConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { getHoursSinceTimestamp } from "@/utils/date"
+import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
+
+// Define the type for message IDs page
+type IMessageIdsPage = {
+  messageIds: IXmtpMessageId[]
+  nextCursorNs: number | null
+  prevCursorNs: number | null
+}
 
 export function conversationHasRecentActivities(args: {
   xmtpConversationId: IXmtpConversationId
@@ -9,10 +18,15 @@ export function conversationHasRecentActivities(args: {
 }) {
   const { xmtpConversationId, clientInboxId } = args
 
-  const messages = getConversationMessagesInfiniteQueryData({
+  // Access query data directly using reactQueryClient instead of importing the function
+  const queryKey = getReactQueryKey({
+    baseStr: "conversation-messages-infinite",
     clientInboxId,
     xmtpConversationId,
-  })?.pages[0]?.messageIds
+  })
+
+  const data = reactQueryClient.getQueryData<InfiniteData<IMessageIdsPage>>(queryKey)
+  const messages = data?.pages?.[0]?.messageIds
 
   const lastMessageId = messages?.[0]
 

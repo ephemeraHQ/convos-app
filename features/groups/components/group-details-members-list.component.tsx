@@ -7,9 +7,14 @@ import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
+import { useCurrentSenderGroupMember } from "@/features/groups/hooks/use-current-sender-group-member"
 import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
 import { useGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import { GroupDetailsListItem } from "@/features/groups/ui/group-details.ui"
+import {
+  getGroupMemberIsAdmin,
+  getGroupMemberIsSuperAdmin,
+} from "@/features/groups/utils/group-admin.utils"
 import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useRouter } from "@/navigation/use-navigation"
@@ -36,6 +41,10 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
     caller: "GroupDetailsMembersList",
   })
 
+  const { currentSenderGroupMember } = useCurrentSenderGroupMember({
+    xmtpConversationId,
+  })
+
   const sortedMembers = useMemo(() => {
     return sortGroupMembers(Object.values(members?.byId || {}).filter(Boolean))
   }, [members])
@@ -45,18 +54,20 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
       return true
     }
 
-    const currentSenderPermission = members?.byId[currentSenderInboxId]?.permission
+    if (!currentSenderGroupMember) {
+      return false
+    }
 
     if (groupPermissions?.addMemberPolicy === "admin") {
-      return currentSenderPermission === "admin"
+      return getGroupMemberIsAdmin({ member: currentSenderGroupMember })
     }
 
     if (groupPermissions?.addMemberPolicy === "superAdmin") {
-      return currentSenderPermission === "super_admin"
+      return getGroupMemberIsSuperAdmin({ member: currentSenderGroupMember })
     }
 
     return false
-  }, [groupPermissions, members, currentSenderInboxId])
+  }, [groupPermissions, currentSenderGroupMember])
 
   const handleAddMembersPress = useCallback(() => {
     router.push("AddGroupMembers", { xmtpConversationId })

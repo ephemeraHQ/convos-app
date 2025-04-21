@@ -14,8 +14,14 @@ import { useConversationStoreContext } from "@/features/conversation/conversatio
 import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { useDmPeerInboxId } from "@/features/conversation/hooks/use-dm-peer-inbox-id"
 import { DisappearingMessagesHeaderAction } from "@/features/disappearing-messages/disappearing-messages-header-action"
+import { useCurrentSenderGroupMember } from "@/features/groups/hooks/use-current-sender-group-member"
 import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
+import { useGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
+import {
+  getGroupMemberIsAdmin,
+  getGroupMemberIsSuperAdmin,
+} from "@/features/groups/utils/group-admin.utils"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useHeader } from "@/navigation/use-header"
@@ -35,6 +41,46 @@ export function useConversationScreenHeader() {
     xmtpConversationId: xmtpConversationId!,
     caller: "useConversationScreenHeader",
   })
+
+  const { currentSenderGroupMember } = useCurrentSenderGroupMember({
+    xmtpConversationId: xmtpConversationId!,
+  })
+
+  const { data: groupPermissions } = useGroupPermissionsQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId: xmtpConversationId!,
+    caller: "useConversationScreenHeader",
+  })
+
+  const canEditDisappearingMessages = useMemo(() => {
+    if (conversationType === "dm") {
+      return true
+    }
+
+    if (conversationType !== "group" || !groupPermissions || !currentSenderGroupMember) {
+      return false
+    }
+
+    const policy = groupPermissions.updateMessageDisappearingPolicy
+
+    if (policy === "allow") {
+      return true
+    }
+
+    if (policy === "deny") {
+      return false
+    }
+
+    if (policy === "admin") {
+      return getGroupMemberIsAdmin({ member: currentSenderGroupMember })
+    }
+
+    if (policy === "superAdmin") {
+      return getGroupMemberIsSuperAdmin({ member: currentSenderGroupMember })
+    }
+
+    return false
+  }, [conversationType, groupPermissions, currentSenderGroupMember])
 
   const onBack = useCallback(() => navigation.goBack(), [navigation])
 
@@ -67,15 +113,21 @@ export function useConversationScreenHeader() {
         return {
           ...baseConfig,
           titleComponent: <GroupConversationTitle xmtpConversationId={xmtpConversationId} />,
-          RightActionComponent: (
+          RightActionComponent: canEditDisappearingMessages ? (
             <DisappearingMessagesHeaderAction xmtpConversationId={xmtpConversationId} />
-          ),
+          ) : undefined,
         }
       }
     }
 
     return baseConfig
-  }, [conversationType, isCreatingNewConversation, onBack, xmtpConversationId])
+  }, [
+    conversationType,
+    isCreatingNewConversation,
+    onBack,
+    xmtpConversationId,
+    canEditDisappearingMessages,
+  ])
 
   useHeader(headerConfig, [headerConfig])
 }
