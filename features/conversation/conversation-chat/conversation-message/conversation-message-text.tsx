@@ -1,24 +1,27 @@
 import { memo } from "react"
+import { ClickableText } from "@/components/clickable-text"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { ConversationMessageUrlHandler } from "./conversation-message-url-handler"
+import { createVanityUrlParser } from "./conversation-message-parsers"
 
-type IMessageTextProps = {
+export const ConversationMessageText = memo(function ConversationMessageText({
+  children,
+  inverted,
+}: {
   children: string
   inverted?: boolean
-}
-
-export const MessageText = memo(function MessageText(args: IMessageTextProps) {
-  const { children, inverted } = args
-
+}) {
   const { theme } = useAppTheme()
-
-  // Use the ConversationMessageUrlHandler for URL detection and handling
+  
+  const vanityUrlParser = createVanityUrlParser(theme.colors.global.orange)
+  
   return (
-    <ConversationMessageUrlHandler
-      text={children}
+    <ClickableText
+      additionalParsers={[vanityUrlParser]}
       style={{
         color: inverted ? theme.colors.text.inverted.primary : theme.colors.text.primary,
       }}
-    />
+    >
+      {children}
+    </ClickableText>
   )
 })

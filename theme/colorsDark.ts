@@ -66,6 +66,7 @@ export const colorsDark: IColors = {
     white: lightPalette.light,
     black: darkPalette.dark,
     green: darkPalette.green,
+    orange: darkPalette.orange,
     primary: darkPalette.dark,
     primaryAlpha60: darkPalette.alpha60,
     caution: darkPalette.red,

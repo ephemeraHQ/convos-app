@@ -8,7 +8,7 @@ import {
   BubbleContentContainer,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-bubble"
 import { ConversationMessageGestures } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures"
-import { MessageText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text"
+import { ConversationMessageText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { IConversationMessageText } from "./conversation-message.types"
 
@@ -37,7 +37,7 @@ export const ConversationMessageSimpleText = memo(function ConversationMessageSi
     <BubbleContainer>
       <ConversationMessageGestures>
         <BubbleContentContainer>
-          <MessageText inverted={fromMe}>{message.content.text}</MessageText>
+          <ConversationMessageText inverted={fromMe}>{message.content.text}</ConversationMessageText>
         </BubbleContentContainer>
       </ConversationMessageGestures>
     </BubbleContainer>

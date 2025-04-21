@@ -3,6 +3,7 @@ import * as Linking from "expo-linking"
 import { useCallback } from "react"
 import { StyleProp, StyleSheet, TextStyle } from "react-native"
 import { ParsedText } from "@/components/parsed-text/parsed-text"
+import { ICustomParseShape } from "@/components/parsed-text/parsed-text.types"
 import {
   ADDRESS_REGEX,
   CB_ID_REGEX,
@@ -18,9 +19,14 @@ import { showActionSheet } from "./action-sheet"
 type Props = {
   children: React.ReactNode
   style?: StyleProp<TextStyle>
+  additionalParsers?: ICustomParseShape[]
 }
 
-export function ClickableText({ children, style }: Props) {
+export function ClickableText({ 
+  children, 
+  style,
+  additionalParsers = [],
+}: Props) {
   const styles = useStyles()
 
   const handleEmailPress = useCallback((email: string) => {
@@ -67,60 +73,65 @@ export function ClickableText({ children, style }: Props) {
     [],
   )
 
+  // Define default parsers
+  const defaultParsers: ICustomParseShape[] = [
+    {
+      onPress: handleNewConversationPress,
+      onLongPress: showCopyActionSheet("Copy wallet address"),
+      pattern: ADDRESS_REGEX,
+      style: styles.clickableText,
+    },
+    {
+      onPress: handleNewConversationPress,
+      onLongPress: showCopyActionSheet("Copy lens handle"),
+      pattern: LENS_REGEX,
+      style: styles.clickableText,
+    },
+    {
+      onPress: handleNewConversationPress,
+      onLongPress: showCopyActionSheet("Copy ENS name"),
+      pattern: ENS_REGEX,
+      style: styles.clickableText,
+    },
+    {
+      onPress: handleNewConversationPress,
+      onLongPress: showCopyActionSheet("Copy Coinbase ID"),
+      pattern: CB_ID_REGEX,
+      style: styles.clickableText,
+    },
+    {
+      onPress: handleNewConversationPress,
+      onLongPress: showCopyActionSheet("Copy Unstoppable domain"),
+      pattern: UNS_REGEX,
+      style: styles.clickableText,
+    },
+    {
+      onPress: handleNewConversationPress,
+      onLongPress: showCopyActionSheet("Copy Farcaster username"),
+      pattern: FARCASTER_REGEX,
+      style: styles.clickableText,
+    },
+    {
+      onPress: handleEmailPress,
+      onLongPress: showCopyActionSheet("Copy email"),
+      pattern: EMAIL_REGEX,
+      style: styles.clickableText,
+    },
+    {
+      onPress: handleUrlPress,
+      onLongPress: showCopyActionSheet("Copy link"),
+      pattern: URL_REGEX,
+      style: styles.clickableText,
+    },
+  ]
+  
+  const allParsers = [...additionalParsers, ...defaultParsers]
+
   return (
     <ParsedText
       accessibilityRole="link"
       style={style}
-      parse={[
-        {
-          onPress: handleNewConversationPress,
-          onLongPress: showCopyActionSheet("Copy wallet address"),
-          pattern: ADDRESS_REGEX,
-          style: styles.clickableText,
-        },
-        {
-          onPress: handleNewConversationPress,
-          onLongPress: showCopyActionSheet("Copy lens handle"),
-          pattern: LENS_REGEX,
-          style: styles.clickableText,
-        },
-        {
-          onPress: handleNewConversationPress,
-          onLongPress: showCopyActionSheet("Copy ENS name"),
-          pattern: ENS_REGEX,
-          style: styles.clickableText,
-        },
-        {
-          onPress: handleNewConversationPress,
-          onLongPress: showCopyActionSheet("Copy Coinbase ID"),
-          pattern: CB_ID_REGEX,
-          style: styles.clickableText,
-        },
-        {
-          onPress: handleNewConversationPress,
-          onLongPress: showCopyActionSheet("Copy Unstoppable domain"),
-          pattern: UNS_REGEX,
-          style: styles.clickableText,
-        },
-        {
-          onPress: handleNewConversationPress,
-          onLongPress: showCopyActionSheet("Copy Farcaster username"),
-          pattern: FARCASTER_REGEX,
-          style: styles.clickableText,
-        },
-        {
-          onPress: handleEmailPress,
-          onLongPress: showCopyActionSheet("Copy email"),
-          pattern: EMAIL_REGEX,
-          style: styles.clickableText,
-        },
-        {
-          onPress: handleUrlPress,
-          onLongPress: showCopyActionSheet("Copy link"),
-          pattern: URL_REGEX,
-          style: styles.clickableText,
-        },
-      ]}
+      parse={allParsers}
     >
       {children}
     </ParsedText>
