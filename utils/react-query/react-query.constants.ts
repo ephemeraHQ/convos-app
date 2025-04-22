@@ -1,8 +1,9 @@
 import { UseQueryOptions } from "@tanstack/react-query"
+import { TimeUtils } from "@/utils/time.utils"
 
-export const DEFAULT_GC_TIME = 1000 * 60 * 60 * 24 * 7 // 7 days
+export const DEFAULT_GC_TIME = TimeUtils.minutes(5).toMilliseconds()
 
-export const DEFAULT_STALE_TIME = 1000 * 60 * 60 * 24 // 24h
+export const DEFAULT_STALE_TIME = TimeUtils.minutes(1).toMilliseconds()
 
 export const reactQueryCacheOnlyQueryOptions: Partial<UseQueryOptions<any>> = {
   refetchOnMount: false,
