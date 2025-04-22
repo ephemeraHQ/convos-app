@@ -150,6 +150,6 @@ export function refetchGroupQuery(args: IArgsWithCaller) {
       clientInboxId: args.clientInboxId,
       xmtpConversationId: args.xmtpConversationId,
       caller: args.caller,
-    }),
+    }).queryKey,
   })
 }
