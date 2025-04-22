@@ -1,9 +1,9 @@
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions } from "@tanstack/react-query"
-import { AxiosError } from "axios"
 import { getConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
+import { TimeUtils } from "@/utils/time.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
 
 export type IConversationMetadataQueryData = Awaited<ReturnType<typeof getConversationMetadata>>
@@ -27,6 +27,7 @@ export function getConversationMetadataQueryOptions({ xmtpConversationId, client
     }),
     queryFn: () => getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }),
     enabled,
+    gcTime: TimeUtils.days(30).toMilliseconds(), // Because the current user is the only one that can make changes to their conversation metadata
     staleTime: Infinity, // Because the current user is the only one that can make changes to their conversation metadata
   })
 }

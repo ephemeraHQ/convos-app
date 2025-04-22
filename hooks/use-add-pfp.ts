@@ -84,6 +84,7 @@ export function useAddOrRemovePfp(args?: {
    */
   const addPFP = useCallback(
     () => {
+      console.log("test")
       return new Promise<string>((resolve, reject) => {
         const showOptions = () => {
           const defaultOptions: ActionSheetOption[] = [

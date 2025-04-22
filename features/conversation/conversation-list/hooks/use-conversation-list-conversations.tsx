@@ -23,11 +23,22 @@ export const useConversationListConversations = () => {
     caller: "useConversationListConversations",
   })
 
-  const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
-    conversationIds,
+  // const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
+  //   conversationIds,
+  // })
+
+  const lastMessageIdsQueries = useQueries({
+    queries: conversationIds.map((conversationId) => ({
+      ...getConversationMessageQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+        caller: "useConversationListConversations",
+      }),
+      select: (data) => data?.pages[0]?.messageIds,
+    })),
   })
 
-  const lastMessageIds = Object.values(lastMessageIdForConversationMap).filter(Boolean)
+  const lastMessageIds = lastMessageIdsQueries.flatMap((query) => query.data ?? [])
 
   const lastMessageQueries = useQueries({
     queries: lastMessageIds.map((messageId) => ({
@@ -64,13 +75,13 @@ export const useConversationListConversations = () => {
         !isConversationAllowed(conversation) ||
         metadata?.pinned ||
         metadata?.deleted ||
-        (conversationMetadataQuery.isLoading && !conversationMetadataQuery.isFetched)
+        conversationMetadataQuery.isLoading
       ) {
         return acc
       }
 
       // Get the last message for valid conversations
-      const messageId = lastMessageIdForConversationMap[conversationId]
+      const messageId = lastMessageIds[index]
       const messageIndex = lastMessageIds.findIndex((id) => id === messageId)
       const lastMessageQuery = messageIndex >= 0 ? lastMessageQueries[messageIndex] : undefined
       const lastMessage = lastMessageQuery?.data
@@ -90,8 +101,7 @@ export const useConversationListConversations = () => {
   // Sort in descending order (newest first)
   validConversationIds.sort((a, b) => b.timestamp - a.timestamp)
 
-  // Extract just the conversation IDs for the final result
-  const result = validConversationIds.map((item) => item.conversationId)
+  const sortedValidConversationIds = validConversationIds.map((item) => item.conversationId)
 
   const handleRefetch = useCallback(() => {
     // Refetch all conversations
@@ -126,7 +136,7 @@ export const useConversationListConversations = () => {
     hasAnyLastMessageIdLoading
 
   return {
-    data: result,
+    data: sortedValidConversationIds,
     refetch: handleRefetch,
     isLoading,
   }

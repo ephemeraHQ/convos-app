@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { skipToken, useQuery } from "@tanstack/react-query"
 import { identityResolutionApi } from "@/features/social-profiles/identity-resolution.api"
 import {
   isValidBaseName,
@@ -9,39 +9,47 @@ import { IEthereumAddress } from "@/utils/evm/address"
 import { TimeUtils } from "@/utils/time.utils"
 
 export function useEnsNameResolution(name: string | undefined) {
-  const isValid = isValidEnsName(name)
+  const trimmedName = name?.trim()
+  const isValid = isValidEnsName(trimmedName)
 
   return useQuery({
-    queryKey: ["identity", "ens", name],
+    queryKey: ["identity", "ens", trimmedName],
     queryFn: async () =>
-      (await identityResolutionApi.resolveEnsName({ name: name! })) as IEthereumAddress,
-    enabled: Boolean(name) && isValid,
+      (await identityResolutionApi.resolveEnsName({ name: trimmedName! })) as IEthereumAddress,
+    enabled: Boolean(trimmedName) && isValid,
     staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
   })
 }
 
 export function useBaseNameResolution(name: string | undefined) {
-  const isValid = isValidBaseName(name)
+  const trimmedName = name?.trim()
+  const isValid = isValidBaseName(trimmedName)
 
   return useQuery({
-    queryKey: ["identity", "base", name],
+    queryKey: ["identity", "base", trimmedName],
     queryFn: async () =>
-      (await identityResolutionApi.resolveBaseName({ name: name! })) as IEthereumAddress,
-    enabled: Boolean(name) && isValid,
+      (await identityResolutionApi.resolveBaseName({ name: trimmedName! })) as IEthereumAddress,
+    enabled: Boolean(trimmedName) && isValid,
     staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
   })
 }
 
 export function useUnstoppableDomainNameResolution(name: string | undefined) {
-  const isValid = isValidUnstoppableDomainName(name)
+  const trimmedName = name?.trim()
+  const isValid = isValidUnstoppableDomainName(trimmedName)
 
   return useQuery({
-    queryKey: ["identity", "unstoppable-domains", name],
-    queryFn: async () =>
-      (await identityResolutionApi.resolveUnstoppableDomainName({
-        name: name!,
-      })) as IEthereumAddress,
-    enabled: Boolean(name) && isValid,
+    queryKey: ["identity", "unstoppable-domains", trimmedName],
+    queryFn: trimmedName
+      ? async () =>
+          (await identityResolutionApi.resolveUnstoppableDomainName({
+            name: trimmedName,
+          })) as IEthereumAddress
+      : skipToken,
+    enabled: Boolean(trimmedName) && isValid,
     staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
   })
 }

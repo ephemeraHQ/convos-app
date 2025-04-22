@@ -43,6 +43,7 @@ export const getSocialProfilesForEthAddressQueryOptions = (
           }
         : skipToken,
     staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that this should change
+    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that this should change
   })
 }
 

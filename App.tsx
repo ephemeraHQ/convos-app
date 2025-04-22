@@ -13,6 +13,7 @@ import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-
 import { useSignoutIfNoPrivyUser } from "@/features/authentication/use-logout-if-no-privy-user"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
+import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
@@ -33,7 +34,6 @@ import { base } from "viem/chains"
 import { config } from "./config"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
 import { registerBackgroundNotificationTask } from "./features/notifications/background-notifications-handler"
-import { setupConversationsNotificationsSubscriptions } from "./features/notifications/notifications-conversations-subscriptions"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
 import { sentryInit } from "./utils/sentry/sentry-init"
@@ -57,7 +57,6 @@ export function App() {
 
   useEffect(() => {
     setupConvosApi()
-    setupConversationsNotificationsSubscriptions().catch(captureError)
   }, [])
 
   // Seems to be slowing the app. Need to investigate
@@ -105,6 +104,7 @@ const Handlers = memo(function Handlers() {
   useSignoutIfNoPrivyUser()
   useCreateUserIfNoExist()
   useNotificationListeners()
+  useConversationsNotificationsSubscriptions()
 
   return null
 })

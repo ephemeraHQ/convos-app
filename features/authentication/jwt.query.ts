@@ -18,6 +18,7 @@ export function getJwtQueryOptions() {
         }
       : skipToken,
     staleTime: Infinity,
+    gcTime: Infinity,
   })
 }
 

@@ -17,11 +17,9 @@ import {
 } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
-import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useEffectWhenCondition } from "@/hooks/use-effect-once"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
@@ -55,23 +53,27 @@ export const ConversationListScreen = memo(function ConversationListScreen(
     registerPushNotifications().catch(captureError)
   }, [])
 
+  // Temporary comment until we solve performance issues
   // Let's preload the active conversations
-  useEffectWhenCondition(
-    () => {
-      for (const conversationId of conversationsIds.filter((xmtpConversationId) =>
-        conversationHasRecentActivities({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId,
-        }),
-      )) {
-        // Preload the conversation screen
-        router.preload("Conversation", {
-          xmtpConversationId: conversationId,
-        })
-      }
-    },
-    Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
-  )
+  // useEffectWhenCondition(
+  //   () => {
+  //     for (const conversationId of conversationsIds
+  //       .filter((xmtpConversationId) =>
+  //         conversationHasRecentActivities({
+  //           clientInboxId: currentSender.inboxId,
+  //           xmtpConversationId,
+  //         }),
+  //       )
+  //       // For now we don't want more than 5 conversations to be preloaded
+  //       .slice(0, 5)) {
+  //       // Preload the conversation screen
+  //       // router.preload("Conversation", {
+  //       //   xmtpConversationId: conversationId,
+  //       // })
+  //     }
+  //   },
+  //   Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
+  // )
 
   const handleRefresh = useCallback(async () => {
     try {

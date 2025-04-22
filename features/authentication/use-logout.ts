@@ -5,8 +5,7 @@ import { getCurrentSender, resetMultiInboxStore } from "@/features/authenticatio
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { reactQueryMMKV } from "@/utils/react-query/react-query-persister"
-import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { authLogger } from "../../utils/logger/logger"
 
 export const useLogout = () => {
@@ -25,12 +24,6 @@ export const useLogout = () => {
         // TODO: Change this once we support multiple identities
         resetMultiInboxStore()
 
-        // Clear both in-memory cache and persisted data
-        reactQueryClient.getQueryCache().clear()
-        reactQueryClient.clear()
-        reactQueryClient.removeQueries()
-        reactQueryMMKV.clearAll()
-
         if (currentSender) {
           logoutXmtpClient({
             inboxId: currentSender.inboxId,
@@ -38,6 +31,8 @@ export const useLogout = () => {
         }
 
         await privyLogout()
+
+        clearReacyQueryQueriesAndCache()
 
         authLogger.debug("Successfully logged out")
       } catch (error) {
