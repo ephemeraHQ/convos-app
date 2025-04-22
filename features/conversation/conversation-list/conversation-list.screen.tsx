@@ -49,41 +49,39 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   const router = useRouter()
   const currentSender = useSafeCurrentSender()
 
-  // useConversationListScreenHeader()
+  useConversationListScreenHeader()
 
-  // useEffect(() => {
-  //   registerPushNotifications().catch(captureError)
-  // }, [])
+  useEffect(() => {
+    registerPushNotifications().catch(captureError)
+  }, [])
 
   // Let's preload the active conversations
-  // useEffectWhenCondition(
-  //   () => {
-  //     for (const conversationId of conversationsIds.filter((xmtpConversationId) =>
-  //       conversationHasRecentActivities({
-  //         clientInboxId: currentSender.inboxId,
-  //         xmtpConversationId,
-  //       }),
-  //     )) {
-  //       // Preload the conversation screen
-  //       router.preload("Conversation", {
-  //         xmtpConversationId: conversationId,
-  //       })
-  //     }
-  //   },
-  //   Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
-  // )
+  useEffectWhenCondition(
+    () => {
+      for (const conversationId of conversationsIds.filter((xmtpConversationId) =>
+        conversationHasRecentActivities({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId,
+        }),
+      )) {
+        // Preload the conversation screen
+        router.preload("Conversation", {
+          xmtpConversationId: conversationId,
+        })
+      }
+    },
+    Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
+  )
 
-  // const handleRefresh = useCallback(async () => {
-  //   try {
-  //     await refetchConversations()
-  //   } catch (error) {
-  //     captureError(new GenericError({ error, additionalMessage: "Error refreshing conversations" }))
-  //   }
-  // }, [refetchConversations])
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refetchConversations()
+    } catch (error) {
+      captureError(new GenericError({ error, additionalMessage: "Error refreshing conversations" }))
+    }
+  }, [refetchConversations])
 
-  // const isLoading = conversationsIds?.length === 0 && isLoadingConversations
-
-  return null
+  const isLoading = conversationsIds?.length === 0 && isLoadingConversations
 
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
