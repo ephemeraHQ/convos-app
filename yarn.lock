@@ -5513,7 +5513,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@privy-io/api-base@npm:1.4.5, @privy-io/api-base@npm:^1.4.5":
+"@privy-io/api-base@npm:1.4.5":
   version: 1.4.5
   resolution: "@privy-io/api-base@npm:1.4.5"
   dependencies:
@@ -5522,7 +5522,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@privy-io/chains@npm:^0.0.1":
+"@privy-io/chains@npm:0.0.1, @privy-io/chains@npm:^0.0.1":
   version: 0.0.1
   resolution: "@privy-io/chains@npm:0.0.1"
   checksum: 10c0/1eb5a17af33e3247842fa19505e05d7e19fcebf2546de3d1371d5fb6b87d99a6b132736e05309d7015b937fcfd91189927853520aec9a73a4454ae9e87bca26c
@@ -5540,12 +5540,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@privy-io/expo@npm:^0.49.0":
-  version: 0.49.3
-  resolution: "@privy-io/expo@npm:0.49.3"
+"@privy-io/expo@npm:^0.52.3":
+  version: 0.52.3
+  resolution: "@privy-io/expo@npm:0.52.3"
   dependencies:
-    "@privy-io/js-sdk-core": "npm:0.46.1"
+    "@privy-io/js-sdk-core": "npm:0.48.0"
+    "@scure/base": "npm:^1.2.4"
     react-fast-compare: "npm:^3.2.2"
+    tweetnacl: "npm:^1.0.3"
     zustand: "npm:^4.4.1"
   peerDependencies:
     "@expo-google-fonts/inter": "*"
@@ -5553,7 +5555,6 @@ __metadata:
     expo-apple-authentication: "*"
     expo-application: "*"
     expo-clipboard: "*"
-    expo-constants: "*"
     expo-crypto: "*"
     expo-font: "*"
     expo-linking: "*"
@@ -5571,21 +5572,27 @@ __metadata:
   peerDependenciesMeta:
     "@expo-google-fonts/inter":
       optional: true
-    expo-apple-authentication:
+    expo-clipboard:
       optional: true
     expo-font:
       optional: true
     permissionless:
       optional: true
+    react-native-qrcode-styled:
+      optional: true
+    react-native-safe-area-context:
+      optional: true
+    react-native-svg:
+      optional: true
     viem:
       optional: true
-  checksum: 10c0/144e6fba14ade2b600ab2d778d82910f34221a260b73b7a79c0010ff39ec85c20fd2791708c82dba002ab9aaf8ab4d056a8083fecad132ae493b2be1a55c0bb3
+  checksum: 10c0/dd1451ef65839fc759350d8659da131c31d68b6170df569912ab6c2bba63f0a553522132effb8022a8f85de2c5b62195d2e2b7e6495e7e51529f23584c2ddf6e
   languageName: node
   linkType: hard
 
-"@privy-io/js-sdk-core@npm:0.46.1":
-  version: 0.46.1
-  resolution: "@privy-io/js-sdk-core@npm:0.46.1"
+"@privy-io/js-sdk-core@npm:0.48.0":
+  version: 0.48.0
+  resolution: "@privy-io/js-sdk-core@npm:0.48.0"
   dependencies:
     "@ethersproject/abstract-signer": "npm:^5.7.0"
     "@ethersproject/bignumber": "npm:^5.7.0"
@@ -5593,8 +5600,10 @@ __metadata:
     "@ethersproject/providers": "npm:^5.7.2"
     "@ethersproject/transactions": "npm:^5.7.0"
     "@ethersproject/units": "npm:^5.7.0"
-    "@privy-io/api-base": "npm:^1.4.5"
-    "@privy-io/public-api": "npm:2.20.1"
+    "@privy-io/api-base": "npm:1.4.5"
+    "@privy-io/chains": "npm:0.0.1"
+    "@privy-io/public-api": "npm:2.22.0"
+    canonicalize: "npm:^2.0.0"
     eventemitter3: "npm:^5.0.1"
     fetch-retry: "npm:^6.0.0"
     jose: "npm:^4.15.5"
@@ -5610,20 +5619,20 @@ __metadata:
       optional: true
     viem:
       optional: true
-  checksum: 10c0/f7a91ba7b7e526b873a2883ad4b0802bf5a2957771987cdd240790ba9ac1032df37d08a886359db93d74b5421c71d63d1c7c2169354d89813dbed17d0af8a6e3
+  checksum: 10c0/a751ba0ca5a217d1e12d6441f6067fc8ca79b8dfea584cc850481a6db59571d9f62e0cbc6f64aa71e9a85620f4cdc40cc7b839af80047eb2314d895d83d9c041
   languageName: node
   linkType: hard
 
-"@privy-io/public-api@npm:2.20.1":
-  version: 2.20.1
-  resolution: "@privy-io/public-api@npm:2.20.1"
+"@privy-io/public-api@npm:2.22.0":
+  version: 2.22.0
+  resolution: "@privy-io/public-api@npm:2.22.0"
   dependencies:
     "@privy-io/api-base": "npm:1.4.5"
     bs58: "npm:^5.0.0"
     libphonenumber-js: "npm:^1.10.31"
     viem: "npm:^2"
     zod: "npm:^3.22.4"
-  checksum: 10c0/114856c4b223fce86ffaa402eccf9d3c92209b97c7dfcfd2e9e6b839d1ee9380e72f19e107c4c4b574c09ad548b2e4531130806f7ea0e02adf9764365b01a38f
+  checksum: 10c0/bcd6398fc0b4c16623555016dd6cc871de55bde586babba8b62da20ad71ebfb85b73d1d56873a5c724040bff1be512c5315e9825e22e0c7a250a37e20680ad57
   languageName: node
   linkType: hard
 
@@ -6624,7 +6633,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@scure/base@npm:~1.2.2, @scure/base@npm:~1.2.4":
+"@scure/base@npm:^1.2.4, @scure/base@npm:~1.2.2, @scure/base@npm:~1.2.4":
   version: 1.2.4
   resolution: "@scure/base@npm:1.2.4"
   checksum: 10c0/469c8aee80d6d6973e1aac6184befa04568f1b4016e40c889025f4a721575db9c1ca0c2ead80613896cce929392740322a18da585a427f157157e797dc0a42a9
@@ -10186,6 +10195,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"canonicalize@npm:^2.0.0":
+  version: 2.1.0
+  resolution: "canonicalize@npm:2.1.0"
+  bin:
+    canonicalize: bin/canonicalize.js
+  checksum: 10c0/3b1ec612765851e71eeff2868f5ccbf0a06ffd8db8deef36efda89167527f96803b555c4ca8b5f5230f0a13badeeac5541c9244c8996fea97d00cee8dca2bf35
+  languageName: node
+  linkType: hard
+
 "canvaskit-wasm@npm:0.39.1":
   version: 0.39.1
   resolution: "canvaskit-wasm@npm:0.39.1"
@@ -10695,7 +10713,7 @@ __metadata:
     "@ianvs/prettier-plugin-sort-imports": "npm:^4.4.1"
     "@legendapp/list": "npm:^1.0.0-beta.26"
     "@privy-io/chains": "npm:^0.0.1"
-    "@privy-io/expo": "npm:^0.49.0"
+    "@privy-io/expo": "npm:^0.52.3"
     "@privy-io/expo-native-extensions": "npm:^0.0.4"
     "@react-native-async-storage/async-storage": "npm:1.23.1"
     "@react-native-clipboard/clipboard": "npm:1.11.2"
@@ -22125,6 +22143,13 @@ __metadata:
   dependencies:
     domino: "npm:^2.1.6"
   checksum: 10c0/db6085ee38b2ef99888b628453806581aedb34e9866e495587b9b7c8eb923eb730fa795bc030f32d1da2e7394e8f2294ea2381a64dac286e6d040f28e776eb93
+  languageName: node
+  linkType: hard
+
+"tweetnacl@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "tweetnacl@npm:1.0.3"
+  checksum: 10c0/069d9df51e8ad4a89fbe6f9806c68e06c65be3c7d42f0701cc43dba5f0d6064686b238bbff206c5addef8854e3ce00c643bff59432ea2f2c639feab0ee1a93f9
   languageName: node
   linkType: hard
 
