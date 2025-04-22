@@ -90,7 +90,7 @@ export const ConversationAttachmentRemoteImageSmart = memo(
     })
 
     const { url, ...metadata } =
-      conversationMessage?.content as IConversationMessageRemoteAttachmentContent
+      (conversationMessage?.content as IConversationMessageRemoteAttachmentContent) || {}
 
     const {
       data: attachment,

@@ -10,7 +10,7 @@ import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 
 type IArgs = {
   xmtpMessageId: IXmtpMessageId
-  url: string
+  url: string | undefined
   metadata: RemoteAttachmentMetadata
 }
 
