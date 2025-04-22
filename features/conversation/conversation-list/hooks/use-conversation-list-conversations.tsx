@@ -23,22 +23,11 @@ export const useConversationListConversations = () => {
     caller: "useConversationListConversations",
   })
 
-  // const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
-  //   conversationIds,
-  // })
-
-  const lastMessageIdsQueries = useQueries({
-    queries: conversationIds.map((conversationId) => ({
-      ...getConversationMessageQueryOptions({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-        caller: "useConversationListConversations",
-      }),
-      select: (data) => data?.pages[0]?.messageIds,
-    })),
+  const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
+    conversationIds,
   })
 
-  const lastMessageIds = lastMessageIdsQueries.flatMap((query) => query.data ?? [])
+  const lastMessageIds = Object.values(lastMessageIdForConversationMap)
 
   const lastMessageQueries = useQueries({
     queries: lastMessageIds.map((messageId) => ({
