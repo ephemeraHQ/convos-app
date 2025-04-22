@@ -33,6 +33,7 @@ import { isConversationAllowed } from "@/features/conversation/utils/is-conversa
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
+import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
@@ -174,9 +175,23 @@ export const ConversationMessages = memo(function ConversationMessages() {
           .finally(() => {
             refreshingRef.current = false
           })
+
+        // Also refetch group query so the header updates if it needs to
+        refetchGroupQuery({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId,
+          caller: "Conversation Messages",
+        }).catch(captureError)
       }
     },
-    [fetchNextPage, hasNextPage, isRefetchingMessages, refetchMessages],
+    [
+      fetchNextPage,
+      hasNextPage,
+      isRefetchingMessages,
+      refetchMessages,
+      currentSender.inboxId,
+      xmtpConversationId,
+    ],
   )
 
   const latestXmtpMessageIdFromCurrentSender = useMemo(() => {
