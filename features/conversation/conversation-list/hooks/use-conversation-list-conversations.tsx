@@ -96,9 +96,10 @@ export const useConversationListConversations = () => {
     // Refetch all conversations
     refetchConversations().catch(captureError)
     // Refetch all metadata for all conversations
-    conversationMetadataQueries.forEach((query) => {
-      query.refetch().catch(captureError)
-    })
+    // Not important enough to refetch
+    // conversationMetadataQueries.forEach((query) => {
+    //   query.refetch().catch(captureError)
+    // })
     // Refetch all messages for all conversations
     for (const conversationId of conversationIds) {
       refetchInfiniteConversationMessages({
@@ -108,7 +109,7 @@ export const useConversationListConversations = () => {
       }).catch(captureError)
     }
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
-  }, [conversationIds, currentSender.inboxId, conversationMetadataQueries, refetchConversations])
+  }, [conversationIds, currentSender.inboxId, refetchConversations])
 
   const hasAnyLastMessageLoading = lastMessageQueries.some(
     (query) => query.isLoading && !query.data,

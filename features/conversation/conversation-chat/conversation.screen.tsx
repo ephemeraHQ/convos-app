@@ -70,11 +70,11 @@ const Content = memo(function Content() {
 
   useConversationScreenHeader()
 
-  // useEffect(() => {
-  //   if (xmtpConversationId) {
-  //     clearNotificationsForConversation({ xmtpConversationId })
-  //   }
-  // }, [xmtpConversationId])
+  useEffect(() => {
+    if (xmtpConversationId) {
+      clearNotificationsForConversation({ xmtpConversationId })
+    }
+  }, [xmtpConversationId])
 
   if (isLoadingConversation) {
     return (

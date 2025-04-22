@@ -1,7 +1,7 @@
 import { FlashList } from "@shopify/flash-list"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import React, { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
-import { FlatList, NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
+import { NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
 import { FadeInDown, useAnimatedRef } from "react-native-reanimated"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
 import { AnimatedVStack } from "@/design-system/VStack"
@@ -48,7 +48,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const refreshingRef = useRef(false)
-  const scrollRef = useAnimatedRef<FlatList>()
+  const scrollRef = useAnimatedRef<FlashList<IXmtpMessageId>>()
   const conversationStore = useConversationStore()
   const hasPulledToRefreshRef = useRef(false)
   const { theme } = useAppTheme()
@@ -96,7 +96,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
 
   // Scroll to message when we select one in the store
   useEffect(() => {
-    const unsub = conversationStore.subscribe(
+    const unsubscribe = conversationStore.subscribe(
       (state) => state.scrollToXmtpMessageId,
       (scrollToXmtpMessageId) => {
         if (!scrollToXmtpMessageId) {
@@ -104,6 +104,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
         }
 
         const index = messageIds.findIndex((messageId) => messageId === scrollToXmtpMessageId)
+
         if (index === -1) {
           return
         }
@@ -121,7 +122,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     )
 
     return () => {
-      unsub()
+      unsubscribe()
     }
   }, [conversationStore, scrollRef, messageIds])
 
@@ -246,6 +247,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
 
   return (
     <FlashList
+      ref={scrollRef}
       data={messageIds}
       renderItem={renderItem}
       drawDistance={50} // Smaller because rendering messages is expensive

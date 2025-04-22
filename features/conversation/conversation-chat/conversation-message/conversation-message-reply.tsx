@@ -122,7 +122,11 @@ const MessageReplyContent = memo(function MessageReplyContent(props: {
   }
 
   if (messageContentIsText(replyMessageContent.content)) {
-    return <ConversationMessageText inverted={fromMe}>{replyMessageContent.content.text}</ConversationMessageText>
+    return (
+      <ConversationMessageText inverted={fromMe}>
+        {replyMessageContent.content.text}
+      </ConversationMessageText>
+    )
   }
 
   if (messageContentIsReply(replyMessageContent.content)) {
