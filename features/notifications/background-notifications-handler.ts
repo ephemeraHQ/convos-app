@@ -5,9 +5,12 @@ import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
+import { storage } from "@/utils/storage/storage"
 import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
 
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
+const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
+const NOTIFICATION_ID_TTL = 1000 * 60 * 5 // 5 minutes in milliseconds
 
 /**
  * Extracts the essential notification data (contentTopic and encryptedMessage)
@@ -60,6 +63,46 @@ function extractNotificationData(
   return null
 }
 
+async function hasProcessedMessage(encryptedMessage: string): Promise<boolean> {
+  try {
+    const processedMessagesJson = storage.getString(PROCESSED_NOTIFICATIONS_KEY)
+    if (!processedMessagesJson) return false
+
+    const processedMessages = JSON.parse(processedMessagesJson) as Array<{
+      id: string
+      timestamp: number
+    }>
+
+    return processedMessages.some((message) => message.id === encryptedMessage)
+  } catch (error) {
+    notificationsLogger.error("Error checking processed messages", error)
+    return false
+  }
+}
+
+async function markMessageAsProcessed(encryptedMessage: string): Promise<void> {
+  try {
+    const now = Date.now()
+    const processedMessagesJson = storage.getString(PROCESSED_NOTIFICATIONS_KEY)
+    let processedMessages = processedMessagesJson
+      ? (JSON.parse(processedMessagesJson) as Array<{ id: string; timestamp: number }>)
+      : []
+
+    // Remove expired entries
+    processedMessages = processedMessages.filter(
+      (message) => now - message.timestamp < NOTIFICATION_ID_TTL,
+    )
+
+    // Add new message
+    processedMessages.push({ id: encryptedMessage, timestamp: now })
+
+    // Store updated list
+    storage.set(PROCESSED_NOTIFICATIONS_KEY, JSON.stringify(processedMessages))
+  } catch (error) {
+    notificationsLogger.error("Error marking message as processed", error)
+  }
+}
+
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
   try {
     if (error) {
@@ -89,10 +132,19 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
 
     const { conversationTopic, encryptedMessage } = notificationData
 
+    // Check if we've already processed this message
+    if (await hasProcessedMessage(encryptedMessage)) {
+      notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
+      return
+    }
+
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage,
       conversationTopic,
     })
+
+    // Mark message as processed
+    await markMessageAsProcessed(encryptedMessage)
   } catch (error) {
     captureError(
       new NotificationError({

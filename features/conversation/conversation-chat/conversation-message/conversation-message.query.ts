@@ -5,6 +5,7 @@ import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { mergeObjDeep } from "@/utils/objects"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
+import { TimeUtils } from "@/utils/time.utils"
 import { convertXmtpMessageToConvosMessage } from "./utils/convert-xmtp-message-to-convos-message"
 
 type IArgs = {
@@ -54,6 +55,7 @@ export function getConversationMessageQueryOptions(
     refetchOnWindowFocus: false, // Because we prefer setting the message query data from when we fetch list of messages
     refetchOnReconnect: false, // Because we prefer setting the message query data from when we fetch list of messages
     staleTime: Infinity, // Because we prefer setting the message query data from when we fetch list of messages
+    gcTime: TimeUtils.days(30).toMilliseconds(),
   })
 }
 

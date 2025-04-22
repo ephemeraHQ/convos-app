@@ -7,7 +7,7 @@ export function isValidEnsName(name: string | undefined): boolean {
   if (!name) {
     return false
   }
-  return ENS_REGEX.test(name)
+  return ENS_REGEX.test(name.trim())
 }
 
 /**
@@ -29,5 +29,5 @@ export function isValidUnstoppableDomainName(name: string | undefined): boolean 
   if (!name) {
     return false
   }
-  return UNS_REGEX.test(name)
+  return UNS_REGEX.test(name.trim())
 }

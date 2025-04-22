@@ -100,7 +100,7 @@ function useShowDebugMenu({
 
   const showLogsMenu = useCallback(() => {
     const logsMethods = {
-      "Start new log session": () => {
+      "Clear current log session": () => {
         clearLogFile().catch(captureError)
       },
       "Share current session logs": () => {

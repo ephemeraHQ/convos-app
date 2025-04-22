@@ -24,6 +24,7 @@ import { useAnimatedKeyboard } from "@/hooks/use-animated-keyboard"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { IEthereumAddress, isEthereumAddress } from "@/utils/evm/address"
+import { logJson } from "@/utils/logger/logger"
 import { SearchUsersResultsList } from "../../search-users/search-users-results-list"
 import { SearchUsersResultsListItemEthAddress } from "../../search-users/search-users-results-list-item-eth-address"
 import { SearchUsersResultsListItemGroup } from "../../search-users/search-users-results-list-item-group"
@@ -245,67 +246,43 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
   const listData = useMemo(() => {
     const items: SearchResultItem[] = []
 
-    // 1. Add DMs first
-    // But if we have selected users in the search bar, don't show DMs
-    // Because otherwise the user would have selected the existing DM already...
+    // Collect all possible items first without filtering
+
+    // 1. Add DMs first if no selected users
     if (selectedSearchUserInboxIds.length === 0) {
-      items.push(
-        ...existingDm
-          .map((xmtpConversationId) => ({
-            type: "dm" as const,
-            xmtpConversationId,
-          }))
-          .slice(0, MAX_INITIAL_RESULTS),
-      )
+      existingDm.forEach((xmtpConversationId) => {
+        items.push({
+          type: "dm" as const,
+          xmtpConversationId,
+        })
+      })
     }
 
     // 2. Add groups where member names match the search query
-    items.push(
-      ...existingGroupsByMemberName
-        .map((xmtpConversationId) => ({
-          type: "group" as const,
-          xmtpConversationId,
-        }))
-        .slice(0, MAX_INITIAL_RESULTS),
-    )
+    existingGroupsByMemberName.forEach((xmtpConversationId) => {
+      items.push({
+        type: "group" as const,
+        xmtpConversationId,
+      })
+    })
 
-    // 3. Add groups where group names match the search query if not already in the list
-    items.push(
-      ...existingGroupsByGroupName
-        .filter(
-          (xmtpConversationId) =>
-            !items.some(
-              (item) => item.type === "group" && item.xmtpConversationId === xmtpConversationId,
-            ),
-        )
-        .map((xmtpConversationId) => ({
-          type: "group" as const,
-          xmtpConversationId,
-        }))
-        .slice(0, MAX_INITIAL_RESULTS),
-    )
+    // 3. Add groups where group names match the search query
+    existingGroupsByGroupName.forEach((xmtpConversationId) => {
+      items.push({
+        type: "group" as const,
+        xmtpConversationId,
+      })
+    })
 
-    // 4. Add user profiles that aren't already in DMs
-    const profilesNotInDms = searchConvosUsersData
-      ?.map((profile) => ({
+    // 4. Add user profiles
+    searchConvosUsersData?.forEach((profile) => {
+      items.push({
         type: "profile" as const,
         inboxId: profile.xmtpId,
-      }))
-      .filter(({ inboxId }) => {
-        const addedDms = items.filter(searchResultIsDm)
-        // Skip if the profile is already in a DM conversation
-        return !addedDms.some(({ xmtpConversationId }) => {
-          return inboxIdIsPartOfConversationUsingCacheData({
-            inboxId,
-            xmtpConversationId,
-          })
-        })
       })
-
-    items.push(...(profilesNotInDms ?? []))
+    })
 
     // 5. Add raw Ethereum address if the search query is an Ethereum address
-    // and we don't have any Convos users
     if (isEthereumAddress(searchTextValue) && searchConvosUsersData?.length === 0) {
       items.push({
         type: "external_identity" as const,
@@ -333,7 +310,44 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
       })
     }
 
-    return items
+    // Filter out duplicates while preserving order
+    const seen = new Set<string>()
+    const uniqueItems: SearchResultItem[] = []
+
+    items.forEach((item) => {
+      let key: string
+
+      if (searchResultIsDm(item)) {
+        key = `dm-${item.xmtpConversationId}`
+      } else if (searchResultIsGroup(item)) {
+        key = `group-${item.xmtpConversationId}`
+      } else if (searchResultIsProfile(item)) {
+        key = `profile-${item.inboxId}`
+      } else if (searchResultIsExternalIdentity(item)) {
+        key = `external-identity-${item.address}`
+      } else {
+        const _ensureNever: never = item
+        throw new Error("Invalid item type")
+      }
+
+      if (!seen.has(key)) {
+        seen.add(key)
+        uniqueItems.push(item)
+      }
+    })
+
+    // Apply MAX_INITIAL_RESULTS limit for each type
+    const result: SearchResultItem[] = []
+
+    // Get first MAX_INITIAL_RESULTS of each type while preserving order
+    const dms = uniqueItems.filter(searchResultIsDm).slice(0, MAX_INITIAL_RESULTS)
+    const groups = uniqueItems.filter(searchResultIsGroup).slice(0, MAX_INITIAL_RESULTS * 2) // Double for both types of groups
+    const profiles = uniqueItems.filter(searchResultIsProfile)
+    const externalIdentities = uniqueItems.filter(searchResultIsExternalIdentity)
+
+    result.push(...dms, ...groups, ...profiles, ...externalIdentities)
+
+    return result
   }, [
     existingDm,
     existingGroupsByMemberName,
