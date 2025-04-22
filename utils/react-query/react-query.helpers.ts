@@ -5,6 +5,7 @@ import {
   QueryOptions,
   UseQueryOptions,
 } from "@tanstack/react-query"
+import { ReactQueryError } from "@/utils/error"
 import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "./react-query.client"
 
@@ -111,6 +112,16 @@ export function refetchReactQueryBetter<T>(args: UseQueryOptions<T>) {
     return Promise.resolve()
   }
   return reactQueryClient.refetchQueries(args)
+}
+
+export function ensureQueryDataBetter<T>(args: UseQueryOptions<T>) {
+  if (!args.enabled) {
+    queryLogger.debug(`Skipping ensureQueryData for ${args.queryKey} because it's disabled`)
+    throw new ReactQueryError({
+      error: new Error(`Can't call ensureQueryData because query ${args.queryKey} is disabled`),
+    })
+  }
+  return reactQueryClient.ensureQueryData(args)
 }
 
 /**

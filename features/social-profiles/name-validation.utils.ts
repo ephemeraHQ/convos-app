@@ -7,7 +7,11 @@ export function isValidEnsName(name: string | undefined): boolean {
   if (!name) {
     return false
   }
-  return ENS_REGEX.test(name.trim())
+  const trimmed = name.trim()
+  if (trimmed.includes(" ")) {
+    return false
+  }
+  return ENS_REGEX.test(trimmed)
 }
 
 /**
@@ -18,8 +22,12 @@ export function isValidBaseName(name: string | undefined): boolean {
   if (!name) {
     return false
   }
+  const trimmed = name.trim()
+  if (trimmed.includes(" ")) {
+    return false
+  }
   // Base names must end with .eth and contain .base
-  return name.includes(".base") && name.endsWith(".eth")
+  return trimmed.includes(".base") && trimmed.endsWith(".eth")
 }
 
 /**
@@ -29,5 +37,9 @@ export function isValidUnstoppableDomainName(name: string | undefined): boolean 
   if (!name) {
     return false
   }
-  return UNS_REGEX.test(name.trim())
+  const trimmed = name.trim()
+  if (trimmed.includes(" ")) {
+    return false
+  }
+  return UNS_REGEX.test(trimmed)
 }

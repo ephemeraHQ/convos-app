@@ -52,8 +52,8 @@ export const getAllowedConsentConversationsQueryOptions = (
     queryKey: ["allowed-consent-conversations", clientInboxId],
     queryFn: enabled ? () => getAllowedConsentConversationsQueryFn({ clientInboxId }) : skipToken,
     enabled,
-    staleTime: TimeUtils.days(30).toMilliseconds(), // Updated via stream
-    gcTime: TimeUtils.days(30).toMilliseconds(), // Updated via stream
+    staleTime: TimeUtils.days(30).toMilliseconds(), // Updated via stream or manually when user give consent so we don't need lots of refresh
+    gcTime: TimeUtils.days(30).toMilliseconds(), // Updated via stream or manually when user give consent so we don't need lots of refresh
   })
 }
 

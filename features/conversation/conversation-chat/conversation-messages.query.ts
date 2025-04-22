@@ -192,13 +192,7 @@ export function getConversationMessagesInfiniteQueryOptions(
       Boolean(clientInboxId) &&
       Boolean(xmtpConversationId) &&
       !isTmpConversation(xmtpConversationId),
-    refetchOnMount: (query) => {
-      const isRecent = conversationHasRecentActivities({
-        clientInboxId,
-        xmtpConversationId,
-      })
-      return isRecent ? "always" : true
-    },
+    refetchOnMount: true,
     refetchOnWindowFocus: (query) => {
       const isRecent = conversationHasRecentActivities({
         clientInboxId,

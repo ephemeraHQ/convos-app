@@ -74,8 +74,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
     ...(settings?.retentionDurationInNs && {
       refetchInterval: convertNanosecondsToMilliseconds(settings.retentionDurationInNs) * 0.5,
     }),
-    refetchOnWindowFocus: "always",
-    refetchOnMount: "always",
+    refetchOnWindowFocus: "always", // We want to make sure we have the latest messages
+    refetchOnMount: "always", // We want to make sure we have the latest messages
   })
 
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
