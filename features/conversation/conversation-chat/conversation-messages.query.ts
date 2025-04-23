@@ -7,9 +7,9 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
+import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { queryLogger } from "@/utils/logger/logger"
@@ -80,8 +80,9 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("Conversation not found")
   }
 
-  await ensureConversationSyncAllQuery({
+  await syncAllXmtpConversations({
     clientInboxId,
+    caller: "conversationMessagesInfiniteQueryFn",
   })
 
   const xmtpMessages = await getXmtpConversationMessages({

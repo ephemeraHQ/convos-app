@@ -1,9 +1,9 @@
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { Query, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
-import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -28,16 +28,10 @@ async function getConversation(args: IGetConversationArgs) {
     throw new Error("Inbox ID is required")
   }
 
-  // Let's make sure we have this query done otherwise it doesn't make sense to do "syncOneXmtpConversation"
-  await ensureConversationSyncAllQuery({
+  await syncAllXmtpConversations({
     clientInboxId,
+    caller: "getConversation",
   })
-
-  // Not sure if needed and it slows down the app so removing it forn now
-  // await syncOneXmtpConversation({
-  //   clientInboxId,
-  //   conversationId: xmtpConversationId,
-  // })
 
   const xmtpConversation = await getXmtpConversation({
     clientInboxId,

@@ -1,7 +1,8 @@
 import { usePrivy } from "@privy-io/expo"
 import { useCallback } from "react"
-import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getCurrentSender, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
+import { unsubscribeFromAllConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -16,19 +17,42 @@ export const useLogout = () => {
       authLogger.debug(`Logging out called by ${args.caller}`)
 
       try {
-        // First doing this so that all places
-        useAuthenticationStore.getState().actions.setStatus("signedOut")
-
         const currentSender = getCurrentSender()
 
-        // TODO: Change this once we support multiple identities
-        resetMultiInboxStore()
+        // Unsubscribe from all conversations notifications
+        if (currentSender) {
+          try {
+            await unsubscribeFromAllConversationsNotifications({
+              clientInboxId: currentSender.inboxId,
+            })
+          } catch (error) {
+            captureError(
+              new GenericError({
+                error,
+                additionalMessage: "Error unsubscribing from conversations notifications",
+              }),
+            )
+          }
+        }
+
+        try {
+          await unregisterBackgroundNotificationTask()
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error unregistering background notification task",
+            }),
+          )
+        }
 
         if (currentSender) {
           logoutXmtpClient({
             inboxId: currentSender.inboxId,
           }).catch(captureError)
         }
+
+        resetMultiInboxStore()
 
         await privyLogout()
 

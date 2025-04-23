@@ -1,10 +1,10 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { Query, QueryObserver, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
-import { ensureConversationSyncAllQuery } from "@/features/conversation/queries/conversation-sync-all.query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
+import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
 import { TimeUtils } from "@/utils/time.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -124,8 +124,9 @@ export function removeConversationFromAllowedConsentConversationsQuery(args: {
 async function getAllowedConsentConversationsQueryFn(args: IArgs) {
   const { clientInboxId } = args
 
-  await ensureConversationSyncAllQuery({
+  await syncAllXmtpConversations({
     clientInboxId,
+    caller: "getAllowedConsentConversationsQueryFn",
   })
 
   const xmtpConversations = await getXmtpConversations({

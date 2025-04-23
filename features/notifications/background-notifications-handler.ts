@@ -1,7 +1,12 @@
+import { useQuery } from "@tanstack/react-query"
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
+import { useEffect } from "react"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
+import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
+import { usePrevious } from "@/hooks/use-previous-value"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -103,6 +108,73 @@ async function markMessageAsProcessed(encryptedMessage: string): Promise<void> {
   }
 }
 
+/**
+ * Register a task to handle background notifications
+ * This is what allows us to process notifications even when the app is closed
+ */
+async function registerBackgroundNotificationTask() {
+  try {
+    if (!Device.isDevice) {
+      notificationsLogger.debug(
+        "Skipping background notification task registration on simulator/emulator",
+      )
+      return
+    }
+
+    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK)) {
+      notificationsLogger.debug("Background notification task already registered")
+      return
+    }
+
+    notificationsLogger.debug("Registering background notification task...")
+    await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK)
+    notificationsLogger.debug("Background notification task registered successfully")
+  } catch (error) {
+    throw new NotificationError({
+      error,
+      additionalMessage: "Failed to register background notification task",
+    })
+  }
+}
+
+export async function unregisterBackgroundNotificationTask() {
+  try {
+    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK)) {
+      return TaskManager.unregisterTaskAsync(BACKGROUND_NOTIFICATION_TASK)
+    }
+  } catch (error) {
+    captureError(
+      new NotificationError({
+        error,
+        additionalMessage: "Failed to unregister background notification task",
+      }),
+    )
+  }
+}
+
+export function useRegisterBackgroundNotificationTask() {
+  const authStatus = useAuthenticationStore((state) => state.status)
+  const { data: hasNotificationPermission } = useQuery({
+    ...getNotificationsPermissionsQueryConfig(),
+    select: (data) => data.status === "granted",
+  })
+  const previousNotificationPermission = usePrevious(hasNotificationPermission)
+
+  useEffect(() => {
+    // Only register if signed in and has notification permission
+    if (authStatus === "signedIn" && hasNotificationPermission) {
+      registerBackgroundNotificationTask().catch(captureError)
+    }
+  }, [authStatus, hasNotificationPermission])
+
+  useEffect(() => {
+    // Unregister if notification permission removed
+    if (previousNotificationPermission && !hasNotificationPermission) {
+      unregisterBackgroundNotificationTask()?.catch(captureError)
+    }
+  }, [hasNotificationPermission, previousNotificationPermission])
+}
+
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
   try {
     if (error) {
@@ -138,13 +210,13 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       return
     }
 
+    // Mark message as processed as soon as possible
+    await markMessageAsProcessed(encryptedMessage)
+
     await maybeDisplayLocalNewMessageNotification({
       encryptedMessage,
       conversationTopic,
     })
-
-    // Mark message as processed
-    await markMessageAsProcessed(encryptedMessage)
   } catch (error) {
     captureError(
       new NotificationError({
@@ -157,32 +229,3 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     )
   }
 })
-
-/**
- * Register a task to handle background notifications
- * This is what allows us to process notifications even when the app is closed
- */
-export async function registerBackgroundNotificationTask() {
-  try {
-    if (!Device.isDevice) {
-      notificationsLogger.debug(
-        "Skipping background notification task registration on simulator/emulator",
-      )
-      return
-    }
-
-    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK)) {
-      notificationsLogger.debug("Background notification task already registered")
-      return
-    }
-
-    notificationsLogger.debug("Registering background notification task...")
-    await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK)
-    notificationsLogger.debug("Background notification task registered successfully")
-  } catch (error) {
-    throw new NotificationError({
-      error,
-      additionalMessage: "Failed to register background notification task",
-    })
-  }
-}

@@ -5,9 +5,19 @@ export function withTimeout<T>(args: {
 }): Promise<T> {
   const { promise, timeoutMs, errorMessage = "Operation timed out" } = args
 
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-  })
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(errorMessage))
+    }, timeoutMs)
 
-  return Promise.race([promise, timeoutPromise])
+    promise
+      .then((result) => {
+        clearTimeout(timeoutId)
+        resolve(result)
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId)
+        reject(error)
+      })
+  })
 }

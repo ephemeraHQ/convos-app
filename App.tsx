@@ -13,6 +13,7 @@ import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-
 import { useSignoutIfNoPrivyUser } from "@/features/authentication/use-logout-if-no-privy-user"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
+import { useRegisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
 import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
@@ -20,10 +21,10 @@ import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wal
 import { AppNavigator } from "@/navigation/app-navigator"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
-import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
 import { ReactQueryPersistProvider } from "@/utils/react-query/react-query-persist-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { useReactQueryInit } from "@/utils/react-query/react-query.init"
 import "expo-dev-client"
 import React, { memo, useEffect } from "react"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
@@ -33,7 +34,6 @@ import { ThirdwebProvider } from "thirdweb/react"
 import { base } from "viem/chains"
 import { config } from "./config"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
-import { registerBackgroundNotificationTask } from "./features/notifications/background-notifications-handler"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
 import { sentryInit } from "./utils/sentry/sentry-init"
@@ -45,7 +45,6 @@ const chainOverride = addRpcUrlOverrideToChain(base, config.evm.rpcEndpoint)
 const supportedChains = [chainOverride] as [Chain, ...Chain[]]
 
 sentryInit()
-registerBackgroundNotificationTask().catch(captureError)
 configureForegroundNotificationBehavior()
 
 export function App() {
@@ -105,6 +104,8 @@ const Handlers = memo(function Handlers() {
   useCreateUserIfNoExist()
   useNotificationListeners()
   useConversationsNotificationsSubscriptions()
+  useRegisterBackgroundNotificationTask()
+  useReactQueryInit()
 
   return null
 })

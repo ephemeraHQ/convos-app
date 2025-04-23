@@ -2,7 +2,10 @@ import { queryOptions, useQueries, useQuery } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
-import { getAllowedConsentConversationsQueryOptions } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import {
+  getAllowedConsentConversationsQueryData,
+  getAllowedConsentConversationsQueryOptions,
+} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
@@ -24,12 +27,8 @@ import {
 export function useConversationsNotificationsSubscriptions() {
   const authStatus = useAuthenticationStore((state) => state.status)
   const senders = useMultiInboxStore((state) => state.senders)
-  const previousAuthStatus = usePrevious(authStatus)
 
-  const wasSignedIn = previousAuthStatus === "signedIn"
-  const wasSignedOut = previousAuthStatus === "signedOut"
   const isSignedIn = authStatus === "signedIn"
-  const isSignedOut = authStatus === "signedOut"
 
   // Use react-query to directly get permissions
   const { data: hasNotificationPermission } = useQuery({
@@ -185,16 +184,11 @@ export function useConversationsNotificationsSubscriptions() {
   }, [isSignedIn, hasNotificationPermission, senders, senderWithConversationIdsMap])
 
   useEffect(() => {
-    // Was signed in and now logged out
-    if (isSignedOut && wasSignedIn) {
-      unsubscribeFromAllConversations()
-    }
-
     // Had notif permission and remove it
     if (previousNotificationPermission && !hasNotificationPermission) {
       unsubscribeFromAllConversations()
     }
-  }, [isSignedOut, wasSignedIn, hasNotificationPermission, previousNotificationPermission])
+  }, [hasNotificationPermission, previousNotificationPermission])
 
   return null
 }
@@ -277,6 +271,31 @@ async function subscribeToConversationsNotifications(args: {
       }),
     )
   }
+}
+
+export async function unsubscribeFromAllConversationsNotifications(args: {
+  clientInboxId: IXmtpInboxId
+}) {
+  const { clientInboxId } = args
+
+  const client = await getXmtpClientByInboxId({
+    inboxId: clientInboxId,
+  })
+
+  const conversationIds = getAllowedConsentConversationsQueryData({
+    clientInboxId,
+  })
+
+  if (!conversationIds) {
+    throw new Error(`No conversation ids found for inbox ${clientInboxId}`)
+  }
+
+  const conversationTopics = conversationIds.map(getXmtpConversationTopicFromXmtpId)
+
+  await unsubscribeFromNotificationTopics({
+    installationId: client.installationId,
+    topics: conversationTopics,
+  })
 }
 
 async function unsubscribeFromConversationsNotifications(args: {

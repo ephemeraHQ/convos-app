@@ -1,4 +1,4 @@
-import { memo, useEffect } from "react"
+import { memo } from "react"
 import { TextStyle, ViewStyle } from "react-native"
 import { Screen } from "@/components/screen/screen"
 import { AnimatedCenter, Center } from "@/design-system/Center"
@@ -11,24 +11,22 @@ import { ONBOARDING_ENTERING_DELAY } from "@/features/auth-onboarding/auth-onboa
 import { OnboardingSubtitle } from "@/features/auth-onboarding/components/onboarding-subtitle"
 import { useAuthOnboardingContext } from "@/features/auth-onboarding/contexts/auth-onboarding.context"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
-import { useLogout } from "@/features/authentication/use-logout"
 import { useHeader } from "@/navigation/use-header"
 import { $globalStyles } from "@/theme/styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { captureError } from "@/utils/capture-error"
 import { openLink } from "@/utils/linking"
 import { AuthOnboardingWelcomeFooter } from "./auth-onboarding-welcome-footer"
 
 export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
   const { themed, theme } = useAppTheme()
 
-  const { logout } = useLogout()
+  // const { logout } = useLogout()
 
   // Makes sense to make sure we're fully logged out when we are at this welcome screen
-  useEffect(() => {
-    logout({ caller: "AuthWelcomeContent onMount" }).catch(captureError)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // useEffect(() => {
+  //   logout({ caller: "AuthWelcomeContent onMount" }).catch(captureError)
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [])
 
   useHeaderWrapper()
 

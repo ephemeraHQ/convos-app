@@ -24,5 +24,5 @@ export function lowercaseEthAddress(address: IEthereumAddress) {
   if (!isEthereumAddress(address)) {
     throw new Error(`Invalid Ethereum address: ${address}`)
   }
-  return address.toLowerCase() as ILowercaseEthereumAddress
+  return address.toLowerCase().trim() as ILowercaseEthereumAddress
 }
