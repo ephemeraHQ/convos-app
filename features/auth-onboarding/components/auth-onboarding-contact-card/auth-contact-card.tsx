@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useRef } from "react"
+import React, { memo, useCallback } from "react"
 import { TextStyle, ViewStyle } from "react-native"
 import { interpolate, useAnimatedStyle, useSharedValue } from "react-native-reanimated"
 import { Screen } from "@/components/screen/screen"
@@ -22,10 +22,12 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
   const { themed, theme } = useAppTheme()
   const userFriendlyError = useAuthOnboardingStore((s) => s.userFriendlyError)
   
-  // Reference to the footer's continue function
-  const continueRef = useRef<() => void>()
-  
   const { container: containerStyles } = useProfileContactCardStyles()
+
+  // Clear errors on mounts
+  React.useEffect(() => {
+    useAuthOnboardingStore.getState().actions.setUserFriendlyError(null)
+  }, [])
 
   useHeader({
     safeAreaEdges: ["top"],
@@ -42,8 +44,8 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
   
   // Handle keyboard submit action
   const handleSubmit = useCallback(() => {
-    if (continueRef.current) {
-      continueRef.current()
+    if (handleContinue) {
+      handleContinue()
     }
   }, [])
 
@@ -120,8 +122,7 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
           </Text>
 
           <AuthOnboardingContactCardFooter 
-            footerContainerHeightAV={footerContainerHeightAV} 
-            continueRef={continueRef}
+            footerContainerHeightAV={footerContainerHeightAV}
           />
         </AnimatedVStack>
       </Screen>
