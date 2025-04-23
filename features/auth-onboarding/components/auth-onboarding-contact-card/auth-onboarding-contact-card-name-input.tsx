@@ -3,36 +3,46 @@ import React, { memo, useCallback, useState } from "react"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { ProfileContactCardEditableNameInput } from "@/features/profiles/components/profile-contact-card/profile-contact-card-editable-name-input"
 
-export const AuthOnboardingContactCardNameInput = memo(
-  function AuthOnboardingContactCardNameInput() {
-    useIsFocused()
+export const AuthOnboardingContactCardNameInput = memo(function AuthOnboardingContactCardNameInput() {
+  useIsFocused()
+  
+  const [nameValidationError, setNameValidationError] = useState<string>()
+  const userFriendlyError = useAuthOnboardingStore((state) => state.userFriendlyError)
+  const name = useAuthOnboardingStore((state) => state.name)
 
-    const [nameValidationError, setNameValidationError] = useState<string>()
+  const handleDisplayNameChange = useCallback((args: { text: string; error?: string }) => {
+    const { text, error } = args
+    const { actions } = useAuthOnboardingStore.getState()
 
-    const isOnchainName = useAuthOnboardingStore((state) => state.name?.includes("."))
-
-    const handleDisplayNameChange = useCallback((args: { text: string; error?: string }) => {
-      const { text, error } = args
-      const { actions } = useAuthOnboardingStore.getState()
-
-      if (error) {
-        setNameValidationError(error)
-        actions.setName("")
-        return
-      }
-
-      setNameValidationError(undefined)
+    if (error) {
+      setNameValidationError(error)
+      actions.setUserFriendlyError(error)
       actions.setName(text)
-    }, [])
+      return
+    }
 
-    return (
-      <ProfileContactCardEditableNameInput
-        defaultValue={useAuthOnboardingStore.getState().name}
-        onChangeText={handleDisplayNameChange}
-        status={nameValidationError ? "error" : undefined}
-        helper={nameValidationError}
-        isOnchainName={isOnchainName}
-      />
-    )
-  },
-)
+    setNameValidationError(undefined)
+    
+    // Clear any error when user starts typing
+    if (userFriendlyError) {
+      actions.setUserFriendlyError(null)
+    }
+    
+    actions.setName(text)
+  }, [userFriendlyError])
+
+  // Determine if we should show an error state
+  const showError = nameValidationError || userFriendlyError
+  
+  // For now, let's not make input fields non-editable ever in onboarding
+  const isOnchainName = false
+
+  return (
+    <ProfileContactCardEditableNameInput
+      defaultValue={name}
+      onChangeText={handleDisplayNameChange}
+      status={showError ? "error" : undefined}
+      isOnchainName={isOnchainName}
+    />
+  )
+})

@@ -68,7 +68,7 @@ export const en = {
       displayName: {
         placeholder: "Nice to meet you",
         errors: {
-          noDots: "Display name cannot contain dots",
+          noDots: "Dots allowed for imported onchain names",
         },
       },
     },

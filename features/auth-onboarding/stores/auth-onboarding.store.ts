@@ -7,6 +7,7 @@ type IAuthOnboardingState = {
   // Global
   page: IPage
   isProcessingWeb3Stuff: boolean // Used to track if we're still processing creating embedded wallet, smart contract wallet, XMTP inbox, etc.
+  userFriendlyError: string | null // Simplified error message to display to the user
 
   // Contact card
   name: string
@@ -20,6 +21,7 @@ type IAuthOnboardingActions = {
   reset: () => void
   setIsProcessingWeb3Stuff: (isProcessingWeb3Stuff: boolean) => void
   setPage: (page: IPage) => void
+  setUserFriendlyError: (error: string | null) => void
 
   // Contact card
   setName: (name: string) => void
@@ -37,6 +39,7 @@ const initialState: IAuthOnboardingState = {
   // Global
   page: "welcome",
   isProcessingWeb3Stuff: false,
+  userFriendlyError: null,
 
   // Contact card
   name: "",
@@ -51,6 +54,7 @@ export const useAuthOnboardingStore = create<IAuthOnboardingStore>((set) => ({
   actions: {
     setIsProcessingWeb3Stuff: (isProcessingWeb3Stuff) => set({ isProcessingWeb3Stuff }),
     setPage: (page) => set({ page }),
+    setUserFriendlyError: (userFriendlyError) => set({ userFriendlyError }),
 
     // Contact card
     setName: (name: string) =>

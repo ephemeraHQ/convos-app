@@ -20,14 +20,14 @@ import { AuthOnboardingContactCardNameInput } from "./auth-onboarding-contact-ca
 
 export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard() {
   const { themed, theme } = useAppTheme()
-
+  const userFriendlyError = useAuthOnboardingStore((s) => s.userFriendlyError)
+  
   const { container: containerStyles } = useProfileContactCardStyles()
 
   useHeader({
     safeAreaEdges: ["top"],
     leftText: "Cancel",
     onLeftPress: () => useAuthOnboardingStore.getState().actions.setPage("welcome"),
-    // TODO: add error state in zustand state!
   })
 
   const { progressAV: keyboardProgressAV } = useAnimatedKeyboard()
@@ -101,8 +101,12 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
             />
           </VStack>
 
-          <Text preset="small" color="secondary" style={themed($footerText)}>
-            You can update this anytime.
+          <Text 
+            preset="small" 
+            color={userFriendlyError ? "caution" : "secondary"} 
+            style={themed($footerText)}
+          >
+            {userFriendlyError || "You can update this anytime."}
           </Text>
 
           <AuthOnboardingContactCardFooter footerContainerHeightAV={footerContainerHeightAV} />

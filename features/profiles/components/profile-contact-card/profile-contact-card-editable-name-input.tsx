@@ -3,6 +3,7 @@ import { Center } from "@/design-system/Center"
 import { IconButton } from "@/design-system/IconButton/IconButton"
 import { TextField } from "@/design-system/TextField/TextField"
 import { TextFieldAccessoryProps, TextFieldProps } from "@/design-system/TextField/TextField.props"
+import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { translate } from "@/i18n"
 import { useAppTheme } from "@/theme/use-app-theme"
 
@@ -19,19 +20,18 @@ export const ProfileContactCardEditableNameInput = memo(
 
     const handleChangeText = useCallback(
       (text: string) => {
-        if (text.includes(".")) {
-          onChangeText?.({
-            text: "",
-            error: "Dots ('.') are only allowed for imported onchain names",
-          })
-          return
-        }
-
-        // const result = profileValidationSchema.shape.name.safeParse(text)
+        // Handle dot error or clear error
+        const dotErrorMessage = text.includes(".") 
+          ? translate("userProfile.inputs.displayName.errors.noDots")
+          : null
+          
+        // Set error state in store
+        useAuthOnboardingStore.getState().actions.setUserFriendlyError(dotErrorMessage)
+          
+        // Pass to parent component
         onChangeText?.({
           text,
-          error: undefined,
-          // error: result.success ? undefined : result.error.message,
+          error: dotErrorMessage ?? undefined,
         })
       },
       [onChangeText],
