@@ -36,26 +36,20 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
     <Screen contentContainerStyle={$globalStyles.flex1} safeAreaEdges={["bottom"]} preset="fixed">
       <Center style={$globalStyles.flex1}>
         <VStack>
-          <OnboardingSubtitle
-            entering={theme.animation
-              .reanimatedFadeInSpringSlow()
-              .delay(ONBOARDING_ENTERING_DELAY.FIRST)}
-          >
-            Welcome to Convos
-          </OnboardingSubtitle>
           {/* This is a really custom text. No preset */}
           <AnimatedText
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
-              .delay(ONBOARDING_ENTERING_DELAY.SECOND)}
+              .delay(ONBOARDING_ENTERING_DELAY.FIRST)}
             style={themed($titleStyle)}
           >
             Not another{"\n"}chat app
           </AnimatedText>
           <AnimatedText
+            preset="smaller"
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
-              .delay(ONBOARDING_ENTERING_DELAY.THIRD)}
+              .delay(ONBOARDING_ENTERING_DELAY.SECOND)}
             style={$subtextStyle}
             color={"secondary"}
           >
