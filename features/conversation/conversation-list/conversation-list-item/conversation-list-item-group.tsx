@@ -14,6 +14,7 @@ import { useConversationLastMessage } from "@/features/conversation/hooks/use-co
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
+import { useFocusRerender } from "@/hooks/use-focus-rerender"
 import { useRouter } from "@/navigation/use-navigation"
 import { ConversationListItem } from "./conversation-list-item"
 import { DeleteSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-delete-action"
@@ -27,6 +28,9 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
   xmtpConversationId,
 }: IConversationListItemGroupProps) {
   const router = useRouter()
+
+  // To update the timestamp when the screen comes into focus
+  useFocusRerender()
 
   const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId,
@@ -55,8 +59,8 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   const messageText = useMessageContentStringValue(lastMessage)
 
-  // Subtitle with sender info
-  const subtitle = useMemo(() => {
+  // Not in useMemo because we want to change the timestamp when we rerender
+  const subtitle = (() => {
     if (!lastMessage) return ""
 
     const timestamp = lastMessage.sentNs ?? 0
@@ -74,7 +78,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     }
 
     return `${timeToShow} ${MIDDLE_DOT} ${senderPrefix}${messageText.trim()}`
-  }, [lastMessage, messageText, senderDisplayName])
+  })()
 
   const { toggleReadStatusAsync } = useToggleReadStatus({
     xmtpConversationId,

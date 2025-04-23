@@ -71,3 +71,7 @@ export type RequireExactlyOne<T, Keys extends keyof T = keyof T> = {
   [K in Keys]: Required<Pick<T, K>> & { [P in Exclude<Keys, K>]?: undefined }
 }[Keys] &
   Omit<T, Keys>
+
+export type WithUndefined<T, K extends keyof T> = Omit<T, K> & {
+  [P in K]: T[P] | undefined
+}

@@ -15,8 +15,8 @@ export const useLogout = () => {
     async (args: { caller: string }) => {
       authLogger.debug(`Logging out called by ${args.caller}`)
 
-      // TODO: Might need to fix the order of operations here
       try {
+        // First doing this so that all places
         useAuthenticationStore.getState().actions.setStatus("signedOut")
 
         const currentSender = getCurrentSender()

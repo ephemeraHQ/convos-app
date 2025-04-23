@@ -47,20 +47,18 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     })),
   })
 
-  const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
+  const { lastMessageIds } = useConversationLastMessageIds({
     conversationIds: likelyNotSpamConversationIds,
   })
 
   const lastMessageQueries = useQueries({
-    queries: Object.values(lastMessageIdForConversationMap)
-      .filter(Boolean)
-      .map((messageId) => ({
-        ...getConversationMessageQueryOptions({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: messageId,
-          caller: "ConversationListAwaitingRequests",
-        }),
-      })),
+    queries: lastMessageIds.map((messageId) => ({
+      ...getConversationMessageQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpMessageId: messageId,
+        caller: "ConversationListAwaitingRequests",
+      }),
+    })),
   })
 
   // Combine the results

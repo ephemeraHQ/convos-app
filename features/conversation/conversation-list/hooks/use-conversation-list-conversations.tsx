@@ -23,11 +23,10 @@ export const useConversationListConversations = () => {
     caller: "useConversationListConversations",
   })
 
-  const { lastMessageIdForConversationMap } = useConversationLastMessageIds({
-    conversationIds,
-  })
-
-  const lastMessageIds = Object.values(lastMessageIdForConversationMap)
+  const { refetch: refetchConversationLastMessageIds, lastMessageIds } =
+    useConversationLastMessageIds({
+      conversationIds,
+    })
 
   const lastMessageQueries = useQueries({
     queries: lastMessageIds.map((messageId) => ({
@@ -108,8 +107,15 @@ export const useConversationListConversations = () => {
         caller: "useConversationListConversations",
       }).catch(captureError)
     }
+
+    refetchConversationLastMessageIds()
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
-  }, [conversationIds, currentSender.inboxId, refetchConversations])
+  }, [
+    conversationIds,
+    currentSender.inboxId,
+    refetchConversations,
+    refetchConversationLastMessageIds,
+  ])
 
   const hasAnyLastMessageLoading = lastMessageQueries.some(
     (query) => query.isLoading && !query.data,

@@ -1,4 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
+import { useQuery } from "@tanstack/react-query"
 import React, { memo, useEffect } from "react"
 import { GlobalMediaViewerPortal } from "@/components/global-media-viewer/global-media-viewer"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
@@ -16,7 +17,7 @@ import { MessageReactionsDrawer } from "@/features/conversation/conversation-cha
 import { useConversationScreenHeader } from "@/features/conversation/conversation-chat/conversation.screen-header"
 import { ConversationCreateListResults } from "@/features/conversation/conversation-create/conversation-create-list-results"
 import { ConversationCreateSearchInput } from "@/features/conversation/conversation-create/conversation-create-search-input"
-import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
+import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { clearNotificationsForConversation } from "@/features/notifications/notifications.service"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
@@ -62,10 +63,14 @@ const Content = memo(function Content() {
     (state) => state.isCreatingNewConversation,
   )
 
-  const { data: conversation, isLoading: isLoadingConversation } = useConversationQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId: xmtpConversationId,
-    caller: "Conversation screen",
+  const { data: conversation, isLoading: isLoadingConversation } = useQuery({
+    ...getConversationQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId: xmtpConversationId,
+      caller: "Conversation screen",
+    }),
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
   })
 
   useConversationScreenHeader()

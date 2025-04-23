@@ -1,7 +1,9 @@
 import {
   InfiniteData,
+  InfiniteQueryObserver,
   infiniteQueryOptions,
   Optional,
+  QueriesObserver,
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
@@ -198,6 +200,13 @@ export function getConversationMessagesInfiniteQueryOptions(
         clientInboxId,
         xmtpConversationId,
       })
+
+      if (isRecent) {
+        queryLogger.debug(
+          `Refetching conversation messages infinite query on window focus for ${xmtpConversationId}`,
+        )
+      }
+
       return isRecent ? "always" : true
     },
   })
@@ -481,4 +490,36 @@ export function refetchInfiniteConversationMessages(args: IArgsWithCaller) {
   return reactQueryClient.refetchQueries({
     queryKey: getConversationMessagesInfiniteQueryOptions(args).queryKey,
   })
+}
+
+// Define the type for the observers we'll store in the cache
+type ConversationMessagesInfiniteQueryObserver = ReturnType<
+  typeof createConversationMessagesInfiniteQueryObserver
+>
+
+// Cache to avoid creating multiple observers for the same query
+const observersCache = new Map<string, ConversationMessagesInfiniteQueryObserver>()
+
+// Helper function to create an observer with consistent typing
+function createConversationMessagesInfiniteQueryObserver(args: IArgs) {
+  const queryOptions = getConversationMessagesInfiniteQueryOptions(args)
+  return new InfiniteQueryObserver(reactQueryClient, queryOptions)
+}
+
+QueriesObserver
+
+export function getConversationMessagesInfiniteQueryObserver(args: IArgs) {
+  // Create a cache key from the query key components
+  const cacheKey = `${args.clientInboxId}:${args.xmtpConversationId}`
+
+  // Return existing observer if we have one
+  if (observersCache.has(cacheKey)) {
+    return observersCache.get(cacheKey)!
+  }
+
+  // Create and cache new observer
+  const observer = createConversationMessagesInfiniteQueryObserver(args)
+
+  observersCache.set(cacheKey, observer)
+  return observer
 }

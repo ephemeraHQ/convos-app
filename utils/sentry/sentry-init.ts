@@ -11,9 +11,9 @@ export function sentryInit() {
     enabled: !__DEV__,
     environment: getEnv(),
     // Add more context data to events (IP address, cookies, user, etc.)
-    sendDefaultPii: getEnv() !== "production",
+    sendDefaultPii: true, // getEnv() !== "production",
     // Attach stacktraces to all messages for more context
-    attachStacktrace: getEnv() !== "production",
+    attachStacktrace: true, // getEnv() !== "production",
 
     beforeSend: (event: ErrorEvent, hint: EventHint) => {
       event.tags = {

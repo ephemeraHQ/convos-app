@@ -52,7 +52,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const conversationStore = useConversationStore()
   const hasPulledToRefreshRef = useRef(false)
   const { theme } = useAppTheme()
-  const { data: settings } = useDisappearingMessageSettings({
+  const { data: disappearingMessageSettings } = useDisappearingMessageSettings({
     clientInboxId: currentSender.inboxId,
     conversationId: xmtpConversationId,
     caller: "Conversation Messages",
@@ -71,8 +71,9 @@ export const ConversationMessages = memo(function ConversationMessages() {
       caller: "Conversation Messages",
     }),
     select: (data) => data.pages.flatMap((page) => page.messageIds),
-    ...(settings?.retentionDurationInNs && {
-      refetchInterval: convertNanosecondsToMilliseconds(settings.retentionDurationInNs) * 0.5,
+    ...(disappearingMessageSettings?.retentionDurationInNs && {
+      refetchInterval:
+        convertNanosecondsToMilliseconds(disappearingMessageSettings.retentionDurationInNs) * 0.5,
     }),
     refetchOnWindowFocus: "always", // We want to make sure we have the latest messages
     refetchOnMount: "always", // We want to make sure we have the latest messages
@@ -140,7 +141,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       const listHeight = layoutMeasurement.height
       const listContentHeight = contentSize.height > listHeight ? listHeight : contentSize.height
       const distanceFromTop = listContentHeight - contentOffsetY
-      const isPastTopThreshold = distanceFromTop < listHeight * 0.2
+      const isPastTopThreshold = distanceFromTop < listHeight * 0.1
 
       if (isPastTopThreshold && hasNextPage) {
         refreshingRef.current = true
@@ -161,7 +162,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       }
 
       // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
-      const isPastBottomThreshold = contentOffsetY < -50
+      const isPastBottomThreshold = contentOffsetY < -25
 
       if (isPastBottomThreshold && !hasPulledToRefreshRef.current) {
         // Only refetch if we haven't already refreshed during this pull-down gesture

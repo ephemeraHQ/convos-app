@@ -17,6 +17,7 @@ import { useConversationLastMessage } from "@/features/conversation/hooks/use-co
 import { useDmPeerInboxId } from "@/features/conversation/hooks/use-dm-peer-inbox-id"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
+import { useFocusRerender } from "@/hooks/use-focus-rerender"
 import { navigate } from "@/navigation/navigation.utils"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
@@ -33,6 +34,9 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   xmtpConversationId,
 }: IConversationListItemDmProps) {
   const { theme } = useAppTheme()
+
+  // To update the timestamp when the screen comes into focus
+  useFocusRerender()
 
   const currentSender = useSafeCurrentSender()
 
@@ -60,7 +64,8 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     xmtpConversationId,
   })
 
-  const subtitle = useMemo(() => {
+  // Not in useMemo because we want to change the timestamp when we rerender
+  const subtitle = (() => {
     if (!lastMessage || !messageText) {
       return ""
     }
@@ -79,7 +84,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     const senderPrefix = isCurrentUserSender ? "You " : displayName ? `${displayName} ` : ""
 
     return `${timeToShow} ${MIDDLE_DOT} ${senderPrefix}${messageText.trim()}`
-  }, [lastMessage, messageText, displayName])
+  })()
 
   const leftActionsBackgroundColor = useMemo(
     () => (isDeleted ? theme.colors.fill.tertiary : theme.colors.fill.caution),

@@ -1,4 +1,5 @@
 import { QueryKey } from "@tanstack/react-query"
+import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryMMKV } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 
@@ -12,8 +13,10 @@ export function getReactQueryKey(args: {
 }
 
 export function clearReacyQueryQueriesAndCache() {
+  queryLogger.debug("Clearing react query queries and cache...")
   reactQueryClient.getQueryCache().clear()
   reactQueryClient.clear()
   reactQueryClient.removeQueries()
   reactQueryMMKV.clearAll()
+  queryLogger.debug("Cleared react query queries and cache")
 }
