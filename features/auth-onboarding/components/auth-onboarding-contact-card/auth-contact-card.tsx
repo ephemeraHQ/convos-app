@@ -27,6 +27,7 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
     safeAreaEdges: ["top"],
     leftText: "Cancel",
     onLeftPress: () => useAuthOnboardingStore.getState().actions.setPage("welcome"),
+    // TODO: add error state in zustand state!
   })
 
   const { progressAV: keyboardProgressAV } = useAnimatedKeyboard()
@@ -100,11 +101,11 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
           </VStack>
 
           <Text preset="small" color="secondary" style={themed($footerText)}>
-            Add and edit Contact Cards anytime,{`\n`}or go Rando for extra privacy.
+            You can update this anytime.
           </Text>
-        </AnimatedVStack>
 
-        <AuthOnboardingContactCardFooter footerContainerHeightAV={footerContainerHeightAV} />
+          <AuthOnboardingContactCardFooter footerContainerHeightAV={footerContainerHeightAV} />
+        </AnimatedVStack>
       </Screen>
     </AnimatedVStack>
   )
