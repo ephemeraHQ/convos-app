@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import React, { memo, useCallback, useRef } from "react"
 import { TextStyle, ViewStyle } from "react-native"
 import { interpolate, useAnimatedStyle, useSharedValue } from "react-native-reanimated"
 import { Screen } from "@/components/screen/screen"
@@ -14,13 +14,16 @@ import { useHeader } from "@/navigation/use-header"
 import { $globalStyles } from "@/theme/styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { AuthOnboardingContactCardAvatar } from "./auth-onboarding-contact-card-avatar"
-import { AuthOnboardingContactCardFooter } from "./auth-onboarding-contact-card-footer"
+import { AuthOnboardingContactCardFooter, handleContinue } from "./auth-onboarding-contact-card-footer"
 import { AuthOnboardingContactCardImport } from "./auth-onboarding-contact-card-import"
 import { AuthOnboardingContactCardNameInput } from "./auth-onboarding-contact-card-name-input"
 
 export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard() {
   const { themed, theme } = useAppTheme()
   const userFriendlyError = useAuthOnboardingStore((s) => s.userFriendlyError)
+  
+  // Reference to the footer's continue function
+  const continueRef = useRef<() => void>()
   
   const { container: containerStyles } = useProfileContactCardStyles()
 
@@ -36,6 +39,13 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
   const contentContainerHeightAV = useSharedValue(0)
   const cardContainerHeightAV = useSharedValue(0)
   const footerContainerHeightAV = useSharedValue(0)
+  
+  // Handle keyboard submit action
+  const handleSubmit = useCallback(() => {
+    if (continueRef.current) {
+      continueRef.current()
+    }
+  }, [])
 
   // To make sure the card is vertically centered when the keyboard is open
   const contentAnimatedStyle = useAnimatedStyle(() => {
@@ -95,7 +105,7 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
             }}
           >
             <ProfileContactCardLayout
-              name={<AuthOnboardingContactCardNameInput />}
+              name={<AuthOnboardingContactCardNameInput onSubmitEditing={handleSubmit} />}
               avatar={<AuthOnboardingContactCardAvatar />}
               additionalOptions={<AuthOnboardingContactCardImport />}
             />
@@ -109,7 +119,10 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
             {userFriendlyError || "You can update this anytime."}
           </Text>
 
-          <AuthOnboardingContactCardFooter footerContainerHeightAV={footerContainerHeightAV} />
+          <AuthOnboardingContactCardFooter 
+            footerContainerHeightAV={footerContainerHeightAV} 
+            continueRef={continueRef}
+          />
         </AnimatedVStack>
       </Screen>
     </AnimatedVStack>

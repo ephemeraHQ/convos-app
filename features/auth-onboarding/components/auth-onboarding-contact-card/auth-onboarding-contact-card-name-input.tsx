@@ -3,7 +3,15 @@ import React, { memo, useCallback, useState } from "react"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { ProfileContactCardEditableNameInput } from "@/features/profiles/components/profile-contact-card/profile-contact-card-editable-name-input"
 
-export const AuthOnboardingContactCardNameInput = memo(function AuthOnboardingContactCardNameInput() {
+// Props type for the name input component
+type IAuthOnboardingContactCardNameInputProps = {
+  onSubmitEditing?: () => void
+}
+
+export const AuthOnboardingContactCardNameInput = memo(function AuthOnboardingContactCardNameInput(
+  props: IAuthOnboardingContactCardNameInputProps
+) {
+  const { onSubmitEditing } = props
   useIsFocused()
   
   const [nameValidationError, setNameValidationError] = useState<string>()
@@ -43,6 +51,7 @@ export const AuthOnboardingContactCardNameInput = memo(function AuthOnboardingCo
       onChangeText={handleDisplayNameChange}
       status={showError ? "error" : undefined}
       isOnchainName={isOnchainName}
+      onSubmitEditing={onSubmitEditing}
     />
   )
 })

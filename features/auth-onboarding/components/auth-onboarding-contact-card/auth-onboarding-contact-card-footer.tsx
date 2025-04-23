@@ -1,6 +1,6 @@
 import { usePrivy } from "@privy-io/expo"
 import { isAxiosError } from "axios"
-import React, { memo, useCallback, useState } from "react"
+import React, { memo, useCallback, useState, useEffect } from "react"
 import { SharedValue } from "react-native-reanimated"
 import { z } from "zod"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
@@ -22,11 +22,17 @@ const createProfileSchema = z.object({
   name: ConvosProfileSchema.shape.name,
 })
 
-export const AuthOnboardingContactCardFooter = memo(function AuthOnboardingContactCardFooter({
-  footerContainerHeightAV,
-}: {
+// Expose the continue function for keyboard events
+export let handleContinue: (() => Promise<void>) | undefined
+
+type IAuthOnboardingContactCardFooterProps = {
   footerContainerHeightAV: SharedValue<number>
-}) {
+}
+
+export const AuthOnboardingContactCardFooter = memo(function AuthOnboardingContactCardFooter(
+  props: IAuthOnboardingContactCardFooterProps
+) {
+  const { footerContainerHeightAV } = props
   const { mutateAsync: createUserAsync, isPending: isCreatingUser } = useCreateUserMutation()
 
   const isAvatarUploading = useAuthOnboardingStore((state) => state.isAvatarUploading)
@@ -114,6 +120,14 @@ export const AuthOnboardingContactCardFooter = memo(function AuthOnboardingConta
       setPressedOnContinue(false)
     }
   }, [createUserAsync, privyUser, setUserFriendlyError])
+
+  // Store the continue function in the exported variable
+  useEffect(() => {
+    handleContinue = handleRealContinue
+    return () => {
+      handleContinue = undefined
+    }
+  }, [handleRealContinue])
 
   return (
     <VStack
