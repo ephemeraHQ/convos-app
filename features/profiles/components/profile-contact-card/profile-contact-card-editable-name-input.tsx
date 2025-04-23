@@ -82,6 +82,7 @@ export const ProfileContactCardEditableNameInput = memo(
         onChangeText={handleChangeText}
         editable={!isOnchainName}
         RightAccessory={isOnchainName ? renderClearTextAccessory : undefined}
+        returnKeyType="done"
         {...rest}
       />
     )

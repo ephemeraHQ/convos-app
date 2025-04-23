@@ -41,5 +41,6 @@ export function OnboardingFooter({
 }
 
 const $buttonStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.sm,
   marginHorizontal: spacing.lg,
 })

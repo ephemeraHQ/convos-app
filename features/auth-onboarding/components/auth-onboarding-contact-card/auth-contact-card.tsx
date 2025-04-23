@@ -50,7 +50,8 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
               -contentContainerHeightAV.value / 2 +
                 cardContainerHeightAV.value / 2 +
                 footerContainerHeightAV.value -
-                textContainerHeightAV.value / 2,
+                textContainerHeightAV.value / 2 -
+                theme.spacing.sm, // Move it slightly higher in the screen above the keyboard
             ],
             "clamp",
           ),
