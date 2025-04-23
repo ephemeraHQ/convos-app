@@ -1,5 +1,5 @@
 import { memo, useEffect } from "react"
-import { TextStyle, ViewStyle, View, ImageStyle } from "react-native"
+import { TextStyle, ViewStyle, ImageStyle } from "react-native"
 import { Screen } from "@/components/screen/screen"
 import { AnimatedCenter, Center } from "@/design-system/Center"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
@@ -9,7 +9,6 @@ import { AnimatedText, Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { HStack } from "@/design-system/HStack"
 import { ONBOARDING_ENTERING_DELAY } from "@/features/auth-onboarding/auth-onboarding.constants"
-import { OnboardingSubtitle } from "@/features/auth-onboarding/components/onboarding-subtitle"
 import { useAuthOnboardingContext } from "@/features/auth-onboarding/contexts/auth-onboarding.context"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { useHeader } from "@/navigation/use-header"
@@ -78,7 +77,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
             <Link
               preset="smaller"
               color="secondary"
-              onPress={() => openLink({ url: "https://www.convos.xyz/terms" })}
+              onPress={() => openLink({ url: "https://convos.org/terms-of-service" })}
             >
               Terms of Service
             </Link>{" "}
@@ -86,7 +85,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
             <Link
               preset="smaller"
               color="secondary"
-              onPress={() => openLink({ url: "https://www.convos.xyz/privacy" })}
+              onPress={() => openLink({ url: "https://convos.org/privacy-policy" })}
             >
               Privacy Policy
             </Link>
