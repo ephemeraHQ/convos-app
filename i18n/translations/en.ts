@@ -66,7 +66,7 @@ export const en = {
       },
       usernameSuffix: ".convos.org",
       displayName: {
-        placeholder: "Enter your name",
+        placeholder: "Nice to meet you",
         errors: {
           noDots: "Display name cannot contain dots",
         },

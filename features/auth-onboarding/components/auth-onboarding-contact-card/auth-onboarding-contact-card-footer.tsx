@@ -97,7 +97,8 @@ export const AuthOnboardingContactCardFooter = memo(function AuthOnboardingConta
       }}
     >
       <OnboardingFooter
-        text={"Continue"}
+        text={"That's me"}
+        variant="outline"
         onPress={handleRealContinue}
         isLoading={
           isCreatingUser ||
