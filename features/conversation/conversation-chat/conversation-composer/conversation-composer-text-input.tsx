@@ -18,8 +18,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const { onSubmitEditing } = props
 
   const inputRef = useRef<RNTextInput>(null)
-  // Keep track of the last non-empty input value to handle dictation clearing
-  const lastNonEmptyValue = useRef("")
   // Track if a change comes from dictation ending
   const isDictationEndChange = useRef(false)
 
@@ -28,13 +26,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const conversationComposerStore = useConversationComposerStore()
   const inputDefaultValue = conversationComposerStore.getState().inputValue
   const isEnabled = useConversationComposerIsEnabled()
-
-  // Initialize last non-empty value ref
-  useEffect(() => {
-    if (inputDefaultValue) {
-      lastNonEmptyValue.current = inputDefaultValue
-    }
-  }, [inputDefaultValue])
 
   const handleChangeText = useCallback(
     (text: string) => {
@@ -46,11 +37,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
         isDictationEndChange.current = true
         // Don't update state with empty value, keep the last known value
         return
-      }
-
-      if (text) {
-        // Keep track of non-empty values
-        lastNonEmptyValue.current = text
       }
 
       // Reset the dictation end flag
@@ -76,13 +62,12 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
           // Preventing clear due to dictation end
           // Restore the previous text
           conversationComposerStore.setState({
-            inputValue: lastNonEmptyValue.current,
+            inputValue: prevState.inputValue, // Use previous value from store
           })
           return
         }
 
         inputRef.current?.clear()
-        lastNonEmptyValue.current = ""
         // This timeout fixes the issue where the autocorrect suggestions isn't cleared
         setTimeout(() => {
           inputRef.current?.setNativeProps({ text: state.inputValue })
@@ -90,9 +75,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
       } else if (state.inputValue !== prevState.inputValue) {
         // Handle prefill value changes
         inputRef.current?.setNativeProps({ text: state.inputValue })
-        if (state.inputValue) {
-          lastNonEmptyValue.current = state.inputValue
-        }
       }
     })
 
@@ -124,16 +106,19 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const handleBlur = useCallback(() => {
     if (isDictationEndChange.current && Platform.OS === "ios") {
       // Handling dictation end on blur
-      // Restore the last known good value to the input
-      inputRef.current?.setNativeProps({ text: lastNonEmptyValue.current })
-      // Also update the store
-      conversationComposerStore.setState({
-        inputValue: lastNonEmptyValue.current,
-      })
+      const currentStoreValue = conversationComposerStore.getState().inputValue
+      
+      // If dictation ended with empty text, we need to restore the previous value
+      if (!currentStoreValue) {
+        // Get the previous value from elsewhere in your app if needed
+        // For now, we'll rely on the fact that we're preventing empty updates
+        inputRef.current?.setNativeProps({ text: inputDefaultValue || "" })
+      }
+      
       // Reset the flag
       isDictationEndChange.current = false
     }
-  }, [conversationComposerStore])
+  }, [conversationComposerStore, inputDefaultValue])
 
   return (
     <TextInput
