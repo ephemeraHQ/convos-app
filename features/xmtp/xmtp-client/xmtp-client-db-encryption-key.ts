@@ -5,17 +5,109 @@ import { xmtpLogger } from "@/utils/logger/logger"
 import { secureStorage } from "@/utils/storage/secure-storage"
 import { storage } from "@/utils/storage/storage"
 
-const DB_ENCRYPTION_KEY_STORAGE_KEY_STRING = "LIBXMTP_DB_ENCRYPTION_KEY"
-const BACKUP_PREFIX = "BACKUP_XMTP_KEY_"
+// Constants
+const DB_ENCRYPTION_KEY_STORAGE_KEY_STRING = "LIBXMTP_DB_ENCRYPTION_KEY" // NEVER CHANGE THIS
+const BACKUP_PREFIX = "BACKUP_XMTP_KEY_" // NEVER CHANGE THIS
+const XMTP_KEY_LENGTH = 32
 
+// Storage key utilities
+function _getSecureStorageKey(ethAddress: ILowercaseEthereumAddress) {
+  return `${DB_ENCRYPTION_KEY_STORAGE_KEY_STRING}_${ethAddress}`
+}
+
+function _getBackupStorageKey(ethAddress: ILowercaseEthereumAddress) {
+  return `${BACKUP_PREFIX}${ethAddress}`
+}
+
+// Key format utilities
+function _formatKey(base64Key: string): Uint8Array {
+  const keyArray = new Uint8Array(Buffer.from(base64Key, "base64"))
+
+  if (keyArray.length !== XMTP_KEY_LENGTH) {
+    throw new XMTPError({
+      error: new Error(`Invalid key length: ${keyArray.length}. Expected ${XMTP_KEY_LENGTH} bytes`),
+      additionalMessage: "XMTP encryption key has invalid length",
+    })
+  }
+
+  return keyArray
+}
+
+async function _generateKey(): Promise<string> {
+  return Buffer.from(await getRandomBytesAsync(XMTP_KEY_LENGTH)).toString("base64")
+}
+
+// Secure storage operations
+async function _getFromSecureStorage(
+  ethAddress: ILowercaseEthereumAddress,
+): Promise<string | null> {
+  const storageKey = _getSecureStorageKey(ethAddress)
+
+  try {
+    return await secureStorage.getItem(storageKey)
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to get DB encryption key for ${ethAddress}`,
+    })
+  }
+}
+
+export async function deleteDbKey(args: { ethAddress: ILowercaseEthereumAddress }) {
+  const { ethAddress } = args
+  const storageKey = _getSecureStorageKey(ethAddress)
+
+  try {
+    await secureStorage.deleteItem(storageKey)
+    xmtpLogger.debug(`Deleted DB encryption key for ${ethAddress}`)
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to delete DB encryption key for ${ethAddress}`,
+    })
+  }
+}
+
+// Backup storage operations
+function _saveToBackup(ethAddress: ILowercaseEthereumAddress, value: string) {
+  const backupKey = _getBackupStorageKey(ethAddress)
+  storage.set(backupKey, value)
+  xmtpLogger.debug(`Saved encryption key to backup for ${ethAddress}`)
+}
+
+function _getFromBackup(ethAddress: ILowercaseEthereumAddress): string | null {
+  const backupKey = _getBackupStorageKey(ethAddress)
+  const value = storage.getString(backupKey)
+  return value || null
+}
+
+function _deleteFromBackup(ethAddress: ILowercaseEthereumAddress) {
+  const backupKey = _getBackupStorageKey(ethAddress)
+  storage.delete(backupKey)
+}
+
+// Key management operations
+async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; key: string }) {
+  const { ethAddress, key } = args
+  const storageKey = _getSecureStorageKey(ethAddress)
+
+  try {
+    await secureStorage.setItem(storageKey, key)
+    xmtpLogger.debug(`Saved DB encryption key for ${ethAddress}`)
+    _saveToBackup(ethAddress, key)
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to save DB encryption key for ${ethAddress}`,
+    })
+  }
+}
+
+// Public API
 export async function cleanXmtpDbEncryptionKey(args: { ethAddress: ILowercaseEthereumAddress }) {
   const { ethAddress } = args
-  const DB_ENCRYPTION_KEY = getXmtpDbEncryptionStorageKey({ ethAddress })
-  await secureStorage.deleteItem(DB_ENCRYPTION_KEY)
-
-  // Also clean backup
-  const backupKey = getBackupStorageKey({ ethAddress })
-  storage.delete(backupKey)
+  await deleteDbKey({ ethAddress })
+  _deleteFromBackup(ethAddress)
 }
 
 export async function getOrCreateXmtpDbEncryptionKey(args: {
@@ -23,61 +115,24 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
 }) {
   const { ethAddress } = args
 
-  const DB_ENCRYPTION_KEY_STORAGE_KEY = getXmtpDbEncryptionStorageKey({ ethAddress })
-
   xmtpLogger.debug(`Getting XMTP DB encryption key for ${ethAddress}`)
 
   try {
     // Check if key exists in secure storage
-    const existingKey = await secureStorage.getItem(DB_ENCRYPTION_KEY_STORAGE_KEY)
+    const existingKey = await _getFromSecureStorage(ethAddress)
     if (existingKey) {
       xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress}`)
-
-      // Ensure backup exists
-      saveToBackup(ethAddress, existingKey)
-
-      return new Uint8Array(Buffer.from(existingKey, "base64"))
-    }
-
-    // Check if key exists in old storage
-    // Delete in ~1 month when most people have logged in at least once
-    xmtpLogger.debug(
-      `No existing DB encryption key found for ${ethAddress}, checking old storage...`,
-    )
-    const oldExistingKey = await secureStorage.getItem(DB_ENCRYPTION_KEY_STORAGE_KEY_STRING)
-    if (oldExistingKey) {
-      xmtpLogger.debug(`Found old DB encryption key`)
-      await secureStorage.setItem(DB_ENCRYPTION_KEY_STORAGE_KEY, oldExistingKey)
-
-      // Also save to backup
-      saveToBackup(ethAddress, oldExistingKey)
-
-      return new Uint8Array(Buffer.from(oldExistingKey, "base64"))
-    }
-
-    // Check if key exists in backup
-    const backupKey = getFromBackup(ethAddress)
-    if (backupKey) {
-      xmtpLogger.debug(`Found backup DB encryption key for ${ethAddress}`)
-
-      // Restore to secure storage
-      await secureStorage.setItem(DB_ENCRYPTION_KEY_STORAGE_KEY, backupKey)
-
-      return new Uint8Array(Buffer.from(backupKey, "base64"))
+      return _formatKey(existingKey)
     }
 
     // Create new key
-    xmtpLogger.debug(
-      `Can't find existing DB encryption key for ${ethAddress}, creating a new one...`,
-    )
-    const newKey = Buffer.from(await getRandomBytesAsync(32)).toString("base64")
-    await secureStorage.setItem(DB_ENCRYPTION_KEY_STORAGE_KEY, newKey)
+    xmtpLogger.debug(`Creating new DB encryption key for ${ethAddress}`)
+    const newKey = await _generateKey()
 
-    // Save to backup
-    saveToBackup(ethAddress, newKey)
+    // Save to secure storage and backup
+    await _saveKey({ ethAddress, key: newKey })
 
-    xmtpLogger.debug(`Created new DB encryption key for ${ethAddress}`)
-    return new Uint8Array(Buffer.from(newKey, "base64"))
+    return _formatKey(newKey)
   } catch (error) {
     throw new XMTPError({
       error,
@@ -86,14 +141,13 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
   }
 }
 
-// Gets the encryption key from backup when secure storage fails
 export async function getBackupXmtpDbEncryptionKey(args: {
   ethAddress: ILowercaseEthereumAddress
 }) {
   const { ethAddress } = args
   xmtpLogger.debug(`Trying to get backup XMTP DB encryption key for ${ethAddress}`)
 
-  const backupKey = getFromBackup(ethAddress)
+  const backupKey = _getFromBackup(ethAddress)
   if (!backupKey) {
     throw new XMTPError({
       error: new Error("No backup key found"),
@@ -101,28 +155,5 @@ export async function getBackupXmtpDbEncryptionKey(args: {
     })
   }
 
-  // Return in the expected format
-  return new Uint8Array(Buffer.from(backupKey, "base64"))
-}
-
-function getXmtpDbEncryptionStorageKey(args: { ethAddress: ILowercaseEthereumAddress }) {
-  const { ethAddress } = args
-  return `${DB_ENCRYPTION_KEY_STORAGE_KEY_STRING}_${ethAddress}`
-}
-
-function getBackupStorageKey(args: { ethAddress: ILowercaseEthereumAddress }) {
-  const { ethAddress } = args
-  return `${BACKUP_PREFIX}${ethAddress}`
-}
-
-function saveToBackup(ethAddress: ILowercaseEthereumAddress, value: string) {
-  const backupKey = getBackupStorageKey({ ethAddress })
-  storage.set(backupKey, value)
-  xmtpLogger.debug(`Saved encryption key to backup for ${ethAddress}`)
-}
-
-function getFromBackup(ethAddress: ILowercaseEthereumAddress): string | null {
-  const backupKey = getBackupStorageKey({ ethAddress })
-  const value = storage.getString(backupKey)
-  return value || null
+  return _formatKey(backupKey)
 }
