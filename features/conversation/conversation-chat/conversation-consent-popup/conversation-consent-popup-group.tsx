@@ -48,7 +48,9 @@ export function ConversationConsentPopupGroup() {
         includeAddedBy: false,
       })
     } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: `Failed to allow group` }))
+      captureErrorWithToast(new GenericError({ error, additionalMessage: `Failed to allow group` }), {
+        message: "Failed to allow group"
+      })
     }
   }, [allowGroup])
 

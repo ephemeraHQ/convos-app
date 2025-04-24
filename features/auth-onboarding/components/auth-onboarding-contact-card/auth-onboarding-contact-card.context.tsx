@@ -2,7 +2,6 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { usePrivy } from "@privy-io/expo"
 import { isAxiosError } from "axios"
 import { z } from "zod"
-import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { IPrivyUserId } from "@/features/authentication/authentication.types"
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
@@ -102,18 +101,14 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
             : "Failed to create profile. Please try again."
         setUserFriendlyError(userMessage)
       } else {
-        const errorMessage = "An unexpected error occurred. Please try again."
-        setUserFriendlyError(errorMessage)
-        showSnackbar({
-          message: errorMessage,
-          type: "error",
-        })
-        
         captureErrorWithToast(
           new GenericError({
             error,
-            additionalMessage: errorMessage,
+            additionalMessage: "An unexpected error occurred. Please try again.",
           }),
+          {
+            message: "An unexpected error occurred. Please try again.",
+          }
         )
       }
     } finally {

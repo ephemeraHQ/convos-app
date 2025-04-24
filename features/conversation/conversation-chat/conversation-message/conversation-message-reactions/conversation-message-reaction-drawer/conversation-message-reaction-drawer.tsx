@@ -93,6 +93,9 @@ const BottomSheetContent = memo(function BottomSheetContent() {
       } catch (error) {
         captureErrorWithToast(
           new GenericError({ error, additionalMessage: "Failed to remove reaction" }),
+          {
+            message: "Failed to remove reaction"
+          }
         )
       }
     },

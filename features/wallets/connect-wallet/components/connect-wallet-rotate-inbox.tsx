@@ -88,6 +88,9 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
     } catch (error) {
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error creating new inbox ID" }),
+        {
+          message: "Error creating new inbox"
+        }
       )
     }
   }, [activeWallet, smartWalletClient, setHasRotatedWalletAddress])

@@ -44,6 +44,9 @@ export const ConversationMessageGestures = memo(function ConversationMessageGest
       } catch (error) {
         captureErrorWithToast(
           new GenericError({ error, additionalMessage: "Error showing context menu" }),
+          {
+            message: "Error showing context menu"
+          }
         )
       }
     },

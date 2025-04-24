@@ -34,7 +34,12 @@ export const AuthOnboardingContactCardAvatar = memo(function AuthOnboardingConta
       if (error instanceof UserCancelledError) {
         return // Ignore cancel errors
       }
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error adding avatar" }))
+      captureErrorWithToast(
+        new GenericError({ error, additionalMessage: "Error adding avatar" }),
+        {
+          message: "Error adding avatar",
+        },
+      )
     }
   }, [addPFP])
 

@@ -36,6 +36,9 @@ export function useMessageContextMenuItems(args: {
         error: new Error("No message found in triggerMessageContextMenu"),
         additionalMessage: "Couldn't find message",
       }),
+      {
+        message: "Couldn't find message"
+      }
     )
     return []
   }

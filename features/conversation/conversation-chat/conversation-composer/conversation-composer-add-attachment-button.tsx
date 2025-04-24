@@ -165,6 +165,9 @@ export const ConversationComposerAddAttachmentButton = memo(
       } catch (error) {
         captureErrorWithToast(
           new GenericError({ error, additionalMessage: "Failed to pick media" }),
+          {
+            message: "Failed to select media"
+          }
         )
       }
     }, [handleAsset])
@@ -184,6 +187,9 @@ export const ConversationComposerAddAttachmentButton = memo(
             error,
             additionalMessage: "Failed to process attachment from camera",
           }),
+          {
+            message: "Failed to process camera photo"
+          }
         )
       }
     }, [handleAsset])
