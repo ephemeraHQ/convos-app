@@ -80,6 +80,9 @@ export const useDeleteDm = ({
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting dm" }),
+              {
+                message: "Error deleting chat"
+              }
             )
           }
         },
@@ -96,6 +99,9 @@ export const useDeleteDm = ({
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting dm" }),
+              {
+                message: "Error deleting and blocking chat"
+              }
             )
           }
         },

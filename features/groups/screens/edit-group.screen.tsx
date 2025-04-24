@@ -80,7 +80,9 @@ export const EditGroupScreen = memo(function EditGroupScreen(
 
       router.goBack()
     } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error updating group" }))
+      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error updating group" }), {
+        message: "Error updating group"
+      })
     }
   }, [router, updateGroupAsync, group])
 
@@ -170,6 +172,9 @@ const GroupAvatarEditor = memo(function GroupAvatarEditor() {
       }
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error adding group avatar" }),
+        {
+          message: "Error adding group avatar"
+        }
       )
     }
   }, [addPFP])

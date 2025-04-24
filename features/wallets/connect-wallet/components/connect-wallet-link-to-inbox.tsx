@@ -69,6 +69,9 @@ export const ConnectWalletLinkToInbox = memo(function ConnectWalletLinkToInbox(
     } catch (error) {
       captureErrorWithToast(
         new ConnectWalletError({ error, additionalMessage: "Error linking wallet to inbox" }),
+        {
+          message: "Error linking wallet to inbox"
+        }
       )
     }
   }, [activeWallet])
@@ -83,7 +86,7 @@ export const ConnectWalletLinkToInbox = memo(function ConnectWalletLinkToInbox(
     <ConnectWalletLayout
       header={<ConnectWalletHeader title="Sign to confirm" />}
       text={
-        <ConnectWalletTextSection secondaryText="By signing in your wallet app, you’re proving that you own this wallet." />
+        <ConnectWalletTextSection secondaryText="By signing in your wallet app, you're proving that you own this wallet." />
       }
       content={
         <ConnectWalletItem

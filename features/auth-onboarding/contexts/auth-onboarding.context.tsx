@@ -295,6 +295,9 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
             error,
             additionalMessage: "You must enable biometrics to use passkeys",
           }),
+          {
+            message: "You must enable biometrics to use passkeys",
+          },
         )
       }
       // We often see this weird error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
@@ -304,10 +307,16 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
             error,
             additionalMessage: "You're already logged in. Please try again",
           }),
+          {
+            message: "You're already logged in. Please try again",
+          }
         )
       } else {
         captureErrorWithToast(
           new AuthenticationError({ error, additionalMessage: "Failed to sign up with passkey" }),
+          {
+            message: "Failed to sign up with passkey",
+          }
         )
       }
 

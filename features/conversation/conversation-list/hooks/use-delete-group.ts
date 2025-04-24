@@ -68,6 +68,9 @@ export const useDeleteGroup = (args: { xmtpConversationId: IXmtpConversationId }
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting group" }),
+              {
+                message: "Error deleting group"
+              }
             )
           }
         },
@@ -85,6 +88,9 @@ export const useDeleteGroup = (args: { xmtpConversationId: IXmtpConversationId }
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting group" }),
+              {
+                message: "Error deleting and blocking group"
+              }
             )
           }
         },

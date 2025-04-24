@@ -79,7 +79,11 @@ const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversa
           captureErrorWithToast(
             new GenericError({
               error,
+              additionalMessage: "Failed to load reply message"
             }),
+            {
+              message: "Failed to load reply message"
+            }
           )
         }
       },

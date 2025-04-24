@@ -54,6 +54,9 @@ export function ConversationConsentPopupDm() {
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error consenting" }),
+              {
+                message: "Error deleting conversation"
+              }
             )
           }
         }
@@ -64,14 +67,16 @@ export function ConversationConsentPopupDm() {
   const handleAccept = useCallback(async () => {
     try {
       if (!dm) {
-        throw new Error("Dm not found")
+        throw new Error("DM not found")
       }
 
       await allowDmConsentAsync({
         xmtpConversationId,
       })
     } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error consenting" }))
+      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error consenting" }), {
+        message: "Error joining conversation"
+      })
     }
   }, [allowDmConsentAsync, dm, xmtpConversationId])
 

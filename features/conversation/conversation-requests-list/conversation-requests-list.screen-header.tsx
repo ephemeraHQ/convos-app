@@ -44,6 +44,9 @@ export function useConversationRequestsListScreenHeader(args: { selectedTab: ITa
                   error,
                   additionalMessage: translate("Error deleting all requests"),
                 }),
+                {
+                  message: translate("Error deleting all requests")
+                }
               )
             }
           },

@@ -44,6 +44,9 @@ export function ProfileSocialsNames({ inboxId }: IProfileSocialsNamesProps) {
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error copying address" }),
+              {
+                message: "Error copying address"
+              }
             )
           }
         } else if (selectedIndex === 1) {
@@ -52,6 +55,9 @@ export function ProfileSocialsNames({ inboxId }: IProfileSocialsNamesProps) {
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error removing wallet from inbox" }),
+              {
+                message: "Error removing wallet from inbox"
+              }
             )
           }
         }

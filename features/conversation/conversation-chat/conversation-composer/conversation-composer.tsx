@@ -34,6 +34,9 @@ export const ConversationComposer = memo(function ConversationComposer() {
     } catch (error) {
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Failed to send message" }),
+        {
+          message: "Failed to send message"
+        }
       )
     }
   }, [sendToExistingConversation, createConversationAndSend, conversationStore])

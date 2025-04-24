@@ -99,7 +99,9 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     try {
       await (isDeleted ? restoreConversationAsync() : deleteDm())
     } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error deleting dm" }))
+      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error deleting dm" }), {
+        message: "Error deleting chat"
+      })
     }
   }, [isDeleted, deleteDm, restoreConversationAsync])
 
@@ -109,6 +111,9 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
     } catch (error) {
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error toggling read status" }),
+        {
+          message: "Error toggling read status"
+        }
       )
     }
   }, [toggleReadStatusAsync])

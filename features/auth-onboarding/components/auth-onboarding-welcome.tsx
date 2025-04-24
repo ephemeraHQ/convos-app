@@ -143,7 +143,6 @@ function useHeaderWrapper() {
 const $termsContainer: ThemedStyle<ViewStyle> = ({ spacing, borderRadius, colors }) => ({
   padding: spacing.sm,
   marginHorizontal: spacing.lg,
-  backgroundColor: colors.background.raised,
   borderRadius: borderRadius.xxs,
 })
 

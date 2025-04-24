@@ -111,6 +111,9 @@ const InstalledWalletItem = memo(function InstalledWalletItem(props: IInstalledW
     } catch (error) {
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: `Error connecting ${wallet.name} wallet` }),
+        {
+          message: `Error connecting wallet`
+        }
       )
     } finally {
       store.actions.setWalletIdThatIsConnecting(undefined)
