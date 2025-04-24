@@ -22,6 +22,7 @@ import {
   closeMessageReactionsDrawer,
   conversationMessageDrawerBottomSheetRef,
 } from "./conversation-message-reaction-drawer.service"
+import { VStack } from "@/design-system/VStack"
 
 export const MessageReactionsDrawer = memo(function MessageReactionsDrawer() {
   const insets = useSafeAreaInsets()
@@ -174,7 +175,12 @@ const BottomSheetContent = memo(function BottomSheetContent() {
                     uri={item.reactor.avatar}
                     name={item.reactor.username}
                   />
-                  <Text style={themed($username)}>{item.reactor.username}</Text>
+                  <VStack style={themed($reactionInnerContent)}>
+                    <Text style={themed($username)}>{item.reactor.username}</Text>
+                    {isOwnReaction && (
+                      <Text style={themed($tapToRemove)}>Tap to remove</Text>
+                    )}
+                  </VStack>
                   <Text style={themed($reactionContent)}>{item.content}</Text>
                 </HStack>
               </ReactionContainer>
@@ -213,17 +219,24 @@ const $reactionInner: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
 })
 
-const $username: ThemedStyle<TextStyle> = ({ spacing, colors }) => ({
+const $reactionInnerContent: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
   display: "flex",
-  alignItems: "flex-end",
+  alignItems: "flex-start",
   gap: spacing.xxxs,
+})
+
+const $username: ThemedStyle<TextStyle> = ({ spacing, colors }) => ({
   overflow: "hidden",
   color: colors.text.primary,
 })
 
 const $reactionContent: ThemedStyle<TextStyle> = ({ spacing }) => ({
   padding: spacing.xxxs,
+})
+
+const $tapToRemove: ThemedStyle<TextStyle> = ({ colors }) => ({
+  color: colors.text.secondary,
 })
 
 const $chipText: ThemedStyle<TextStyle> = ({ colors }) => ({
