@@ -61,14 +61,12 @@ const createRefreshTokenInterceptor = (
   return async (error: AxiosError): Promise<AxiosResponse> => {
     // If there's no response, we can't handle this error
     if (!error.response) {
-      return Promise.reject(
-        new ConvosApiError({ error, additionalMessage: "No response from server" }),
-      )
+      return Promise.reject(error)
     }
 
     // Only handle 401 Unauthorized errors
     if (error.response.status !== 401) {
-      return Promise.reject(new ConvosApiError({ error }))
+      return Promise.reject(error)
     }
 
     const originalRequest = error.config as ExtendedAxiosRequestConfig

@@ -10,7 +10,6 @@ import {
 import { useSearchExistingDmsQuery } from "@/features/conversation/conversation-create/queries/search-existing-dms.query"
 import { useSearchExistingGroupsByGroupMembersQuery } from "@/features/conversation/conversation-create/queries/search-existing-groups-by-group-members.query"
 import { useSearchExistingGroupsByGroupNameQuery } from "@/features/conversation/conversation-create/queries/search-existing-groups-by-group-name.query"
-import { inboxIdIsPartOfConversationUsingCacheData } from "@/features/conversation/utils/inbox-id-is-part-of-converastion"
 import { useDmQuery } from "@/features/dm/dm.query"
 import { useSearchConvosUsersQuery } from "@/features/search-users/queries/search-convos-users.query"
 import {
@@ -24,7 +23,6 @@ import { useAnimatedKeyboard } from "@/hooks/use-animated-keyboard"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { IEthereumAddress, isEthereumAddress } from "@/utils/evm/address"
-import { logJson } from "@/utils/logger/logger"
 import { SearchUsersResultsList } from "../../search-users/search-users-results-list"
 import { SearchUsersResultsListItemEthAddress } from "../../search-users/search-users-results-list-item-eth-address"
 import { SearchUsersResultsListItemGroup } from "../../search-users/search-users-results-list-item-group"
@@ -33,6 +31,8 @@ import { SearchUsersResultsListItemUserDm } from "../../search-users/search-user
 
 // Because we want a mix of DMs, groups, and profiles
 const MAX_INITIAL_RESULTS = 3
+const SMALL_SEARCH_QUERY_LENGTH = 4
+const MAX_RESULTS_WHEN_SMALL_SEARCH_QUERY = 5
 
 type ISearchResultItemDm = {
   type: "dm"
@@ -337,7 +337,7 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
     })
 
     // Apply MAX_INITIAL_RESULTS limit for each type
-    const result: SearchResultItem[] = []
+    let result: SearchResultItem[] = []
 
     // Get first MAX_INITIAL_RESULTS of each type while preserving order
     const dms = uniqueItems.filter(searchResultIsDm).slice(0, MAX_INITIAL_RESULTS)
@@ -346,6 +346,11 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
     const externalIdentities = uniqueItems.filter(searchResultIsExternalIdentity)
 
     result.push(...dms, ...groups, ...profiles, ...externalIdentities)
+
+    // If the search query is small, show less results because we probably don't care about those results
+    if (searchTextValue.length <= SMALL_SEARCH_QUERY_LENGTH) {
+      result = result.slice(0, MAX_RESULTS_WHEN_SMALL_SEARCH_QUERY)
+    }
 
     return result
   }, [

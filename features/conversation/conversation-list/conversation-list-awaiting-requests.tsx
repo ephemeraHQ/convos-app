@@ -47,9 +47,11 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     })),
   })
 
-  const { lastMessageIds } = useConversationLastMessageIds({
+  const { lastMessageIdByConversationId } = useConversationLastMessageIds({
     conversationIds: likelyNotSpamConversationIds,
   })
+
+  const lastMessageIds = Object.values(lastMessageIdByConversationId)
 
   const lastMessageQueries = useQueries({
     queries: lastMessageIds.map((messageId) => ({

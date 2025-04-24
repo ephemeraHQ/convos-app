@@ -69,8 +69,7 @@ export function useConversationLastMessageIds(args: { conversationIds: IXmtpConv
   }, [getInitialLastMessageIds])
 
   return {
-    // lastMessageIdForConversationMap,
-    lastMessageIds: Object.values(lastMessageIdForConversationMap),
+    lastMessageIdByConversationId: lastMessageIdForConversationMap,
     isLoading: false,
     refetch,
   }

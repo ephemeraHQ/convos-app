@@ -75,11 +75,9 @@ export async function syncAllXmtpConversations(args: {
   const now = Date.now()
   const timeSinceLastSync = now - lastSyncTime
 
+  // Skip this sync as it's too soon after the last one
   if (timeSinceLastSync < MIN_SYNC_ALL_INTERVAL) {
-    xmtpLogger.debug(
-      `Skipping syncAllConversations for ${clientInboxId} as it's been less than ${MIN_SYNC_ALL_INTERVAL}ms since the last sync`,
-    )
-    return Promise.resolve() // Skip this sync as it's too soon after the last one
+    return Promise.resolve()
   }
 
   // Check if there's already a sync in progress for this inbox

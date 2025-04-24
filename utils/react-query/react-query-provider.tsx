@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { memo } from "react"
 import { config } from "@/config"
@@ -7,10 +8,14 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { DEFAULT_GC_TIME } from "@/utils/react-query/react-query.constants"
 import { reactQueryPersister } from "./react-query-persister"
 
-export const ReactQueryPersistProvider = memo(function ReactQueryPersistProvider(props: {
+export const ReactQueryProvider = memo(function ReactQueryProvider(props: {
   children: React.ReactNode
 }) {
   const { children } = props
+
+  if (config.reactQueryPersistCacheIsEnabled) {
+    return <QueryClientProvider client={reactQueryClient}>{children}</QueryClientProvider>
+  }
 
   return (
     <PersistQueryClientProvider
@@ -18,7 +23,7 @@ export const ReactQueryPersistProvider = memo(function ReactQueryPersistProvider
       persistOptions={{
         persister: reactQueryPersister,
         maxAge: DEFAULT_GC_TIME,
-        buster: config.reactQueryPersistCacheIsEnabled ? "v5" : undefined,
+        buster: "v5", // Changing this will force a new cache
         dehydrateOptions: {
           // Determines which queries should be persisted to storage
           shouldDehydrateQuery(query) {

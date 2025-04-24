@@ -38,7 +38,7 @@ export class ConvosApiError extends BaseError {
       }
     }
 
-    super("[API]", args)
+    super("[CONVOS API]", args)
 
     // Store original error after super() call
     this.origError = args.error

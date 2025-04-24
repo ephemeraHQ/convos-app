@@ -12,7 +12,6 @@ export const SearchUsersInputChip = memo(function SearchUsersInputChip(props: {
 
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId,
-    freshData: true,
   })
 
   const selectedChipInboxId = useSearchUsersInputStore((state) => state.selectedChipInboxId)

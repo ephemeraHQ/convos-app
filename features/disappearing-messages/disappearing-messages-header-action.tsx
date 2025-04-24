@@ -3,6 +3,7 @@ import { ViewStyle } from "react-native"
 import { DropdownMenu, IDropdownMenuAction } from "@/design-system/dropdown-menu/dropdown-menu"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useClearDisappearingMessageSettings } from "@/features/disappearing-messages/clear-disappearing-message-settings.mutation"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { DisappearingMessageDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useUpdateDisappearingMessageSettings } from "@/features/disappearing-messages/update-disappearing-message-settings.mutation"
@@ -13,13 +14,16 @@ import { GenericError } from "@/utils/error"
 
 type IDisappearingMessageOptionId =
   | "header"
+  | "off"
   | "sixty_days"
+  | "thirty_days"
   | "one_week"
   | "one_day"
   | "eight_hours"
   | "one_hour"
   | "one_minute"
   | "ten_seconds"
+  | "one_second"
   | "clear"
   | "how_it_works"
 
@@ -36,9 +40,18 @@ const DISAPPEARING_MESSAGE_OPTIONS: IDisappearingMessageOptionItem[] = [
     subtitle: "New messages will disappear after the selected duration",
   },
   {
+    id: "off",
+    title: "Off",
+  },
+  {
     id: "sixty_days",
     title: "60 days",
     retentionDurationInNs: DisappearingMessageDuration.SIXTY_DAYS,
+  },
+  {
+    id: "thirty_days",
+    title: "30 days",
+    retentionDurationInNs: DisappearingMessageDuration.THIRTY_DAYS,
   },
   {
     id: "one_week",
@@ -71,6 +84,12 @@ const DISAPPEARING_MESSAGE_OPTIONS: IDisappearingMessageOptionItem[] = [
     retentionDurationInNs: DisappearingMessageDuration.TEN_SECONDS,
   },
   {
+    id: "one_second",
+    title: "1 second",
+    retentionDurationInNs: DisappearingMessageDuration.ONE_SECOND,
+  },
+
+  {
     displayInline: true,
     id: "clear",
     title: "Clear chat",
@@ -92,6 +111,7 @@ export const DisappearingMessagesHeaderAction = ({
   const { theme, themed } = useAppTheme()
   const currentSender = useSafeCurrentSender()
   const { mutateAsync: updateSettingsMutateAsync } = useUpdateDisappearingMessageSettings()
+  const { mutateAsync: clearSettingsMutateAsync } = useClearDisappearingMessageSettings()
 
   const { data: settings } = useDisappearingMessageSettings({
     clientInboxId: currentSender.inboxId,
@@ -109,6 +129,14 @@ export const DisappearingMessagesHeaderAction = ({
         }
 
         if (option.id === "header") {
+          return
+        }
+
+        if (option.id === "off") {
+          await clearSettingsMutateAsync({
+            clientInboxId: currentSender.inboxId,
+            conversationId: xmtpConversationId,
+          })
           return
         }
 
@@ -140,28 +168,34 @@ export const DisappearingMessagesHeaderAction = ({
         )
       }
     },
-    [currentSender.inboxId, xmtpConversationId, updateSettingsMutateAsync],
+    [
+      currentSender.inboxId,
+      xmtpConversationId,
+      updateSettingsMutateAsync,
+      clearSettingsMutateAsync,
+    ],
   )
 
   const menuActions = useMemo(() => {
     return DISAPPEARING_MESSAGE_OPTIONS.map((option) => ({
       ...option,
       // Add a checkmark icon if this is the current selection
-      // We would need to fetch the actual current duration to check which one is selected
-      // For now, just show checkmark for enabled/disabled
+      // For "off" option, show checkmark when there are no settings
       image:
-        settings?.retentionDurationInNs &&
-        option.retentionDurationInNs === settings?.retentionDurationInNs
-          ? "checkmark"
-          : "",
+        option.id === "off"
+          ? !settings?.retentionDurationInNs
+            ? "checkmark"
+            : ""
+          : settings?.retentionDurationInNs &&
+              option.retentionDurationInNs === settings?.retentionDurationInNs
+            ? "checkmark"
+            : "",
     }))
   }, [settings?.retentionDurationInNs])
 
-  const enabled = !!settings?.retentionDurationInNs
-
   return (
     <DropdownMenu actions={menuActions} onPress={handleMenuPress} style={themed($menuContainer)}>
-      <HeaderAction disabled={!enabled} icon="timer" />
+      <HeaderAction disabled={false} icon="timer" />
     </DropdownMenu>
   )
 }

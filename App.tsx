@@ -22,7 +22,7 @@ import { AppNavigator } from "@/navigation/app-navigator"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
-import { ReactQueryPersistProvider } from "@/utils/react-query/react-query-persist-provider"
+import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
 import "expo-dev-client"
@@ -62,7 +62,7 @@ export function App() {
   // useSyncQueries({ queryClient: reactQueryClient })
 
   return (
-    <ReactQueryPersistProvider>
+    <ReactQueryProvider>
       <PrivyProvider
         appId={config.privy.appId}
         clientId={config.privy.clientId}
@@ -93,7 +93,7 @@ export function App() {
           </ThirdwebProvider>
         </SmartWalletsProvider>
       </PrivyProvider>
-    </ReactQueryPersistProvider>
+    </ReactQueryProvider>
   )
 }
 

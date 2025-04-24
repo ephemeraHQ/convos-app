@@ -23,10 +23,12 @@ export const useConversationListConversations = () => {
     caller: "useConversationListConversations",
   })
 
-  const { refetch: refetchConversationLastMessageIds, lastMessageIds } =
+  const { refetch: refetchConversationLastMessageIds, lastMessageIdByConversationId } =
     useConversationLastMessageIds({
       conversationIds,
     })
+
+  const lastMessageIds = Object.values(lastMessageIdByConversationId)
 
   const lastMessageQueries = useQueries({
     queries: lastMessageIds.map((messageId) => ({
@@ -48,7 +50,7 @@ export const useConversationListConversations = () => {
   })
 
   // Single pass to process conversations
-  const validConversationIds = conversationIds.reduce(
+  let validConversationIds = conversationIds.reduce(
     (acc, conversationId, index) => {
       const conversationMetadataQuery = conversationMetadataQueries[index]
       const conversation = getConversationQueryData({
@@ -69,11 +71,10 @@ export const useConversationListConversations = () => {
       }
 
       // Get the last message for valid conversations
-      const messageId = lastMessageIds[index]
-      const messageIndex = lastMessageIds.findIndex((id) => id === messageId)
-      const lastMessageQuery = messageIndex >= 0 ? lastMessageQueries[messageIndex] : undefined
+      const messageId = lastMessageIdByConversationId[conversationId]
+      const lastMessageQuery = lastMessageQueries.find((query) => query.data?.xmtpId === messageId)
       const lastMessage = lastMessageQuery?.data
-      const timestamp = lastMessage?.sentMs ?? 0
+      const timestamp = lastMessage?.sentNs ?? 0
 
       // Add to accumulator with timestamp for sorting
       acc.push({
@@ -87,7 +88,9 @@ export const useConversationListConversations = () => {
   )
 
   // Sort in descending order (newest first)
-  validConversationIds.sort((a, b) => b.timestamp - a.timestamp)
+  validConversationIds = validConversationIds.sort((a, b) => {
+    return b.timestamp - a.timestamp
+  })
 
   const sortedValidConversationIds = validConversationIds.map((item) => item.conversationId)
 

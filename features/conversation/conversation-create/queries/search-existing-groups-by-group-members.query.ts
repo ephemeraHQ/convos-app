@@ -12,11 +12,8 @@ import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { normalizeString } from "@/utils/str"
 
-export async function searchExistingGroupsByGroupMembers(args: {
-  searchQuery: string
-  searcherInboxId: IXmtpInboxId
-}) {
-  const { searchQuery, searcherInboxId } = args
+export async function searchExistingGroupsByGroupMembers(args: { searchQuery: string }) {
+  const { searchQuery } = args
 
   const currentSender = getSafeCurrentSender()
 
@@ -42,11 +39,19 @@ export async function searchExistingGroupsByGroupMembers(args: {
   await Promise.all(
     conversations.filter(isConversationGroup).map(async (group) => {
       try {
-        const otherMembersInboxIds = group.members.ids.filter((id) => id !== searcherInboxId)
+        // const otherMembersInboxIds = group.members.ids.filter((id) => id !== searcherInboxId)
+        // For now only search for members that we allowed otherwise we're doing too many requests!
+        const otherMemberInboxIdsWithAllowedConsent = Object.values(group.members.byId)
+          .filter((member) => member.consentState === "allowed")
+          .map((member) => member.inboxId)
+
+        if (otherMemberInboxIdsWithAllowedConsent.length === 0) {
+          return
+        }
 
         // Use Promise.race to get the first matching member
         const result = await Promise.race([
-          ...otherMembersInboxIds.map(async (inboxId) => {
+          ...otherMemberInboxIdsWithAllowedConsent.map(async (inboxId) => {
             const profile = await ensureProfileQueryData({
               xmtpId: inboxId,
               caller: "SearchExistingGroupsByGroupMembers",
@@ -104,7 +109,6 @@ export function getSearchExistingGroupsByGroupMembersQueryOptions(args: {
     queryFn: () => {
       return searchExistingGroupsByGroupMembers({
         searchQuery: normalizedSearchQuery,
-        searcherInboxId,
       })
     },
     enabled: !!normalizedSearchQuery && !!searcherInboxId,

@@ -32,7 +32,6 @@ export const SearchUsersResultsListItemEthAddress = memo(
 
     const { displayName, avatarUrl } = usePreferredDisplayInfo({
       ethAddress,
-      freshData: true,
     })
 
     return (
