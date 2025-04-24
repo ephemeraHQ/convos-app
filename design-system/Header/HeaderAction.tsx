@@ -48,7 +48,7 @@ export function HeaderAction(props: HeaderActionProps) {
         onPress={onPress}
         disabled={disabled || !onPress}
         activeOpacity={0.8}
-        hitSlop={theme.spacing.sm}
+        hitSlop={theme.spacing.xxxs}
       >
         <Text preset="body" text={content} style={themed($actionText)} />
       </TouchableOpacity>
@@ -62,7 +62,7 @@ export function HeaderAction(props: HeaderActionProps) {
         onPress={onPress}
         disabled={disabled || !onPress}
         style={[themed([$actionIconContainer, { backgroundColor }]), style, disabledStyle]}
-        hitSlop={theme.spacing.sm}
+        hitSlop={theme.spacing.xxxs}
       >
         <Icon size={theme.iconSize.lg} icon={icon} color={iconColor} />
       </Pressable>

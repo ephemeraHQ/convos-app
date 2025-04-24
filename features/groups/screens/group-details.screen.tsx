@@ -49,7 +49,7 @@ export const GroupDetailsScreen = memo(function GroupDetailsScreen(
   }
 
   return (
-    <Screen preset="scroll">
+    <Screen preset="scroll" safeAreaEdges={["bottom"]} >
       {/* Header Section with Avatar and Group Info */}
       <VStack
         style={{

@@ -88,7 +88,7 @@ export function useGroupDetailsScreenHeader(args: { xmtpConversationId: IXmtpCon
       backgroundColor: theme.colors.background.surface,
       RightActionComponent: (
         <HStack style={{ columnGap: theme.spacing["4xs"] }}>
-          <HeaderAction icon="square.and.arrow.up" onPress={handleSharePress} />
+          {/* <HeaderAction icon="square.and.arrow.up" onPress={handleSharePress} /> */}
           {canEditGroup && <HeaderAction icon="pencil" onPress={handleEditPress} />}
           {/* <HeaderAction icon="more_vert" onPress={handleMenuPress} /> */}
         </HStack>
