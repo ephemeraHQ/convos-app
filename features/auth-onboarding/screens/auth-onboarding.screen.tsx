@@ -5,7 +5,7 @@ import { AuthOnboardingWelcome } from "@/features/auth-onboarding/components/aut
 import { AuthOnboardingContextProvider } from "@/features/auth-onboarding/contexts/auth-onboarding.context"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 
-export const AuthScreen = memo(function AuthScreen() {
+export const AuthOnboardingScreen = memo(function AuthScreen() {
   const { isReady } = usePrivy()
 
   if (!isReady) {

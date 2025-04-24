@@ -5,7 +5,7 @@ import React, { memo, useEffect } from "react"
 import { config } from "@/config"
 import { AppSettingsScreen } from "@/features/app-settings/app-settings.screen"
 import { AuthOnboardingContactCardImportInfoScreen } from "@/features/auth-onboarding/screens/auth-onboarding-contact-card-import-info.screen"
-import { AuthScreen } from "@/features/auth-onboarding/screens/auth-onboarding.screen"
+import { AuthOnboardingScreen } from "@/features/auth-onboarding/screens/auth-onboarding.screen"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
 import { BlockedConversationsScreen } from "@/features/blocked-conversations/blocked-conversations.screen"
@@ -153,7 +153,7 @@ const AppStacks = memo(function AppStacks() {
         <AppNativeStack.Group>
           <AppNativeStack.Screen
             name="Auth"
-            component={AuthScreen}
+            component={AuthOnboardingScreen}
             // Fade animation when transitioning to signed out state
             options={{ animation: "fade" }}
           />
