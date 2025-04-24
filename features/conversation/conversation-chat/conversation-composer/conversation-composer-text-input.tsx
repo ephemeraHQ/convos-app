@@ -18,6 +18,10 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const { onSubmitEditing } = props
 
   const inputRef = useRef<RNTextInput>(null)
+  // Keep track of the last non-empty input value to handle dictation clearing
+  const lastNonEmptyValue = useRef("")
+  // Track if a change comes from dictation ending
+  const isDictationEndChange = useRef(false)
 
   const { theme, themed } = useAppTheme()
 
@@ -25,11 +29,37 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const inputDefaultValue = conversationComposerStore.getState().inputValue
   const isEnabled = useConversationComposerIsEnabled()
 
+  // Initialize last non-empty value ref
+  useEffect(() => {
+    if (inputDefaultValue) {
+      lastNonEmptyValue.current = inputDefaultValue
+    }
+  }, [inputDefaultValue])
+
   const handleChangeText = useCallback(
     (text: string) => {
-      conversationComposerStore.setState((state) => ({
+      // If this is empty text after non-empty text AND we're on iOS, this might be
+      // dictation ending - we need to preserve the previous value
+      const currentValue = conversationComposerStore.getState().inputValue
+      if (Platform.OS === "ios" && !text && currentValue) {
+        // Potential dictation end detected
+        isDictationEndChange.current = true
+        // Don't update state with empty value, keep the last known value
+        return
+      }
+
+      if (text) {
+        // Keep track of non-empty values
+        lastNonEmptyValue.current = text
+      }
+
+      // Reset the dictation end flag
+      isDictationEndChange.current = false
+
+      // Store value in the zustand store
+      conversationComposerStore.setState({
         inputValue: text,
-      }))
+      })
     },
     [conversationComposerStore],
   )
@@ -41,7 +71,18 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
     const unsubscribe = conversationComposerStore.subscribe((state, prevState) => {
       // Handle clearing the input
       if (prevState.inputValue && !state.inputValue) {
+        // Don't clear if this might be a dictation end event
+        if (isDictationEndChange.current) {
+          // Preventing clear due to dictation end
+          // Restore the previous text
+          conversationComposerStore.setState({
+            inputValue: lastNonEmptyValue.current,
+          })
+          return
+        }
+
         inputRef.current?.clear()
+        lastNonEmptyValue.current = ""
         // This timeout fixes the issue where the autocorrect suggestions isn't cleared
         setTimeout(() => {
           inputRef.current?.setNativeProps({ text: state.inputValue })
@@ -49,6 +90,9 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
       } else if (state.inputValue !== prevState.inputValue) {
         // Handle prefill value changes
         inputRef.current?.setNativeProps({ text: state.inputValue })
+        if (state.inputValue) {
+          lastNonEmptyValue.current = state.inputValue
+        }
       }
     })
 
@@ -76,6 +120,21 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
     [onSubmitEditing],
   )
 
+  // Reset dictation flag on blur (when focus leaves the input)
+  const handleBlur = useCallback(() => {
+    if (isDictationEndChange.current && Platform.OS === "ios") {
+      // Handling dictation end on blur
+      // Restore the last known good value to the input
+      inputRef.current?.setNativeProps({ text: lastNonEmptyValue.current })
+      // Also update the store
+      conversationComposerStore.setState({
+        inputValue: lastNonEmptyValue.current,
+      })
+      // Reset the flag
+      isDictationEndChange.current = false
+    }
+  }, [conversationComposerStore])
+
   return (
     <TextInput
       style={themed($textInput)}
@@ -84,6 +143,7 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
       ref={inputRef}
       onSubmitEditing={handleSubmitEditing}
       onChangeText={handleChangeText}
+      onBlur={handleBlur}
       multiline
       defaultValue={inputDefaultValue}
       placeholder="Message"
