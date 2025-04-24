@@ -61,7 +61,6 @@ export async function wrapXmtpCallWithDuration<T>(
 
     if (result && typeof result === "object" && "metrics" in result) {
       metrics = result.metrics as FullMetrics
-      const { totalNativeDurationMs, encodingNativeDurationMs, bridgeMs, jsDecodeMs, totalMs } = metrics
       xmtpLogger.debug(
         `XMTP operation [${operationId}] "${xmtpFunctionName}" has the following metrics: ${JSON.stringify(metrics)}`,
       )
