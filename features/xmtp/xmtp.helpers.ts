@@ -1,8 +1,8 @@
-import { v4 as uuidv4 } from "uuid"
 import { config } from "@/config"
 import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
+import { getRandomId } from "@/utils/general"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { withTimeout } from "@/utils/promise-timeout"
 
@@ -29,7 +29,7 @@ export async function wrapXmtpCallWithDuration<T>(
   xmtpFunctionName: string,
   xmtpCall: () => Promise<T>,
 ): Promise<T> {
-  const operationId = uuidv4()
+  const operationId = getRandomId()
   const { addOperation, removeOperation } = useXmtpActivityStore.getState().actions
 
   // Record start time and add to store

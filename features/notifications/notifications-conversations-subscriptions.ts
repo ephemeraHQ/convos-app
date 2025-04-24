@@ -278,6 +278,8 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
 }) {
   const { clientInboxId } = args
 
+  notificationsLogger.debug(`Unsubscribing from all conversations for inbox ${clientInboxId}...`)
+
   const client = await getXmtpClientByInboxId({
     inboxId: clientInboxId,
   })
@@ -296,6 +298,10 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
     installationId: client.installationId,
     topics: conversationTopics,
   })
+
+  notificationsLogger.debug(
+    `Successfully unsubscribed from ${conversationTopics.length} conversations for inbox ${clientInboxId}`,
+  )
 }
 
 async function unsubscribeFromConversationsNotifications(args: {

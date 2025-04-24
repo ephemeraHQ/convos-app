@@ -1,5 +1,6 @@
 import { usePrivy } from "@privy-io/expo"
 import { useCallback } from "react"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getCurrentSender, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
 import { unsubscribeFromAllConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
@@ -17,6 +18,8 @@ export const useLogout = () => {
       authLogger.debug(`Logging out called by ${args.caller}`)
 
       try {
+        useAuthenticationStore.getState().actions.setStatus("signedOut")
+
         const currentSender = getCurrentSender()
 
         // Unsubscribe from all conversations notifications
