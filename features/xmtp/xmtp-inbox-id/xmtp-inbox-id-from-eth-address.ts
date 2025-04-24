@@ -1,8 +1,7 @@
 import { findInboxIdFromIdentity, PublicIdentity } from "@xmtp/react-native-sdk"
-import { config } from "@/config"
-import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
 import { GenericError, XMTPError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
@@ -31,29 +30,14 @@ export async function getInboxIdFromEthAddress(args: {
     })
   }
 
-  const client = await getXmtpClientByInboxId({
-    inboxId: clientInboxId,
-  })
-
   try {
-    const lookupStartTime = Date.now()
-    const inboxId = (await findInboxIdFromIdentity(
-      client.installationId,
-      new PublicIdentity(targetEthAddress, "ETHEREUM"),
+    const installationId = await ensureXmtpInstallationQueryData({
+      inboxId: clientInboxId,
+    })
+
+    const inboxId = (await wrapXmtpCallWithDuration("findInboxIdFromIdentity", () =>
+      findInboxIdFromIdentity(installationId, new PublicIdentity(targetEthAddress, "ETHEREUM")),
     )) as unknown as IXmtpInboxId
-    const lookupEndTime = Date.now()
-
-    const lookupDuration = lookupEndTime - lookupStartTime
-
-    if (lookupDuration > config.xmtp.maxMsUntilLogError) {
-      captureError(
-        new XMTPError({
-          error: new Error(
-            `Inbox lookup took ${lookupDuration}ms for target address: ${targetEthAddress}`,
-          ),
-        }),
-      )
-    }
 
     return inboxId
   } catch (error) {

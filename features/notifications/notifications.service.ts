@@ -18,8 +18,8 @@ import { ensureNotificationsPermissions } from "@/features/notifications/notific
 import { registerNotificationInstallation } from "@/features/notifications/notifications.api"
 import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
 import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
-import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { useAppStateStore } from "@/stores/use-app-state-store"
@@ -68,12 +68,12 @@ export async function registerPushNotifications() {
     })
 
     const currentSender = getSafeCurrentSender()
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: currentSender.inboxId,
     })
 
     await registerNotificationInstallation({
-      installationId: client.installationId,
+      installationId,
       deliveryMechanism: {
         deliveryMechanismType: {
           case: "apnsDeviceToken",

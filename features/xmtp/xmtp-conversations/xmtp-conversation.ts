@@ -13,9 +13,10 @@ import {
   prepareMessage,
   publishPreparedMessages,
 } from "@xmtp/react-native-sdk"
-import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
+import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export async function getXmtpConversation(args: {
   clientInboxId: IXmtpInboxId
@@ -24,13 +25,12 @@ export async function getXmtpConversation(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
-      inboxId: clientInboxId,
+    const conversation = await wrapXmtpCallWithDuration("findConversation", async () => {
+      const client = await getXmtpClientByInboxId({
+        inboxId: clientInboxId,
+      })
+      return findConversation(client, conversationId)
     })
-
-    const conversation = await wrapXmtpCallWithDuration("findConversation", () =>
-      findConversation(client, conversationId),
-    )
 
     return conversation
   } catch (error) {
@@ -48,13 +48,13 @@ export async function sendXmtpConversationMessageOptimistic(args: {
 }) {
   const { content, clientInboxId, conversationId } = args
 
-  const client = await getXmtpClientByInboxId({
+  const installationId = await ensureXmtpInstallationQueryData({
     inboxId: clientInboxId,
   })
 
   try {
     return wrapXmtpCallWithDuration("prepareMessage", () =>
-      prepareMessage(client.installationId, conversationId, content),
+      prepareMessage(installationId, conversationId, content),
     )
   } catch (error) {
     throw new XMTPError({
@@ -71,11 +71,11 @@ export async function publishXmtpConversationMessages(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
-    await publishPreparedMessages(client.installationId, conversationId)
+    await publishPreparedMessages(installationId, conversationId)
   } catch (error) {
     throw new XMTPError({
       error,

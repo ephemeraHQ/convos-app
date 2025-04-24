@@ -41,9 +41,29 @@ const breadcrumbTransport: transportFunctionType<{}> = (args) => {
 const LOG_FILE_NAME = "convos-logs.txt"
 const LOG_FILE_DIR = FileSystem.documentDirectory!
 export const LOG_FILE_PATH = `${LOG_FILE_DIR}${LOG_FILE_NAME}`
+// Set log size limit to 5MB
+const MAX_LOG_SIZE = 5 * 1024 * 1024
 
 export async function clearLogFile() {
   await FileSystem.writeAsStringAsync(LOG_FILE_PATH, "")
+}
+
+// Check log file size and reset if needed
+export async function checkLogFileSize() {
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(LOG_FILE_PATH)
+
+    if (!fileInfo.exists) {
+      return
+    }
+
+    if (fileInfo.size > MAX_LOG_SIZE) {
+      // Just clear the file when it gets too big
+      await clearLogFile()
+    }
+  } catch (error) {
+    console.error("Failed to check log file size:", error)
+  }
 }
 
 const transports = [
@@ -82,14 +102,15 @@ const baseLogger = RNLogger.createLogger({
   },
 })
 
-// function createPrefixedLogger(prefix: string): ILogger {
-//   return {
-//     debug: (...args: any[]) => baseLogger.debug(`[${prefix}]`, ...args),
-//     info: (...args: any[]) => baseLogger.info(`[${prefix}]`, ...args),
-//     warn: (...args: any[]) => baseLogger.warn(`[${prefix}]`, ...args),
-//     error: (...args: any[]) => baseLogger.error(`[${prefix}]`, ...args),
-//   }
-// }
+// Setup periodic log file size check in production (every 30 minutes)
+
+// Initial check
+checkLogFileSize().catch(console.error)
+
+// Periodic checks
+setInterval(() => {
+  checkLogFileSize().catch(console.error)
+}, 5000)
 
 // Logger exports
 export const logger = baseLogger.extend("GENERAL")

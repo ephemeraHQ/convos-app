@@ -17,7 +17,11 @@ function getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }: I
   return getConversationMetadata({ xmtpConversationId, clientInboxId })
 }
 
-export function getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }: IArgs) {
+export function getConversationMetadataQueryOptions({
+  xmtpConversationId,
+  clientInboxId,
+  caller,
+}: IArgs & { caller?: string }) {
   const enabled = !!xmtpConversationId && !isTmpConversation(xmtpConversationId)
   return queryOptions({
     queryKey: getReactQueryKey({
@@ -25,6 +29,9 @@ export function getConversationMetadataQueryOptions({ xmtpConversationId, client
       xmtpConversationId,
       clientInboxId,
     }),
+    meta: {
+      caller,
+    },
     queryFn: () => getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }),
     enabled,
     gcTime: TimeUtils.days(30).toMilliseconds(), // Because the current user is the only one that can make changes to their conversation metadata
@@ -32,10 +39,10 @@ export function getConversationMetadataQueryOptions({ xmtpConversationId, client
   })
 }
 
-export function prefetchConversationMetadataQuery(args: IArgs) {
-  const { xmtpConversationId, clientInboxId } = args
+export function prefetchConversationMetadataQuery(args: IArgs & { caller: string }) {
+  const { xmtpConversationId, clientInboxId, caller } = args
   return reactQueryClient.prefetchQuery(
-    getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }),
+    getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId, caller }),
   )
 }
 

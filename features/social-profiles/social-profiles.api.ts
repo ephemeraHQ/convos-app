@@ -60,11 +60,17 @@ const SocialProfilesResponseSchema = z.object({
 
 export type ISocialProfilesResponse = z.infer<typeof SocialProfilesResponseSchema>
 
-export async function fetchSocialProfilesForAddress(args: { ethAddress: string }) {
-  const { ethAddress } = args
+export async function fetchSocialProfilesForAddress(args: {
+  ethAddress: string
+  signal?: AbortSignal
+}) {
+  const { ethAddress, signal } = args
 
   const { data } = await convosApi.get<ISocialProfilesResponse>(
     `/api/v1/lookup/address/${ethAddress}`,
+    {
+      signal,
+    },
   )
 
   const response = SocialProfilesResponseSchema.safeParse(data)

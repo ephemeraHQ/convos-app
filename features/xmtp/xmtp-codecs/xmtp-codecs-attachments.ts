@@ -1,10 +1,14 @@
-import { RemoteAttachmentMetadata } from "@xmtp/react-native-sdk"
+import {
+  decryptAttachment,
+  encryptAttachment,
+  RemoteAttachmentMetadata,
+} from "@xmtp/react-native-sdk"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { XMTPError } from "@/utils/error"
 import { calculateFileDigest, fileExists } from "@/utils/file-system/file-system"
-import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 export const MAX_AUTOMATIC_DOWNLOAD_ATTACHMENT_SIZE = 10000000 // 10MB
 
@@ -15,12 +19,12 @@ export const encryptXmtpAttachment = async (args: {
 }) => {
   const { fileUri, mimeType, clientInboxId = getSafeCurrentSender().inboxId } = args
 
-  const client = await getXmtpClientByInboxId({
+  const installationId = await ensureXmtpInstallationQueryData({
     inboxId: clientInboxId,
   })
 
   const encryptedAttachment = await wrapXmtpCallWithDuration("encryptAttachment", () =>
-    client.encryptAttachment({ fileUri, mimeType }),
+    encryptAttachment(installationId, { fileUri, mimeType }),
   )
 
   // Calculate and verify content digest
@@ -43,10 +47,6 @@ export const decryptXmtpAttachment = async (args: {
 }) => {
   const { encryptedLocalFileUri, metadata, clientInboxId = getSafeCurrentSender().inboxId } = args
 
-  const client = await getXmtpClientByInboxId({
-    inboxId: clientInboxId,
-  })
-
   const exists = await fileExists(encryptedLocalFileUri)
 
   if (!exists) {
@@ -66,8 +66,12 @@ export const decryptXmtpAttachment = async (args: {
     })
   }
 
+  const installationId = await ensureXmtpInstallationQueryData({
+    inboxId: clientInboxId,
+  })
+
   const decryptedAttachment = await wrapXmtpCallWithDuration("decryptAttachment", () =>
-    client.decryptAttachment({ encryptedLocalFileUri, metadata }),
+    decryptAttachment(installationId, { encryptedLocalFileUri, metadata }),
   )
 
   return decryptedAttachment

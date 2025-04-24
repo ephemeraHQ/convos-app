@@ -17,6 +17,7 @@ export const useConversationIsUnread = ({ xmtpConversationId }: UseConversationI
     getConversationMetadataQueryOptions({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
+      caller: "useConversationIsUnread",
     }),
   )
 

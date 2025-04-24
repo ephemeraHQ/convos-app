@@ -1,7 +1,7 @@
 import { IXmtpConversationTopic, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { getHmacKeys } from "@xmtp/react-native-sdk"
 import { IHmacKey } from "@/features/notifications/notifications.api"
-import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { logger } from "@/utils/logger/logger"
@@ -17,12 +17,12 @@ export async function getXmtpHmacKeysForConversation(args: {
   const { clientInboxId, conversationTopic } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
     const response = await wrapXmtpCallWithDuration("getHmacKeys", () =>
-      getHmacKeys(client.installationId),
+      getHmacKeys(installationId),
     )
     return response.hmacKeys[
       conversationTopic
@@ -46,7 +46,7 @@ export async function getXmtpWelcomeTopicHmacKeys(args: { clientInboxId: IXmtpIn
 
   try {
     // First get the client installation ID
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
@@ -54,12 +54,12 @@ export async function getXmtpWelcomeTopicHmacKeys(args: { clientInboxId: IXmtpIn
 
     // Get all HMAC keys
     const hmacKeysResponse = await wrapXmtpCallWithDuration("getHmacKeys (welcome)", () =>
-      getHmacKeys(client.installationId),
+      getHmacKeys(installationId),
     )
 
     // Get the welcome topic
     // Format is typically: /xmtp/mls/1/w-${installationId}/proto
-    const welcomeTopic = `/xmtp/mls/1/w-${client.installationId}/proto`
+    const welcomeTopic = `/xmtp/mls/1/w-${installationId}/proto`
 
     // Extract the keys for the welcome topic
     const topicHmacKeys = hmacKeysResponse.hmacKeys[welcomeTopic]

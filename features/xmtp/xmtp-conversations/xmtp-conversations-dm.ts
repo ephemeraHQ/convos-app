@@ -10,13 +10,12 @@ export async function getXmtpDmByInboxId(args: {
   const { clientInboxId, inboxId } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
-      inboxId: clientInboxId,
+    const conversation = await wrapXmtpCallWithDuration("findDmByInboxId", async () => {
+      const client = await getXmtpClientByInboxId({
+        inboxId: clientInboxId,
+      })
+      return client.conversations.findDmByInboxId(inboxId)
     })
-
-    const conversation = await wrapXmtpCallWithDuration("findDmByInboxId", () =>
-      client.conversations.findDmByInboxId(inboxId),
-    )
 
     return conversation
   } catch (error) {

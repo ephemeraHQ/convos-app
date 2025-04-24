@@ -7544,13 +7544,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/pacer@npm:0.1.0, @tanstack/pacer@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "@tanstack/pacer@npm:0.1.0"
-  checksum: 10c0/7a8ec1e1918d1cfd57b4cc14775b2d27d0743ca9f24babec637c229bc013b667420a32360540a83f100092b138b069b2df307993a3e6abb59bf717aea7073f75
-  languageName: node
-  linkType: hard
-
 "@tanstack/query-async-storage-persister@npm:^5.67.3":
   version: 5.69.2
   resolution: "@tanstack/query-async-storage-persister@npm:5.69.2"
@@ -7606,18 +7599,6 @@ __metadata:
     "@tanstack/query-core": "npm:5.62.2"
     "@tanstack/query-persist-client-core": "npm:5.62.2"
   checksum: 10c0/46bc4d3ec4ca8e72990c324128b1e42249e373d9185fc6fadb2873e935a35d90c585b89d81aa79ca253d3bd43a84afecebd36ef7262656d97c9e9f1145f263f4
-  languageName: node
-  linkType: hard
-
-"@tanstack/react-pacer@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "@tanstack/react-pacer@npm:0.1.0"
-  dependencies:
-    "@tanstack/pacer": "npm:0.1.0"
-  peerDependencies:
-    react: ">=16.8"
-    react-dom: ">=16.8"
-  checksum: 10c0/cddcedd7942f2ec5e5ce71e5441ab0bdc5ccb4d8ce091cd82289c2db2ebe1177b224c9965c986c57e490e58dd131fd8823678e74a0f779b570021687f972c1ca
   languageName: node
   linkType: hard
 
@@ -10750,11 +10731,9 @@ __metadata:
     "@shopify/flash-list": "npm:1.7.3"
     "@shopify/react-native-skia": "npm:1.5.0"
     "@tanstack/eslint-plugin-query": "npm:^5.62.16"
-    "@tanstack/pacer": "npm:^0.1.0"
     "@tanstack/query-async-storage-persister": "npm:^5.67.3"
     "@tanstack/query-persist-client-core": "npm:5.62.2"
     "@tanstack/query-sync-storage-persister": "npm:5.62.2"
-    "@tanstack/react-pacer": "npm:^0.1.0"
     "@tanstack/react-query": "npm:5.62.2"
     "@tanstack/react-query-persist-client": "npm:5.62.2"
     "@testing-library/react-native": "npm:^12.6.1"

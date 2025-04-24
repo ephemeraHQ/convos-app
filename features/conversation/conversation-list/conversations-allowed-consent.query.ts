@@ -1,8 +1,7 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { Query, QueryObserver, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
+import { QueryObserver, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
-import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
@@ -41,13 +40,7 @@ export const getAllowedConsentConversationsQueryOptions = (
   return queryOptions({
     meta: {
       caller,
-      persist: (query: Query) => {
-        const conversationIds = query.state.data as IXmtpConversationId[] | undefined
-
-        if (!conversationIds) return true
-
-        return !conversationIds.some(isTmpConversation)
-      },
+      persist: true,
     },
     queryKey: ["allowed-consent-conversations", clientInboxId],
     queryFn: enabled ? () => getAllowedConsentConversationsQueryFn({ clientInboxId }) : skipToken,

@@ -36,9 +36,10 @@ export const getSocialProfilesForEthAddressQueryOptions = (
     enabled: ethAddress && isEthereumAddress(ethAddress),
     queryFn:
       ethAddress && isEthereumAddress(ethAddress)
-        ? () => {
+        ? async ({ signal }) => {
             return fetchSocialProfilesForAddress({
               ethAddress,
+              signal,
             })
           }
         : skipToken,

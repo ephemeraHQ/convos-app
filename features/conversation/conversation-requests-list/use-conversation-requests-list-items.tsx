@@ -33,6 +33,7 @@ export function useConversationRequestsListItem() {
       getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
+        caller: "useConversationRequestsListItem",
       }),
     ),
   })

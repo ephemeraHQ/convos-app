@@ -17,6 +17,7 @@ export function usePinnedConversations() {
       getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
+        caller: "usePinnedConversations",
       }),
     ),
     combine: (queries) => {

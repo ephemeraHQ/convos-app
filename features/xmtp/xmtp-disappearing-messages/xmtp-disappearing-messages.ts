@@ -4,7 +4,7 @@ import {
   isDisappearingMessagesEnabled,
   updateDisappearingMessageSettings,
 } from "@xmtp/react-native-sdk"
-import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { getTodayNs } from "@/utils/date"
@@ -20,12 +20,12 @@ export async function getXmtpDisappearingMessageSettings(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
     const settings = await wrapXmtpCallWithDuration("getDisappearingMessageSettings", async () => {
-      return disappearingMessageSettings(client.installationId, conversationId)
+      return disappearingMessageSettings(installationId, conversationId)
     })
 
     return settings || null
@@ -47,12 +47,12 @@ export async function isXmtpDisappearingMessagesEnabled(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
     return wrapXmtpCallWithDuration("isDisappearingMessagesEnabled", async () => {
-      return isDisappearingMessagesEnabled(client.installationId, conversationId)
+      return isDisappearingMessagesEnabled(installationId, conversationId)
     })
   } catch (error) {
     throw new XMTPError({
@@ -73,13 +73,13 @@ export async function updateXmtpDisappearingMessageSettings(args: {
   const { clientInboxId, conversationId, retentionDurationInNs } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
     await wrapXmtpCallWithDuration("updateDisappearingMessageSettings", async () => {
       return updateDisappearingMessageSettings(
-        client.installationId,
+        installationId,
         conversationId,
         getTodayNs(),
         retentionDurationInNs,
@@ -100,12 +100,12 @@ export async function clearXmtpDisappearingMessageSettings(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
     await wrapXmtpCallWithDuration("clearDisappearingMessageSettings", async () => {
-      return clearDisappearingMessageSettings(client.installationId, conversationId)
+      return clearDisappearingMessageSettings(installationId, conversationId)
     })
   } catch (error) {
     throw new XMTPError({

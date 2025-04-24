@@ -12,6 +12,7 @@ export function useConversationIsPinned(args: { xmtpConversationId: IXmtpConvers
     ...getConversationMetadataQueryOptions({
       xmtpConversationId,
       clientInboxId: currentSender.inboxId,
+      caller: "useConversationIsPinned",
     }),
     select: (data) => data?.pinned,
   })

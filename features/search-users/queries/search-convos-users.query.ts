@@ -27,7 +27,11 @@ function getConvosUsersSearchQueryOptions(searchQuery: string) {
   return queryOptions({
     enabled,
     queryKey: ["search-convos-users", searchQuery],
-    queryFn: enabled ? () => searchProfiles({ searchQuery }) : skipToken,
+    queryFn: enabled
+      ? async ({ signal }) => {
+          return await searchProfiles({ searchQuery, signal })
+        }
+      : skipToken,
     staleTime: TimeUtils.minutes(5).toMilliseconds(),
     // Keep showing previous search results while new results load
     // to prevent UI flicker during search

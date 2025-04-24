@@ -19,6 +19,7 @@ export const useBlockedConversationsForCurrentAccount = () => {
       ...getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
+        caller: "useBlockedConversationsForCurrentAccount",
       }),
     })),
   })

@@ -6,11 +6,13 @@ import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { ValidationError } from "@/utils/error"
 import { ConvosProfileSchema, type IConvosProfile } from "./profiles.types"
 
-export const fetchProfile = async (args: { xmtpId: IXmtpInboxId }) => {
-  const { xmtpId } = args
+export const fetchProfile = async (args: { xmtpId: IXmtpInboxId; signal?: AbortSignal }) => {
+  const { xmtpId, signal } = args
 
   try {
-    const { data } = await convosApi.get<IConvosProfile>(`/api/v1/profiles/${xmtpId}`)
+    const { data } = await convosApi.get<IConvosProfile>(`/api/v1/profiles/${xmtpId}`, {
+      signal,
+    })
 
     const result = ConvosProfileSchema.safeParse(data)
 

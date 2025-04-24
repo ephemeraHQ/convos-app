@@ -22,9 +22,12 @@ type ISearchProfilesResponse = z.infer<typeof SearchProfilesResponseSchema>
 
 export type ISearchProfilesResult = z.infer<typeof ProfileSchema>
 
-export const searchProfiles = async ({ searchQuery }: { searchQuery: string }) => {
+export const searchProfiles = async (args: { searchQuery: string; signal?: AbortSignal }) => {
+  const { searchQuery, signal } = args
+
   const { data } = await convosApi.get<ISearchProfilesResponse>("/api/v1/profiles/search", {
     params: { query: searchQuery },
+    signal,
   })
 
   const result = SearchProfilesResponseSchema.safeParse(data)

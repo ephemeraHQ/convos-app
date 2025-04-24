@@ -32,6 +32,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
       getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
+        caller: "ConversationListAwaitingRequests",
       }),
     ),
   })

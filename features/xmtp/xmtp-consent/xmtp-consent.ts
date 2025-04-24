@@ -1,5 +1,6 @@
 import { IXmtpConsentState, IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { canMessage, setConsentState } from "@xmtp/react-native-sdk"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -10,16 +11,12 @@ export async function xmtpInboxIdCanMessageEthAddress(args: {
 }) {
   const { inboxId, ethAddress } = args
 
-  const client = await getXmtpClientByInboxId({
+  const installationId = await ensureXmtpInstallationQueryData({
     inboxId,
   })
 
-  if (!client) {
-    throw new Error("Client not found")
-  }
-
   const canMessageResult = await wrapXmtpCallWithDuration("canMessage", () =>
-    client.canMessage([{ kind: "ETHEREUM", identifier: ethAddress }]),
+    canMessage(installationId, [{ kind: "ETHEREUM", identifier: ethAddress }]),
   )
 
   return canMessageResult[ethAddress.toLowerCase()]
@@ -67,20 +64,6 @@ export async function xmtpInboxIdCanMessageEthAddress(args: {
 //   )
 // }
 
-export const syncXmtpConsent = async (inboxId: IXmtpInboxId) => {
-  const client = await getXmtpClientByInboxId({
-    inboxId,
-  })
-  try {
-    await wrapXmtpCallWithDuration("syncConsent", () => client.preferences.syncConsent())
-  } catch (error) {
-    throw new XMTPError({
-      error,
-      additionalMessage: "failed to sync consent",
-    })
-  }
-}
-
 export async function setXmtpConsentStateForInboxId(args: {
   peerInboxId: IXmtpInboxId
   consent: IXmtpConsentState
@@ -88,16 +71,12 @@ export async function setXmtpConsentStateForInboxId(args: {
   const { peerInboxId, consent } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: peerInboxId,
     })
 
     await wrapXmtpCallWithDuration("setConsentState", () =>
-      client.preferences.setConsentState({
-        value: peerInboxId,
-        entryType: "inbox_id",
-        state: consent,
-      }),
+      setConsentState(installationId, peerInboxId, "inbox_id", consent),
     )
   } catch (error) {
     throw new XMTPError({
@@ -114,21 +93,13 @@ export const updateXmtpConsentForGroupsForInbox = async (args: {
 }) => {
   const { clientInboxId, groupIds, consent } = args
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
-    if (!client) {
-      throw new Error("Client not found")
-    }
-
     for (const groupId of groupIds) {
       await wrapXmtpCallWithDuration("setConsentState (group)", () =>
-        client.preferences.setConsentState({
-          value: groupId,
-          entryType: "conversation_id",
-          state: consent,
-        }),
+        setConsentState(installationId, groupId, "conversation_id", consent),
       )
     }
   } catch (error) {

@@ -16,6 +16,7 @@ import {
   updateGroupName,
 } from "@xmtp/react-native-sdk"
 import { PermissionPolicySet } from "@xmtp/react-native-sdk/build/lib/types/PermissionPolicySet"
+import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
@@ -149,12 +150,12 @@ export async function updateXmtpGroupImage(args: {
   const { clientInboxId, xmtpConversationId, imageUrl } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
+    const installationId = await ensureXmtpInstallationQueryData({
       inboxId: clientInboxId,
     })
 
     await wrapXmtpCallWithDuration("updateGroupImageUrl", () =>
-      updateGroupImageUrl(client.installationId, xmtpConversationId, imageUrl),
+      updateGroupImageUrl(installationId, xmtpConversationId, imageUrl),
     )
   } catch (error) {
     throw new XMTPError({

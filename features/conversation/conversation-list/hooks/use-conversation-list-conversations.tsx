@@ -45,11 +45,11 @@ export const useConversationListConversations = () => {
       getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
+        caller: "useConversationListConversations",
       }),
     ),
   })
 
-  // Single pass to process conversations
   let validConversationIds = conversationIds.reduce(
     (acc, conversationId, index) => {
       const conversationMetadataQuery = conversationMetadataQueries[index]
@@ -87,38 +87,41 @@ export const useConversationListConversations = () => {
     [] as Array<{ conversationId: IXmtpConversationId; timestamp: number }>,
   )
 
-  // Sort in descending order (newest first)
+  // // Sort in descending order (newest first)
   validConversationIds = validConversationIds.sort((a, b) => {
     return b.timestamp - a.timestamp
   })
 
   const sortedValidConversationIds = validConversationIds.map((item) => item.conversationId)
 
-  const handleRefetch = useCallback(() => {
-    // Refetch all conversations
-    refetchConversations().catch(captureError)
-    // Refetch all metadata for all conversations
-    // Not important enough to refetch
-    // conversationMetadataQueries.forEach((query) => {
-    //   query.refetch().catch(captureError)
-    // })
-    // Refetch all messages for all conversations
-    for (const conversationId of conversationIds) {
-      refetchInfiniteConversationMessages({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-        caller: "useConversationListConversations",
-      }).catch(captureError)
-    }
+  const handleRefetch = useCallback(
+    () => {
+      // Refetch all conversations
+      refetchConversations().catch(captureError)
+      // Refetch all metadata for all conversations
+      // Not important enough to refetch
+      // conversationMetadataQueries.forEach((query) => {
+      //   query.refetch().catch(captureError)
+      // })
+      // Refetch all messages for all conversations
+      for (const conversationId of conversationIds) {
+        refetchInfiniteConversationMessages({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId: conversationId,
+          caller: "useConversationListConversations",
+        }).catch(captureError)
+      }
 
-    refetchConversationLastMessageIds()
+      refetchConversationLastMessageIds()
+    },
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
-  }, [
-    conversationIds,
-    currentSender.inboxId,
-    refetchConversations,
-    refetchConversationLastMessageIds,
-  ])
+    [
+      conversationIds,
+      currentSender.inboxId,
+      refetchConversations,
+      refetchConversationLastMessageIds,
+    ],
+  )
 
   const hasAnyLastMessageLoading = lastMessageQueries.some(
     (query) => query.isLoading && !query.data,

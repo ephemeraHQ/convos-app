@@ -101,12 +101,12 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
   } = args
 
   try {
-    const client = await getXmtpClientByInboxId({
-      inboxId: clientInboxId,
-    })
+    const conversations = await wrapXmtpCallWithDuration("listConversations", async () => {
+      const client = await getXmtpClientByInboxId({
+        inboxId: clientInboxId,
+      })
 
-    const conversations = await wrapXmtpCallWithDuration("listConversations", () =>
-      client.conversations.list(
+      return client.conversations.list(
         {
           addedByInboxId: true,
           name: true,
@@ -118,8 +118,8 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
         },
         limit,
         consentStates,
-      ),
-    )
+      )
+    })
 
     return conversations
   } catch (error) {

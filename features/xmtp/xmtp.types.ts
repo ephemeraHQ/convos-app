@@ -34,6 +34,7 @@ import {
   TextCodec,
   updateDisappearingMessageSettings,
 } from "@xmtp/react-native-sdk"
+import { InstallationId } from "@xmtp/react-native-sdk/build/lib/Client"
 import { ConversationSendPayload, MessageId } from "@xmtp/react-native-sdk/build/lib/types"
 import { ISupportedXmtpCodecs } from "./xmtp-codecs/xmtp-codecs"
 
@@ -123,3 +124,6 @@ export type IXmtpDisappearingMessageSettings = DisappearingMessageSettings
 export const IXmtpDisappearingMessageSettings = disappearingMessageSettings
 export const IXmtpIsDisappearingMessagesEnabled = isDisappearingMessagesEnabled
 export const IXmtpUpdateDisappearingMessageSettings = updateDisappearingMessageSettings
+
+// ===== Installation Types =====
+export type IXmtpInstallationId = InstallationId

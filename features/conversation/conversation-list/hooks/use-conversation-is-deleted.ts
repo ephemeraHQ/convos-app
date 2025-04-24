@@ -12,6 +12,7 @@ export function useConversationIsDeleted(args: { xmtpConversationId: IXmtpConver
     ...getConversationMetadataQueryOptions({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
+      caller: "useConversationIsDeleted",
     }),
     select: (data) => data?.deleted,
   })

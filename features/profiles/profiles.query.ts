@@ -32,9 +32,9 @@ export const getProfileQueryConfig = (args: Optional<IArgsWithCaller, "caller">)
     }),
     staleTime: TimeUtils.hours(1).toMilliseconds(),
     queryFn: enabled
-      ? async () => {
+      ? async ({ signal }) => {
           try {
-            return await fetchProfile({ xmtpId })
+            return await fetchProfile({ xmtpId, signal })
           } catch (error) {
             // For now do this because if we chat with a bot for example, we'll never have a Convos profile
             if (isConvosApi404Error(error)) {
