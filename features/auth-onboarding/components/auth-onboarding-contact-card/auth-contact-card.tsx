@@ -14,13 +14,15 @@ import { useHeader } from "@/navigation/use-header"
 import { $globalStyles } from "@/theme/styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { AuthOnboardingContactCardAvatar } from "./auth-onboarding-contact-card-avatar"
-import { AuthOnboardingContactCardFooter, handleContinue } from "./auth-onboarding-contact-card-footer"
+import { AuthOnboardingContactCardFooter } from "./auth-onboarding-contact-card-footer"
 import { AuthOnboardingContactCardImport } from "./auth-onboarding-contact-card-import"
 import { AuthOnboardingContactCardNameInput } from "./auth-onboarding-contact-card-name-input"
+import { AuthOnboardingContactCardProvider, useAuthOnboardingContactCardContext } from "./auth-onboarding-contact-card.context"
 
-export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard() {
+const AuthOnboardingContactCardContent = memo(function AuthOnboardingContactCardContent() {
   const { themed, theme } = useAppTheme()
   const userFriendlyError = useAuthOnboardingStore((s) => s.userFriendlyError)
+  const { handleContinue } = useAuthOnboardingContactCardContext()
   
   const { container: containerStyles } = useProfileContactCardStyles()
 
@@ -42,12 +44,10 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
   const cardContainerHeightAV = useSharedValue(0)
   const footerContainerHeightAV = useSharedValue(0)
   
-  // Handle keyboard submit action
+  // Handle keyboard submit action using context
   const handleSubmit = useCallback(() => {
-    if (handleContinue) {
-      handleContinue()
-    }
-  }, [])
+    handleContinue()
+  }, [handleContinue])
 
   // To make sure the card is vertically centered when the keyboard is open
   const contentAnimatedStyle = useAnimatedStyle(() => {
@@ -127,6 +127,14 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
         </AnimatedVStack>
       </Screen>
     </AnimatedVStack>
+  )
+})
+
+export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard() {
+  return (
+    <AuthOnboardingContactCardProvider>
+      <AuthOnboardingContactCardContent />
+    </AuthOnboardingContactCardProvider>
   )
 })
 
