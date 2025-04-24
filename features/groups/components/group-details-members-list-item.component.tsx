@@ -45,7 +45,7 @@ export const MemberListItem = memo(function MemberListItem(props: { memberInboxI
   return (
     <Pressable onPress={handlePress}>
       <GroupDetailsListItem
-        avatar={avatarUrl}
+        avatarSource={avatarUrl}
         avatarName={displayName}
         title={displayName}
         subtitle={subtitle}
