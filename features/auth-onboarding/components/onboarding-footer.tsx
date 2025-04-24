@@ -21,7 +21,7 @@ export function OnboardingFooter({
   isLoading,
   variant = "fill",
 }: IOnboardingFooterProps) {
-  const { themed } = useAppTheme()
+  const { theme, themed } = useAppTheme()
 
   return (
     <Button
@@ -32,7 +32,7 @@ export function OnboardingFooter({
       textStyle={(disabled || isLoading) ? { opacity: 0.6 } : undefined}
       onPress={onPress}
       {...(isLoading
-        ? { LeftAccessory: () => <ActivityIndicator color="white"/> }
+        ? { LeftAccessory: () => <ActivityIndicator color={theme.colors.text.primary} /> }
         : {})}
     >
       {!isLoading && text}
