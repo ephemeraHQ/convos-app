@@ -5513,12 +5513,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@privy-io/api-base@npm:1.4.5":
-  version: 1.4.5
-  resolution: "@privy-io/api-base@npm:1.4.5"
+"@privy-io/api-base@npm:1.4.6-beta-20250424021159":
+  version: 1.4.6-beta-20250424021159
+  resolution: "@privy-io/api-base@npm:1.4.6-beta-20250424021159"
   dependencies:
     zod: "npm:^3.21.4"
-  checksum: 10c0/c81659477667144495d1d9b7d6db0bd7a9619083f07b175eee467c218d6cf26c39ee27d2bacc6670024f9596967d7bbcec172fee76c76a127046f8dfa96ef4b2
+  checksum: 10c0/50fada3e25bd044fb6a73032fadc2589707c6d1f0cac93f02ade92976af25edd531ea7d5ecdf962a507be0961a7077a076bf46b3066cce99d8b9b113032a4b00
   languageName: node
   linkType: hard
 
@@ -5540,11 +5540,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@privy-io/expo@npm:^0.52.3":
-  version: 0.52.3
-  resolution: "@privy-io/expo@npm:0.52.3"
+"@privy-io/expo@npm:0.52.4-beta-20250424021159":
+  version: 0.52.4-beta-20250424021159
+  resolution: "@privy-io/expo@npm:0.52.4-beta-20250424021159"
   dependencies:
-    "@privy-io/js-sdk-core": "npm:0.48.0"
+    "@privy-io/js-sdk-core": "npm:0.48.1-beta-20250424021159"
     "@scure/base": "npm:^1.2.4"
     react-fast-compare: "npm:^3.2.2"
     tweetnacl: "npm:^1.0.3"
@@ -5586,13 +5586,13 @@ __metadata:
       optional: true
     viem:
       optional: true
-  checksum: 10c0/dd1451ef65839fc759350d8659da131c31d68b6170df569912ab6c2bba63f0a553522132effb8022a8f85de2c5b62195d2e2b7e6495e7e51529f23584c2ddf6e
+  checksum: 10c0/ad2d31af7e9bee0e7c46b075d32c3cacfcddec495d2166e0b9e9f6db24247efa616c3b031ae0a913fac20ce752058c0d8ad4c39e99880c2f25eaf42241c3dbeb
   languageName: node
   linkType: hard
 
-"@privy-io/js-sdk-core@npm:0.48.0":
-  version: 0.48.0
-  resolution: "@privy-io/js-sdk-core@npm:0.48.0"
+"@privy-io/js-sdk-core@npm:0.48.1-beta-20250424021159":
+  version: 0.48.1-beta-20250424021159
+  resolution: "@privy-io/js-sdk-core@npm:0.48.1-beta-20250424021159"
   dependencies:
     "@ethersproject/abstract-signer": "npm:^5.7.0"
     "@ethersproject/bignumber": "npm:^5.7.0"
@@ -5600,9 +5600,9 @@ __metadata:
     "@ethersproject/providers": "npm:^5.7.2"
     "@ethersproject/transactions": "npm:^5.7.0"
     "@ethersproject/units": "npm:^5.7.0"
-    "@privy-io/api-base": "npm:1.4.5"
+    "@privy-io/api-base": "npm:1.4.6-beta-20250424021159"
     "@privy-io/chains": "npm:0.0.1"
-    "@privy-io/public-api": "npm:2.22.0"
+    "@privy-io/public-api": "npm:2.23.0-beta-20250424021159"
     canonicalize: "npm:^2.0.0"
     eventemitter3: "npm:^5.0.1"
     fetch-retry: "npm:^6.0.0"
@@ -5619,20 +5619,20 @@ __metadata:
       optional: true
     viem:
       optional: true
-  checksum: 10c0/a751ba0ca5a217d1e12d6441f6067fc8ca79b8dfea584cc850481a6db59571d9f62e0cbc6f64aa71e9a85620f4cdc40cc7b839af80047eb2314d895d83d9c041
+  checksum: 10c0/5c45451170676f4cec50fde04820ff36f120fcf1d14d01b09c65c59f68ab1cbcc3b104bb77f4ecd8b006c6b9aae924078d366d67797b81068e141d62dafe2890
   languageName: node
   linkType: hard
 
-"@privy-io/public-api@npm:2.22.0":
-  version: 2.22.0
-  resolution: "@privy-io/public-api@npm:2.22.0"
+"@privy-io/public-api@npm:2.23.0-beta-20250424021159":
+  version: 2.23.0-beta-20250424021159
+  resolution: "@privy-io/public-api@npm:2.23.0-beta-20250424021159"
   dependencies:
-    "@privy-io/api-base": "npm:1.4.5"
+    "@privy-io/api-base": "npm:1.4.6-beta-20250424021159"
     bs58: "npm:^5.0.0"
     libphonenumber-js: "npm:^1.10.31"
     viem: "npm:^2"
     zod: "npm:^3.22.4"
-  checksum: 10c0/bcd6398fc0b4c16623555016dd6cc871de55bde586babba8b62da20ad71ebfb85b73d1d56873a5c724040bff1be512c5315e9825e22e0c7a250a37e20680ad57
+  checksum: 10c0/91ca9cb1443ff49211f0d1f4c395e6754836874bf1efbed02d433e0856511ea5c1ee1f0b647f33d189715af37da607ad07c65d6d0a855676631d4aaa3053d09a
   languageName: node
   linkType: hard
 
@@ -10732,7 +10732,7 @@ __metadata:
     "@ianvs/prettier-plugin-sort-imports": "npm:^4.4.1"
     "@legendapp/list": "npm:^1.0.0-beta.26"
     "@privy-io/chains": "npm:^0.0.1"
-    "@privy-io/expo": "npm:^0.52.3"
+    "@privy-io/expo": "npm:0.52.4-beta-20250424021159"
     "@privy-io/expo-native-extensions": "npm:^0.0.4"
     "@react-native-async-storage/async-storage": "npm:1.23.1"
     "@react-native-clipboard/clipboard": "npm:1.11.2"
