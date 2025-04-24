@@ -5,17 +5,20 @@ import { XMTPError } from "@/utils/error"
 import { getRandomId } from "@/utils/general"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { withTimeout } from "@/utils/promise-timeout"
+import { FullMetrics } from "@xmtp/react-native-sdk"
 
 export function logErrorIfXmtpRequestTookTooLong(args: {
   durationMs: number
   xmtpFunctionName: string
+  metrics: FullMetrics | undefined
 }) {
-  const { durationMs, xmtpFunctionName } = args
+  const { durationMs, xmtpFunctionName, metrics } = args
 
   if (durationMs > config.xmtp.maxMsUntilLogError) {
     captureError(
       new XMTPError({
         error: new Error(`Calling "${xmtpFunctionName}" took ${durationMs}ms`),
+        ...(metrics && { extra: { metrics } })
       }),
     )
   }
@@ -54,13 +57,21 @@ export async function wrapXmtpCallWithDuration<T>(
     // Record end time and calculate duration
     const endTime = Date.now()
     const durationMs = endTime - startTime
+    let metrics: FullMetrics | undefined;
+
+    if (result && typeof result === "object" && "metrics" in result) {
+      metrics = result.metrics as FullMetrics
+      xmtpLogger.debug(
+        `XMTP operation [${operationId}] "${xmtpFunctionName}" has the following metrics: ${JSON.stringify(metrics)}`,
+      )
+    }
 
     xmtpLogger.debug(
       `XMTP operation [${operationId}] "${xmtpFunctionName}" finished in ${durationMs}ms`,
     )
 
     // Log error if the request took too long
-    logErrorIfXmtpRequestTookTooLong({ durationMs, xmtpFunctionName })
+    logErrorIfXmtpRequestTookTooLong({ durationMs, xmtpFunctionName, metrics })
 
     return result
   } catch (error) {
