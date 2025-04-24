@@ -18,7 +18,7 @@ const syncAllConversationsPromisesCache = new Map<IXmtpInboxId, Promise<void>>()
 const lastSyncAllTimestamps = new Map<IXmtpInboxId, number>()
 
 // Minimum time between syncAll operations in milliseconds
-const MIN_SYNC_ALL_INTERVAL = 5000
+const MIN_SYNC_ALL_INTERVAL = 10000
 
 export async function syncOneXmtpConversation(args: {
   clientInboxId: IXmtpInboxId
@@ -77,7 +77,7 @@ export async function syncAllXmtpConversations(args: {
 
   if (timeSinceLastSync < MIN_SYNC_ALL_INTERVAL) {
     xmtpLogger.debug(
-      `Skipping syncAllConversations for ${clientInboxId} as it was too soon after the last sync`,
+      `Skipping syncAllConversations for ${clientInboxId} as it's been less than ${MIN_SYNC_ALL_INTERVAL}ms since the last sync`,
     )
     return Promise.resolve() // Skip this sync as it's too soon after the last one
   }
@@ -104,7 +104,7 @@ export async function syncAllXmtpConversations(args: {
     } catch (error) {
       throw new XMTPError({
         error,
-        additionalMessage: `Failed to sync conversations for inbox: ${clientInboxId}`,
+        additionalMessage: `Failed to sync all conversations for inbox: ${clientInboxId}`,
       })
     } finally {
       // Always clean up the cache entry when done

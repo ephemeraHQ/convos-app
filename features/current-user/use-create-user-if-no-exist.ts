@@ -108,9 +108,8 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
     (sender) => !identities.some((identity) => identity.xmtpId === sender.inboxId),
   )
 
-  authLogger.debug(`Creating ${missingIdentities.length} missing device identities`)
-
   for (const sender of missingIdentities) {
+    authLogger.debug(`Creating missing device identities for ${sender.inboxId}...`)
     // 4. If no identities, create one
     await createIdentity({
       deviceId,

@@ -41,6 +41,9 @@ export async function wrapXmtpCallWithDuration<T>(
   })
 
   try {
+    // Log the start of the XMTP operation
+    xmtpLogger.debug(`XMTP operation [${operationId}] "${xmtpFunctionName}" started...`)
+
     // Execute the actual XMTP call with a 30-second timeout
     const result = await withTimeout({
       promise: xmtpCall(),
@@ -52,13 +55,18 @@ export async function wrapXmtpCallWithDuration<T>(
     const endTime = Date.now()
     const durationMs = endTime - startTime
 
-    xmtpLogger.debug(`XMTP operation "${xmtpFunctionName}" took ${durationMs}ms`)
+    xmtpLogger.debug(
+      `XMTP operation [${operationId}] "${xmtpFunctionName}" finished in ${durationMs}ms`,
+    )
 
     // Log error if the request took too long
     logErrorIfXmtpRequestTookTooLong({ durationMs, xmtpFunctionName })
 
     return result
   } catch (error) {
+    // Log the error with operation ID
+    xmtpLogger.error(`XMTP operation [${operationId}] "${xmtpFunctionName}" failed: ${error}`)
+
     // Re-throw the error to be handled by the caller
     // We still want to remove the operation from the store in the finally block
     throw error

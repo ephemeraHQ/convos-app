@@ -38,10 +38,11 @@ export async function hydrateAuth() {
       inboxId: currentSender.inboxId,
     })
       .then((isValid) => {
-        authLogger.debug(`XMTP installation is valid: ${isValid}`)
         if (!isValid) {
           authLogger.debug("Invalid XMTP installation while hydrating auth so signing out...")
           useAuthenticationStore.getState().actions.setStatus("signedOut")
+        } else {
+          authLogger.debug("Valid XMTP installation")
         }
       })
       .catch(captureError)

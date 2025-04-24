@@ -118,7 +118,7 @@ async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
       streamLogger.debug(`Starting messages stream for ${inboxId}...`)
       await startMessageStreaming({ clientInboxId: inboxId })
 
-      streamLogger.debug(`Successfully started all streams for ${inboxId}`)
+      streamLogger.debug(`Started all streams for ${inboxId}`)
     } catch (error) {
       // Remove from active streams on error
       activeStreams.delete(inboxId)
@@ -150,7 +150,7 @@ async function stopStreaming(inboxIds: IXmtpInboxId[]) {
         // Stop conversation streaming
         await stopStreamingConversations({ inboxId })
 
-        streamLogger.debug(`Successfully stopped all streams for ${inboxId}`)
+        streamLogger.debug(`Stopped all streams for ${inboxId}`)
       } catch (error) {
         captureError(
           new StreamError({
