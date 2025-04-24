@@ -87,7 +87,7 @@ function _deleteFromBackup(ethAddress: ILowercaseEthereumAddress) {
 }
 
 // Key management operations
-async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; key: string }) {
+export async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; key: string }) {
   const { ethAddress, key } = args
   const storageKey = _getSecureStorageKey(ethAddress)
 
