@@ -19,7 +19,8 @@ export const ProfileContactCardLayout = memo(function CardLayout({
       <VStack style={{ flex: 1, justifyContent: "space-between" }}>
         <HStack style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
           {avatar}
-          {additionalOptions}
+          {/* Temporarily hide the import button */}
+          {/* {additionalOptions} */}
         </HStack>
         {name}
       </VStack>

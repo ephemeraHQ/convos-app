@@ -14,7 +14,7 @@ export const AuthOnboardingContactCardAvatar = memo(function AuthOnboardingConta
     currentImageUri: avatar,
     onRemove: () => {
       reset()
-      useAuthOnboardingStore.getState().actions.setAvatar("")
+      useAuthOnboardingStore.getState().actions.setAvatar(null)
     },
   })
 

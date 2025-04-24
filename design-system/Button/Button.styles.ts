@@ -60,7 +60,7 @@ export const getButtonViewStyle =
 
         case "outline":
           style.borderWidth = 1
-          style.borderColor = colors.border.secondary
+          style.borderColor = colors.border.subtle
           style.backgroundColor = "transparent"
           if (pressed) {
             style.backgroundColor = colors.fill.minimal

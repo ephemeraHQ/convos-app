@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import React, { memo, useCallback } from "react"
 import { TextStyle, ViewStyle } from "react-native"
 import { interpolate, useAnimatedStyle, useSharedValue } from "react-native-reanimated"
 import { Screen } from "@/components/screen/screen"
@@ -17,11 +17,19 @@ import { AuthOnboardingContactCardAvatar } from "./auth-onboarding-contact-card-
 import { AuthOnboardingContactCardFooter } from "./auth-onboarding-contact-card-footer"
 import { AuthOnboardingContactCardImport } from "./auth-onboarding-contact-card-import"
 import { AuthOnboardingContactCardNameInput } from "./auth-onboarding-contact-card-name-input"
+import { AuthOnboardingContactCardProvider, useAuthOnboardingContactCardContext } from "./auth-onboarding-contact-card.context"
 
-export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard() {
+const AuthOnboardingContactCardContent = memo(function AuthOnboardingContactCardContent() {
   const { themed, theme } = useAppTheme()
-
+  const userFriendlyError = useAuthOnboardingStore((s) => s.userFriendlyError)
+  const { handleContinue } = useAuthOnboardingContactCardContext()
+  
   const { container: containerStyles } = useProfileContactCardStyles()
+
+  // Clear errors on mounts
+  React.useEffect(() => {
+    useAuthOnboardingStore.getState().actions.setUserFriendlyError(null)
+  }, [])
 
   useHeader({
     safeAreaEdges: ["top"],
@@ -35,6 +43,11 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
   const contentContainerHeightAV = useSharedValue(0)
   const cardContainerHeightAV = useSharedValue(0)
   const footerContainerHeightAV = useSharedValue(0)
+  
+  // Handle keyboard submit action using context
+  const handleSubmit = useCallback(() => {
+    handleContinue()
+  }, [handleContinue])
 
   // To make sure the card is vertically centered when the keyboard is open
   const contentAnimatedStyle = useAnimatedStyle(() => {
@@ -49,7 +62,8 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
               -contentContainerHeightAV.value / 2 +
                 cardContainerHeightAV.value / 2 +
                 footerContainerHeightAV.value -
-                textContainerHeightAV.value / 2,
+                textContainerHeightAV.value / 2 -
+                theme.spacing.sm, // Move it slightly higher in the screen above the keyboard
             ],
             "clamp",
           ),
@@ -93,20 +107,34 @@ export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard
             }}
           >
             <ProfileContactCardLayout
-              name={<AuthOnboardingContactCardNameInput />}
+              name={<AuthOnboardingContactCardNameInput onSubmitEditing={handleSubmit} />}
               avatar={<AuthOnboardingContactCardAvatar />}
               additionalOptions={<AuthOnboardingContactCardImport />}
             />
           </VStack>
 
-          <Text preset="small" color="secondary" style={themed($footerText)}>
-            Add and edit Contact Cards anytime,{`\n`}or go Rando for extra privacy.
+          <Text 
+            preset="small" 
+            color={userFriendlyError ? "caution" : "secondary"} 
+            style={themed($footerText)}
+          >
+            {userFriendlyError || "You can update this anytime."}
           </Text>
-        </AnimatedVStack>
 
-        <AuthOnboardingContactCardFooter footerContainerHeightAV={footerContainerHeightAV} />
+          <AuthOnboardingContactCardFooter 
+            footerContainerHeightAV={footerContainerHeightAV}
+          />
+        </AnimatedVStack>
       </Screen>
     </AnimatedVStack>
+  )
+})
+
+export const AuthOnboardingContactCard = memo(function AuthOnboardingContactCard() {
+  return (
+    <AuthOnboardingContactCardProvider>
+      <AuthOnboardingContactCardContent />
+    </AuthOnboardingContactCardProvider>
   )
 })
 

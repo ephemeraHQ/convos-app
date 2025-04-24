@@ -19,13 +19,9 @@ export const AuthOnboardingWelcomeFooter = memo(function AuthOnboardingWelcomeFo
         .delay(ONBOARDING_ENTERING_DELAY.FOURTH)}
     >
       <OnboardingFooter
-        iconName="contact-card"
-        text="Create a Contact Card"
+        text="Create your Contact Card"
         onPress={signup}
-        disabled={isProcessingWeb3Stuff}
-        iconButtonProps={{
-          iconSize: 34, // Custom size to fit the Figma design
-        }}
+        disabled={isProcessingWeb3Stuff} 
       />
     </AnimatedVStack>
   )

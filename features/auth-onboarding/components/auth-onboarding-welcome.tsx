@@ -1,5 +1,5 @@
-import { memo } from "react"
-import { TextStyle, ViewStyle } from "react-native"
+import { memo, useEffect } from "react"
+import { TextStyle, ViewStyle, ImageStyle } from "react-native"
 import { Screen } from "@/components/screen/screen"
 import { AnimatedCenter, Center } from "@/design-system/Center"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
@@ -7,14 +7,15 @@ import { Link } from "@/design-system/link"
 import { Pressable } from "@/design-system/Pressable"
 import { AnimatedText, Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
+import { HStack } from "@/design-system/HStack"
 import { ONBOARDING_ENTERING_DELAY } from "@/features/auth-onboarding/auth-onboarding.constants"
-import { OnboardingSubtitle } from "@/features/auth-onboarding/components/onboarding-subtitle"
 import { useAuthOnboardingContext } from "@/features/auth-onboarding/contexts/auth-onboarding.context"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { useHeader } from "@/navigation/use-header"
 import { $globalStyles } from "@/theme/styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { openLink } from "@/utils/linking"
+import { Image } from "@/design-system/image"
 import { AuthOnboardingWelcomeFooter } from "./auth-onboarding-welcome-footer"
 
 export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
@@ -34,26 +35,20 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
     <Screen contentContainerStyle={$globalStyles.flex1} safeAreaEdges={["bottom"]} preset="fixed">
       <Center style={$globalStyles.flex1}>
         <VStack>
-          <OnboardingSubtitle
-            entering={theme.animation
-              .reanimatedFadeInSpringSlow()
-              .delay(ONBOARDING_ENTERING_DELAY.FIRST)}
-          >
-            Welcome to Convos
-          </OnboardingSubtitle>
           {/* This is a really custom text. No preset */}
           <AnimatedText
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
-              .delay(ONBOARDING_ENTERING_DELAY.SECOND)}
+              .delay(ONBOARDING_ENTERING_DELAY.FIRST)}
             style={themed($titleStyle)}
           >
             Not another{"\n"}chat app
           </AnimatedText>
           <AnimatedText
+            preset="smaller"
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
-              .delay(ONBOARDING_ENTERING_DELAY.THIRD)}
+              .delay(ONBOARDING_ENTERING_DELAY.SECOND)}
             style={$subtextStyle}
             color={"secondary"}
           >
@@ -82,7 +77,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
             <Link
               preset="smaller"
               color="secondary"
-              onPress={() => openLink({ url: "https://www.convos.xyz/terms" })}
+              onPress={() => openLink({ url: "https://convos.org/terms-of-service" })}
             >
               Terms of Service
             </Link>{" "}
@@ -90,7 +85,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
             <Link
               preset="smaller"
               color="secondary"
-              onPress={() => openLink({ url: "https://www.convos.xyz/privacy" })}
+              onPress={() => openLink({ url: "https://convos.org/privacy-policy" })}
             >
               Privacy Policy
             </Link>
@@ -102,7 +97,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
 })
 
 function useHeaderWrapper() {
-  const { theme } = useAppTheme()
+  const { theme, themed } = useAppTheme()
 
   const { login } = useAuthOnboardingContext()
 
@@ -117,7 +112,27 @@ function useHeaderWrapper() {
             .reanimatedFadeInSpringSlow()
             .delay(ONBOARDING_ENTERING_DELAY.SIXTH)}
         >
-          <HeaderAction disabled={isProcessingWeb3Stuff} icon="person-badge-key" onPress={login} />
+          <HeaderAction 
+            text="Sign in" 
+            disabled={isProcessingWeb3Stuff} 
+            onPress={login} 
+          />
+        </AnimatedCenter>
+      ),
+      LeftActionComponent: (
+        <AnimatedCenter
+          entering={theme.animation
+            .reanimatedFadeInSpringSlow()
+            .delay(ONBOARDING_ENTERING_DELAY.SIXTH)}
+        >
+          <HStack style={{ alignItems: "center", paddingLeft: theme.spacing.sm }}>
+            <Image
+              source={require("@/assets/icons/convos-orange.svg")}
+              style={themed($logoImage)}
+              contentFit="contain"
+            />
+            <Text preset="body">Convos</Text>
+          </HStack>
         </AnimatedCenter>
       ),
     },
@@ -127,7 +142,7 @@ function useHeaderWrapper() {
 
 const $termsContainer: ThemedStyle<ViewStyle> = ({ spacing, borderRadius, colors }) => ({
   padding: spacing.sm,
-  margin: spacing.lg,
+  marginHorizontal: spacing.lg,
   backgroundColor: colors.background.raised,
   borderRadius: borderRadius.xxs,
 })
@@ -143,4 +158,10 @@ const $titleStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
   fontWeight: "bold",
   marginTop: spacing.xs,
   marginBottom: spacing.sm,
+})
+
+const $logoImage: ThemedStyle<ImageStyle> = () => ({
+  width: 24,
+  height: 24,
+  marginRight: 8,
 })

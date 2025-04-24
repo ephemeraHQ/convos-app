@@ -1,50 +1,46 @@
 import { ViewStyle } from "react-native"
 import { ActivityIndicator } from "@/design-system/activity-indicator"
-import { IIconName } from "@/design-system/Icon/Icon.types"
+import { IButtonVariant } from "@/design-system/Button/Button.props"
 import { IIconButtonProps } from "@/design-system/IconButton/IconButton.props"
-import { OnboardingIconButton } from "@/features/auth-onboarding/components/onboarding-icon-button"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { OnboardingFooterText } from "./onboarding-footer-text"
+import { Button } from "@/design-system/Button/Button"
 
 type IOnboardingFooterProps = {
   text: string
-  iconName: IIconName
   onPress: () => void
   disabled?: boolean
   isLoading?: boolean
   iconButtonProps?: IIconButtonProps
+  variant?: IButtonVariant
 }
-
-const $iconButtonStyle: ThemedStyle<ViewStyle> = ({ borderRadius }) => ({
-  borderRadius: borderRadius.lg,
-})
 
 export function OnboardingFooter({
   text,
-  iconName,
   onPress,
   disabled,
   isLoading,
-  iconButtonProps,
+  variant = "fill",
 }: IOnboardingFooterProps) {
-  const { themed } = useAppTheme()
+  const { theme, themed } = useAppTheme()
 
   return (
-    <>
-      <OnboardingIconButton
-        action="primary"
-        size="xl"
-        disabled={disabled || isLoading}
-        style={themed($iconButtonStyle)}
-        onPress={onPress}
-        {...(isLoading
-          ? { icon: <ActivityIndicator /> }
-          : {
-              iconName,
-            })}
-        {...iconButtonProps}
-      />
-      <OnboardingFooterText color={disabled ? "inactive" : "primary"}>{text}</OnboardingFooterText>
-    </>
+    <Button
+      variant={variant}
+      action="primary"
+      disabled={disabled || isLoading}
+      style={themed($buttonStyle)}
+      textStyle={(disabled || isLoading) ? { opacity: 0.6 } : undefined}
+      onPress={onPress}
+      {...(isLoading
+        ? { LeftAccessory: () => <ActivityIndicator color={theme.colors.text.primary} /> }
+        : {})}
+    >
+      {!isLoading && text}
+    </Button>
   )
 }
+
+const $buttonStyle: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginTop: spacing.sm,
+  marginHorizontal: spacing.lg,
+})
