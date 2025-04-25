@@ -5,7 +5,6 @@ import {
   useMultiInboxStore,
 } from "@/features/authentication/multi-inbox.store"
 import { IWallet } from "@/features/wallets/connect-wallet/connect-wallet.types"
-import { useSmartWalletClient } from "@/features/wallets/smart-wallet"
 import { createXmtpSignerFromSwc } from "@/features/wallets/utils/create-xmtp-signer-from-swc"
 import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpSigner } from "@/features/xmtp/xmtp-signer/get-xmtp-signer"
@@ -36,10 +35,10 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
   const { activeWallet } = props
 
   const router = useRouter()
-  const { smartWalletClient } = useSmartWalletClient()
   const currentRoute = getCurrentRoute()
 
-  const smartWalletClientEthAddress = smartWalletClient?.account.address
+  // @ts-expect-error
+  const smartWalletClientEthAddress = "" // TODO
 
   // Track if this smart wallet has already been rotated to a different inbox
   // We only allow rotating a smart wallet's inbox once to prevent address hopping
@@ -89,11 +88,11 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error creating new inbox ID" }),
         {
-          message: "Error creating new inbox"
-        }
+          message: "Error creating new inbox",
+        },
       )
     }
-  }, [activeWallet, smartWalletClient, setHasRotatedWalletAddress])
+  }, [activeWallet, setHasRotatedWalletAddress])
 
   if (!isHasRotatedWalletAddressLoaded) {
     return <ConnectWalletLoadingContent />

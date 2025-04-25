@@ -1,6 +1,6 @@
-import { usePrivy } from "@privy-io/expo"
+import { useTurnkey } from "@turnkey/sdk-react-native"
 import { AxiosError } from "axios"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { formatRandomUsername } from "@/features/auth-onboarding/utils/format-random-user-name"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { IPrivyUserId } from "@/features/authentication/authentication.types"
@@ -26,7 +26,6 @@ import {
   getDevicePushNotificationsToken,
   getExpoPushNotificationsToken,
 } from "@/features/notifications/notifications.service"
-import { useSmartWalletClient } from "@/features/wallets/smart-wallet"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -127,11 +126,8 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
   })
 }
 
-async function startFlow(args: {
-  privyUserId: IPrivyUserId
-  smartWalletClientAddress: IEthereumAddress
-}) {
-  const { privyUserId, smartWalletClientAddress } = args
+async function startFlow(args: { privyUserId: IPrivyUserId; ethAddress: IEthereumAddress }) {
+  const { privyUserId, ethAddress } = args
 
   const { data: currentUser, error: fetchCurrentUserError } = await tryCatch(fetchCurrentUser())
 
@@ -157,7 +153,7 @@ async function startFlow(args: {
     const createdUser = await createUserMutation({
       inboxId: currentSender.inboxId,
       privyUserId,
-      smartContractWalletAddress: smartWalletClientAddress,
+      smartContractWalletAddress: ethAddress,
       profile: getRandomProfile(),
     })
 
@@ -181,29 +177,9 @@ async function startFlow(args: {
  * This handles edge cases like app closure during onboarding
  */
 export function useCreateUserIfNoExist() {
-  const { user: privyUser } = usePrivy()
-  const { smartWalletClient } = useSmartWalletClient()
-
-  const isSubscribedRef = useRef(false)
+  const { user } = useTurnkey()
 
   useEffect(() => {
-    if (!privyUser) {
-      //   authLogger.debug("Privy user not found, skipping user creation")
-      return
-    }
-
-    if (!smartWalletClient) {
-      //   authLogger.debug("Smart contract client not found, skipping user creation")
-      return
-    }
-
-    if (isSubscribedRef.current) {
-      //   authLogger.debug("Already subscribed to authentication store, skipping user creation")
-      return
-    }
-
-    isSubscribedRef.current = true
-
     const unsubscribe = useAuthenticationStore.subscribe(
       (state) => state.status,
       (status) => {
@@ -211,15 +187,13 @@ export function useCreateUserIfNoExist() {
           return
         }
 
-        if (!smartWalletClient) {
-          throw new AuthenticationError({
-            error: new Error("Smart contract client not found"),
-          })
+        if (!user) {
+          return
         }
 
         startFlow({
-          privyUserId: privyUser.id as IPrivyUserId,
-          smartWalletClientAddress: smartWalletClient.account.address as IEthereumAddress,
+          privyUserId: user.id as IPrivyUserId,
+          ethAddress: user.wallets[0].accounts[0].address as IEthereumAddress,
         }).catch(captureError)
       },
       {
@@ -230,7 +204,7 @@ export function useCreateUserIfNoExist() {
     return () => {
       unsubscribe()
     }
-  }, [privyUser, smartWalletClient])
+  }, [user])
 }
 
 const firstNames = [

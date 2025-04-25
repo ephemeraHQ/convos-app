@@ -56,6 +56,10 @@ export const shared = {
   expo: {
     projectId: appConfigExtra.eas.projectId,
   },
+  turnkey: {
+    organizationId: process.env.EXPO_PUBLIC_TURNKEY_ORGANIZATION_ID || "",
+    turnkeyApiUrl: process.env.EXPO_PUBLIC_TURNKEY_API_URL || "https://api.turnkey.com",
+  },
   firebase: {
     appCheckDebugToken:
       Platform.OS === "android"

@@ -1,12 +1,11 @@
-## Privy Dependencies
+## Turnkey Dependencies
 
-- Viem: https://docs.privy.io/guide/expo/setup/smart-wallets
-- permissionless: https://docs.privy.io/guide/expo/setup/smart-wallets
-- ethersproject/shims: https://github.com/privy-io/expo-starter/blob/main/entrypoint.js
-- fast-text-encoding: https://github.com/privy-io/expo-starter/blob/main/entrypoint.js
-- react-native-get-random-values: https://github.com/privy-io/expo-starter/blob/main/entrypoint.js
-- react-native-passkeys: https://github.com/privy-io/expo-starter/blob/main/entrypoint.js
-- privy-io/expo-native-extensions: Not sure why, but without it the app won't start and has a weird error "Cannot read property 'call' of undefined"
+react-native-keychain
+react-native-inappbrowser-reborn
+@turnkey/crypto
+@turnkey/api-key-stamper
+@turnkey/http
+@turnkey/sdk-react-native
 
 ## Thirdweb Dependencies
 

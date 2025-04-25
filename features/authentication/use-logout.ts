@@ -1,4 +1,3 @@
-import { usePrivy } from "@privy-io/expo"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getCurrentSender, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
@@ -11,8 +10,6 @@ import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.
 import { authLogger } from "../../utils/logger/logger"
 
 export const useLogout = () => {
-  const { logout: privyLogout } = usePrivy()
-
   const logout = useCallback(
     async (args: { caller: string }) => {
       authLogger.debug(`Logging out called by ${args.caller}`)
@@ -57,7 +54,7 @@ export const useLogout = () => {
 
         resetMultiInboxStore()
 
-        await privyLogout()
+        // await privyLogout()
 
         clearReacyQueryQueriesAndCache()
 

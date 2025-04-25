@@ -31,6 +31,10 @@ export type IConfig = {
   thirdweb: {
     clientId: string
   }
+  turnkey: {
+    organizationId: string
+    turnkeyApiUrl: string
+  }
   privy: {
     appId: string
     clientId: string
