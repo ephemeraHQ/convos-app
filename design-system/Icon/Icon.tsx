@@ -86,7 +86,7 @@ export function Icon(props: IIconProps) {
     picto,
     icon,
     style,
-    size = theme.iconSize.lg,
+    size = theme.iconSize.md,
     color = theme.colors.fill.primary,
     weight,
     ...rest
