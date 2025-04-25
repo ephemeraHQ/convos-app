@@ -18,6 +18,8 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
   const { onSubmitEditing } = props
 
   const inputRef = useRef<RNTextInput>(null)
+  // Track if a change comes from dictation ending
+  const isDictationEndChange = useRef(false)
 
   const { theme, themed } = useAppTheme()
 
@@ -27,9 +29,23 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
 
   const handleChangeText = useCallback(
     (text: string) => {
-      conversationComposerStore.setState((state) => ({
+      // If this is empty text after non-empty text AND we're on iOS, this might be
+      // dictation ending - we need to preserve the previous value
+      const currentValue = conversationComposerStore.getState().inputValue
+      if (Platform.OS === "ios" && !text && currentValue) {
+        // Potential dictation end detected
+        isDictationEndChange.current = true
+        // Don't update state with empty value, keep the last known value
+        return
+      }
+
+      // Reset the dictation end flag
+      isDictationEndChange.current = false
+
+      // Store value in the zustand store
+      conversationComposerStore.setState({
         inputValue: text,
-      }))
+      })
     },
     [conversationComposerStore],
   )
@@ -41,6 +57,16 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
     const unsubscribe = conversationComposerStore.subscribe((state, prevState) => {
       // Handle clearing the input
       if (prevState.inputValue && !state.inputValue) {
+        // Don't clear if this might be a dictation end event
+        if (isDictationEndChange.current) {
+          // Preventing clear due to dictation end
+          // Restore the previous text
+          conversationComposerStore.setState({
+            inputValue: prevState.inputValue, // Use previous value from store
+          })
+          return
+        }
+
         inputRef.current?.clear()
         // This timeout fixes the issue where the autocorrect suggestions isn't cleared
         setTimeout(() => {
@@ -76,6 +102,24 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
     [onSubmitEditing],
   )
 
+  // Reset dictation flag on blur (when focus leaves the input)
+  const handleBlur = useCallback(() => {
+    if (isDictationEndChange.current && Platform.OS === "ios") {
+      // Handling dictation end on blur
+      const currentStoreValue = conversationComposerStore.getState().inputValue
+      
+      // If dictation ended with empty text, we need to restore the previous value
+      if (!currentStoreValue) {
+        // Get the previous value from elsewhere in your app if needed
+        // For now, we'll rely on the fact that we're preventing empty updates
+        inputRef.current?.setNativeProps({ text: inputDefaultValue || "" })
+      }
+      
+      // Reset the flag
+      isDictationEndChange.current = false
+    }
+  }, [conversationComposerStore, inputDefaultValue])
+
   return (
     <TextInput
       style={themed($textInput)}
@@ -84,6 +128,7 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
       ref={inputRef}
       onSubmitEditing={handleSubmitEditing}
       onChangeText={handleChangeText}
+      onBlur={handleBlur}
       multiline
       defaultValue={inputDefaultValue}
       placeholder="Message"
