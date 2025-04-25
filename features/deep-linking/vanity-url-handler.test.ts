@@ -14,13 +14,35 @@ jest.mock("@/config", () => ({
 
 jest.mock("@/features/profiles/utils/find-inbox-id-by-username")
 jest.mock("@/navigation/navigation.utils")
-jest.mock("@/utils/logger/logger", () => ({
-  deepLinkLogger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
+jest.mock("@/utils/logger/logger", () => {
+  return {
+    deepLinkLogger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }
+  }
+})
+
+// Mock captureError
+jest.mock("@/utils/capture-error", () => ({
+  captureError: jest.fn(),
 }))
+
+// Mock expo-linking and set process.env.EXPO_OS
+jest.mock('expo-linking', () => ({
+  createURL: jest.fn(),
+  parse: jest.fn(),
+  parseInitialURLAsync: jest.fn(),
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+  openURL: jest.fn(),
+  canOpenURL: jest.fn(),
+  getInitialURL: jest.fn()
+}));
+
+// Set the EXPO_OS environment variable
+process.env.EXPO_OS = 'web'; // or 'ios', 'android' depending on your needs
 
 describe("Vanity URL Handler", () => {
   describe("extractUsernameFromVanityUrl", () => {
