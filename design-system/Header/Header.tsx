@@ -100,10 +100,10 @@ export function Header(props: HeaderProps) {
       >
         <HStack
           // {...debugBorder("red")}
-          style={$contentContainer}
+          style={themed($contentContainer)}
         >
           {onBack ? (
-            <HeaderAction icon="chevron.left" onPress={onBack} backgroundColor={backgroundColor} />
+            <HeaderAction icon="chevron.left" onPress={onBack} />
           ) : (
             (leftTx || leftText || leftIcon || LeftActionComponent) && (
               <HeaderAction
@@ -156,19 +156,19 @@ export function Header(props: HeaderProps) {
 
 const $wrapper: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
-  paddingHorizontal: spacing.xs,
+  paddingHorizontal: spacing.xxs,
 })
 
 const $container: ViewStyle = {
   width: "100%",
 }
 
-const $contentContainer: ViewStyle = {
+const $contentContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   flex: 1,
   alignItems: "center",
-}
+})
 
-const $titleContainer: ThemedStyle<ViewStyle> = () => ({
+const $titleContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   justifyContent: "center",
   zIndex: 1,

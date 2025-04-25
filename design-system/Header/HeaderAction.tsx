@@ -64,7 +64,7 @@ export function HeaderAction(props: HeaderActionProps) {
         style={[themed([$actionIconContainer, { backgroundColor }]), style, disabledStyle]}
         hitSlop={theme.spacing.xxxs}
       >
-        <Icon size={theme.iconSize.lg} icon={icon} color={iconColor} />
+        <Icon size={theme.iconSize.md} icon={icon} color={iconColor} />
       </Pressable>
     )
   }

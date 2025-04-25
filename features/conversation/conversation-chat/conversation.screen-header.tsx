@@ -152,6 +152,7 @@ const ConversationHeaderTitleDumb = memo(function ConversationHeaderTitle({
   return (
     <HStack
       style={{
+        paddingHorizontal: theme.spacing.xxxs,
         flex: 1,
       }}
     >
