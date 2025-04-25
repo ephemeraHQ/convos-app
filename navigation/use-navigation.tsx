@@ -35,7 +35,7 @@ export function useRouter(args?: {
   onBeforeRemove?: (e: { data: { action: NavigationAction } }) => void
   onBlur?: () => void
   onFocus?: () => void
-  onTransitionStart?: (e: { isClosing: boolean }) => void
+  onTransitionStart?: (e: EventArg<"transitionStart", false, { closing: boolean }>) => void
   onGestureCancel?: (e: EventArg<"gestureCancel", false, undefined>) => void
 }) {
   const { onFocus, onBeforeRemove, onBlur, onTransitionStart, onGestureCancel } = args || {}

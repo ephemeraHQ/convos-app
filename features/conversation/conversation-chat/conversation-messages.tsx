@@ -63,7 +63,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     isRefetching: isRefetchingMessages,
     refetch: refetchMessages,
     fetchNextPage,
-    // hasNextPage,
+    hasNextPage,
   } = useInfiniteQuery({
     ...getConversationMessagesInfiniteQueryOptions({
       clientInboxId: currentSender.inboxId,
@@ -133,19 +133,20 @@ export const ConversationMessages = memo(function ConversationMessages() {
       if (refreshingRef.current || isRefetchingMessages) {
         return
       }
-
+      
+      // contentOffset: Current scroll position (y is positive when scrolling up in inverted list)
+      // contentSize: Total size of all content in the list
+      // layoutMeasurement: Size of the visible viewport
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
 
-      const contentOffsetY = contentOffset.y
+      // Calculate distance from top of older messages 
+      // In inverted lists, we're at "top" of old messages when contentOffset.y is large
+      const distanceFromTop = contentSize.height - layoutMeasurement.height - contentOffset.y
+      
+      // Trigger loading when within 20% of viewport height from the top
+      const isPastTopThreshold = distanceFromTop < layoutMeasurement.height * 0.2
 
-      const listHeight = layoutMeasurement.height
-      const listContentHeight = contentSize.height > listHeight ? listHeight : contentSize.height
-      const distanceFromTop = listContentHeight - contentOffsetY
-      const isPastTopThreshold = distanceFromTop < listHeight * 0.1
-
-      // hasNextPage is often false even when we have messages to
-      // fetch while pulling to refresh, so commenting out for now
-      if (isPastTopThreshold /* && hasNextPage */) {
+      if (isPastTopThreshold && hasNextPage) {
         refreshingRef.current = true
         logger.debug("Fetching older messages because we're scrolled past the top...")
         fetchNextPage()
@@ -159,12 +160,12 @@ export const ConversationMessages = memo(function ConversationMessages() {
       }
 
       // Reset once the user has scrolled back up past the threshold
-      if (contentOffsetY >= 0) {
+      if (contentOffset.y >= 0) {
         hasPulledToRefreshRef.current = false
       }
 
       // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
-      const isPastBottomThreshold = contentOffsetY < -25
+      const isPastBottomThreshold = contentOffset.y < -25
 
       if (isPastBottomThreshold && !hasPulledToRefreshRef.current) {
         // Only refetch if we haven't already refreshed during this pull-down gesture
@@ -190,7 +191,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     },
     [
       fetchNextPage,
-      // hasNextPage,
+      hasNextPage,
       isRefetchingMessages,
       refetchMessages,
       currentSender.inboxId,
