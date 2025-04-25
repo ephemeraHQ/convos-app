@@ -3,7 +3,7 @@ import { translate } from "@i18n"
 import {
   compressAndResizeImage,
   getMimeTypeFromAsset,
-  pickMultipleMediaFromLibrary,
+  pickSingleMediaFromLibrary,
   takePictureFromCamera,
 } from "@utils/media"
 import * as ImagePicker from "expo-image-picker"
@@ -15,6 +15,7 @@ import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
 import {
   IComposerAttachmentPicked,
   useConversationComposerStore,
+  useConversationComposerStoreContext,
 } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer.store-context"
 import { useConversationComposerIsEnabled } from "@/features/conversation/conversation-chat/conversation-composer/hooks/use-conversation-composer-is-enabled"
 import { uploadFile } from "@/features/uploads/upload.api"
@@ -32,6 +33,11 @@ export const ConversationComposerAddAttachmentButton = memo(
 
     const conversationComposerStore = useConversationComposerStore()
     const isEnabled = useConversationComposerIsEnabled()
+    
+    // Check if there are any attachments
+    const hasAttachments = useConversationComposerStoreContext(
+      (state) => state.composerAttachments.length > 0
+    )
 
     const handleAsset = useCallback(
       async (asset: ImagePicker.ImagePickerAsset) => {
@@ -119,49 +125,17 @@ export const ConversationComposerAddAttachmentButton = memo(
 
     const pickMedia = useCallback(async () => {
       try {
-        logger.debug("[pickMedia] Picking multiple media from library")
-        const assets = await pickMultipleMediaFromLibrary()
+        logger.debug("[pickMedia] Picking single media from library")
+        const asset = await pickSingleMediaFromLibrary()
 
-        if (!assets) {
-          logger.debug("[pickMedia] No assets selected")
+        if (!asset) {
+          logger.debug("[pickMedia] No asset selected")
           return
         }
 
-        logger.debug("[pickMedia] Processing assets", { count: assets.length })
-        const results = await customPromiseAllSettled(
-          assets.map((asset) => {
-            return handleAsset(asset)
-          }),
-        )
-        logger.debug("[pickMedia] Results", results)
-
-        const failedResults = results.filter((result) => result.status === "rejected")
-        const failedCount = failedResults.length
-        const successCount = results.length - failedCount
-
-        logger.debug("[pickMedia] Finished processing assets", {
-          total: results.length,
-          success: successCount,
-          failed: failedCount,
-        })
-
-        if (failedCount > 0) {
-          // Capture errors from failed results
-          failedResults.forEach((result) => {
-            logger.error("[pickMedia] Failed to process attachment", { error: result.reason })
-            captureError(
-              new GenericError({
-                error: result.reason,
-                additionalMessage: "Failed to process attachment",
-              }),
-            )
-          })
-
-          showSnackbar({
-            message: `Failed to process ${failedCount} attachment${failedCount > 1 ? "s" : ""}`,
-            type: "error",
-          })
-        }
+        logger.debug("[pickMedia] Processing asset")
+        await handleAsset(asset)
+        
       } catch (error) {
         captureErrorWithToast(
           new GenericError({ error, additionalMessage: "Failed to pick media" }),
@@ -225,7 +199,7 @@ export const ConversationComposerAddAttachmentButton = memo(
 
     return (
       <DropdownMenu
-        disabled={!isEnabled}
+        disabled={!isEnabled || hasAttachments}
         style={themed($dropdownMenu)}
         onPress={onDropdownMenuPress}
         actions={dropdownMenuActions}
