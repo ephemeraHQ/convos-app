@@ -63,7 +63,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     isRefetching: isRefetchingMessages,
     refetch: refetchMessages,
     fetchNextPage,
-    hasNextPage,
+    // hasNextPage,
   } = useInfiniteQuery({
     ...getConversationMessagesInfiniteQueryOptions({
       clientInboxId: currentSender.inboxId,
@@ -143,7 +143,9 @@ export const ConversationMessages = memo(function ConversationMessages() {
       const distanceFromTop = listContentHeight - contentOffsetY
       const isPastTopThreshold = distanceFromTop < listHeight * 0.1
 
-      if (isPastTopThreshold && hasNextPage) {
+      // hasNextPage is often false even when we have messages to
+      // fetch while pulling to refresh, so commenting out for now
+      if (isPastTopThreshold /* && hasNextPage */) {
         refreshingRef.current = true
         logger.debug("Fetching older messages because we're scrolled past the top...")
         fetchNextPage()
@@ -188,7 +190,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
     },
     [
       fetchNextPage,
-      hasNextPage,
+      // hasNextPage,
       isRefetchingMessages,
       refetchMessages,
       currentSender.inboxId,
