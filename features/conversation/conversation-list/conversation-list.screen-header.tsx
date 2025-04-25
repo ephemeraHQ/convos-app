@@ -50,7 +50,7 @@ function HeaderRightActions() {
 
 const $rightContainer: ThemedStyle<ViewStyle> = (theme) => ({
   alignItems: "center",
-  columnGap: theme.spacing.xxs,
+  columnGap: theme.spacing.xxxs,
 })
 
 const $newConversationContainer: ViewStyle = {
