@@ -18,6 +18,7 @@ export type NavigationParamList = {
   Blocked: undefined
   Chats: undefined
   ChatsRequests: undefined
+  ChatsRequestsUncleared: undefined
   Conversation: {
     xmtpConversationId?: IXmtpConversationId
     composerTextPrefill?: string

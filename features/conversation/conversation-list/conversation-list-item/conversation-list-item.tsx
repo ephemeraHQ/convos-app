@@ -3,7 +3,7 @@ import { ViewStyle } from "react-native"
 import { AnimatedCenter, Center } from "@/design-system/Center"
 import { ITextProps, Text } from "@/design-system/Text"
 import { TouchableHighlight } from "@/design-system/touchable-highlight"
-import { VStack } from "@/design-system/VStack"
+import { IVStackProps, VStack } from "@/design-system/VStack"
 import { useConversationListStyles } from "@/features/conversation/conversation-list/conversation-list.styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 
@@ -14,6 +14,7 @@ export type IConversationListItemProps = {
   onPress?: () => void
   isUnread?: boolean
   showError?: boolean
+  previewContainerProps?: IVStackProps
 }
 
 export const ConversationListItem = memo(function ConversationListItem({
@@ -23,9 +24,12 @@ export const ConversationListItem = memo(function ConversationListItem({
   subtitle,
   avatarComponent,
   showError,
+  previewContainerProps,
 }: IConversationListItemProps) {
   const { themed, theme } = useAppTheme()
   const { screenHorizontalPadding } = useConversationListStyles()
+
+  const { style: previewContainerStyle, ...restPreviewContainerProps } = previewContainerProps ?? {}
 
   return (
     <TouchableHighlight
@@ -39,7 +43,10 @@ export const ConversationListItem = memo(function ConversationListItem({
     >
       <>
         <Center style={$avatarWrapper}>{avatarComponent}</Center>
-        <VStack style={themed($messagePreviewContainer)}>
+        <VStack
+          style={[themed($messagePreviewContainer), previewContainerStyle]}
+          {...restPreviewContainerProps}
+        >
           {typeof title === "string" ? (
             <ConversationListItemTitle>{title}</ConversationListItemTitle>
           ) : (

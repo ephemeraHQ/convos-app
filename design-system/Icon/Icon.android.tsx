@@ -52,6 +52,7 @@ export const iconRegistry: Record<IIconName, keyof typeof MaterialIcons.glyphMap
   "arrow.clockwise": "refresh",
   person: "person",
   exclamation: "error",
+  "exclamationmark.octagon.fill": "error",
   "info.circle": "info",
   "person.2": "group",
   "arrowshape.turn.up.left": "reply",

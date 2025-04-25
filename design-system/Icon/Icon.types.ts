@@ -58,6 +58,7 @@ export type IIconName =
   | "tray"
   | "cloud"
   | "exclamationmark.triangle"
+  | "exclamationmark.octagon.fill"
   | "magnifyingglass"
   | "star"
   | "pin"

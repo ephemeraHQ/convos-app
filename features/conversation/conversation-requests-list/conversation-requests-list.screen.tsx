@@ -1,60 +1,121 @@
-import { memo, useCallback, useState } from "react"
+import { memo, useCallback, useMemo } from "react"
+import {
+  BannerContainer,
+  BannerContentContainer,
+  BannerSubtitle,
+  BannerTitle,
+} from "@/components/banner"
 import { Screen } from "@/components/screen/screen"
+import { Icon } from "@/design-system/Icon/Icon"
+import { IVStackProps, VStack } from "@/design-system/VStack"
+import {
+  ConversationListItem,
+  ConversationListItemSubtitle,
+  ConversationListItemTitle,
+} from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
-import { ConversationRequestsToggle } from "@/features/conversation/conversation-requests-list/conversation-requests-list-toggle"
 import { useConversationRequestsListScreenHeader } from "@/features/conversation/conversation-requests-list/conversation-requests-list.screen-header"
-import { useBetterFocusEffect } from "@/hooks/use-better-focus-effect"
-import { translate } from "@/i18n"
+import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
-import { captureError } from "@/utils/capture-error"
+import { useAppTheme } from "@/theme/use-app-theme"
 import { useConversationRequestsListItem } from "./use-conversation-requests-list-items"
 
-export type ITab = "you-might-know" | "hidden"
-
 export const ConversationRequestsListScreen = memo(function () {
-  const [selectedTab, setSelectedTab] = useState<ITab>("you-might-know")
+  useConversationRequestsListScreenHeader()
 
-  useConversationRequestsListScreenHeader({ selectedTab })
-
-  const handleToggleSelect = useCallback((tab: ITab) => {
-    setSelectedTab(tab)
-  }, [])
+  const { likelyNotSpamConversationIds, likelySpamConversationIds } =
+    useConversationRequestsListItem()
 
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
-      <ConversationRequestsToggle
-        options={[
-          { label: translate("You might know"), value: "you-might-know" },
-          { label: translate("Hidden"), value: "hidden" },
-        ]}
-        selectedTab={selectedTab}
-        onSelect={handleToggleSelect}
+      <ConversationList
+        ListHeaderComponent={<ListHeader />}
+        ListFooterComponent={
+          likelySpamConversationIds.length > 0 ? (
+            <ListFooter likelySpamCount={likelySpamConversationIds.length} />
+          ) : undefined
+        }
+        conversationsIds={likelyNotSpamConversationIds}
       />
-
-      <ConversationListWrapper selectedTab={selectedTab} />
     </Screen>
   )
 })
 
-const ConversationListWrapper = memo(function ConversationListWrapper({
-  selectedTab,
-}: {
-  selectedTab: ITab
-}) {
-  const { likelyNotSpamConversationIds, likelySpamConversationIds, refetch } =
-    useConversationRequestsListItem()
+const ListFooter = memo(function ListFooter({ likelySpamCount }: { likelySpamCount: number }) {
+  const { theme } = useAppTheme()
+  const router = useRouter()
 
-  useBetterFocusEffect(
-    useCallback(() => {
-      refetch().catch(captureError)
-    }, [refetch]),
+  const title = useMemo(() => {
+    return <ConversationListItemTitle>Uncleared</ConversationListItemTitle>
+  }, [])
+
+  const subtitle = useMemo(() => {
+    const text = `${likelySpamCount} chat${likelySpamCount !== 1 ? "s" : ""}`
+    return <ConversationListItemSubtitle>{text}</ConversationListItemSubtitle>
+  }, [likelySpamCount])
+
+  const avatarComponent = useMemo(
+    function avatarComponent() {
+      return (
+        <VStack
+          style={{
+            width: theme.avatarSize.lg,
+            height: theme.avatarSize.lg,
+            backgroundColor: theme.colors.fill.tertiary,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon
+            icon="exclamationmark.octagon.fill"
+            size={theme.avatarSize.lg / 2}
+            color={theme.colors.global.white}
+          />
+        </VStack>
+      )
+    },
+    [theme],
   )
 
+  const previewContainerProps = useMemo(() => {
+    return {
+      style: {
+        justifyContent: "center",
+      },
+    } satisfies IVStackProps
+  }, [])
+
+  const handleOnPress = useCallback(() => {
+    router.navigate("ChatsRequestsUncleared")
+  }, [router])
+
   return (
-    <ConversationList
-      conversationsIds={
-        selectedTab === "you-might-know" ? likelyNotSpamConversationIds : likelySpamConversationIds
-      }
+    <ConversationListItem
+      onPress={handleOnPress}
+      title={title}
+      subtitle={subtitle}
+      avatarComponent={avatarComponent}
+      previewContainerProps={previewContainerProps}
     />
+  )
+})
+
+const ListHeader = memo(function ListHeader() {
+  const { theme } = useAppTheme()
+
+  return (
+    <BannerContainer
+      style={{
+        marginTop: theme.spacing.xs + theme.spacing.xs, // The Figma as an additional margin top
+        marginBottom: theme.spacing.xs,
+        marginHorizontal: theme.spacing.lg,
+      }}
+    >
+      <BannerContentContainer>
+        <BannerTitle>Chats that clear your security rules</BannerTitle>
+        <BannerSubtitle>No links · No pics · No $</BannerSubtitle>
+      </BannerContentContainer>
+    </BannerContainer>
   )
 })

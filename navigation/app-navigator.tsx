@@ -12,6 +12,7 @@ import { BlockedConversationsScreen } from "@/features/blocked-conversations/blo
 import { ConversationScreen } from "@/features/conversation/conversation-chat/conversation.screen"
 import { ConversationListScreen } from "@/features/conversation/conversation-list/conversation-list.screen"
 import { ConversationRequestsListScreen } from "@/features/conversation/conversation-requests-list/conversation-requests-list.screen"
+import { ConversationUnclearedRequestsScreen } from "@/features/conversation/conversation-requests-list/conversation-uncleared-requests.screen"
 // import { ShareProfileNav, ShareProfileScreenConfig } from "../screens/ShareProfileNav"
 import { DeepLinkHandler } from "@/features/deep-linking/deep-link-handler.component"
 import { getStateFromPath } from "@/features/deep-linking/navigation-handlers"
@@ -201,6 +202,10 @@ const AppStacks = memo(function AppStacks() {
           />
           <AppNativeStack.Screen name="Blocked" component={BlockedConversationsScreen} />
           <AppNativeStack.Screen name="ChatsRequests" component={ConversationRequestsListScreen} />
+          <AppNativeStack.Screen
+            name="ChatsRequestsUncleared"
+            component={ConversationUnclearedRequestsScreen}
+          />
           <AppNativeStack.Screen name="Conversation" component={ConversationScreen} />
           <AppNativeStack.Screen
             options={{ presentation: "modal" }}

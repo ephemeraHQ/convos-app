@@ -3,7 +3,8 @@ import { useQueries } from "@tanstack/react-query"
 import React, { memo, useCallback, useMemo } from "react"
 import { Center } from "@/design-system/Center"
 import { AnimatedHStack, HStack } from "@/design-system/HStack"
-import { Image } from "@/design-system/image"
+import { Icon } from "@/design-system/Icon/Icon"
+import { IVStackProps } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
@@ -118,7 +119,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
           columnGap: theme.spacing.xxs,
         }}
       >
-        <ConversationListItemTitle>Requests</ConversationListItemTitle>
+        <ConversationListItemTitle>Security</ConversationListItemTitle>
       </HStack>
     )
   }, [theme])
@@ -128,12 +129,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
       if (isLoadingUknownConversations) {
         return "Checking for invites"
       }
-      if (numberOfRequestsLikelyNotSpam === 0) {
-        return "All clear"
-      }
-      return `${numberOfRequestsLikelyNotSpam} new contact${
-        numberOfRequestsLikelyNotSpam > 1 ? "s" : ""
-      }`
+      return `${numberOfRequestsLikelyNotSpam} chat${numberOfRequestsLikelyNotSpam > 1 ? "s" : ""}`
     }
 
     const text = getSubtitleText()
@@ -156,23 +152,11 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
         style={{
           width: theme.avatarSize.lg,
           height: theme.avatarSize.lg,
-          backgroundColor: theme.colors.fill.tertiary,
-          borderRadius: 999,
+          backgroundColor: theme.colors.global.orange,
+          borderRadius: theme.borderRadius.sm,
         }}
       >
-        {/* TODO: Add skia to make it better and add the little "shield" icon */}
-        <Image
-          source={
-            theme.isDark
-              ? require("@/assets/icons/chat-bubble-dark.png")
-              : require("@/assets/icons/chat-bubble-light.png")
-          }
-          style={{
-            width: theme.avatarSize.sm,
-            height: theme.avatarSize.sm,
-          }}
-          contentFit="contain"
-        />
+        <Icon icon="shield.fill" size={theme.avatarSize.lg / 2} color={theme.colors.global.white} />
       </Center>
     )
   }, [theme])
@@ -181,6 +165,18 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     navigation.navigate("ChatsRequests")
   }, [navigation])
 
+  const previewContainerProps = useMemo(() => {
+    return {
+      style: {
+        justifyContent: "center",
+      },
+    } satisfies IVStackProps
+  }, [])
+
+  if (numberOfRequestsLikelyNotSpam === 0) {
+    return null
+  }
+
   return (
     <ConversationListItem
       title={title}
@@ -188,6 +184,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
       onPress={handleOnPress}
       isUnread={hasUnreadMessages}
       avatarComponent={AvatarComponent}
+      previewContainerProps={previewContainerProps}
     />
   )
 })

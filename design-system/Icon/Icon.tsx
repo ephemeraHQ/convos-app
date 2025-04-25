@@ -52,6 +52,7 @@ export const iconRegistry: Record<IIconName, SFSymbol> = {
   "arrow.clockwise": "arrow.clockwise",
   person: "person",
   exclamation: "exclamationmark",
+  "exclamationmark.octagon.fill": "exclamationmark.octagon.fill",
   "info.circle": "info.circle",
   "person.2": "person.2",
   "arrowshape.turn.up.left": "arrowshape.turn.up.left",
