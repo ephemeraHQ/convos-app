@@ -1,4 +1,5 @@
 import {
+  EventArg,
   NavigationAction,
   RouteProp,
   useNavigation,
@@ -34,8 +35,10 @@ export function useRouter(args?: {
   onBeforeRemove?: (e: { data: { action: NavigationAction } }) => void
   onBlur?: () => void
   onFocus?: () => void
+  onTransitionStart?: (e: { isClosing: boolean }) => void
+  onGestureCancel?: (e: EventArg<"gestureCancel", false, undefined>) => void
 }) {
-  const { onFocus, onBeforeRemove, onBlur } = args || {}
+  const { onFocus, onBeforeRemove, onBlur, onTransitionStart, onGestureCancel } = args || {}
 
   const navigation = useNavigation<NativeStackNavigationProp<NavigationParamList>>()
 
@@ -74,6 +77,32 @@ export function useRouter(args?: {
       beforeRemoveListener()
     }
   }, [onBeforeRemove, navigation])
+
+  useEffect(() => {
+    // @ts-ignore - "transitionStart" actually exists
+    const transitionStartListener = navigation.addListener("transitionStart", (e) => {
+      if (onTransitionStart) {
+        onTransitionStart(e)
+      }
+    })
+
+    return () => {
+      transitionStartListener()
+    }
+  }, [onTransitionStart, navigation])
+
+  useEffect(() => {
+    // @ts-ignore - "gestureCancel" actually exists
+    const gestureCancelListener = navigation.addListener("gestureCancel", (e) => {
+      if (onGestureCancel) {
+        onGestureCancel(e)
+      }
+    })
+
+    return () => {
+      gestureCancelListener()
+    }
+  }, [onGestureCancel, navigation])
 
   return navigation
 }

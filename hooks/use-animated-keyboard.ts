@@ -11,8 +11,13 @@ export function useAnimatedKeyboard() {
     const currentHeight = height.value * -1
 
     // Store previous height when keyboard is fully open
-    if (progressAV.value === 1) {
-      previousOpenKeyboardHeightAV.value = currentHeight
+    if (progressAV.value === 1 && currentHeight > 0) {
+      // We saw some glitches where the height goes smaller than what it's actually is!
+      // So we clamp it to the actual height.
+      previousOpenKeyboardHeightAV.value = Math.max(
+        previousOpenKeyboardHeightAV.value,
+        currentHeight,
+      )
     }
 
     return currentHeight
