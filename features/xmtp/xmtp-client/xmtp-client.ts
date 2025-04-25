@@ -1,14 +1,14 @@
 import { IXmtpClientWithCodecs, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { Client as XmtpClient } from "@xmtp/react-native-sdk"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
-import { buildXmtpClientInstance } from "@/features/xmtp/xmtp-client/xmtp-client-build"
+import { buildXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client-build"
 import { cleanXmtpDbEncryptionKey } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress, lowercaseEthAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { clientByEthAddress, clientByInboxId } from "./xmtp-client-cache"
 
-export { buildXmtpClientInstance } from "./xmtp-client-build"
+export { buildXmtpClient as buildXmtpClientInstance } from "./xmtp-client-build"
 export { createXmtpClient } from "./xmtp-client-create"
 
 export async function getXmtpClientByInboxId(args: { inboxId: IXmtpInboxId }) {
@@ -29,7 +29,7 @@ export async function getXmtpClientByInboxId(args: { inboxId: IXmtpInboxId }) {
       })
     }
 
-    const client = await buildXmtpClientInstance({
+    const client = await buildXmtpClient({
       ethereumAddress: sender.ethereumAddress,
       inboxId,
     })

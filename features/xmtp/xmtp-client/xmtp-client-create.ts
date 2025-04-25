@@ -11,10 +11,42 @@ import { ISupportedXmtpCodecs, supportedXmtpCodecs } from "@/features/xmtp/xmtp-
 import { xmtpIdentityIsEthereumAddress } from "@/features/xmtp/xmtp-identifier/xmtp-identifier"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
-import { lowercaseEthAddress } from "@/utils/evm/address"
+import { IEthereumAddress, lowercaseEthAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
+import { isXmtpDbEncryptionKeyError } from "../xmtp-errors"
 
-export async function createXmtpClient(args: { inboxSigner: IXmtpSigner }) {
+async function _createXmtpClient(args: {
+  inboxSigner: IXmtpSigner
+  dbEncryptionKey: Uint8Array
+  operationName: string
+  ethAddress: IEthereumAddress
+}): Promise<IXmtpClientWithCodecs> {
+  const { inboxSigner, dbEncryptionKey, operationName, ethAddress } = args
+
+  const xmtpClientResult = await wrapXmtpCallWithDuration(operationName, () =>
+    XmtpClient.create<ISupportedXmtpCodecs>(inboxSigner, {
+      env: config.xmtp.env,
+      dbEncryptionKey,
+      codecs: supportedXmtpCodecs,
+      ...(config.xmtp.env === "local" && {
+        customLocalUrl: getXmtpLocalUrl(),
+      }),
+    }),
+  )
+
+  const typedClient = xmtpClientResult as IXmtpClientWithCodecs
+  const resolvedClientPromise = Promise.resolve(typedClient)
+
+  // Cache the client by both Ethereum address and inbox ID
+  clientByEthAddress.set(ethAddress, resolvedClientPromise)
+  clientByInboxId.set(typedClient.inboxId, resolvedClientPromise)
+
+  return typedClient
+}
+
+export async function createXmtpClient(args: {
+  inboxSigner: IXmtpSigner
+}): Promise<IXmtpClientWithCodecs> {
   const { inboxSigner } = args
 
   try {
@@ -34,59 +66,29 @@ export async function createXmtpClient(args: { inboxSigner: IXmtpSigner }) {
     xmtpLogger.debug(`Creating XMTP client instance...`)
 
     try {
-      const xmtpClientResult = await wrapXmtpCallWithDuration("createXmtpClient", () =>
-        XmtpClient.create<ISupportedXmtpCodecs>(inboxSigner, {
-          env: config.xmtp.env,
-          dbEncryptionKey,
-          codecs: supportedXmtpCodecs,
-          ...(config.xmtp.env === "local" && {
-            customLocalUrl: getXmtpLocalUrl(),
-          }),
-        }),
-      )
-
-      const typedClient = xmtpClientResult as IXmtpClientWithCodecs
-      const resolvedClientPromise = Promise.resolve(typedClient)
-
-      // Cache the client by both Ethereum address and inbox ID
-      clientByEthAddress.set(ethAddress, resolvedClientPromise)
-      clientByInboxId.set(typedClient.inboxId, resolvedClientPromise)
-
-      return typedClient
+      return await _createXmtpClient({
+        inboxSigner,
+        dbEncryptionKey,
+        operationName: "createXmtpClient",
+        ethAddress,
+      })
     } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("PRAGMA key or salt has incorrect value")
-      ) {
+      if (isXmtpDbEncryptionKeyError(error)) {
         xmtpLogger.warn(`PRAGMA key error detected, trying with backup key...`)
 
         const backupDbEncryptionKey = await getBackupXmtpDbEncryptionKey({
           ethAddress,
         })
 
-        const xmtpClientResult = await wrapXmtpCallWithDuration(
-          "createXmtpClientWithBackupKey",
-          () =>
-            XmtpClient.create<ISupportedXmtpCodecs>(inboxSigner, {
-              env: config.xmtp.env,
-              dbEncryptionKey: backupDbEncryptionKey,
-              codecs: supportedXmtpCodecs,
-              ...(config.xmtp.env === "local" && {
-                customLocalUrl: getXmtpLocalUrl(),
-              }),
-            }),
-        )
+        const client = await _createXmtpClient({
+          inboxSigner,
+          dbEncryptionKey: backupDbEncryptionKey,
+          operationName: "createXmtpClientWithBackupKey",
+          ethAddress,
+        })
 
-        const typedClient = xmtpClientResult as IXmtpClientWithCodecs
         xmtpLogger.debug(`Successfully created XMTP client using backup key`)
-
-        const resolvedClientPromise = Promise.resolve(typedClient)
-
-        // Cache the client by both Ethereum address and inbox ID
-        clientByEthAddress.set(ethAddress, resolvedClientPromise)
-        clientByInboxId.set(typedClient.inboxId, resolvedClientPromise)
-
-        return typedClient
+        return client
       }
 
       throw error

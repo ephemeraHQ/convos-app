@@ -66,60 +66,6 @@ export function useConversationsNotificationsSubscriptions() {
     },
   })
 
-  // Helper function for unsubscribing from all conversations
-  async function unsubscribeFromAllConversations(
-    conversationsMap?: Map<IXmtpInboxId, IXmtpConversationId[]>,
-  ) {
-    try {
-      notificationsLogger.debug("Unsubscribing from all conversations...")
-
-      // Use provided map or current ref
-      const mapToUse = conversationsMap || previousConversationsRef.current
-
-      // Unsubscribe from all conversations for all inboxes
-      const unsubscribePromises = Array.from(mapToUse.entries()).map(
-        async ([inboxId, conversationIds]) => {
-          if (conversationIds.length > 0) {
-            try {
-              await unsubscribeFromConversationsNotifications({
-                conversationIds,
-                clientInboxId: inboxId,
-              })
-
-              notificationsLogger.debug(
-                `Unsubscribed from ${conversationIds.length} conversations for inbox ${inboxId}`,
-              )
-            } catch (error) {
-              captureError(
-                new NotificationError({
-                  error,
-                  additionalMessage: `Failed to unsubscribe from conversations during cleanup for inbox ${inboxId}`,
-                }),
-              )
-            }
-          }
-        },
-      )
-
-      // Wait for all unsubscribe operations to complete
-      await Promise.all(unsubscribePromises)
-
-      // Clear the reference if we're using the current ref (not a captured copy)
-      if (!conversationsMap) {
-        previousConversationsRef.current.clear()
-      }
-
-      notificationsLogger.debug("Unsubscribed from all conversations")
-    } catch (error) {
-      captureError(
-        new NotificationError({
-          error,
-          additionalMessage: "Failed to unsubscribe from all conversations during cleanup",
-        }),
-      )
-    }
-  }
-
   // Main effect to handle subscriptions when queries data changes
   useEffect(() => {
     // Skip if not signed in or no permission
@@ -185,10 +131,17 @@ export function useConversationsNotificationsSubscriptions() {
 
   useEffect(() => {
     // Had notif permission and remove it
-    if (previousNotificationPermission && !hasNotificationPermission) {
-      unsubscribeFromAllConversations()
+    if (previousNotificationPermission && !hasNotificationPermission && isSignedIn) {
+      const senders = useMultiInboxStore.getState().senders
+      Promise.all(
+        senders.map((sender) =>
+          unsubscribeFromAllConversationsNotifications({
+            clientInboxId: sender.inboxId,
+          }),
+        ),
+      ).catch(captureError)
     }
-  }, [hasNotificationPermission, previousNotificationPermission])
+  }, [hasNotificationPermission, previousNotificationPermission, isSignedIn])
 
   return null
 }
@@ -292,7 +245,7 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
     throw new Error(`No conversation ids found for inbox ${clientInboxId}`)
   }
 
-  if (conversationIds.length > 0) {
+  if (conversationIds.length === 0) {
     notificationsLogger.debug(`No conversations to unsubscribe from for inbox ${clientInboxId}`)
     return
   }
