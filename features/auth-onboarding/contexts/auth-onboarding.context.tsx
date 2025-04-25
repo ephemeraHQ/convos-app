@@ -64,8 +64,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     errorMessage: "Privy took too long to be ready",
   })
 
-  authLogger.debug(`Smart wallet client is ready: ${!!smartWalletClient}`)
-
   const { waitUntil: waitUntilSmartWalletClientIsReady } = useWaitUntil({
     thing: smartWalletClient,
     timeoutMs: 20000, // Yes unfortunately, this can sometimes take a while... Need to investigate our RPC
@@ -309,14 +307,14 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
           }),
           {
             message: "You're already logged in. Please try again",
-          }
+          },
         )
       } else {
         captureErrorWithToast(
           new AuthenticationError({ error, additionalMessage: "Failed to sign up with passkey" }),
           {
             message: "Failed to sign up with passkey",
-          }
+          },
         )
       }
 

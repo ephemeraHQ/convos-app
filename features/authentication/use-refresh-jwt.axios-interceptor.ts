@@ -71,12 +71,6 @@ const createRefreshTokenInterceptor = (
 
     const originalRequest = error.config as ExtendedAxiosRequestConfig
     if (!originalRequest) {
-      captureError(
-        new ConvosApiError({
-          error,
-          additionalMessage: "Cannot retry request: original request config is missing",
-        }),
-      )
       return Promise.reject(error)
     }
 
@@ -84,21 +78,10 @@ const createRefreshTokenInterceptor = (
     // This prevents infinite refresh loops
     if (originalRequest._retry) {
       apiLogger.debug("Token refresh failed: already attempted refresh for this request")
-      captureError(
-        new ConvosApiError({
-          error,
-          additionalMessage: "JWT refresh failed: token refresh already attempted",
-        }),
-      )
 
       // Logout and reject - we can't recover from this
       await onRefreshFailure()
-      return Promise.reject(
-        new ConvosApiError({
-          error,
-          additionalMessage: "JWT refresh failed: token refresh already attempted",
-        }),
-      )
+      return Promise.reject(error)
     }
 
     try {
@@ -133,12 +116,7 @@ const createRefreshTokenInterceptor = (
         await onRefreshFailure()
       }
 
-      return Promise.reject(
-        new ConvosApiError({
-          error: refreshError,
-          additionalMessage: "JWT refresh failed",
-        }),
-      )
+      return Promise.reject(refreshError)
     }
   }
 }

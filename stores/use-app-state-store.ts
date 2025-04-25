@@ -95,3 +95,9 @@ export const waitUntilAppActive = async () => {
     )
   })
 }
+
+export function useAppLaunchedForBackgroundStuff() {
+  return useAppStateStore(
+    (state) => state.currentState === "background" && state.previousState === "inactive",
+  )
+}

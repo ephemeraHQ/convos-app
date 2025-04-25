@@ -7,6 +7,7 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
@@ -197,6 +198,16 @@ export function getConversationMessagesInfiniteQueryOptions(
       !isTmpConversation(xmtpConversationId),
     refetchOnMount: true,
     refetchOnWindowFocus: (query) => {
+      const allowedConversationIds =
+        getAllowedConsentConversationsQueryData({
+          clientInboxId,
+        }) || []
+
+      // We only want to refetch if the conversation has been allowed
+      if (!allowedConversationIds.includes(xmtpConversationId)) {
+        return false
+      }
+
       const isRecent = conversationHasRecentActivities({
         clientInboxId,
         xmtpConversationId,

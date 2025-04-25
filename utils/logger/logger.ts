@@ -41,8 +41,7 @@ const breadcrumbTransport: transportFunctionType<{}> = (args) => {
 const LOG_FILE_NAME = "convos-logs.txt"
 const LOG_FILE_DIR = FileSystem.documentDirectory!
 export const LOG_FILE_PATH = `${LOG_FILE_DIR}${LOG_FILE_NAME}`
-// Set log size limit to 5MB
-const MAX_LOG_SIZE = 5 * 1024 * 1024
+const MAX_LOG_SIZE = 1 * 1024 * 1024 // 1MB
 
 export async function clearLogFile() {
   await FileSystem.writeAsStringAsync(LOG_FILE_PATH, "")
@@ -101,8 +100,6 @@ const baseLogger = RNLogger.createLogger({
     },
   },
 })
-
-// Setup periodic log file size check in production (every 30 minutes)
 
 // Initial check
 checkLogFileSize().catch(console.error)

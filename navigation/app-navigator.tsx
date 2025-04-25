@@ -27,6 +27,7 @@ import { NavigationParamList } from "@/navigation/navigation.types"
 import { navigationRef } from "@/navigation/navigation.utils"
 import { ShareProfileScreen } from "@/screens/ShareProfile"
 import { WebviewPreview } from "@/screens/WebviewPreview"
+import { useAppLaunchedForBackgroundStuff } from "@/stores/use-app-state-store"
 import { useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { hideSplashScreen } from "@/utils/splash/splash"
@@ -96,10 +97,14 @@ export const AppNavigator = memo(function AppNavigator() {
   const { themeScheme, navigationTheme, setThemeContextOverride, ThemeProvider } =
     useThemeProvider()
 
-  // Hydrate auth when the app is loaded
+  const isAppLaunchedForBackgroundStuff = useAppLaunchedForBackgroundStuff()
+
   useEffect(() => {
-    hydrateAuth().catch(captureError)
-  }, [])
+    // Hydrating when the app is launched for background stuff cause some issues
+    if (!isAppLaunchedForBackgroundStuff) {
+      hydrateAuth().catch(captureError)
+    }
+  }, [isAppLaunchedForBackgroundStuff])
 
   return (
     <ThemeProvider value={{ themeScheme, setThemeContextOverride }}>
