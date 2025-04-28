@@ -3,7 +3,7 @@ import { memo, useCallback, useMemo } from "react"
 import { GroupAvatar } from "@/components/group-avatar"
 import { ISwipeableRenderActionsArgs } from "@/components/swipeable"
 import { MIDDLE_DOT } from "@/design-system/middle-dot"
-import { isCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { isCurrentSender, useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { isTextMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { ConversationListItemSwipeable } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable"
 import { useConversationIsUnread } from "@/features/conversation/conversation-list/hooks/use-conversation-is-unread"
@@ -19,6 +19,7 @@ import { useRouter } from "@/navigation/use-navigation"
 import { ConversationListItem } from "./conversation-list-item"
 import { DeleteSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-delete-action"
 import { ToggleUnreadSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-toggle-read-action"
+import { useGroupQuery } from "@/features/groups/queries/group.query"
 
 type IConversationListItemGroupProps = {
   xmtpConversationId: IXmtpConversationId
@@ -44,8 +45,18 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     xmtpConversationId,
   })
 
-  const { displayName: senderDisplayName } = usePreferredDisplayInfo({
+  const { displayName: senderDisplayName,  } = usePreferredDisplayInfo({
     inboxId: lastMessage?.senderInboxId,
+  })
+
+  const currentSender = useSafeCurrentSender()
+  const { data: group } = useGroupQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+  })
+  
+  const { displayName: inviterDisplayName } = usePreferredDisplayInfo({
+    inboxId: group?.addedByInboxId,
   })
 
   const onPress = useCallback(() => {
@@ -61,7 +72,12 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   // Not in useMemo because we want to change the timestamp when we rerender
   const subtitle = (() => {
-    if (!lastMessage) return ""
+    if (!lastMessage) {
+      if (inviterDisplayName) {
+        return `${inviterDisplayName} invited you`
+      }
+      return "You were invited"
+    }
 
     const timestamp = lastMessage.sentNs ?? 0
     const timeToShow = getCompactRelativeTime(timestamp)
