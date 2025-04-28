@@ -64,7 +64,5 @@ export const ConversationListEmptySkeleton = memo(function ConversationListEmpty
     )
   }, [theme])
 
-  return null
-
   return <ConversationListItem key={index} avatarComponent={AvatarComponent} />
 })

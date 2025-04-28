@@ -35,6 +35,7 @@ import { isTmpConversation } from "@/features/conversation/utils/tmp-conversatio
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { window } from "@/theme/layout"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { convertNanosecondsToMilliseconds } from "@/utils/date"
@@ -133,16 +134,16 @@ export const ConversationMessages = memo(function ConversationMessages() {
       if (refreshingRef.current || isRefetchingMessages) {
         return
       }
-      
+
       // contentOffset: Current scroll position (y is positive when scrolling up in inverted list)
       // contentSize: Total size of all content in the list
       // layoutMeasurement: Size of the visible viewport
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
 
-      // Calculate distance from top of older messages 
+      // Calculate distance from top of older messages
       // In inverted lists, we're at "top" of old messages when contentOffset.y is large
       const distanceFromTop = contentSize.height - layoutMeasurement.height - contentOffset.y
-      
+
       // Trigger loading when within 20% of viewport height from the top
       const isPastTopThreshold = distanceFromTop < layoutMeasurement.height * 0.2
 
@@ -254,7 +255,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       ref={scrollRef}
       data={messageIds}
       renderItem={renderItem}
-      drawDistance={50} // Smaller because rendering messages is expensive
+      drawDistance={window.height / 2}
       estimatedItemSize={100} // Random value for now but big enough so that if we have big messages we don't have to render a lot of them
       inverted
       initialScrollIndex={0}

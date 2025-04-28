@@ -25,7 +25,6 @@ type IDisappearingMessageOptionId =
   | "ten_seconds"
   | "one_second"
   | "clear"
-  | "how_it_works"
 
 type IDisappearingMessageOptionItem = Omit<IDropdownMenuAction, "id"> & {
   id: IDisappearingMessageOptionId
@@ -88,16 +87,10 @@ const DISAPPEARING_MESSAGE_OPTIONS: IDisappearingMessageOptionItem[] = [
     title: "1 second",
     retentionDurationInNs: DisappearingMessageDuration.ONE_SECOND,
   },
-
   {
     displayInline: true,
     id: "clear",
     title: "Clear chat",
-  },
-  {
-    displayInline: true,
-    id: "how_it_works",
-    title: "How it works",
   },
 ]
 
@@ -166,8 +159,8 @@ export const DisappearingMessagesHeaderAction = ({
             additionalMessage: "Failed to update disappearing message settings",
           }),
           {
-            message: "Failed to update disappearing message settings"
-          }
+            message: "Failed to update disappearing message settings",
+          },
         )
       }
     },

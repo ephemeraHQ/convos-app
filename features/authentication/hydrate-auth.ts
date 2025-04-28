@@ -6,8 +6,6 @@ import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmt
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
-import { retryWithBackoff } from "@/utils/retryWithBackoff"
-import { tryCatch } from "@/utils/try-catch"
 
 export async function hydrateAuth() {
   authLogger.debug("Hydrating auth...")
@@ -20,18 +18,9 @@ export async function hydrateAuth() {
     return
   }
 
-  const { error } = await tryCatch(
-    retryWithBackoff({
-      fn: () =>
-        getXmtpClientByInboxId({
-          inboxId: currentSender.inboxId,
-        }),
-      retries: 2,
-      delay: 500,
-    }),
-  )
-
-  if (error) {
+  getXmtpClientByInboxId({
+    inboxId: currentSender.inboxId,
+  }).catch((error) => {
     if (isXmtpNoNetworkError(error)) {
       authLogger.debug("No network error while hydrating auth so just returning...")
       return
@@ -45,7 +34,7 @@ export async function hydrateAuth() {
     )
     useAuthenticationStore.getState().actions.setStatus("signedOut")
     return
-  }
+  })
 
   // Don't do it with await because we prefer doing it in the background and letting user continue
   validateXmtpInstallation({
