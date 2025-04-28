@@ -13,19 +13,6 @@ export const reactQueryPersitingStorage = createStorage(REACT_QUERY_PERSISTER_ST
 export const reactQueryPersister = createReactQueryPersister(reactQueryPersitingStorage)
 const REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY = "react-query-client"
 
-// Track latest hydration metrics
-let lastHydrationTime = 0
-let lastHydrationSize = 0
-let lastHydrationQueryCount = 0
-
-export function getReactQueryHydrationMetrics() {
-  return {
-    timeMs: lastHydrationTime,
-    sizeBytes: lastHydrationSize,
-    queryCount: lastHydrationQueryCount,
-  }
-}
-
 function createReactQueryPersister(storage: IStorage): ReactQueryPersister {
   return {
     persistClient: async (client: ReactQueryPersistedClient) => {
@@ -82,13 +69,11 @@ function createReactQueryPersister(storage: IStorage): ReactQueryPersister {
 
         const client = JSON.parse(clientString) as ReactQueryPersistedClient
 
-        // Record the time it took to hydrate
-        lastHydrationTime = stopTimer(timerId)
-
         if (__DEV__) {
           persistLogger.debug("React Query hydration complete", {
-            lastHydrationTime,
-            queryCount: client.clientState.queries.length,
+            lastHydrationTime: stopTimer(timerId),
+            lastHydrationSize: clientString.length,
+            lastHydrationQueryCount: client.clientState.queries.length,
           })
         }
 

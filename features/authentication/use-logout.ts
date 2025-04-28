@@ -57,11 +57,11 @@ export const useLogout = () => {
 
         try {
           await Promise.all(
-            senders.map((sender) => {
+            senders.map((sender) =>
               logoutXmtpClient({
                 inboxId: sender.inboxId,
-              })
-            }),
+              }),
+            ),
           )
         } catch (error) {
           captureError(new GenericError({ error, additionalMessage: "Error logging out xmtp" }))
