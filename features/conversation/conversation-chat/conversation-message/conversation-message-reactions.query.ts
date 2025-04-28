@@ -41,11 +41,11 @@ export function getConversationMessageReactionsQueryOptions(args: IArgs) {
     },
     meta: {
       persist: (query: Query<IConversationMessageReactions>) => {
-        if (!query.state.data) {
+        const data = query.state.data
+        if (!data) {
           return false
         }
-        const hasReactions = Object.keys(query.state.data.bySender).length > 0
-        return hasReactions
+        return Object.values(data.bySender).some((arr) => arr.length > 0)
       },
     },
     // enabled: !!xmtpMessageId && !!clientInboxId,
