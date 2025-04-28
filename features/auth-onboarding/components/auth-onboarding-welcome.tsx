@@ -1,13 +1,14 @@
-import { memo, useEffect } from "react"
-import { TextStyle, ViewStyle, ImageStyle } from "react-native"
+import { memo } from "react"
+import { ImageStyle, TextStyle, ViewStyle } from "react-native"
 import { Screen } from "@/components/screen/screen"
 import { AnimatedCenter, Center } from "@/design-system/Center"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
+import { HStack } from "@/design-system/HStack"
+import { Image } from "@/design-system/image"
 import { Link } from "@/design-system/link"
 import { Pressable } from "@/design-system/Pressable"
 import { AnimatedText, Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
-import { HStack } from "@/design-system/HStack"
 import { ONBOARDING_ENTERING_DELAY } from "@/features/auth-onboarding/auth-onboarding.constants"
 import { useAuthOnboardingContext } from "@/features/auth-onboarding/contexts/auth-onboarding.context"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
@@ -15,7 +16,6 @@ import { useHeader } from "@/navigation/use-header"
 import { $globalStyles } from "@/theme/styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { openLink } from "@/utils/linking"
-import { Image } from "@/design-system/image"
 import { AuthOnboardingWelcomeFooter } from "./auth-onboarding-welcome-footer"
 
 export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
@@ -112,11 +112,7 @@ function useHeaderWrapper() {
             .reanimatedFadeInSpringSlow()
             .delay(ONBOARDING_ENTERING_DELAY.SIXTH)}
         >
-          <HeaderAction 
-            text="Sign in" 
-            disabled={isProcessingWeb3Stuff} 
-            onPress={login} 
-          />
+          <HeaderAction text="Sign in" disabled={isProcessingWeb3Stuff} onPress={login} />
         </AnimatedCenter>
       ),
       LeftActionComponent: (

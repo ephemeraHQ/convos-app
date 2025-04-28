@@ -2,6 +2,7 @@ import { z } from "zod"
 import { captureError } from "@/utils/capture-error"
 import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi, convosPublicApi } from "@/utils/convos-api/convos-api-instance"
+import { IEthereumAddress } from "@/utils/evm/address"
 import { AUTHENTICATE_ROUTE } from "./authentication.constants"
 
 const fetchJwtResponseSchema = z.object({
@@ -26,7 +27,7 @@ export async function fetchJwt({ signal }: { signal?: AbortSignal }): Promise<Fe
 
 const createSubOrganizationResponseSchema = z.object({
   subOrgId: z.string(),
-  walletAddress: z.string(),
+  walletAddress: z.custom<IEthereumAddress>(),
 })
 
 type CreateSubOrganizationResponse = z.infer<typeof createSubOrganizationResponseSchema>
@@ -39,6 +40,7 @@ type AuthenticatorTransport =
   | "AUTHENTICATOR_TRANSPORT_HYBRID"
 
 export async function createSubOrganization(args: {
+  ephemeralPublicKey: string
   passkey: {
     challenge: string
     attestation: {
@@ -51,20 +53,19 @@ export async function createSubOrganization(args: {
   signal?: AbortSignal
 }) {
   try {
-    const { passkey, signal } = args
+    const { passkey, ephemeralPublicKey, signal } = args
 
     const response = await convosPublicApi.post<CreateSubOrganizationResponse>(
       "/api/v1/wallets",
       {
         challenge: passkey.challenge,
         attestation: passkey.attestation,
+        ephemeralPublicKey,
       },
       {
         signal,
       },
     )
-
-    console.log("response:", response.data)
 
     const result = createSubOrganizationResponseSchema.safeParse(response.data)
 

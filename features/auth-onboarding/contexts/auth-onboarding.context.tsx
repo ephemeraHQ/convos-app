@@ -1,8 +1,6 @@
-import { TurnkeySigner } from "@turnkey/ethers"
 import { createPasskey, isSupported, PasskeyStamper } from "@turnkey/react-native-passkey-stamper"
 import { TurnkeyClient, useTurnkey } from "@turnkey/sdk-react-native"
 import { PublicIdentity } from "@xmtp/react-native-sdk"
-import { ethers } from "ethers"
 import React, { createContext, useCallback, useContext, useEffect, useMemo } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
@@ -12,8 +10,9 @@ import { createSubOrganization } from "@/features/authentication/authentication.
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
-import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
-import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client-create"
+import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
+import { useWaitUntil } from "@/hooks/use-wait-until"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -35,12 +34,25 @@ const AuthOnboardingContext = createContext<IAuthOnboardingContextType>(
 
 export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps) => {
   const { children } = props
+  const {
+    createEmbeddedKey,
+    createSession,
+    clearSession,
+    createSessionFromEmbeddedKey,
+    client,
+    signRawPayload,
+  } = useTurnkey()
   const { logout } = useLogout()
-  const { createEmbeddedKey, createSession, clearSession } = useTurnkey()
+
+  const { waitUntil: waitUntilClient } = useWaitUntil({
+    thing: client,
+    timeoutMs: 10000,
+    errorMessage: "Failed to create client",
+  })
 
   useEffect(() => {
     // Use to clear session and do tests
-    clearSession()
+    // clearSession()
 
     return () => {
       useAuthOnboardingStore.getState().actions.reset()
@@ -60,43 +72,112 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
       authLogger.debug(`Starting passkey authentication with Turnkey...`)
 
+      // Create a passkey stamper (this will trigger Face ID)
+      authLogger.debug("Creating passkey stamper...")
       const stamper = new PasskeyStamper({
         rpId: config.app.webDomain,
       })
+      authLogger.debug("Created passkey stamper")
 
-      const httpClient = new TurnkeyClient({ baseUrl: config.turnkey.turnkeyApiUrl }, stamper)
+      // Create a client with the stamper
+      authLogger.debug("Creating HTTP client...")
+      const httpClient = new TurnkeyClient({ baseUrl: "https://api.turnkey.com" }, stamper)
+      authLogger.debug("Created HTTP client")
 
+      // Create embedded key for the session
+      authLogger.debug("Creating embedded key...")
       const targetPublicKey = await createEmbeddedKey()
+      authLogger.debug("Created embedded key:", targetPublicKey)
 
+      // Authenticate with the parent organization
+      authLogger.debug("Creating read/write session...")
       const sessionResponse = await httpClient.createReadWriteSession({
         type: "ACTIVITY_TYPE_CREATE_READ_WRITE_SESSION_V2",
         timestampMs: Date.now().toString(),
-        organizationId: config.turnkey.organizationId,
+        organizationId: config.turnkey.organizationId, // Parent org ID
         parameters: {
           targetPublicKey,
+          expirationSeconds: "86400", // 24 hours
         },
       })
+      authLogger.debug("Created read/write session")
 
+      // Extract the credential bundle
+      authLogger.debug("Extracting credential bundle...")
       const credentialBundle =
         sessionResponse.activity.result.createReadWriteSessionResultV2?.credentialBundle
 
       if (!credentialBundle) {
+        authLogger.error("Failed to get credential bundle")
         throw new Error("Failed to get credential bundle")
       }
+      authLogger.debug("Extracted credential bundle")
 
-      await createSession({
+      // Create the session
+      authLogger.debug("Creating session...")
+      const session = await createSession({
         bundle: credentialBundle,
+      })
+      authLogger.debug("Created session")
+
+      const walletAddress = session.user?.wallets[0].accounts[0].address as IEthereumAddress
+
+      authLogger.debug("Creating XMTP client...")
+      const { data: xmtpClient, error: xmtpError } = await tryCatch(
+        createXmtpClient({
+          inboxSigner: {
+            getIdentifier: async () => new PublicIdentity(walletAddress, "ETHEREUM"),
+            getChainId: () => undefined,
+            getBlockNumber: () => undefined,
+            signerType: () => "EOA",
+            signMessage: async (message: string) => {
+              const sig = await signRawPayload({
+                signWith: walletAddress,
+                payload: message,
+                encoding: "PAYLOAD_ENCODING_TEXT_UTF8",
+                hashFunction: "HASH_FUNCTION_KECCAK256",
+              })
+
+              // Convert RSV format to hex string
+              const signature = `0x${sig.r}${sig.s}${sig.v}`
+
+              return { signature }
+            },
+          },
+        }),
+      )
+      authLogger.debug("XMTP client created")
+
+      if (xmtpError) {
+        throw xmtpError
+      }
+
+      if (!xmtpClient) {
+        throw new Error("XMTP client creation failed")
+      }
+
+      const isValid = await validateXmtpInstallation({
+        inboxId: xmtpClient.inboxId,
+      })
+
+      if (!isValid) {
+        throw new Error("Invalid client installation")
+      }
+
+      useMultiInboxStore.getState().actions.setCurrentSender({
+        ethereumAddress: walletAddress,
+        inboxId: xmtpClient.inboxId,
       })
 
       await hydrateAuth()
     } catch (error) {
       if (error instanceof Error && error.message.includes("Unknown error occurred")) {
-        authLogger.debug("User cancelled the passkey login")
+        authLogger.debug("User cancelled the passkey registration")
       } else {
         captureErrorWithToast(
-          new AuthenticationError({ error, additionalMessage: "Failed to login with passkey" }),
+          new AuthenticationError({ error, additionalMessage: "Failed to sign up with passkey" }),
           {
-            message: "Failed to login with passkey",
+            message: "Failed to sign up with passkey",
           },
         )
       }
@@ -106,7 +187,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedKey, createSession, logout])
+  }, [createEmbeddedKey, createSession, signRawPayload, logout])
 
   const signup = useCallback(async () => {
     if (!isSupported()) {
@@ -139,77 +220,49 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         },
       })
 
+      console.log("authenticatorParams:", authenticatorParams)
+      const ephemeralPublicKey = await createEmbeddedKey({
+        isCompressed: true,
+      })
+      console.log("ephemeralPublicKey:", ephemeralPublicKey)
+
       // Step 2: Create a sub organization
-      const subOrgData = await createSubOrganization({
+      const { subOrgId, walletAddress } = await createSubOrganization({
+        ephemeralPublicKey: ephemeralPublicKey,
         passkey: {
           challenge: authenticatorParams.challenge,
           attestation: authenticatorParams.attestation,
         },
       })
 
+      console.log("subOrgId:", subOrgId)
+      console.log("walletAddress:", walletAddress)
+
       // Step 3: Create a session
-      const stamper = new PasskeyStamper({
-        rpId: config.app.webDomain,
-      })
-
-      const turnkeyClient = new TurnkeyClient({ baseUrl: "https://api.turnkey.com" }, stamper)
-
-      const targetPublicKey = await createEmbeddedKey()
-
-      console.log("targetPublicKey:", targetPublicKey)
-
-      const organizationId = config.turnkey.organizationId
-
-      console.log("subOrgData.walletAddress:", subOrgData.walletAddress)
-
-      const sessionResponse = await turnkeyClient.createReadWriteSession({
-        type: "ACTIVITY_TYPE_CREATE_READ_WRITE_SESSION_V2",
-        timestampMs: Date.now().toString(),
-        organizationId,
-        parameters: {
-          targetPublicKey,
-        },
-      })
-
-      console.log("sessionResponse:", sessionResponse)
-
-      const credentialBundle =
-        sessionResponse.activity.result.createReadWriteSessionResultV2?.credentialBundle
-
-      console.log("credentialBundle:", credentialBundle)
-
-      if (!credentialBundle) {
-        throw new Error("Failed to get credential bundle")
-      }
-
-      authLogger.debug(`Session established with organization ID: ${organizationId}`)
-
-      await createSession({
-        bundle: credentialBundle,
+      await createSessionFromEmbeddedKey({
+        subOrganizationId: subOrgId,
       })
 
       // Step 4: Create xmtp client
-      const provider = new ethers.JsonRpcProvider(config.evm.rpcEndpoint)
-
-      const turnkeySigner = new TurnkeySigner({
-        client: turnkeyClient,
-        organizationId: config.turnkey.organizationId,
-        signWith: subOrgData.walletAddress,
-      })
-      const connectedSigner = turnkeySigner.connect(provider)
-
       const { data: xmtpClient, error: xmtpError } = await tryCatch(
         createXmtpClient({
           inboxSigner: {
-            getIdentifier: async () => new PublicIdentity(subOrgData.walletAddress, "ETHEREUM"),
+            getIdentifier: async () => new PublicIdentity(walletAddress, "ETHEREUM"),
             getChainId: () => undefined,
             getBlockNumber: () => undefined,
             signerType: () => "EOA",
             signMessage: async (message: string) => {
-              const signature = await connectedSigner.signMessage(message)
-              return {
-                signature,
-              }
+              const sig = await signRawPayload({
+                signWith: walletAddress,
+                payload: message,
+                encoding: "PAYLOAD_ENCODING_TEXT_UTF8",
+                hashFunction: "HASH_FUNCTION_KECCAK256",
+              })
+
+              // Convert RSV format to hex string
+              const signature = `0x${sig.r}${sig.s}${sig.v}`
+
+              return { signature }
             },
           },
         }),
@@ -225,8 +278,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
       // Step 5: Set the current sender
       useMultiInboxStore.getState().actions.setCurrentSender({
-        ethereumAddress: subOrgData?.walletAddress as IEthereumAddress,
-        inboxId: xmtpClient.inboxId as IXmtpInboxId,
+        ethereumAddress: walletAddress,
+        inboxId: xmtpClient.inboxId,
       })
 
       // Step 6: Navigate to the contact card
@@ -248,7 +301,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedKey, createSession, logout])
+  }, [createEmbeddedKey, createSessionFromEmbeddedKey, signRawPayload, logout])
 
   const value = useMemo(() => ({ login, signup }), [login, signup])
 

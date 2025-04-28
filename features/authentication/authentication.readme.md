@@ -1,6 +1,6 @@
 # Authentication Module
 
-This document provides a high-level overview of the authentication strategy used in our application, explaining the flow involving Firebase AppCheck, XMTP, and Ethereum wallet integration via Privy passkeys, as well as the two primary endpoints for user creation and authentication.
+This document provides a high-level overview of the authentication strategy used in our application, explaining the flow involving Firebase AppCheck, XMTP, and Ethereum wallet integration via Turnkey passkeys, as well as the two primary endpoints for user creation and authentication.
 
 ## Loom Recordings
 
@@ -19,14 +19,15 @@ All other endpoints require the JWT for authentication.
 
 ## Authentication Flow
 
-1. **Passkey Authentication via Privy**
+1. **Passkey Authentication via Turnkey**
 
-   - The user logs in using a passkey with Privy
-   - Successful authentication provides access to a Privy account, which in turn gives access to a smart contract Ethereum wallet
+   - The user logs in using a passkey with Turnkey
+   - Successful authentication creates a sub-organization and wallet in Turnkey
+   - The backend communicates with Turnkey to manage the wallet creation and access
 
-2. **Smart Contract Wallet as Signer**
+2. **Turnkey Wallet as Signer**
 
-   - The Ethereum wallet obtained from Privy acts as the cryptographic signer
+   - The Ethereum wallet obtained from Turnkey acts as the cryptographic signer
    - This wallet is used to create an XMTP inbox
 
 3. **Signing the Firebase AppCheck Token**
@@ -38,7 +39,7 @@ All other endpoints require the JWT for authentication.
 4. **JWT Generation**
    - Once verified, the backend issues a JWT
    - This JWT is then used to authenticate all subsequent API requests
-   - There is no refresh token as the persistent cryptographic signer (passkey via Privy) handles re-authentication
+   - There is no refresh token as the persistent cryptographic signer (passkey via Turnkey) handles re-authentication
 
 ## Endpoints
 
@@ -82,7 +83,7 @@ All authentication-related code and documentation are located in the `feature/au
 
 ### Security
 
-The Firebase AppCheck token is signed on the client side by the XMTP inbox and verified by the backend. The integration with Privy and the smart contract wallet removes the need for refresh tokens, as the persistent signer can always re-authenticate.
+The Firebase AppCheck token is signed on the client side by the XMTP inbox and verified by the backend. The integration with Turnkey and passkey authentication removes the need for refresh tokens, as the persistent signer can always re-authenticate.
 
 ### Profile Data Validation
 

@@ -7655,7 +7655,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@turnkey/react-native-passkey-stamper@npm:^1.0.10":
+"@turnkey/react-native-passkey-stamper@npm:1.0.10, @turnkey/react-native-passkey-stamper@npm:^1.0.10":
   version: 1.0.10
   resolution: "@turnkey/react-native-passkey-stamper@npm:1.0.10"
   dependencies:
@@ -7687,20 +7687,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@turnkey/sdk-react-native@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "@turnkey/sdk-react-native@npm:1.1.0"
+"@turnkey/sdk-react-native@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "@turnkey/sdk-react-native@npm:1.2.0"
   dependencies:
     "@turnkey/api-key-stamper": "npm:0.4.4"
     "@turnkey/crypto": "npm:2.3.1"
     "@turnkey/encoding": "npm:0.4.0"
     "@turnkey/http": "npm:3.0.0"
+    "@turnkey/react-native-passkey-stamper": "npm:1.0.10"
   peerDependencies:
     "@types/react": ^18.2.75
     react: ^16.8.0 || ^17.0.0 || ^18.0.0
     react-native-inappbrowser-reborn: ^3.7.0
     react-native-keychain: ^8.1.0 || ^9.2.2
-  checksum: 10c0/cea8f6888482e779cc5dd58451a5df6c27813975756703324f0bdf64860b83c43cb4afa73c76493fb9d240977b0bc5098b5014455ad2a0f7d2b6490afded729e
+    react-native-passkey: ^3.0.0
+  checksum: 10c0/f05ff6553af325397225f1300a8c35a244a80f32545a7dbf7f4b8c4ad092c93cd8f0d29568adc1864d0dfab91a35bfe69f26c572c7038deb2711d699fd90ace2
   languageName: node
   linkType: hard
 
@@ -10788,7 +10790,7 @@ __metadata:
     "@turnkey/ethers": "npm:^1.1.22"
     "@turnkey/http": "npm:^3.0.0"
     "@turnkey/react-native-passkey-stamper": "npm:^1.0.10"
-    "@turnkey/sdk-react-native": "npm:^1.1.0"
+    "@turnkey/sdk-react-native": "npm:^1.2.0"
     "@types/base-64": "npm:^1.0.0"
     "@types/big.js": "npm:^6.2.2"
     "@types/i18n-js": "npm:^3.8.9"
@@ -10888,7 +10890,7 @@ __metadata:
     react-native-ios-context-menu: "npm:^2.5.1"
     react-native-ios-utilities: "npm:^4.5.2"
     react-native-keyboard-controller: "npm:^1.13.4"
-    react-native-keychain: "npm:^10.0.0"
+    react-native-keychain: "npm:^9.0.0"
     react-native-localize: "npm:^3.0.2"
     react-native-logs: "npm:^5.1.0"
     react-native-mmkv: "npm:^2.12.2"
@@ -19521,10 +19523,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-keychain@npm:^10.0.0":
-  version: 10.0.0
-  resolution: "react-native-keychain@npm:10.0.0"
-  checksum: 10c0/a632ad27e58264506d2b373d329a867f042fb014e8a78db3a63031e953d61b5c98066eed1be238ee6c186d3f213d0efaa2a26526fb3a1d36a624c4460e982230
+"react-native-keychain@npm:^9.0.0":
+  version: 9.2.3
+  resolution: "react-native-keychain@npm:9.2.3"
+  checksum: 10c0/aba1cb083e3703f9ca5ad755eee6303eed19dc8f56ff144bd828d5770086ff9c4fe2f30ce42d94b88d9ffdbbb14e4363907d3d740e8abee2dfe3c2b5baa603bf
   languageName: node
   linkType: hard
 
