@@ -21,6 +21,7 @@ import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/us
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
+import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { IXmtpConversationId, IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { useAppStateStore } from "@/stores/use-app-state-store"
 import { NotificationError, UserCancelledError } from "@/utils/error"
@@ -143,10 +144,10 @@ export async function getDevicePushNotificationsToken() {
 }
 
 export async function requestNotificationsPermissions(): Promise<{ granted: boolean }> {
-  const hasGranted = await userHasGrantedNotificationsPermissions()
+  const permissions = await ensureNotificationsPermissions()
 
   // Permissions already granted
-  if (hasGranted) {
+  if (permissions.status === "granted") {
     return { granted: true }
   }
 
@@ -156,6 +157,12 @@ export async function requestNotificationsPermissions(): Promise<{ granted: bool
     return { granted: true }
   }
 
+  // If we can't ask again, return the current status without showing the prompt
+  if (!permissions.canAskAgain) {
+    return { granted: false }
+  }
+
+  // For iOS, show the permission request dialog
   const result = await Notifications.requestPermissionsAsync({
     ios: {
       allowAlert: true,
@@ -225,6 +232,14 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
         throw new NotificationError({
           error: `Conversation (${xmtpConversationId}) not found`,
         })
+      }
+
+      if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
+        notificationsLogger.debug(
+          `Skipping notification because message is not supported`,
+          xmtpDecryptedMessage,
+        )
+        return
       }
 
       const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)

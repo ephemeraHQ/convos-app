@@ -22,6 +22,16 @@ export const supportedXmtpCodecs = [
 
 export type ISupportedXmtpCodecs = typeof supportedXmtpCodecs
 
+export function buildCodecContentType(codec: ISupportedXmtpCodecs[number]) {
+  return `${codec.contentType.authorityId}/${codec.contentType.typeId}:${codec.contentType.versionMajor}.${codec.contentType.versionMinor}`
+}
+
+export function isSupportedXmtpContentType(contentType: string) {
+  return supportedXmtpCodecs.some((codec) => {
+    return contentType === buildCodecContentType(codec)
+  })
+}
+
 // Text content type
 export function isXmtpTextContentType(contentType: string) {
   return contentType.startsWith("xmtp.org/text:")

@@ -10890,7 +10890,7 @@ __metadata:
     react-native-ios-context-menu: "npm:^2.5.1"
     react-native-ios-utilities: "npm:^4.5.2"
     react-native-keyboard-controller: "npm:^1.13.4"
-    react-native-keychain: "npm:^9.0.0"
+    react-native-keychain: "npm:^9.2.3"
     react-native-localize: "npm:^3.0.2"
     react-native-logs: "npm:^5.1.0"
     react-native-mmkv: "npm:^2.12.2"
@@ -19523,7 +19523,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-keychain@npm:^9.0.0":
+"react-native-keychain@npm:^9.2.3":
   version: 9.2.3
   resolution: "react-native-keychain@npm:9.2.3"
   checksum: 10c0/aba1cb083e3703f9ca5ad755eee6303eed19dc8f56ff144bd828d5770086ff9c4fe2f30ce42d94b88d9ffdbbb14e4363907d3d740e8abee2dfe3c2b5baa603bf

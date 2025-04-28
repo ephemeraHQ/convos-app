@@ -23,6 +23,8 @@ export const getXmtpInstallationQueryOptions = (args: IArgs) => {
     meta: {
       persist: false, // Not persisting until we verify it's safe
     },
+    gcTime: 0,
+    staleTime: 0,
   })
 }
 

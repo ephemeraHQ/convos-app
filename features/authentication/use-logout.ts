@@ -11,15 +11,13 @@ import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.
 import { authLogger } from "../../utils/logger/logger"
 
 export const useLogout = () => {
-  const { clearSession } = useTurnkey()
+  const { clearSession: clearTurnkeySession } = useTurnkey()
 
   const logout = useCallback(
     async (args: { caller: string }) => {
       authLogger.debug(`Logging out called by ${args.caller}`)
 
       try {
-        useAuthenticationStore.getState().actions.setStatus("signedOut")
-
         const currentSender = getCurrentSender()
 
         // Unsubscribe from all conversations notifications
@@ -55,11 +53,16 @@ export const useLogout = () => {
           }).catch(captureError)
         }
 
-        resetMultiInboxStore()
+        await clearTurnkeySession()
 
-        await clearSession()
-
+        // Might want to only clear certain queries later but okay for now
         clearReacyQueryQueriesAndCache()
+
+        // Doing this at the end because we want to make sure that we cleared everything before showing auth screen
+        useAuthenticationStore.getState().actions.setStatus("signedOut")
+
+        // This needs to be last
+        resetMultiInboxStore()
 
         authLogger.debug("Successfully logged out")
       } catch (error) {
@@ -69,9 +72,7 @@ export const useLogout = () => {
         })
       }
     },
-    // Don't add privyLogout to the dependencies array. It's useless and cause lots of re-renders of callers
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [clearTurnkeySession],
   )
 
   return { logout }

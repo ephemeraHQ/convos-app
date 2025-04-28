@@ -41,6 +41,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     createSessionFromEmbeddedKey,
     client,
     signRawPayload,
+    session,
   } = useTurnkey()
   const { logout } = useLogout()
 
@@ -58,6 +59,11 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       useAuthOnboardingStore.getState().actions.reset()
     }
   }, [clearSession])
+
+  useEffect(() => {
+    if (session) {
+    }
+  }, [session])
 
   const login = useCallback(async () => {
     if (!isSupported()) {
@@ -119,6 +125,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         bundle: credentialBundle,
       })
       authLogger.debug("Created session")
+
+      await waitUntilClient()
 
       const walletAddress = session.user?.wallets[0].accounts[0].address as IEthereumAddress
 
@@ -187,7 +195,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedKey, createSession, signRawPayload, logout])
+  }, [createEmbeddedKey, createSession, signRawPayload, logout, waitUntilClient])
 
   const signup = useCallback(async () => {
     if (!isSupported()) {
