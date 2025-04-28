@@ -19,6 +19,7 @@ export const AddGroupMembersSearchUsersResultsListItemEthAddress = memo(
     const { data: inboxId, isLoading: isLoadingInboxId } = useXmtpInboxIdFromEthAddressQuery({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: ethAddress,
+      caller: "AddGroupMembersSearchUsersResultsListItemEthAddress",
     })
 
     const handlePress = useCallback(() => {

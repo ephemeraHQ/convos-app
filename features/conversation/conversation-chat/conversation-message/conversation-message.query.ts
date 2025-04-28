@@ -45,6 +45,9 @@ export function getConversationMessageQueryOptions(
     meta: {
       caller,
       persist: (query: Query<IConversationMessageQueryData>) => {
+        if (!query.state.data) {
+          return false
+        }
         return messageIsRecent(query.state.data)
       },
     },

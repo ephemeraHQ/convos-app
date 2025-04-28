@@ -56,6 +56,7 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
 
   const { displayName: targetDisplayName } = usePreferredDisplayInfo({
     inboxId: memberInboxId,
+    caller: "GroupMemberDetailsBottomSheet",
   })
 
   const isCurrentUser = currentSender.inboxId === memberInboxId

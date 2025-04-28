@@ -34,7 +34,6 @@ export type IConversationMessageTextContent = {
 
 export type IConversationMessageReactionContent = {
   reference: IXmtpMessageId
-  timestamp: number
   action: "added" | "removed" | "unknown"
   schema: "unicode" | "shortcode" | "custom" | "unknown"
   content: string

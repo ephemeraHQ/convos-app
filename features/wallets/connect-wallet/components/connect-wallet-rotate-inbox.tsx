@@ -4,8 +4,9 @@ import {
   getSafeCurrentSender,
   useMultiInboxStore,
 } from "@/features/authentication/multi-inbox.store"
+import { useCurrentTurnkeySessionWalletAddress } from "@/features/authentication/use-current-turnkey-session-wallet-address"
 import { IWallet } from "@/features/wallets/connect-wallet/connect-wallet.types"
-import { createXmtpSignerFromSwc } from "@/features/wallets/utils/create-xmtp-signer-from-swc"
+import { useCreateXmtpSignerFromTurnkey } from "@/features/wallets/hooks/use-create-xmtp-signer-from-turnkey"
 import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpSigner } from "@/features/xmtp/xmtp-signer/get-xmtp-signer"
 import { usePersistState } from "@/hooks/use-persist-state"
@@ -37,8 +38,8 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
   const router = useRouter()
   const currentRoute = getCurrentRoute()
 
-  // @ts-expect-error
-  const smartWalletClientEthAddress = "" // TODO
+  const ethTurnkeyWalletAddress = useCurrentTurnkeySessionWalletAddress()
+  const createXmtpSignerFromTurnkey = useCreateXmtpSignerFromTurnkey()
 
   // Track if this smart wallet has already been rotated to a different inbox
   // We only allow rotating a smart wallet's inbox once to prevent address hopping
@@ -47,15 +48,11 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
     value: hasRotatedWalletAddress,
     setValue: setHasRotatedWalletAddress,
     isLoaded: isHasRotatedWalletAddressLoaded,
-  } = usePersistState(`has-rotated-wallet-${smartWalletClientEthAddress}`)
+  } = usePersistState(`has-rotated-wallet-${ethTurnkeyWalletAddress}`)
 
   // Handle creating a new inbox ID
   const handleCreateNewInboxId = useCallback(async () => {
     try {
-      if (!smartWalletClient) {
-        throw new Error("No smart wallet client found")
-      }
-
       const previousCurrentSender = getSafeCurrentSender()
 
       const activeWalletAccount = activeWallet.getAccount()!
@@ -71,8 +68,11 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
         }),
       })
 
-      // Add the privy SWC to the new client inbox
-      await newXmtpClient.addAccount(createXmtpSignerFromSwc(smartWalletClient), true)
+      // Add the turnkey EOA to the new client inbox
+      await newXmtpClient.addAccount(
+        createXmtpSignerFromTurnkey({ walletAddress: ethTurnkeyWalletAddress }),
+        true,
+      )
 
       // Set the new inbox ID as the current sender
       useMultiInboxStore.getState().actions.setCurrentSender({
@@ -92,7 +92,12 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
         },
       )
     }
-  }, [activeWallet, setHasRotatedWalletAddress])
+  }, [
+    activeWallet,
+    setHasRotatedWalletAddress,
+    createXmtpSignerFromTurnkey,
+    ethTurnkeyWalletAddress,
+  ])
 
   if (!isHasRotatedWalletAddressLoaded) {
     return <ConnectWalletLoadingContent />

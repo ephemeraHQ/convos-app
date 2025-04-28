@@ -4,8 +4,8 @@ import { Loader } from "@/design-system/loader"
 import { VStack } from "@/design-system/VStack"
 import { connectWallet } from "@/features/wallets/connect-wallet/connect-wallet.service"
 import { useConnectWalletStore } from "@/features/wallets/connect-wallet/connect-wallet.store"
-import { useInstalledWalletsQuery } from "@/features/wallets/installed-wallets.query"
-import { ISupportedWallet, supportedWallets } from "@/features/wallets/supported-wallets"
+import { useInstalledWalletsQuery } from "@/features/wallets/queries/installed-wallets.query"
+import { ISupportedWallet, supportedWallets } from "@/features/wallets/utils/supported-wallets"
 import { useRouter } from "@/navigation/use-navigation"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -112,8 +112,8 @@ const InstalledWalletItem = memo(function InstalledWalletItem(props: IInstalledW
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: `Error connecting ${wallet.name} wallet` }),
         {
-          message: `Error connecting wallet`
-        }
+          message: `Error connecting wallet`,
+        },
       )
     } finally {
       store.actions.setWalletIdThatIsConnecting(undefined)

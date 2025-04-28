@@ -1,6 +1,5 @@
 import { createPasskey, isSupported, PasskeyStamper } from "@turnkey/react-native-passkey-stamper"
 import { TurnkeyClient, useTurnkey } from "@turnkey/sdk-react-native"
-import { PublicIdentity } from "@xmtp/react-native-sdk"
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
@@ -10,6 +9,7 @@ import { createSubOrganization } from "@/features/authentication/authentication.
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
+import { useCreateXmtpSignerFromTurnkey } from "@/features/wallets/hooks/use-create-xmtp-signer-from-turnkey"
 import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client-create"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
@@ -49,6 +49,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
   const { logout } = useLogout()
 
+  const createXmtpSignerFromTurnkey = useCreateXmtpSignerFromTurnkey()
+
   const flowType = useRef<"login" | "signup">("login")
   const isCreatingXmtpClient = useRef(false)
 
@@ -78,24 +80,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
         const { data: xmtpClient, error: xmtpError } = await tryCatch(
           createXmtpClient({
-            inboxSigner: {
-              getIdentifier: async () => new PublicIdentity(walletAddress, "ETHEREUM"),
-              getChainId: () => undefined,
-              getBlockNumber: () => undefined,
-              signerType: () => "EOA",
-              signMessage: async (message: string) => {
-                const sig = await signRawPayload({
-                  signWith: walletAddress,
-                  payload: message,
-                  encoding: "PAYLOAD_ENCODING_TEXT_UTF8",
-                  hashFunction: "HASH_FUNCTION_KECCAK256",
-                })
-
-                const signature = `0x${sig.r}${sig.s}${sig.v}`
-
-                return { signature }
-              },
-            },
+            inboxSigner: createXmtpSignerFromTurnkey({ walletAddress }),
           }),
         )
         authLogger.debug("XMTP client created successfully")
@@ -144,7 +129,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
       }
     })()
-  }, [turnkeyClient, session, signRawPayload, logout])
+  }, [turnkeyClient, session, signRawPayload, logout, createXmtpSignerFromTurnkey])
 
   const login = useCallback(async () => {
     if (!isSupported()) {

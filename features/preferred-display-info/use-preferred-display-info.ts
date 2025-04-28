@@ -225,6 +225,7 @@ export async function ensurePreferredDisplayInfo(args: PreferredDisplayInfoArgs)
     inboxId = await ensureXmtpInboxIdFromEthAddressQueryData({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: ethAddressArg,
+      caller: "ensurePreferredDisplayInfo",
     })
   }
 
