@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query"
 import { getCompactRelativeTime } from "@utils/date"
 import { memo, useCallback, useMemo } from "react"
 import { GroupAvatar } from "@/components/group-avatar"
@@ -12,6 +13,7 @@ import { useMessageContentStringValue } from "@/features/conversation/conversati
 import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
 import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
+import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useFocusRerender } from "@/hooks/use-focus-rerender"
@@ -19,7 +21,6 @@ import { useRouter } from "@/navigation/use-navigation"
 import { ConversationListItem } from "./conversation-list-item"
 import { DeleteSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-delete-action"
 import { ToggleUnreadSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-toggle-read-action"
-import { useGroupQuery } from "@/features/groups/queries/group.query"
 
 type IConversationListItemGroupProps = {
   xmtpConversationId: IXmtpConversationId
@@ -30,10 +31,12 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 }: IConversationListItemGroupProps) {
   const router = useRouter()
 
+  const currentSender = useSafeCurrentSender()
+
   // To update the timestamp when the screen comes into focus
   useFocusRerender()
 
-  const { data: lastMessage } = useConversationLastMessage({
+  const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationLastMessage({
     xmtpConversationId,
   })
 
@@ -45,18 +48,22 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     xmtpConversationId,
   })
 
-  const { displayName: senderDisplayName,  } = usePreferredDisplayInfo({
+  const { displayName: senderDisplayName } = usePreferredDisplayInfo({
     inboxId: lastMessage?.senderInboxId,
   })
 
-  const currentSender = useSafeCurrentSender()
-  const { data: group } = useGroupQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
+  const { data: addedByInboxId } = useQuery({
+    ...getGroupQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "ConversationListItemGroup",
+    }),
+    select: (data) => data?.addedByInboxId,
+    enabled: !isLoadingLastMessage && !lastMessage,
   })
-  
+
   const { displayName: inviterDisplayName } = usePreferredDisplayInfo({
-    inboxId: group?.addedByInboxId,
+    inboxId: addedByInboxId,
   })
 
   const onPress = useCallback(() => {
