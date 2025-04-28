@@ -10,7 +10,7 @@ import { Pressable } from "@/design-system/Pressable"
 import { AnimatedText, Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { ONBOARDING_ENTERING_DELAY } from "@/features/auth-onboarding/auth-onboarding.constants"
-import { useLogin } from "@/features/auth-onboarding/hooks"
+import { useAuthOnboardingContext } from "@/features/auth-onboarding/contexts/auth-onboarding.context"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { useHeader } from "@/navigation/use-header"
 import { $globalStyles } from "@/theme/styles"
@@ -99,9 +99,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
 function useHeaderWrapper() {
   const { theme, themed } = useAppTheme()
 
-  // const { login } = useAuthOnboardingContext()
-
-  const { login } = useLogin()
+  const { login } = useAuthOnboardingContext()
 
   const isProcessingWeb3Stuff = useAuthOnboardingStore((s) => s.isProcessingWeb3Stuff)
 

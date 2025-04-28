@@ -2,26 +2,55 @@ import {
   PersistedClient as ReactQueryPersistedClient,
   Persister as ReactQueryPersister,
 } from "@tanstack/react-query-persist-client"
-import { MMKV } from "react-native-mmkv"
 import { captureError } from "@/utils/capture-error"
 import { ReactQueryPersistError } from "@/utils/error"
 import { persistLogger } from "@/utils/logger/logger"
+import { startTimer, stopTimer } from "@/utils/perf/perf-timer"
+import { createStorage, IStorage } from "@/utils/storage/storage"
 
-export const reactQueryMMKV = new MMKV({ id: "convos-react-query-mmkv" })
-export const reactQueryPersister = createMMKVPersister(reactQueryMMKV)
+const REACT_QUERY_PERSISTER_STORAGE_ID = "convos-react-query-persister"
+export const reactQueryPersitingStorage = createStorage(REACT_QUERY_PERSISTER_STORAGE_ID)
+export const reactQueryPersister = createReactQueryPersister(reactQueryPersitingStorage)
+const REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY = "react-query-client"
 
-const REACT_QUERY_CLIENT_KEY = "react-query-client"
+// Track latest hydration metrics
+let lastHydrationTime = 0
+let lastHydrationSize = 0
+let lastHydrationQueryCount = 0
 
-function createMMKVPersister(storage: MMKV): ReactQueryPersister {
+export function getReactQueryHydrationMetrics() {
+  return {
+    timeMs: lastHydrationTime,
+    sizeBytes: lastHydrationSize,
+    queryCount: lastHydrationQueryCount,
+  }
+}
+
+function createReactQueryPersister(storage: IStorage): ReactQueryPersister {
   return {
     persistClient: async (client: ReactQueryPersistedClient) => {
       try {
         // Create a deep clone of the client to avoid modifying the original
         const clientToStore = JSON.parse(JSON.stringify(client)) as ReactQueryPersistedClient
 
+        // Process each query before persistence
+        // clientToStore.clientState.queries = clientToStore.clientState.queries.map((query) => {
+        //   // If query has a transformer function in meta, apply it to transform the data
+        //   if (typeof query.meta?.persist === "function") {
+        //     // Create a copy to avoid modifying the original
+        //     const transformedQuery = { ...query }
+        //     transformedQuery.state = {
+        //       ...transformedQuery.state,
+        //       data: query.meta.persist(query),
+        //     }
+        //     return transformedQuery
+        //   }
+        //   return query
+        // })
+
         const clientString = JSON.stringify(clientToStore)
 
-        storage.set(REACT_QUERY_CLIENT_KEY, clientString)
+        storage.set(REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY, clientString)
 
         // Debug persisted queries after successful persistence
         if (__DEV__) {
@@ -43,13 +72,27 @@ function createMMKVPersister(storage: MMKV): ReactQueryPersister {
     // Automatically called on app load with "PersistQueryClientProvider"
     restoreClient: async () => {
       try {
-        const clientString = storage.getString(REACT_QUERY_CLIENT_KEY)
+        const timerId = startTimer("restoreClient")
+
+        const clientString = storage.getString(REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY)
 
         if (!clientString) {
           return
         }
 
-        return JSON.parse(clientString) as ReactQueryPersistedClient
+        const client = JSON.parse(clientString) as ReactQueryPersistedClient
+
+        // Record the time it took to hydrate
+        lastHydrationTime = stopTimer(timerId)
+
+        if (__DEV__) {
+          persistLogger.debug("React Query hydration complete", {
+            lastHydrationTime,
+            queryCount: client.clientState.queries.length,
+          })
+        }
+
+        return client
       } catch (error) {
         captureError(
           new ReactQueryPersistError({
@@ -62,7 +105,7 @@ function createMMKVPersister(storage: MMKV): ReactQueryPersister {
     // Automatically called when cache needs to be cleared (max GC, error persistence, etc)
     removeClient: async () => {
       try {
-        storage.delete(REACT_QUERY_CLIENT_KEY)
+        storage.delete(REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY)
       } catch (error) {
         captureError(
           new ReactQueryPersistError({
@@ -82,7 +125,9 @@ function createMMKVPersister(storage: MMKV): ReactQueryPersister {
 function debugPersistedQueries() {
   if (__DEV__) {
     try {
-      const clientString = reactQueryMMKV.getString(REACT_QUERY_CLIENT_KEY)
+      const clientString = reactQueryPersitingStorage.getString(
+        REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY,
+      )
 
       if (!clientString) {
         persistLogger.debug("No persisted React Query client found")

@@ -17,12 +17,10 @@ import { startMessageStreaming } from "./stream-messages"
 const activeStreams = new Set<IXmtpInboxId>()
 
 export function useSetupStreamingSubscriptions() {
-  const authStatus = useAuthenticationStore((state) => state.status)
   const senders = useMultiInboxStore((state) => state.senders)
   const currentAppState = useAppStateStore((state) => state.currentState)
   const isInternetReachable = useAppStore((state) => state.isInternetReachable)
 
-  const previousAuthStatus = usePrevious(authStatus)
   const previousAppState = usePrevious(currentAppState)
   const previousSenders = usePrevious(senders)
 
@@ -34,21 +32,13 @@ export function useSetupStreamingSubscriptions() {
       return
     }
 
-    const isSignedIn = authStatus === "signedIn"
-    const wasSignedIn = previousAuthStatus === "signedIn"
+    const isSignedIn = useAuthenticationStore.getState().status === "signedIn"
     const isAppActive = currentAppState === "active"
     const wasAppActive = previousAppState === "active"
 
     // CASE 1: Stop streams when app goes to background
     if (isSignedIn && wasAppActive && !isAppActive) {
       streamLogger.debug("App went to background, stopping streams")
-      stopStreaming(inboxIds).catch(captureError)
-      return
-    }
-
-    // CASE 2: Stop streams when user signs out
-    if (!isSignedIn && wasSignedIn) {
-      streamLogger.debug("User signed out, stopping streams")
       stopStreaming(inboxIds).catch(captureError)
       return
     }
@@ -65,13 +55,6 @@ export function useSetupStreamingSubscriptions() {
       return
     }
 
-    // CASE 4: Start streams when user signs in
-    if (!wasSignedIn) {
-      streamLogger.debug("User signed in, starting streams")
-      startStreaming(inboxIds).catch(captureError)
-      return
-    }
-
     // CASE 5: Sender list changed
     const prevIds = previousSenders?.map((sender) => sender.inboxId) || []
     const hasNewInboxes = inboxIds.some((id) => !prevIds.includes(id))
@@ -82,18 +65,10 @@ export function useSetupStreamingSubscriptions() {
       )
       startStreaming(inboxIds).catch(captureError)
     }
-  }, [
-    authStatus,
-    previousAuthStatus,
-    currentAppState,
-    previousAppState,
-    senders,
-    previousSenders,
-    isInternetReachable,
-  ])
+  }, [currentAppState, previousAppState, senders, previousSenders, isInternetReachable])
 }
 
-async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
+export async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   const isSignedIn = useAuthenticationStore.getState().status === "signedIn"
 
   if (!isSignedIn) {
@@ -133,7 +108,7 @@ async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   }
 }
 
-async function stopStreaming(inboxIds: IXmtpInboxId[]) {
+export async function stopStreaming(inboxIds: IXmtpInboxId[]) {
   await Promise.all(
     inboxIds.map(async (inboxId) => {
       // Skip if no active stream for this inbox

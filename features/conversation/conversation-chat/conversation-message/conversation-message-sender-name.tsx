@@ -15,6 +15,7 @@ export function ConversationMessageSenderName() {
 
   const { displayName } = usePreferredDisplayInfo({
     inboxId: currentMessageSenderInboxId,
+    caller: "ConversationMessageSenderName",
   })
 
   const router = useRouter()

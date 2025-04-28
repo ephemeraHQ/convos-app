@@ -21,6 +21,7 @@ export const ConversationMessageRemoteAttachment = memo(
 
     const { displayName } = usePreferredDisplayInfo({
       inboxId: message.senderInboxId,
+      caller: "ConversationMessageRemoteAttachment",
     })
 
     const { url, ...metadata } = message.content

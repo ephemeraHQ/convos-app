@@ -21,7 +21,6 @@ import { isConversationGroup } from "@/features/conversation/utils/is-conversati
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { NavigationParamList } from "@/navigation/navigation.types"
-import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
@@ -44,8 +43,6 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   } = useConversationListConversations()
 
   const insets = useSafeAreaInsets()
-  const router = useRouter()
-  const currentSender = useSafeCurrentSender()
 
   useConversationListScreenHeader()
 

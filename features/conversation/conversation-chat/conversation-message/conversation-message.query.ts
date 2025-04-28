@@ -1,5 +1,6 @@
-import { queryOptions, useQuery } from "@tanstack/react-query"
+import { Query, queryOptions, useQuery } from "@tanstack/react-query"
 import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
+import { messageIsRecent } from "@/features/conversation/conversation-chat/conversation-message/utils/message-is-recent"
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { mergeObjDeep } from "@/utils/objects"
@@ -43,6 +44,9 @@ export function getConversationMessageQueryOptions(
   return queryOptions({
     meta: {
       caller,
+      persist: (query: Query<IConversationMessageQueryData>) => {
+        return messageIsRecent(query.state.data)
+      },
     },
     queryKey: getReactQueryKey({
       baseStr: "conversation-message",

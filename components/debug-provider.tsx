@@ -30,7 +30,7 @@ import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { getEnv } from "@/utils/getEnv"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
-import { reactQueryMMKV } from "@/utils/react-query/react-query-persister"
+import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
 import { showActionSheet } from "./action-sheet"
@@ -492,7 +492,7 @@ function useShowDebugMenu({
           reactQueryClient.getQueryCache().clear()
           reactQueryClient.clear()
           reactQueryClient.removeQueries()
-          reactQueryMMKV.clearAll()
+          reactQueryPersitingStorage.clearAll()
 
           showSnackbar({
             message: "React Query cache completely cleared",

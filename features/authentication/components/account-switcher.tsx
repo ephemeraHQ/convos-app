@@ -33,12 +33,14 @@ export function AccountSwitcher(props: { noAvatar?: boolean }) {
   const currentAccountInboxId = currentSender.inboxId
   const { displayName } = usePreferredDisplayInfo({
     inboxId: currentAccountInboxId,
+    caller: "AccountSwitcher",
   })
   const isDebugAddress = currentUserIsDebugUser()
 
   const senders = useMultiInboxStore((state) => state.senders)
   const preferredSendersDisplayInfos = usePreferredDisplayInfoBatch({
     xmtpInboxIds: senders.map((sender) => sender.inboxId),
+    caller: "AccountSwitcher",
   })
 
   const onDropdownPress = useCallback(
@@ -131,7 +133,10 @@ export function ProfileAvatar() {
   const { theme, themed } = useAppTheme()
   const navigation = useNavigation()
   const { inboxId } = useSafeCurrentSender()
-  const { displayName, avatarUrl } = usePreferredDisplayInfo({ inboxId })
+  const { displayName, avatarUrl } = usePreferredDisplayInfo({
+    inboxId,
+    caller: "ProfileAvatar",
+  })
 
   return (
     <Pressable

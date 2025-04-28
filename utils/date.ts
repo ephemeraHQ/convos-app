@@ -1,6 +1,8 @@
-import { isToday as _isToday, differenceInHours, isYesterday } from "date-fns"
 import differenceInCalendarDays from "date-fns/differenceInCalendarDays"
+import differenceInHours from "date-fns/differenceInHours"
 import format from "date-fns/format"
+import _isToday from "date-fns/isToday"
+import isYesterday from "date-fns/isYesterday"
 // Long term we should only import used locales
 import { de, enUS, fr } from "date-fns/locale"
 import { getLocales } from "react-native-localize"
@@ -14,6 +16,11 @@ const getLocale = () => {
     if (countryCode === "DE") return de
   }
   return enUS // default locale
+}
+
+export function getHumanReadableDateWithTime(date: number | Date) {
+  const locale = getLocale()
+  return format(date, "MMM d, yyyy h:mm a", { locale })
 }
 
 export const getRelativeDateTime = (date?: number | Date) => {

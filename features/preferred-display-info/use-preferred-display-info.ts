@@ -48,15 +48,17 @@ type PreferredDisplayInfoArgs = {
     }
 )
 
-export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
-  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData } = args
+export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { caller: string }) {
+  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData, caller: callerArg } = args
 
   const currentSender = useSafeCurrentSender()
+  const caller = `${callerArg}:usePreferredDisplayInfo`
 
   const { data: inboxIdFromEthAddress } = useQuery({
     ...getXmtpInboxIdFromEthAddressQueryOptions({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: ethAddressArg!, // ! because we check enabled
+      caller,
     }),
     enabled: !!ethAddressArg,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
@@ -67,13 +69,13 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
   const { data: ethAddressesForXmtpInboxId } = useEthAddressesForXmtpInboxIdQuery({
     clientInboxId: currentSender.inboxId,
     inboxId,
-    caller: "usePreferredDisplayInfo",
+    caller,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
   // Get Convos profile data
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
-    ...getProfileQueryConfig({ xmtpId: inboxId, caller: "usePreferredDisplayInfo" }),
+    ...getProfileQueryConfig({ xmtpId: inboxId, caller }),
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
@@ -83,7 +85,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
       ...getSocialProfilesForInboxIdQueryOptions({
         inboxId,
         clientInboxId: currentSender.inboxId,
-        caller: "usePreferredDisplayInfo",
+        caller,
       }),
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     },
@@ -95,7 +97,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
     useQuery({
       ...getSocialProfilesForEthAddressQueryOptions({
         ethAddress,
-        caller: "usePreferredDisplayInfo",
+        caller,
       }),
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     })

@@ -1,7 +1,7 @@
 import { createPasskey, isSupported, PasskeyStamper } from "@turnkey/react-native-passkey-stamper"
 import { TurnkeyClient, useTurnkey } from "@turnkey/sdk-react-native"
 import { PublicIdentity } from "@xmtp/react-native-sdk"
-import React, { createContext, useCallback, useContext, useEffect, useMemo } from "react"
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
@@ -12,9 +12,9 @@ import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
 import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client-create"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
-import { useWaitUntil } from "@/hooks/use-wait-until"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
-import { AuthenticationError } from "@/utils/error"
+import { getHumanReadableDateWithTime } from "@/utils/date"
+import { AuthenticationError, ensureError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { authLogger } from "@/utils/logger/logger"
 import { tryCatch } from "@/utils/try-catch"
@@ -32,38 +32,119 @@ const AuthOnboardingContext = createContext<IAuthOnboardingContextType>(
   {} as IAuthOnboardingContextType,
 )
 
+const errorsToIgnore = [
+  "com.apple.AuthenticationServices.AuthorizationError error 1001", // User cancelled the passkey registration
+]
+
 export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps) => {
   const { children } = props
   const {
     createEmbeddedKey,
     createSession,
-    clearSession,
     createSessionFromEmbeddedKey,
-    client,
+    client: turnkeyClient,
     signRawPayload,
     session,
   } = useTurnkey()
+
   const { logout } = useLogout()
 
-  const { waitUntil: waitUntilClient } = useWaitUntil({
-    thing: client,
-    timeoutMs: 10000,
-    errorMessage: "Failed to create client",
-  })
+  const flowType = useRef<"login" | "signup">("login")
+  const isCreatingXmtpClient = useRef(false)
 
   useEffect(() => {
-    // Use to clear session and do tests
-    // clearSession()
-
     return () => {
+      authLogger.debug("AuthOnboardingContextProvider unmounted, resetting state")
       useAuthOnboardingStore.getState().actions.reset()
     }
-  }, [clearSession])
+  }, [])
 
   useEffect(() => {
-    if (session) {
+    if (isCreatingXmtpClient.current || !turnkeyClient || !session) {
+      return
     }
-  }, [session])
+
+    ;(async () => {
+      try {
+        const walletAddress = session.user?.wallets[0].accounts[0].address as IEthereumAddress
+        const subOrgId = session.user?.organizationId
+
+        if (!subOrgId) {
+          throw new Error("Sub organization ID not found")
+        }
+
+        isCreatingXmtpClient.current = true
+        authLogger.debug(`Creating XMTP client for wallet: ${walletAddress}`)
+
+        const { data: xmtpClient, error: xmtpError } = await tryCatch(
+          createXmtpClient({
+            inboxSigner: {
+              getIdentifier: async () => new PublicIdentity(walletAddress, "ETHEREUM"),
+              getChainId: () => undefined,
+              getBlockNumber: () => undefined,
+              signerType: () => "EOA",
+              signMessage: async (message: string) => {
+                const sig = await signRawPayload({
+                  signWith: walletAddress,
+                  payload: message,
+                  encoding: "PAYLOAD_ENCODING_TEXT_UTF8",
+                  hashFunction: "HASH_FUNCTION_KECCAK256",
+                })
+
+                const signature = `0x${sig.r}${sig.s}${sig.v}`
+
+                return { signature }
+              },
+            },
+          }),
+        )
+        authLogger.debug("XMTP client created successfully")
+
+        if (xmtpError) {
+          throw xmtpError
+        }
+
+        if (!xmtpClient) {
+          throw new Error("XMTP client creation failed")
+        }
+
+        authLogger.debug("Validating XMTP installation")
+        const isValid = await validateXmtpInstallation({
+          inboxId: xmtpClient.inboxId,
+        })
+
+        if (!isValid) {
+          throw new Error("Invalid client installation")
+        }
+        authLogger.debug("XMTP installation validated successfully")
+
+        useMultiInboxStore.getState().actions.setCurrentSender({
+          ethereumAddress: walletAddress,
+          inboxId: xmtpClient.inboxId,
+        })
+
+        if (flowType.current === "login") {
+          authLogger.debug("Login flow detected, hydrating auth")
+          await hydrateAuth()
+        } else {
+          authLogger.debug("Signup flow detected, moving to contact card")
+          useAuthOnboardingStore.getState().actions.setPage("contact-card")
+        }
+      } catch (error) {
+        captureErrorWithToast(
+          new AuthenticationError({ error, additionalMessage: "Failed to sign in with passkey" }),
+          {
+            message: "Failed to sign in with passkey",
+          },
+        )
+        logout({ caller: "useLogin" }).catch(captureError)
+        useAuthOnboardingStore.getState().actions.reset()
+      } finally {
+        isCreatingXmtpClient.current = false
+        useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
+      }
+    })()
+  }, [turnkeyClient, session, signRawPayload, logout])
 
   const login = useCallback(async () => {
     if (!isSupported()) {
@@ -75,117 +156,53 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     }
 
     try {
-      useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
-      authLogger.debug(`Starting passkey authentication with Turnkey...`)
+      authLogger.debug("Starting login flow")
+      flowType.current = "login"
 
-      // Create a passkey stamper (this will trigger Face ID)
-      authLogger.debug("Creating passkey stamper...")
+      useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
+
+      authLogger.debug("Creating PasskeyStamper")
       const stamper = new PasskeyStamper({
         rpId: config.app.webDomain,
       })
-      authLogger.debug("Created passkey stamper")
 
-      // Create a client with the stamper
-      authLogger.debug("Creating HTTP client...")
       const httpClient = new TurnkeyClient({ baseUrl: "https://api.turnkey.com" }, stamper)
-      authLogger.debug("Created HTTP client")
 
-      // Create embedded key for the session
-      authLogger.debug("Creating embedded key...")
+      authLogger.debug("Creating embedded key")
       const targetPublicKey = await createEmbeddedKey()
-      authLogger.debug("Created embedded key:", targetPublicKey)
+      authLogger.debug("Embedded key created")
 
-      // Authenticate with the parent organization
-      authLogger.debug("Creating read/write session...")
+      authLogger.debug("Creating read-write session")
       const sessionResponse = await httpClient.createReadWriteSession({
         type: "ACTIVITY_TYPE_CREATE_READ_WRITE_SESSION_V2",
         timestampMs: Date.now().toString(),
         organizationId: config.turnkey.organizationId, // Parent org ID
         parameters: {
           targetPublicKey,
-          expirationSeconds: "86400", // 24 hours
         },
       })
-      authLogger.debug("Created read/write session")
+      authLogger.debug("Read-write session response received")
 
-      // Extract the credential bundle
-      authLogger.debug("Extracting credential bundle...")
       const credentialBundle =
         sessionResponse.activity.result.createReadWriteSessionResultV2?.credentialBundle
 
       if (!credentialBundle) {
-        authLogger.error("Failed to get credential bundle")
         throw new Error("Failed to get credential bundle")
       }
-      authLogger.debug("Extracted credential bundle")
 
-      // Create the session
-      authLogger.debug("Creating session...")
-      const session = await createSession({
+      authLogger.debug("Creating session with credential bundle")
+      await createSession({
         bundle: credentialBundle,
       })
-      authLogger.debug("Created session")
-
-      await waitUntilClient()
-
-      const walletAddress = session.user?.wallets[0].accounts[0].address as IEthereumAddress
-
-      authLogger.debug("Creating XMTP client...")
-      const { data: xmtpClient, error: xmtpError } = await tryCatch(
-        createXmtpClient({
-          inboxSigner: {
-            getIdentifier: async () => new PublicIdentity(walletAddress, "ETHEREUM"),
-            getChainId: () => undefined,
-            getBlockNumber: () => undefined,
-            signerType: () => "EOA",
-            signMessage: async (message: string) => {
-              const sig = await signRawPayload({
-                signWith: walletAddress,
-                payload: message,
-                encoding: "PAYLOAD_ENCODING_TEXT_UTF8",
-                hashFunction: "HASH_FUNCTION_KECCAK256",
-              })
-
-              // Convert RSV format to hex string
-              const signature = `0x${sig.r}${sig.s}${sig.v}`
-
-              return { signature }
-            },
-          },
-        }),
-      )
-      authLogger.debug("XMTP client created")
-
-      if (xmtpError) {
-        throw xmtpError
-      }
-
-      if (!xmtpClient) {
-        throw new Error("XMTP client creation failed")
-      }
-
-      const isValid = await validateXmtpInstallation({
-        inboxId: xmtpClient.inboxId,
-      })
-
-      if (!isValid) {
-        throw new Error("Invalid client installation")
-      }
-
-      useMultiInboxStore.getState().actions.setCurrentSender({
-        ethereumAddress: walletAddress,
-        inboxId: xmtpClient.inboxId,
-      })
-
-      await hydrateAuth()
+      authLogger.debug("Session created successfully")
     } catch (error) {
-      if (error instanceof Error && error.message.includes("Unknown error occurred")) {
-        authLogger.debug("User cancelled the passkey registration")
-      } else {
+      const ensuredError = ensureError(error)
+
+      if (!errorsToIgnore.some((e) => ensuredError.message.includes(e))) {
         captureErrorWithToast(
-          new AuthenticationError({ error, additionalMessage: "Failed to sign up with passkey" }),
+          new AuthenticationError({ error, additionalMessage: "Failed to sign in with passkey" }),
           {
-            message: "Failed to sign up with passkey",
+            message: "Failed to sign in with passkey",
           },
         )
       }
@@ -195,7 +212,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedKey, createSession, signRawPayload, logout, waitUntilClient])
+  }, [createEmbeddedKey, createSession, logout])
 
   const signup = useCallback(async () => {
     if (!isSupported()) {
@@ -207,12 +224,14 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     }
 
     try {
+      authLogger.debug("Starting signup flow")
+      flowType.current = "signup"
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
-      authLogger.debug(`Starting passkey signup with Turnkey`)
 
-      const todayBeautifulString = new Date().toISOString()
+      const todayBeautifulString = getHumanReadableDateWithTime(new Date())
+      const passkeyName = `Convos ${todayBeautifulString}`
 
-      // Step 1: Create a passkey
+      authLogger.debug("Creating passkey")
       const authenticatorParams = await createPasskey({
         authenticatorName: "Passkey",
         rp: {
@@ -221,81 +240,37 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         },
         user: {
           id: uuidv4(),
-          // Name and displayName must match
-          // This name is visible to the user. This is what's shown in the passkey prompt
-          name: `Convos ${todayBeautifulString}`,
-          displayName: `Convos ${todayBeautifulString}`,
+          name: passkeyName,
+          displayName: passkeyName,
         },
       })
+      authLogger.debug("Passkey created successfully")
 
-      console.log("authenticatorParams:", authenticatorParams)
+      authLogger.debug("Creating embedded key")
       const ephemeralPublicKey = await createEmbeddedKey({
         isCompressed: true,
       })
-      console.log("ephemeralPublicKey:", ephemeralPublicKey)
+      authLogger.debug("Embedded key created")
 
-      // Step 2: Create a sub organization
-      const { subOrgId, walletAddress } = await createSubOrganization({
+      authLogger.debug("Creating sub organization")
+      const { subOrgId } = await createSubOrganization({
         ephemeralPublicKey: ephemeralPublicKey,
         passkey: {
           challenge: authenticatorParams.challenge,
           attestation: authenticatorParams.attestation,
         },
       })
+      authLogger.debug(`Sub organization created with ID: ${subOrgId}`)
 
-      console.log("subOrgId:", subOrgId)
-      console.log("walletAddress:", walletAddress)
-
-      // Step 3: Create a session
+      authLogger.debug("Creating session from embedded key")
       await createSessionFromEmbeddedKey({
         subOrganizationId: subOrgId,
       })
-
-      // Step 4: Create xmtp client
-      const { data: xmtpClient, error: xmtpError } = await tryCatch(
-        createXmtpClient({
-          inboxSigner: {
-            getIdentifier: async () => new PublicIdentity(walletAddress, "ETHEREUM"),
-            getChainId: () => undefined,
-            getBlockNumber: () => undefined,
-            signerType: () => "EOA",
-            signMessage: async (message: string) => {
-              const sig = await signRawPayload({
-                signWith: walletAddress,
-                payload: message,
-                encoding: "PAYLOAD_ENCODING_TEXT_UTF8",
-                hashFunction: "HASH_FUNCTION_KECCAK256",
-              })
-
-              // Convert RSV format to hex string
-              const signature = `0x${sig.r}${sig.s}${sig.v}`
-
-              return { signature }
-            },
-          },
-        }),
-      )
-
-      if (xmtpError) {
-        throw xmtpError
-      }
-
-      if (!xmtpClient) {
-        throw new Error("XMTP client creation failed")
-      }
-
-      // Step 5: Set the current sender
-      useMultiInboxStore.getState().actions.setCurrentSender({
-        ethereumAddress: walletAddress,
-        inboxId: xmtpClient.inboxId,
-      })
-
-      // Step 6: Navigate to the contact card
-      useAuthOnboardingStore.getState().actions.setPage("contact-card")
+      authLogger.debug("Session created successfully")
     } catch (error) {
-      if (error instanceof Error && error.message.includes("Unknown error occurred")) {
-        authLogger.debug("User cancelled the passkey registration")
-      } else {
+      const ensuredError = ensureError(error)
+
+      if (!errorsToIgnore.some((e) => ensuredError.message.includes(e))) {
         captureErrorWithToast(
           new AuthenticationError({ error, additionalMessage: "Failed to sign up with passkey" }),
           {
@@ -309,7 +284,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     } finally {
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedKey, createSessionFromEmbeddedKey, signRawPayload, logout])
+  }, [createEmbeddedKey, createSessionFromEmbeddedKey, logout])
 
   const value = useMemo(() => ({ login, signup }), [login, signup])
 

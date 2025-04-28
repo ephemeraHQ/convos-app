@@ -18,6 +18,7 @@ export const MemberListItem = memo(function MemberListItem(props: { memberInboxI
 
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: memberInboxId,
+    caller: "MemberListItem",
   })
 
   const handlePress = useCallback(() => {

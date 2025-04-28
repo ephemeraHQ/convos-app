@@ -4,10 +4,7 @@ import { useEffect } from "react"
 import { formatRandomUsername } from "@/features/auth-onboarding/utils/format-random-user-name"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { IPrivyUserId } from "@/features/authentication/authentication.types"
-import {
-  getMultiInboxStoreSenders,
-  getSafeCurrentSender,
-} from "@/features/authentication/multi-inbox.store"
+import { getAllSenders, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   createIdentity,
   fetchDeviceIdentities,
@@ -101,7 +98,7 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
     })
   }
 
-  const senders = getMultiInboxStoreSenders()
+  const senders = getAllSenders()
 
   const missingIdentities = senders.filter(
     (sender) => !identities.some((identity) => identity.xmtpId === sender.inboxId),

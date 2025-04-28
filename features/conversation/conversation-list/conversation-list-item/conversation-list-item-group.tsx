@@ -46,6 +46,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   const { displayName: senderDisplayName } = usePreferredDisplayInfo({
     inboxId: lastMessage?.senderInboxId,
+    caller: "ConversationListItemGroup",
   })
 
   const onPress = useCallback(() => {
