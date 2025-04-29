@@ -171,8 +171,6 @@ export default () => {
       entitlements: {
         // App check stuff
         "com.apple.developer.devicecheck.appattest-environment": "production",
-        // Add this for keychain access
-        "keychain-access-groups": [`FY4NZR34Z3.${config.ios.bundleIdentifier}`],
       },
       infoPlist: {
         LSApplicationQueriesSchemes: [
@@ -194,6 +192,7 @@ export default () => {
         UIBackgroundModes: ["remote-notification", "fetch", "processing"],
         BGTaskSchedulerPermittedIdentifiers: [
           "com.convos.background-notification",
+          "com.convos.background-notification-small",
           "com.convos.background-fetch",
           "com.convos.background-processing",
         ],

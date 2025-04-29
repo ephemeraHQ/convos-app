@@ -2,7 +2,7 @@ import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { getAppConfig } from "@/features/app-settings/app-settings.api"
 
-const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
+const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification-small"
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

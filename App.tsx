@@ -9,6 +9,7 @@ import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
+import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
 import { registerBackgroundNotificationTaskSmall } from "@/features/notifications/background-notifications-handler-small"
 import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
@@ -17,6 +18,7 @@ import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wal
 import { AppNavigator } from "@/navigation/app-navigator"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
+import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
 import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
@@ -88,7 +90,8 @@ const Handlers = memo(function Handlers() {
   useReactQueryInit()
 
   useEffect(() => {
-    registerBackgroundNotificationTaskSmall()
+    unregisterBackgroundNotificationTask().catch(captureError)
+    registerBackgroundNotificationTaskSmall().catch(captureError)
   }, [])
 
   return null
