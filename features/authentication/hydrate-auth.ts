@@ -3,6 +3,7 @@ import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
+import { isInternetReachable } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
@@ -21,7 +22,7 @@ export async function hydrateAuth() {
   getXmtpClientByInboxId({
     inboxId: currentSender.inboxId,
   }).catch((error) => {
-    if (isXmtpNoNetworkError(error)) {
+    if (isXmtpNoNetworkError(error) || !isInternetReachable()) {
       authLogger.debug("No network error while hydrating auth so just returning...")
       return
     }

@@ -3,11 +3,12 @@ import Constants from "expo-constants"
 import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useMemo } from "react"
 import { Alert, Platform } from "react-native"
+import { Gesture, GestureDetector } from "react-native-gesture-handler"
+import { runOnJS } from "react-native-reanimated"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
-import { VStack } from "@/design-system/VStack"
 import { useLogout } from "@/features/authentication/use-logout"
 import {
   DISPLAYED_NOTIFICATIONS_COUNT_KEY,
@@ -29,7 +30,6 @@ import {
 } from "@/features/xmtp/xmtp-logs"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
-import { $globalStyles } from "@/theme/styles"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { getEnv } from "@/utils/getEnv"
@@ -39,59 +39,22 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
 import { storage } from "@/utils/storage/storage"
 import { showActionSheet } from "./action-sheet"
-import { XmtpLogFilesModal } from "./xmtp-log-files-modal"
 
-export function DebugProvider(props: { children: React.ReactNode }) {
+export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
 
-  const tapCountRef = useRef(0)
-  const tapTimeoutRef = useRef<NodeJS.Timeout>()
-  const [logFilesModalVisible, setLogFilesModalVisible] = useState(false)
-
   const showDebugMenu = useShowDebugMenu({
-    setLogFilesModalVisible,
+    setLogFilesModalVisible: () => {},
   })
 
-  const handleTouchStart = useCallback(() => {
-    // Increment tap count
-    tapCountRef.current += 1
+  const longPressGesture = Gesture.LongPress()
+    .onStart(() => {
+      runOnJS(showDebugMenu)()
+    })
+    .minDuration(1000)
 
-    // Clear existing timeout
-    if (tapTimeoutRef.current) {
-      clearTimeout(tapTimeoutRef.current)
-    }
-
-    // Set new timeout to reset count after 200ms
-    tapTimeoutRef.current = setTimeout(() => {
-      tapCountRef.current = 0
-    }, 200)
-
-    // Show debug menu after 6 taps
-    if (tapCountRef.current >= 6) {
-      showDebugMenu()
-      tapCountRef.current = 0
-    }
-  }, [showDebugMenu])
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  return (
-    <VStack onTouchStart={handleTouchStart} style={$globalStyles.flex1}>
-      {children}
-      <XmtpLogFilesModal
-        visible={logFilesModalVisible}
-        onClose={() => setLogFilesModalVisible(false)}
-      />
-    </VStack>
-  )
-}
+  return <GestureDetector gesture={longPressGesture}>{children}</GestureDetector>
+})
 
 function useShowDebugMenu({
   setLogFilesModalVisible,

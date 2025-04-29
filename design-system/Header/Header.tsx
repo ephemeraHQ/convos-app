@@ -1,5 +1,6 @@
 import { ReactElement } from "react"
 import { StyleProp, TextStyle, ViewStyle } from "react-native"
+import { DebugMenuWrapper } from "@/components/debug-provider"
 import { IPicto } from "@/components/Picto/Picto.types"
 import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
 import { useHeaderHeight } from "@/design-system/Header/Header.utils"
@@ -8,7 +9,7 @@ import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { HStack } from "../HStack"
 import { ITextProps, Text } from "../Text"
 import { ITouchableOpacityProps } from "../TouchableOpacity"
-import { VStack } from "../VStack"
+import { AnimatedVStack, VStack } from "../VStack"
 import { HeaderAction } from "./HeaderAction"
 
 export type HeaderProps = {
@@ -81,76 +82,78 @@ export function Header(props: HeaderProps) {
   const headerHeight = useHeaderHeight()
 
   return (
-    <VStack
-      // {...debugBorder()}
-      style={[
-        $container,
-        $containerInsets,
-        { backgroundColor },
-        withBottomBorder && {
-          borderBottomWidth: theme.borderWidth.xs,
-          borderBottomColor: theme.colors.border.subtle,
-        },
-        $containerStyleOverride,
-      ]}
-    >
-      <HStack
-        // {...debugBorder("yellow")}
-        style={[themed($wrapper), $styleOverride, { height: headerHeight }]}
+    <DebugMenuWrapper>
+      <AnimatedVStack
+        // {...debugBorder()}
+        style={[
+          $container,
+          $containerInsets,
+          { backgroundColor },
+          withBottomBorder && {
+            borderBottomWidth: theme.borderWidth.xs,
+            borderBottomColor: theme.colors.border.subtle,
+          },
+          $containerStyleOverride,
+        ]}
       >
         <HStack
-          // {...debugBorder("red")}
-          style={themed($contentContainer)}
+          // {...debugBorder("yellow")}
+          style={[themed($wrapper), $styleOverride, { height: headerHeight }]}
         >
-          {onBack ? (
-            <HeaderAction icon="chevron.left" onPress={onBack} />
-          ) : (
-            (leftTx || leftText || leftIcon || LeftActionComponent) && (
-              <HeaderAction
-                tx={leftTx}
-                text={leftText}
-                icon={leftIcon}
-                iconColor={leftIconColor}
-                onPress={onLeftPress}
-                txOptions={leftTxOptions}
-                backgroundColor={backgroundColor}
-                ActionComponent={LeftActionComponent}
-              />
-            )
+          <HStack
+            // {...debugBorder("red")}
+            style={themed($contentContainer)}
+          >
+            {onBack ? (
+              <HeaderAction icon="chevron.left" onPress={onBack} />
+            ) : (
+              (leftTx || leftText || leftIcon || LeftActionComponent) && (
+                <HeaderAction
+                  tx={leftTx}
+                  text={leftText}
+                  icon={leftIcon}
+                  iconColor={leftIconColor}
+                  onPress={onLeftPress}
+                  txOptions={leftTxOptions}
+                  backgroundColor={backgroundColor}
+                  ActionComponent={LeftActionComponent}
+                />
+              )
+            )}
+
+            {titleComponent ? (
+              titleComponent
+            ) : titleContent ? (
+              <VStack style={[themed($titleContainer), $titleContainerStyleOverride]}>
+                <Text
+                  preset="body"
+                  text={titleContent}
+                  style={$titleStyleOverride}
+                  onPress={onBack}
+                />
+              </VStack>
+            ) : null}
+          </HStack>
+
+          {isCollapsible && (
+            <VStack style={themed($collapsibleContainer)}>
+              <VStack style={themed($collapsibleIndicator)} />
+            </VStack>
           )}
 
-          {titleComponent ? (
-            titleComponent
-          ) : titleContent ? (
-            <VStack style={[themed($titleContainer), $titleContainerStyleOverride]}>
-              <Text
-                preset="body"
-                text={titleContent}
-                style={$titleStyleOverride}
-                onPress={onBack}
-              />
-            </VStack>
-          ) : null}
+          <HeaderAction
+            tx={rightTx}
+            text={rightText}
+            icon={rightIcon}
+            iconColor={rightIconColor}
+            onPress={onRightPress}
+            txOptions={rightTxOptions}
+            backgroundColor={backgroundColor}
+            ActionComponent={RightActionComponent}
+          />
         </HStack>
-
-        {isCollapsible && (
-          <VStack style={themed($collapsibleContainer)}>
-            <VStack style={themed($collapsibleIndicator)} />
-          </VStack>
-        )}
-
-        <HeaderAction
-          tx={rightTx}
-          text={rightText}
-          icon={rightIcon}
-          iconColor={rightIconColor}
-          onPress={onRightPress}
-          txOptions={rightTxOptions}
-          backgroundColor={backgroundColor}
-          ActionComponent={RightActionComponent}
-        />
-      </HStack>
-    </VStack>
+      </AnimatedVStack>
+    </DebugMenuWrapper>
   )
 }
 

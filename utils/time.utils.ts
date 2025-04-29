@@ -4,21 +4,25 @@ import { hoursToMilliseconds, minutesToMilliseconds, secondsToMilliseconds } fro
 const createDays = (days: number) => ({
   toMilliseconds: () => days * 24 * 60 * 60 * 1000,
   toNanoseconds: () => days * 24 * 60 * 60 * 1000 * 1000000,
+  toSeconds: () => days * 24 * 60 * 60,
 })
 
 const createHours = (hours: number) => ({
   toMilliseconds: () => hoursToMilliseconds(hours),
   toNanoseconds: () => hoursToMilliseconds(hours) * 1000000,
+  toSeconds: () => hours * 60 * 60,
 })
 
 const createMinutes = (minutes: number) => ({
   toMilliseconds: () => minutesToMilliseconds(minutes),
   toNanoseconds: () => minutesToMilliseconds(minutes) * 1000000,
+  toSeconds: () => minutes * 60,
 })
 
 const createSeconds = (seconds: number) => ({
   toMilliseconds: () => secondsToMilliseconds(seconds),
   toNanoseconds: () => secondsToMilliseconds(seconds) * 1000000,
+  toSeconds: () => seconds,
 })
 
 export const nowNano = () => {

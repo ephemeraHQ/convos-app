@@ -75,9 +75,8 @@ export const useLogout = () => {
         // This needs to be at the end because at many places we use useSafeCurrentSender()
         // and it will throw error if we reset the store too early
         // Need the setTimeout because for some reason the navigation is not updated immediately when we set auth status to signed out
-        setTimeout(() => {
-          resetMultiInboxStore()
-        }, 0)
+
+        resetMultiInboxStore()
 
         // Might want to only clear certain queries later but okay for now
         // Put this last because otherwise some useQuery hook triggers even tho we're logging out

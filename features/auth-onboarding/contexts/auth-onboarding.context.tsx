@@ -25,6 +25,7 @@ import { getHumanReadableDateWithTime } from "@/utils/date"
 import { AuthenticationError, ensureError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { authLogger } from "@/utils/logger/logger"
+import { TimeUtils } from "@/utils/time.utils"
 import { tryCatch } from "@/utils/try-catch"
 
 type IAuthOnboardingContextType = {
@@ -170,6 +171,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         organizationId: config.turnkey.organizationId, // Parent org ID
         parameters: {
           targetPublicKey,
+          expirationSeconds: TimeUtils.days(60).toSeconds().toString(),
         },
       })
       authLogger.debug("Read-write session response received")
@@ -184,6 +186,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       authLogger.debug("Creating session with credential bundle")
       await createSession({
         bundle: credentialBundle,
+        expirationSeconds: TimeUtils.days(60).toSeconds(),
       })
       authLogger.debug("Session created successfully")
 
@@ -259,6 +262,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       authLogger.debug("Creating session from embedded key")
       await createSessionFromEmbeddedKey({
         subOrganizationId: subOrgId,
+        expirationSeconds: TimeUtils.days(60).toSeconds(),
       })
       authLogger.debug("Session created successfully")
 

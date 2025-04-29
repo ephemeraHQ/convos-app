@@ -243,11 +243,7 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
     clientInboxId,
   })
 
-  if (!conversationIds) {
-    throw new Error(`No conversation ids found for inbox ${clientInboxId}`)
-  }
-
-  if (conversationIds.length === 0) {
+  if (!conversationIds || conversationIds.length === 0) {
     notificationsLogger.debug(`No conversations to unsubscribe from for inbox ${clientInboxId}`)
     return
   }

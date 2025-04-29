@@ -3,9 +3,8 @@ import { useReactQueryDevTools } from "@dev-plugins/react-query"
 import { ActionSheetProvider } from "@expo/react-native-action-sheet"
 // import { DevToolsBubble } from "react-native-react-query-devtools"
 import { ActionSheet } from "@/components/action-sheet"
-import { ConditionalWrapper } from "@/components/conditional-wrapper"
-import { DebugProvider } from "@/components/debug-provider"
 import { Snackbars } from "@/components/snackbar/snackbars"
+import { XmtpLogFilesModal } from "@/components/xmtp-log-files-modal"
 import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
@@ -28,7 +27,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { ThirdwebProvider } from "thirdweb/react"
-import { config } from "./config"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
@@ -62,18 +60,14 @@ export function App() {
             <KeyboardProvider>
               <ActionSheetProvider>
                 <GestureHandlerRootView style={$globalStyles.flex1}>
-                  <ConditionalWrapper
-                    condition={config.debugMenu}
-                    wrapper={(children) => <DebugProvider>{children}</DebugProvider>}
-                  >
-                    <BottomSheetModalProvider>
-                      <AppNavigator />
-                      {/* {__DEV__ && <DevToolsBubble />} */}
-                      <Handlers />
-                      <Snackbars />
-                      <ActionSheet />
-                    </BottomSheetModalProvider>
-                  </ConditionalWrapper>
+                  <BottomSheetModalProvider>
+                    <AppNavigator />
+                    {/* {__DEV__ && <DevToolsBubble />} */}
+                    <Handlers />
+                    <Snackbars />
+                    <ActionSheet />
+                    <XmtpLogFilesModal />
+                  </BottomSheetModalProvider>
                 </GestureHandlerRootView>
               </ActionSheetProvider>
             </KeyboardProvider>
