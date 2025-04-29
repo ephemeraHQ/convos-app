@@ -13,7 +13,7 @@ export const ReactQueryProvider = memo(function ReactQueryProvider(props: {
 }) {
   const { children } = props
 
-  if (!config.reactQueryPersistCacheIsEnabled) {
+  if (!config.reactQueryPersistCacheIsEnabled || __DEV__) {
     return <QueryClientProvider client={reactQueryClient}>{children}</QueryClientProvider>
   }
 

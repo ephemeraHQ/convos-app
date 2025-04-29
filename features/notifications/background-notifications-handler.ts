@@ -16,6 +16,8 @@ import { maybeDisplayLocalNewMessageNotification } from "./notifications.service
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
 const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
 const NOTIFICATION_ID_TTL = 1000 * 60 * 5 // 5 minutes in milliseconds
+export const RECEIVED_NOTIFICATIONS_COUNT_KEY = "received_notifications_count"
+export const DISPLAYED_NOTIFICATIONS_COUNT_KEY = "displayed_notifications_count"
 
 /**
  * Extracts the essential notification data (contentTopic and encryptedMessage)
@@ -105,6 +107,24 @@ async function markMessageAsProcessed(encryptedMessage: string): Promise<void> {
     storage.set(PROCESSED_NOTIFICATIONS_KEY, JSON.stringify(processedMessages))
   } catch (error) {
     notificationsLogger.error("Error marking message as processed", error)
+  }
+}
+
+function incrementReceivedNotificationsCount(): void {
+  try {
+    const currentCount = storage.getNumber(RECEIVED_NOTIFICATIONS_COUNT_KEY) || 0
+    storage.set(RECEIVED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
+  } catch (error) {
+    notificationsLogger.error("Error incrementing received notifications count", error)
+  }
+}
+
+function incrementDisplayedNotificationsCount(): void {
+  try {
+    const currentCount = storage.getNumber(DISPLAYED_NOTIFICATIONS_COUNT_KEY) || 0
+    storage.set(DISPLAYED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
+  } catch (error) {
+    notificationsLogger.error("Error incrementing displayed notifications count", error)
   }
 }
 
@@ -204,6 +224,9 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
 
     const { conversationTopic, encryptedMessage } = notificationData
 
+    // Increment received notifications counter
+    incrementReceivedNotificationsCount()
+
     // Check if we've already processed this message
     if (await hasProcessedMessage(encryptedMessage)) {
       notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
@@ -213,10 +236,17 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     // Mark message as processed as soon as possible
     await markMessageAsProcessed(encryptedMessage)
 
-    await maybeDisplayLocalNewMessageNotification({
-      encryptedMessage,
-      conversationTopic,
-    })
+    try {
+      await maybeDisplayLocalNewMessageNotification({
+        encryptedMessage,
+        conversationTopic,
+      })
+
+      // If we reached here, the notification was displayed successfully
+      incrementDisplayedNotificationsCount()
+    } catch (error) {
+      notificationsLogger.error("Failed to display notification", error)
+    }
   } catch (error) {
     captureError(
       new NotificationError({

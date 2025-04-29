@@ -12,13 +12,13 @@ import { IEthereumAddress } from "@/utils/evm/address"
 
 const createUserApiRequestBodySchema = z
   .object({
-    privyUserId: z.string(),
+    turnkeyUserId: z.string(),
     device: deviceSchema.pick({
       os: true,
       name: true,
     }),
     identity: identitySchema.pick({
-      privyAddress: true,
+      turnkeyAddress: true,
       xmtpId: true,
     }),
     profile: ConvosProfileSchema.pick({
@@ -34,7 +34,7 @@ export type ICreateUserApiRequestBody = z.infer<typeof createUserApiRequestBodyS
 
 const createUserApiResponseSchema = z.object({
   id: z.custom<IConvosUserID>(),
-  privyUserId: z.custom<ITurnkeyUserId>(),
+  turnkeyUserId: z.custom<ITurnkeyUserId>(),
   device: deviceSchema.pick({
     id: true,
     os: true,
@@ -42,7 +42,7 @@ const createUserApiResponseSchema = z.object({
   }),
   identity: identitySchema.pick({
     id: true,
-    privyAddress: true,
+    turnkeyAddress: true,
     xmtpId: true,
   }),
   profile: ConvosProfileSchema.pick({
@@ -58,23 +58,23 @@ type CreateUserResponse = z.infer<typeof createUserApiResponseSchema>
 
 export type ICreateUserArgs = {
   inboxId: IXmtpInboxId
-  privyUserId: ITurnkeyUserId
+  turnkeyUserId: ITurnkeyUserId
   smartContractWalletAddress: IEthereumAddress
   profile: Pick<IConvosProfile, "name" | "username" | "avatar" | "description">
 }
 
 export async function createUser(args: ICreateUserArgs) {
-  const { privyUserId, smartContractWalletAddress, inboxId, profile } = args
+  const { turnkeyUserId, smartContractWalletAddress, inboxId, profile } = args
 
   try {
     const requestPayload = {
-      privyUserId,
+      turnkeyUserId,
       device: {
         os: getDeviceOs(),
         name: getDeviceModelId(),
       },
       identity: {
-        privyAddress: smartContractWalletAddress,
+        turnkeyAddress: smartContractWalletAddress,
         xmtpId: inboxId,
       },
       profile,

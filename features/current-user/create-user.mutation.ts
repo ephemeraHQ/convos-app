@@ -26,7 +26,7 @@ export function getCreateUserMutationOptions(): MutationOptions<
     //       identities: [
     //         {
     //           id: args.identity.xmtpId,
-    //           privyAddress: args.identity.privyAddress,
+    //           turnkeyAddress: args.identity.turnkeyAddress,
     //           xmtpId: args.identity.xmtpId,
     //         },
     //       ],
@@ -68,7 +68,7 @@ export function getCreateUserMutationOptions(): MutationOptions<
           username: data.profile.username,
           description: data.profile.description ?? null,
           avatar: data.profile.avatar ?? null,
-          privyAddress: data.identity.privyAddress,
+          turnkeyAddress: data.identity.turnkeyAddress,
           xmtpId: data.identity.xmtpId,
         },
       })

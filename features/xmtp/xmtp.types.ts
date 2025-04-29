@@ -20,6 +20,7 @@ import {
   MessageDeliveryStatus,
   MultiRemoteAttachmentCodec,
   NativeMessageContent,
+  PublicIdentity,
   ReactionCodec,
   ReactionContent,
   RemoteAttachmentCodec,
@@ -98,6 +99,7 @@ export type IXmtpRemoteAttachmentMetadata = RemoteAttachmentMetadata
 export type IXmtpClientWithCodecs = Omit<Client<ISupportedXmtpCodecs>, "inboxId"> & {
   inboxId: IXmtpInboxId
 }
+export type IXmtpIdentity = PublicIdentity
 
 export type IXmtpSigner = Signer
 export type IXmtpEnv = "dev" | "production" | "local"

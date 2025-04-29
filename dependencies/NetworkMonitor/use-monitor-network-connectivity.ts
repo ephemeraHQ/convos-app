@@ -14,16 +14,10 @@ export function useMonitorNetworkConnectivity() {
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((netState) => {
       const reachable = !!netState.isInternetReachable
-      const currentReachable = useAppStore.getState().isInternetReachable
 
-      if (reachable !== currentReachable) {
-        logger.debug(
-          `Internet connectivity changed: was ${currentReachable ? "reachable" : "not reachable"}, now ${
-            reachable ? "reachable" : "not reachable"
-          }`,
-        )
-        useAppStore.getState().actions.setIsInternetReachable(reachable)
-      }
+      logger.debug(`Internet connectivity is ${reachable ? "reachable" : "not reachable"}`)
+
+      useAppStore.getState().actions.setIsInternetReachable(reachable)
     })
 
     return unsubscribe

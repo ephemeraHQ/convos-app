@@ -9,7 +9,6 @@ import {
 } from "@features/xmtp/xmtp.types"
 import {
   ConversationVersion,
-  findConversation,
   prepareMessage,
   publishPreparedMessages,
 } from "@xmtp/react-native-sdk"
@@ -28,7 +27,7 @@ export async function getXmtpConversation(args: {
       const client = await getXmtpClientByInboxId({
         inboxId: clientInboxId,
       })
-      return findConversation(client, conversationId)
+      return client.conversations.findConversation(conversationId)
     })
 
     return conversation

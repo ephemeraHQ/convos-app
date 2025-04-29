@@ -5,7 +5,7 @@ import { config } from "@/config"
 import { authLogger } from "@/utils/logger/logger"
 
 const sessionConfig = {
-  apiBaseUrl: "https://api.turnkey.com",
+  apiBaseUrl: config.turnkey.turnkeyApiUrl,
   organizationId: config.turnkey.organizationId,
   onSessionCreated: (session: Session) => {
     authLogger.debug("Turnkey session Created", session)

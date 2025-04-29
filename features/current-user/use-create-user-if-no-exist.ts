@@ -105,7 +105,7 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUser
     await createIdentity({
       deviceId,
       input: {
-        privyAddress: sender.ethereumAddress, // What if it's not a privy address and we connected via EOA?
+        turnkeyAddress: sender.ethereumAddress, // What if it's not a Turnkey address and we connected via EOA?
         xmtpId: sender.inboxId,
       },
     })
@@ -141,7 +141,7 @@ async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEth
     const currentSender = getSafeCurrentSender()
     const createdUser = await createUserMutation({
       inboxId: currentSender.inboxId,
-      privyUserId: turnkeyUserId,
+      turnkeyUserId: turnkeyUserId,
       smartContractWalletAddress: ethAddress,
       profile: getRandomProfile(),
     })
@@ -161,7 +161,7 @@ async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEth
 }
 
 /**
- * Ensures user profile exists in backend after Privy signup, creating it if missing
+ * Ensures user profile exists in backend after Turnkey signup, creating it if missing
  * This handles edge cases like app closure during onboarding
  */
 export function useCreateUserIfNoExist() {

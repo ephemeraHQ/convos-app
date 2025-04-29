@@ -8,7 +8,7 @@ export type IConvosCurrentUser = z.infer<typeof currentUserSchema>
 
 export const identitySchema = z.object({
   id: z.string(),
-  privyAddress: z.custom<IEthereumAddress>(),
+  turnkeyAddress: z.custom<IEthereumAddress>(),
   xmtpId: z.custom<IXmtpInboxId>(),
 })
 

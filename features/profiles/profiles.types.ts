@@ -27,7 +27,7 @@ export const ConvosProfileSchema = z.object({
     .optional(),
   avatar: z.string().url({ message: "Avatar must be a valid URL" }).nullable().optional(),
   xmtpId: z.custom<IXmtpInboxId>(),
-  privyAddress: z.custom<IEthereumAddress>(), // TODO: Maybe this should be changed to simply ethAddress? Let's check thing again once we add multi identity support
+  turnkeyAddress: z.custom<IEthereumAddress>(), // TODO: Maybe this should be changed to simply ethAddress? Let's check thing again once we add multi identity support
 })
 
 export type IConvosProfile = z.infer<typeof ConvosProfileSchema>

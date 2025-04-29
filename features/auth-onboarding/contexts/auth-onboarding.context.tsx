@@ -157,7 +157,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         rpId: config.app.webDomain,
       })
 
-      const httpClient = new TurnkeyClient({ baseUrl: "https://api.turnkey.com" }, stamper)
+      const httpClient = new TurnkeyClient({ baseUrl: config.turnkey.turnkeyApiUrl }, stamper)
 
       authLogger.debug("Creating embedded key")
       const targetPublicKey = await createEmbeddedKey()

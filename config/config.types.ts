@@ -35,10 +35,6 @@ export type IConfig = {
     organizationId: string
     turnkeyApiUrl: string
   }
-  privy: {
-    appId: string
-    clientId: string
-  }
   evm: {
     rpcEndpoint: string
   }

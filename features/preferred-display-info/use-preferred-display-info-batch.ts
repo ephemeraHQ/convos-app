@@ -76,7 +76,7 @@ export function usePreferredDisplayInfoBatch(args: {
         profile,
         socialProfiles,
         inboxId,
-        ethAddress: profile?.privyAddress,
+        ethAddress: profile?.turnkeyAddress,
       })
 
       const avatarUrl = getPreferredAvatarUrl({
@@ -87,7 +87,7 @@ export function usePreferredDisplayInfoBatch(args: {
       const ethAddress = getPreferredEthAddress({
         profile,
         socialProfiles,
-        ethAddress: profile?.privyAddress,
+        ethAddress: profile?.turnkeyAddress,
       })
 
       const username = profile?.username

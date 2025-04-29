@@ -1,8 +1,4 @@
-import {
-  conversationMessagesWithMetrics,
-  findMessage,
-  processMessage,
-} from "@xmtp/react-native-sdk"
+import { conversationMessagesWithMetrics, processMessage } from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import {
   ISupportedXmtpCodecs,
@@ -77,7 +73,7 @@ export async function getXmtpConversationMessage(args: {
     })
 
     const message = await wrapXmtpCallWithDuration("findMessage", () =>
-      findMessage(client.installationId, messageId),
+      client.conversations.findMessage(messageId),
     )
 
     return message

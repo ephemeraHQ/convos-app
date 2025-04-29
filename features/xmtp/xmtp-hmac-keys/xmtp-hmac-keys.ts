@@ -1,5 +1,4 @@
 import { IXmtpConversationTopic, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { getHmacKeys } from "@xmtp/react-native-sdk"
 import { IHmacKey } from "@/features/notifications/notifications.api"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
@@ -22,7 +21,7 @@ export async function getXmtpHmacKeysForConversation(args: {
     })
 
     const response = await wrapXmtpCallWithDuration("getHmacKeys", () =>
-      getHmacKeys(client.installationId),
+      client.conversations.getHmacKeys(),
     )
     return response.hmacKeys[
       conversationTopic
@@ -53,7 +52,7 @@ export async function getXmtpWelcomeTopicHmacKeys(args: { clientInboxId: IXmtpIn
 
     // Get all HMAC keys
     const hmacKeysResponse = await wrapXmtpCallWithDuration("getHmacKeys (welcome)", () =>
-      getHmacKeys(client.installationId),
+      client.conversations.getHmacKeys(),
     )
 
     // Get the welcome topic

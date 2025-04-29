@@ -81,7 +81,7 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
 
       await createUserAsync({
         inboxId: currentSender.inboxId,
-        privyUserId: user?.id as ITurnkeyUserId,
+        turnkeyUserId: user?.id as ITurnkeyUserId,
         smartContractWalletAddress: currentSender.ethereumAddress,
         profile: {
           name: store.name,

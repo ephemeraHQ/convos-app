@@ -12,7 +12,7 @@ const ProfileSchema = z.object({
   avatar: z.string().nullable(),
   description: z.string().nullable(),
   xmtpId: z.custom<IXmtpInboxId>(),
-  privyAddress: z.custom<IEthereumAddress>(),
+  turnkeyAddress: z.custom<IEthereumAddress>(),
 })
 
 // Schema for the API response

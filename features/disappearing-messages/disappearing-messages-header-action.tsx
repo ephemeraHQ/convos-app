@@ -145,11 +145,6 @@ export const DisappearingMessagesHeaderAction = ({
           return
         }
 
-        if (option.id === "how_it_works") {
-          // TODO: Implement how it works
-          return
-        }
-
         if (!option.retentionDurationInNs) {
           throw new Error("Missing retention duration")
         }

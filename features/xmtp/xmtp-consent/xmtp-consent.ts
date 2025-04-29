@@ -1,5 +1,4 @@
 import { IXmtpConsentState, IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { setConsentState } from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
@@ -76,7 +75,11 @@ export async function setXmtpConsentStateForInboxId(args: {
     })
 
     await wrapXmtpCallWithDuration("setConsentState", () =>
-      setConsentState(client.installationId, peerInboxId, "inbox_id", consent),
+      client.preferences.setConsentState({
+        value: peerInboxId,
+        entryType: "inbox_id",
+        state: consent,
+      }),
     )
   } catch (error) {
     throw new XMTPError({
@@ -99,7 +102,11 @@ export const updateXmtpConsentForGroupsForInbox = async (args: {
 
     for (const groupId of groupIds) {
       await wrapXmtpCallWithDuration("setConsentState (group)", () =>
-        setConsentState(client.installationId, groupId, "conversation_id", consent),
+        client.preferences.setConsentState({
+          value: groupId,
+          entryType: "conversation_id",
+          state: consent,
+        }),
       )
     }
   } catch (error) {

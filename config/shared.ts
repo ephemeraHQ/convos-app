@@ -72,10 +72,6 @@ export const shared = {
   thirdweb: {
     clientId: process.env.EXPO_PUBLIC_THIRDWEB_CLIENT_ID,
   },
-  privy: {
-    appId: process.env.EXPO_PUBLIC_PRIVY_APP_ID,
-    clientId: process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID,
-  },
   evm: {
     rpcEndpoint: process.env.EXPO_PUBLIC_EVM_RPC_ENDPOINT,
   },
