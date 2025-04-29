@@ -64,6 +64,7 @@ function createReactQueryPersister(storage: IStorage): ReactQueryPersister {
         const clientString = storage.getString(REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY)
 
         if (!clientString) {
+          stopTimer(timerId)
           return
         }
 
