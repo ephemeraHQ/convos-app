@@ -18,6 +18,7 @@ const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
 const NOTIFICATION_ID_TTL = 1000 * 60 * 5 // 5 minutes in milliseconds
 export const RECEIVED_NOTIFICATIONS_COUNT_KEY = "received_notifications_count"
 export const DISPLAYED_NOTIFICATIONS_COUNT_KEY = "displayed_notifications_count"
+export let isProcessingNotification = false
 
 /**
  * Extracts the essential notification data (contentTopic and encryptedMessage)

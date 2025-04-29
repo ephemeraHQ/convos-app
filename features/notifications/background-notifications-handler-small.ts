@@ -1,8 +1,11 @@
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { getAppConfig } from "@/features/app-settings/app-settings.api"
+import { captureError } from "@/utils/capture-error"
+import { NotificationError } from "@/utils/error"
+import { authLogger, logger } from "@/utils/logger/logger"
 
-const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification-small"
+const BACKGROUND_NOTIFICATION_TASK_SMALL = "com.convos.background-notification-small"
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -14,40 +17,52 @@ Notifications.setNotificationHandler({
 
 export async function unregisterBackgroundNotificationTaskSmall() {
   try {
-    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK)) {
-      return TaskManager.unregisterTaskAsync(BACKGROUND_NOTIFICATION_TASK)
+    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK_SMALL)) {
+      return TaskManager.unregisterTaskAsync(BACKGROUND_NOTIFICATION_TASK_SMALL)
     }
   } catch (error) {
-    console.error("Failed to unregister background notification task", error)
+    captureError(
+      new NotificationError({
+        error,
+        additionalMessage: "Failed to unregister background notification task",
+      }),
+    )
   }
 }
 
 export async function registerBackgroundNotificationTaskSmall() {
   try {
-    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK)) {
+    if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK_SMALL)) {
       return
     }
 
-    await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK)
+    await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK_SMALL)
   } catch (error) {
-    console.error("Failed to register background notification task", error)
+    captureError(
+      new NotificationError({
+        error,
+        additionalMessage: "Failed to register background notification task",
+      }),
+    )
   }
 }
 
-TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
+TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK_SMALL, async ({ data, error }) => {
   try {
+    logger.debug("BACKGROUND_NOTIFICATION_TASK_SMALL", { data, error })
+
     if (error || !data) {
       return
     }
 
     const message = extractBasicMessageData(data)
 
-    console.log("message:", message)
+    authLogger.debug("message:", message)
 
     // We want to check if we can make a network call
     const appSettings = await getAppConfig()
 
-    console.log("appSettings:", appSettings)
+    authLogger.debug("appSettings:", appSettings)
 
     if (message) {
       await Notifications.scheduleNotificationAsync({
@@ -59,7 +74,9 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       })
     }
   } catch (error) {
-    console.error("Error in background notification task", error)
+    captureError(
+      new NotificationError({ error, additionalMessage: "Error in background notification task" }),
+    )
   }
 })
 

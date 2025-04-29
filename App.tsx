@@ -20,6 +20,7 @@ import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
+import { logger } from "@/utils/logger/logger"
 import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
@@ -41,6 +42,15 @@ sentryInit()
 configureForegroundNotificationBehavior()
 
 export function App() {
+  if (global.__IS_BACKGROUND_NOTIFICATION) {
+    logger.debug("App is running in background")
+    return null
+  }
+
+  return <Content />
+}
+
+function Content() {
   useMonitorNetworkConnectivity()
   useReactQueryDevTools(reactQueryClient)
   useSetupStreamingSubscriptions()
