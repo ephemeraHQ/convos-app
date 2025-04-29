@@ -22,7 +22,7 @@ export async function unregisterBackgroundNotificationTaskSmall() {
   }
 }
 
-async function registerBackgroundNotificationTask() {
+export async function registerBackgroundNotificationTaskSmall() {
   try {
     if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK)) {
       return
