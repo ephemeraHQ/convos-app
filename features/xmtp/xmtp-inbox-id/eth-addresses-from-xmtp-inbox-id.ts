@@ -1,7 +1,6 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { getInboxStates } from "@xmtp/react-native-sdk"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { IEthereumAddress } from "@/utils/evm/address"
-import { ensureXmtpInstallationQueryData } from "../xmtp-installations/xmtp-installation.query"
 
 export async function getEthAddressesFromInboxIds(args: {
   clientInboxId: IXmtpInboxId
@@ -9,11 +8,11 @@ export async function getEthAddressesFromInboxIds(args: {
 }) {
   const { clientInboxId, inboxIds } = args
 
-  const installationId = await ensureXmtpInstallationQueryData({
+  const client = await getXmtpClientByInboxId({
     inboxId: clientInboxId,
   })
 
-  const inboxStates = await getInboxStates(installationId, true, inboxIds)
+  const inboxStates = await client.inboxStates(true, inboxIds)
 
   return inboxStates.reduce(
     (acc, inboxState) => {

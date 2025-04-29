@@ -1,24 +1,26 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useCallback } from "react"
 import { Share, ViewStyle } from "react-native"
-import { config } from "@/config"
 import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { HStack } from "@/design-system/HStack"
 import { iconRegistry } from "@/design-system/Icon/Icon"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
+import { generateProfileUrl } from "@/features/profiles/utils/profile-url"
 import { translate } from "@/i18n"
 import { useHeader } from "@/navigation/use-header"
 import { useRouter } from "@/navigation/use-navigation"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { Haptics } from "@/utils/haptics"
-import { generateProfileUrl } from "@/features/profiles/utils/profile-url"
 
 export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId }) {
   const { theme, themed } = useAppTheme()
   const router = useRouter()
 
-  const { displayName, username } = usePreferredDisplayInfo({ inboxId })
+  const { displayName, username } = usePreferredDisplayInfo({
+    inboxId,
+    caller: "ProfileOtherScreenHeader",
+  })
 
   const handleChatPress = useCallback(() => {
     router.navigate("Conversation", {

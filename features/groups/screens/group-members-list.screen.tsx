@@ -7,11 +7,11 @@ import { EmptyState } from "@/design-system/empty-state"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
-import { useGroupQuery } from "@/features/groups/queries/group.query"
+import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
 import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
-import { useRouter } from "@/navigation/use-navigation"
+import { useRouteParams, useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 
 export const GroupMembersListScreen = memo(function GroupMembersListScreen(
@@ -19,13 +19,6 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
 ) {
   const router = useRouter()
   const { xmtpConversationId } = props.route.params
-  const currentSender = useSafeCurrentSender()
-  const insets = useSafeAreaInsets()
-
-  const { data: group, isLoading: isGroupLoading } = useGroupQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-  })
 
   const handleBackPress = useCallback(() => {
     router.goBack()
@@ -48,34 +41,48 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
     [handleBackPress, handleAddMembersPress],
   )
 
-  if (isGroupLoading) {
+  return (
+    <>
+      <Screen contentContainerStyle={$globalStyles.flex1}>
+        <List />
+      </Screen>
+      <GroupMemberDetailsBottomSheet />
+    </>
+  )
+})
+
+const List = memo(function List() {
+  const insets = useSafeAreaInsets()
+  const currentSender = useSafeCurrentSender()
+  const { xmtpConversationId } = useRouteParams<"GroupMembersList">()
+
+  const { members, isLoading: isLoadingMembers } = useGroupMembers({
+    xmtpConversationId,
+    clientInboxId: currentSender.inboxId,
+    caller: "GroupMembersListScreen",
+  })
+
+  if (isLoadingMembers) {
     return null
   }
 
-  if (!group) {
+  if (!members) {
     return (
-      <Screen preset="fixed">
-        <EmptyState
-          title="Group not found"
-          description="This might be an issue. Please report it to support."
-        />
-      </Screen>
+      <EmptyState
+        title="Members not found"
+        description="This might be an issue. Please report it to support."
+      />
     )
   }
 
   return (
-    <>
-      <Screen contentContainerStyle={$globalStyles.flex1}>
-        <FlashList
-          contentContainerStyle={{
-            paddingBottom: insets.bottom,
-          }}
-          data={sortGroupMembers(Object.values(group?.members.byId || {}))}
-          renderItem={({ item }) => <MemberListItem memberInboxId={item.inboxId} />}
-          estimatedItemSize={60}
-        />
-      </Screen>
-      <GroupMemberDetailsBottomSheet />
-    </>
+    <FlashList
+      contentContainerStyle={{
+        paddingBottom: insets.bottom,
+      }}
+      data={sortGroupMembers(Object.values(members.byId))}
+      renderItem={({ item }) => <MemberListItem memberInboxId={item.inboxId} />}
+      estimatedItemSize={60}
+    />
   )
 })

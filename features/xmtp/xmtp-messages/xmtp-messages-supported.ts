@@ -1,4 +1,5 @@
 import {
+  isSupportedXmtpContentType,
   isXmtpGroupUpdatedContentType,
   isXmtpReadReceiptContentType,
 } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
@@ -20,6 +21,10 @@ export function isSupportedXmtpMessage(message: IXmtpDecodedMessage) {
     isXmtpGroupUpdatedContentType(message.contentTypeId) &&
     xmtpMessageIsDisappearingMessageFrom(message as IXmtpDecodedGroupUpdatedMessage)
   ) {
+    return false
+  }
+
+  if (!isSupportedXmtpContentType(message.contentTypeId)) {
     return false
   }
 

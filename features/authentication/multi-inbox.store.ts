@@ -206,14 +206,10 @@ export function isCurrentSender(sender: Partial<CurrentSender>) {
   )
 }
 
-export function useAllInboxIds() {
-  return useMultiInboxStore((state) => state.senders.map((sender) => sender.inboxId))
-}
-
 export function resetMultiInboxStore() {
   useMultiInboxStore.getState().actions.reset()
 }
 
-export function getMultiInboxStoreSenders() {
+export function getAllSenders() {
   return useMultiInboxStore.getState().senders
 }

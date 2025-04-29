@@ -1,32 +1,33 @@
-import {
-  PrivyUser,
-  usePrivy,
-  useEmbeddedEthereumWallet as usePrivyEmbeddedEthereumWallet,
-} from "@privy-io/expo"
-import {
-  useLoginWithPasskey as usePrivyLoginWithPasskey,
-  useSignupWithPasskey as usePrivySignupWithPasskey,
-} from "@privy-io/expo/passkey"
-import React, { createContext, useCallback, useContext, useEffect, useMemo } from "react"
-import { RELYING_PARTY } from "@/features/auth-onboarding/auth-onboarding.constants"
+import { createPasskey, isSupported, PasskeyStamper } from "@turnkey/react-native-passkey-stamper"
+import { TurnkeyClient, useTurnkey } from "@turnkey/sdk-react-native"
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import { v4 as uuidv4 } from "uuid"
+import { showSnackbar } from "@/components/snackbar/snackbar.service"
+import { config } from "@/config"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
+import { createSubOrganization } from "@/features/authentication/authentication.api"
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
-import { useSmartWalletClient } from "@/features/wallets/smart-wallet"
-import { createXmtpSignerFromSwc } from "@/features/wallets/utils/create-xmtp-signer-from-swc"
-import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { useCreateXmtpSignerFromTurnkey } from "@/features/wallets/hooks/use-create-xmtp-signer-from-turnkey"
+import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client-create"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
-import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { useWaitUntil } from "@/hooks/use-wait-until"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
-import { AuthenticationError } from "@/utils/error"
+import { getHumanReadableDateWithTime } from "@/utils/date"
+import { AuthenticationError, ensureError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { authLogger } from "@/utils/logger/logger"
 import { tryCatch } from "@/utils/try-catch"
 
 type IAuthOnboardingContextType = {
-  user: PrivyUser | null
   login: () => Promise<void>
   signup: () => Promise<void>
 }
@@ -39,146 +40,162 @@ const AuthOnboardingContext = createContext<IAuthOnboardingContextType>(
   {} as IAuthOnboardingContextType,
 )
 
-const smartWalletCreationTooLongErrorMessage = "Smart wallet took too long to create"
+const errorsToIgnore = [
+  "com.apple.AuthenticationServices.AuthorizationError error 1001", // User cancelled the passkey registration
+]
 
 export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps) => {
   const { children } = props
-
-  const { smartWalletClient } = useSmartWalletClient()
-  const { create: createEmbeddedWallet } = usePrivyEmbeddedEthereumWallet()
-  const { loginWithPasskey: privyLoginWithPasskey } = usePrivyLoginWithPasskey()
-  const { signupWithPasskey: privySignupWithPasskey } = usePrivySignupWithPasskey()
-  const { user: privyUser, isReady: isPrivyReady, logout: privyLogout } = usePrivy()
+  const {
+    createEmbeddedKey,
+    createSession,
+    createSessionFromEmbeddedKey,
+    client: turnkeyClient,
+    session,
+  } = useTurnkey()
 
   const { logout } = useLogout()
 
+  const createXmtpSignerFromTurnkey = useCreateXmtpSignerFromTurnkey()
+
+  const flowType = useRef<"login" | "signup">("login")
+  const isCreatingXmtpClient = useRef(false)
+  const [readyForXmtpClient, setReadyForXmtpClient] = useState(false)
+
   useEffect(() => {
     return () => {
-      // Reset the store when the component unmounts
+      authLogger.debug("AuthOnboardingContextProvider unmounted, resetting state")
       useAuthOnboardingStore.getState().actions.reset()
     }
   }, [])
 
-  const { waitUntil: waitUntilPrivyIsReady } = useWaitUntil({
-    thing: isPrivyReady,
-    errorMessage: "Privy took too long to be ready",
-  })
+  useEffect(() => {
+    if (isCreatingXmtpClient.current || !turnkeyClient || !session || !readyForXmtpClient) {
+      return
+    }
 
-  const { waitUntil: waitUntilSmartWalletClientIsReady } = useWaitUntil({
-    thing: smartWalletClient,
-    timeoutMs: 20000, // Yes unfortunately, this can sometimes take a while... Need to investigate our RPC
-    errorMessage: smartWalletCreationTooLongErrorMessage,
-  })
+    ;(async () => {
+      try {
+        const walletAddress = session.user?.wallets[0].accounts[0].address as IEthereumAddress
+
+        isCreatingXmtpClient.current = true
+        authLogger.debug(`Creating XMTP client for wallet: ${walletAddress}`)
+
+        const { data: xmtpClient, error: xmtpError } = await tryCatch(
+          createXmtpClient({
+            inboxSigner: createXmtpSignerFromTurnkey(),
+          }),
+        )
+        authLogger.debug("XMTP client created successfully")
+
+        if (xmtpError) {
+          throw xmtpError
+        }
+
+        if (!xmtpClient) {
+          throw new Error("XMTP client creation failed")
+        }
+
+        authLogger.debug("Validating XMTP installation")
+        const isValid = await validateXmtpInstallation({
+          inboxId: xmtpClient.inboxId,
+        })
+
+        if (!isValid) {
+          throw new Error("Invalid client installation")
+        }
+        authLogger.debug("XMTP installation validated successfully")
+
+        useMultiInboxStore.getState().actions.setCurrentSender({
+          ethereumAddress: walletAddress,
+          inboxId: xmtpClient.inboxId,
+        })
+
+        if (flowType.current === "login") {
+          authLogger.debug("Login flow detected, hydrating auth")
+          await hydrateAuth()
+        } else {
+          authLogger.debug("Signup flow detected, moving to contact card")
+          useAuthOnboardingStore.getState().actions.setPage("contact-card")
+        }
+      } catch (error) {
+        captureErrorWithToast(
+          new AuthenticationError({
+            error,
+            additionalMessage: "Failed to create XMTP client flow",
+          }),
+          {
+            message: "Failed to sign in with passkey",
+          },
+        )
+        logout({ caller: "useLogin" }).catch(captureError)
+        useAuthOnboardingStore.getState().actions.reset()
+      } finally {
+        isCreatingXmtpClient.current = false
+        useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
+      }
+    })()
+  }, [turnkeyClient, session, logout, readyForXmtpClient, createXmtpSignerFromTurnkey])
 
   const login = useCallback(async () => {
+    if (!isSupported()) {
+      showSnackbar({
+        message: "Passkeys are not supported on this device",
+        type: "error",
+      })
+      return
+    }
+
     try {
+      authLogger.debug("Starting login flow")
+      flowType.current = "login"
+
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
 
-      // Step 1: Passkey login
-      authLogger.debug(`Starting passkey authentication`)
-
-      await waitUntilPrivyIsReady()
-
-      // Just to make sure because we often receive this error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
-      authLogger.debug(`Privy logging out...`)
-      await privyLogout()
-      authLogger.debug(`Privy logged out`)
-
-      const { data: privyUser, error: passkeyLoginError } = await tryCatch(
-        privyLoginWithPasskey({
-          relyingParty: RELYING_PARTY,
-        }),
-      )
-
-      if (passkeyLoginError) {
-        throw passkeyLoginError
-      }
-
-      if (!privyUser) {
-        throw new Error("Passkey login failed")
-      }
-
-      // Step 2: Wallet
-      authLogger.debug(`Waiting for smart wallet to be created`)
-      const { data: swcClient, error: swcError } = await tryCatch(
-        waitUntilSmartWalletClientIsReady(),
-      )
-
-      if (swcError) {
-        throw swcError
-      }
-
-      if (!swcClient) {
-        throw new Error("Smart wallet creation failed")
-      }
-
-      authLogger.debug(`Smart wallet created`)
-
-      // Step 3: XMTP Inbox client
-      const xmtpClient = await createXmtpClient({
-        inboxSigner: createXmtpSignerFromSwc(swcClient),
+      authLogger.debug("Creating PasskeyStamper")
+      const stamper = new PasskeyStamper({
+        rpId: config.app.webDomain,
       })
 
-      if (!xmtpClient) {
-        throw new Error("XMTP client creation failed")
+      const httpClient = new TurnkeyClient({ baseUrl: config.turnkey.turnkeyApiUrl }, stamper)
+
+      authLogger.debug("Creating embedded key")
+      const targetPublicKey = await createEmbeddedKey()
+      authLogger.debug("Embedded key created")
+
+      authLogger.debug("Creating read-write session")
+      const sessionResponse = await httpClient.createReadWriteSession({
+        type: "ACTIVITY_TYPE_CREATE_READ_WRITE_SESSION_V2",
+        timestampMs: Date.now().toString(),
+        organizationId: config.turnkey.organizationId, // Parent org ID
+        parameters: {
+          targetPublicKey,
+        },
+      })
+      authLogger.debug("Read-write session response received")
+
+      const credentialBundle =
+        sessionResponse.activity.result.createReadWriteSessionResultV2?.credentialBundle
+
+      if (!credentialBundle) {
+        throw new Error("Failed to get credential bundle")
       }
 
-      const isValid = await validateXmtpInstallation({
-        inboxId: xmtpClient.inboxId,
+      authLogger.debug("Creating session with credential bundle")
+      await createSession({
+        bundle: credentialBundle,
       })
+      authLogger.debug("Session created successfully")
 
-      if (!isValid) {
-        throw new Error("Invalid client installation")
-      }
-
-      // Step 4: Set the current sender
-      useMultiInboxStore.getState().actions.setCurrentSender({
-        ethereumAddress: swcClient.account.address as IEthereumAddress,
-        inboxId: xmtpClient.inboxId as IXmtpInboxId,
-      })
-
-      await hydrateAuth()
+      setReadyForXmtpClient(true)
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message.includes("UserCancelled") ||
-          // Happens when we also cancel the passkey login
-          error.message.includes(
-            "(com.apple.AuthenticationServices.AuthorizationError error 1001.)",
-          ))
-      ) {
-        // User cancelled the passkey login
-      } else if (
-        error instanceof Error &&
-        (error.message.includes("Biometrics must be enabled") ||
-          error.message.includes("Calling the 'create' function has failed") ||
-          error.message.includes("Calling the 'get' function has failed"))
-      ) {
+      const ensuredError = ensureError(error)
+
+      if (!errorsToIgnore.some((e) => ensuredError.message.includes(e))) {
         captureErrorWithToast(
-          new AuthenticationError({
-            error,
-            additionalMessage: "You must enable biometrics to use passkeys",
-          }),
+          new AuthenticationError({ error, additionalMessage: "Failed to sign in with passkey" }),
           {
-            message: "You must enable biometrics to use passkeys",
-          },
-        )
-      }
-      // We often see this weird error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
-      else if (error instanceof Error && error.message.includes("Already logged in")) {
-        captureErrorWithToast(
-          new AuthenticationError({
-            error,
-          }),
-          {
-            message: "You're already logged in. Please try again",
-          },
-        )
-      } else {
-        captureErrorWithToast(
-          new AuthenticationError({ error, additionalMessage: "Failed to login with passkey" }),
-          {
-            message: "Failed to login with passkey",
+            message: "Failed to sign in with passkey",
           },
         )
       }
@@ -186,130 +203,70 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       logout({ caller: "AuthContextProvider.login" }).catch(captureError)
       useAuthOnboardingStore.getState().actions.reset()
     } finally {
+      setReadyForXmtpClient(false)
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [
-    privyLoginWithPasskey,
-    privyLogout,
-    logout,
-    waitUntilPrivyIsReady,
-    waitUntilSmartWalletClientIsReady,
-  ])
+  }, [createEmbeddedKey, createSession, logout])
 
   const signup = useCallback(async () => {
+    if (!isSupported()) {
+      showSnackbar({
+        message: "Passkeys are not supported on this device",
+        type: "error",
+      })
+      return
+    }
+
     try {
+      authLogger.debug("Starting signup flow")
+      flowType.current = "signup"
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
 
-      // Step 1: Passkey signup
-      authLogger.debug(`Waiting for Privy to be ready...`)
-      await waitUntilPrivyIsReady()
-      authLogger.debug(`Privy is ready`)
+      const todayBeautifulString = getHumanReadableDateWithTime(new Date())
+      const passkeyName = `Convos ${todayBeautifulString}`
 
-      // Just to make sure because we often receive this error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
-      authLogger.debug(`Privy logging out...`)
-      await privyLogout()
-      authLogger.debug(`Privy logged out`)
-
-      authLogger.debug(`Signing up with passkey...`)
-      const { data: user, error: signupError } = await tryCatch(
-        privySignupWithPasskey({ relyingParty: RELYING_PARTY }),
-      )
-
-      if (signupError) {
-        throw signupError
-      }
-
-      if (!user) {
-        throw new Error("Passkey signup failed")
-      }
-
-      authLogger.debug(`Passkey signup complete`)
-
-      useAuthOnboardingStore.getState().actions.setPage("contact-card")
-
-      // Step 2: Create embedded wallet
-      authLogger.debug(`Creating embedded wallet...`)
-      const { error: walletError } = await tryCatch(createEmbeddedWallet())
-
-      if (walletError) {
-        throw walletError
-      }
-
-      authLogger.debug(`Embedded wallet created`)
-
-      authLogger.debug(`Waiting for smart wallet to be created`)
-      const { data: swcClient, error: swcError } = await tryCatch(
-        waitUntilSmartWalletClientIsReady(),
-      )
-
-      if (swcError) {
-        throw swcError
-      }
-
-      if (!swcClient) {
-        throw new Error("Smart wallet creation failed")
-      }
-
-      authLogger.debug(`Smart wallet created`)
-
-      // Step 3: Create XMTP Inbox
-      const { data: xmtpClient, error: xmtpError } = await tryCatch(
-        createXmtpClient({
-          inboxSigner: createXmtpSignerFromSwc(swcClient),
-        }),
-      )
-
-      if (xmtpError) {
-        throw xmtpError
-      }
-
-      if (!xmtpClient) {
-        throw new Error("XMTP client creation failed")
-      }
-
-      // Step 4: Set the current sender
-      useMultiInboxStore.getState().actions.setCurrentSender({
-        ethereumAddress: swcClient.account.address as IEthereumAddress,
-        inboxId: xmtpClient.inboxId as IXmtpInboxId,
+      authLogger.debug("Creating passkey")
+      const authenticatorParams = await createPasskey({
+        authenticatorName: "Passkey",
+        rp: {
+          id: config.app.webDomain,
+          name: `https://${config.app.webDomain}`,
+        },
+        user: {
+          id: uuidv4(),
+          name: passkeyName,
+          displayName: passkeyName,
+        },
       })
+      authLogger.debug("Passkey created successfully")
+
+      authLogger.debug("Creating embedded key")
+      const ephemeralPublicKey = await createEmbeddedKey({
+        isCompressed: true,
+      })
+      authLogger.debug("Embedded key created")
+
+      authLogger.debug("Creating sub organization")
+      const { subOrgId } = await createSubOrganization({
+        ephemeralPublicKey: ephemeralPublicKey,
+        passkey: {
+          challenge: authenticatorParams.challenge,
+          attestation: authenticatorParams.attestation,
+        },
+      })
+      authLogger.debug(`Sub organization created with ID: ${subOrgId}`)
+
+      authLogger.debug("Creating session from embedded key")
+      await createSessionFromEmbeddedKey({
+        subOrganizationId: subOrgId,
+      })
+      authLogger.debug("Session created successfully")
+
+      setReadyForXmtpClient(true)
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message.includes("UserCancelled") ||
-          // Happens when we also cancel the passkey registration
-          error.message.includes(
-            "(com.apple.AuthenticationServices.AuthorizationError error 1001.)",
-          ))
-      ) {
-        // User cancelled the passkey registration
-      } else if (
-        error instanceof Error &&
-        (error.message.includes("Biometrics must be enabled") ||
-          error.message.includes("Calling the 'create' function has failed") ||
-          error.message.includes("Calling the 'get' function has failed"))
-      ) {
-        captureErrorWithToast(
-          new AuthenticationError({
-            error,
-            additionalMessage: "You must enable biometrics to use passkeys",
-          }),
-          {
-            message: "You must enable biometrics to use passkeys",
-          },
-        )
-      }
-      // We often see this weird error: "Already logged in, use `useLinkWithPasskey` if you are trying to link a passkey to an existing account"
-      else if (error instanceof Error && error.message.includes("Already logged in")) {
-        captureErrorWithToast(
-          new AuthenticationError({
-            error,
-            additionalMessage: "You're already logged in. Please try again",
-          }),
-          {
-            message: "You're already logged in. Please try again",
-          },
-        )
-      } else {
+      const ensuredError = ensureError(error)
+
+      if (!errorsToIgnore.some((e) => ensuredError.message.includes(e))) {
         captureErrorWithToast(
           new AuthenticationError({ error, additionalMessage: "Failed to sign up with passkey" }),
           {
@@ -321,18 +278,12 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       logout({ caller: "AuthContextProvider.signup" }).catch(captureError)
       useAuthOnboardingStore.getState().actions.reset()
     } finally {
+      setReadyForXmtpClient(false)
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [
-    createEmbeddedWallet,
-    privySignupWithPasskey,
-    logout,
-    waitUntilPrivyIsReady,
-    waitUntilSmartWalletClientIsReady,
-    privyLogout,
-  ])
+  }, [createEmbeddedKey, createSessionFromEmbeddedKey, logout])
 
-  const value = useMemo(() => ({ login, signup, user: privyUser }), [login, signup, privyUser])
+  const value = useMemo(() => ({ login, signup }), [login, signup])
 
   return <AuthOnboardingContext.Provider value={value}>{children}</AuthOnboardingContext.Provider>
 }

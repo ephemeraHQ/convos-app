@@ -19,6 +19,7 @@ export const ProfileContactCard = memo(function ProfileContactCard({
 }: IProfileContactCardProps) {
   const { displayName, avatarUrl, username } = usePreferredDisplayInfo({
     inboxId,
+    caller: "ProfileContactCard",
   })
 
   const { theme } = useAppTheme()

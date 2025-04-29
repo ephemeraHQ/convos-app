@@ -136,30 +136,6 @@ export const en = {
     },
     backButton: "Back",
   },
-  privyConnect: {
-    title: {
-      enterPhone: "Connect via\nphone number",
-      verifyPhone: "Confirmation code",
-    },
-    storedSecurely:
-      "Your phone number is stored securely and only shared with Privy so you can log back in.",
-    buttons: {
-      continue: "Continue",
-      back: "Back",
-      resendCode: "Resend code",
-    },
-    phoneInput: {
-      placeholder: "Enter your phone number",
-    },
-    otpInput: {
-      enterCode: "Enter the confirmation code sent to",
-    },
-    errors: {
-      invalidPhoneNumber: "Please enter a valid phone number",
-      invalidCode: "The code you entered is not valid, please try again",
-    },
-    resendCodeIn: "Resend code in {{seconds}} seconds...",
-  },
   createEphemeral: {
     title: "Create an ephemeral account",
     subtitle:

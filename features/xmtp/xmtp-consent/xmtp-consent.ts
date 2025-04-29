@@ -1,6 +1,5 @@
 import { IXmtpConsentState, IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { canMessage, setConsentState } from "@xmtp/react-native-sdk"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -11,12 +10,12 @@ export async function xmtpInboxIdCanMessageEthAddress(args: {
 }) {
   const { inboxId, ethAddress } = args
 
-  const installationId = await ensureXmtpInstallationQueryData({
+  const client = await getXmtpClientByInboxId({
     inboxId,
   })
 
   const canMessageResult = await wrapXmtpCallWithDuration("canMessage", () =>
-    canMessage(installationId, [{ kind: "ETHEREUM", identifier: ethAddress }]),
+    client.canMessage([{ kind: "ETHEREUM", identifier: ethAddress }]),
   )
 
   return canMessageResult[ethAddress.toLowerCase()]
@@ -71,12 +70,16 @@ export async function setXmtpConsentStateForInboxId(args: {
   const { peerInboxId, consent } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: peerInboxId,
     })
 
     await wrapXmtpCallWithDuration("setConsentState", () =>
-      setConsentState(installationId, peerInboxId, "inbox_id", consent),
+      client.preferences.setConsentState({
+        value: peerInboxId,
+        entryType: "inbox_id",
+        state: consent,
+      }),
     )
   } catch (error) {
     throw new XMTPError({
@@ -93,13 +96,17 @@ export const updateXmtpConsentForGroupsForInbox = async (args: {
 }) => {
   const { clientInboxId, groupIds, consent } = args
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     for (const groupId of groupIds) {
       await wrapXmtpCallWithDuration("setConsentState (group)", () =>
-        setConsentState(installationId, groupId, "conversation_id", consent),
+        client.preferences.setConsentState({
+          value: groupId,
+          entryType: "conversation_id",
+          state: consent,
+        }),
       )
     }
   } catch (error) {

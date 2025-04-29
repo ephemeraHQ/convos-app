@@ -62,7 +62,7 @@ export async function getConvosAuthenticationHeaders(): Promise<XmtpApiHeaders> 
  * 2. Authenticate endpoint - Creates a new JWT for an existing user
  *
  * Note: We don't use refresh tokens since users are already authenticated via
- * Privy passkeys. See authentication.readme.md for more details.
+ * Turnkey passkeys. See authentication.readme.md for more details.
  */
 export async function getConvosAuthenticatedHeaders() {
   const jwt = await ensureJwtQueryData()

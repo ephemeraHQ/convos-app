@@ -56,6 +56,10 @@ export const shared = {
   expo: {
     projectId: appConfigExtra.eas.projectId,
   },
+  turnkey: {
+    organizationId: process.env.EXPO_PUBLIC_TURNKEY_ORGANIZATION_ID || "",
+    turnkeyApiUrl: process.env.EXPO_PUBLIC_TURNKEY_API_URL || "https://api.turnkey.com",
+  },
   firebase: {
     appCheckDebugToken:
       Platform.OS === "android"
@@ -67,10 +71,6 @@ export const shared = {
   },
   thirdweb: {
     clientId: process.env.EXPO_PUBLIC_THIRDWEB_CLIENT_ID,
-  },
-  privy: {
-    appId: process.env.EXPO_PUBLIC_PRIVY_APP_ID,
-    clientId: process.env.EXPO_PUBLIC_PRIVY_CLIENT_ID,
   },
   evm: {
     rpcEndpoint: process.env.EXPO_PUBLIC_EVM_RPC_ENDPOINT,

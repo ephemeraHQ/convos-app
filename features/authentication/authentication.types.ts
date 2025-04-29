@@ -1,1 +1,1 @@
-export type IPrivyUserId = string & { readonly __brand: unique symbol }
+export type ITurnkeyUserId = string & { readonly __brand: unique symbol }

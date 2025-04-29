@@ -137,8 +137,11 @@ export function convertXmtpMessageToConvosMessage(
   }
 
   const _exhaustiveCheck: never = message
-  throw new Error(`Unhandled message type to convert from XMTP to ConvoMessage`)
+  throw new Error(
+    `Unhandled message type to convert from XMTP to ConvoMessage ${JSON.stringify(message)}`,
+  )
 }
+
 export function getConvosMessageStatusForXmtpMessage(
   message: IXmtpDecodedMessage,
 ): IConversationMessageStatus {

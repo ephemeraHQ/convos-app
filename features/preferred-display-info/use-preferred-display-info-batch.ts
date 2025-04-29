@@ -11,8 +11,15 @@ import {
 import { getProfileQueryConfig } from "@/features/profiles/profiles.query"
 import { getSocialProfilesForInboxIdQueryOptions } from "@/features/social-profiles/social-profiles-for-inbox-id.query"
 
-export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[] }) {
-  const { xmtpInboxIds } = args
+export function usePreferredDisplayInfoBatch(args: {
+  xmtpInboxIds: IXmtpInboxId[]
+  caller: string
+}) {
+  const { xmtpInboxIds, caller: callerArg } = args
+
+  const caller = useMemo(() => {
+    return `${callerArg}:usePreferredDisplayInfoBatch`
+  }, [callerArg])
 
   // Get a stable reference to the inbox IDs
   const stableInboxIds = useStableArray(xmtpInboxIds)
@@ -23,9 +30,9 @@ export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[
   const profileQueryConfigs = useMemo(
     () =>
       stableInboxIds.map((inboxId) => ({
-        ...getProfileQueryConfig({ xmtpId: inboxId, caller: "usePreferredDisplayInfoBatch" }),
+        ...getProfileQueryConfig({ xmtpId: inboxId, caller }),
       })),
-    [stableInboxIds],
+    [stableInboxIds, caller],
   )
 
   // Memoize the social profile queries configuration
@@ -35,10 +42,10 @@ export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[
         getSocialProfilesForInboxIdQueryOptions({
           inboxId,
           clientInboxId: currentSender.inboxId,
-          caller: "usePreferredDisplayInfoBatch",
+          caller,
         }),
       ),
-    [stableInboxIds, currentSender.inboxId],
+    [stableInboxIds, currentSender.inboxId, caller],
   )
 
   // Execute the profile queries
@@ -69,7 +76,7 @@ export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[
         profile,
         socialProfiles,
         inboxId,
-        ethAddress: profile?.privyAddress,
+        ethAddress: profile?.turnkeyAddress,
       })
 
       const avatarUrl = getPreferredAvatarUrl({
@@ -80,7 +87,7 @@ export function usePreferredDisplayInfoBatch(args: { xmtpInboxIds: IXmtpInboxId[
       const ethAddress = getPreferredEthAddress({
         profile,
         socialProfiles,
-        ethAddress: profile?.privyAddress,
+        ethAddress: profile?.turnkeyAddress,
       })
 
       const username = profile?.username

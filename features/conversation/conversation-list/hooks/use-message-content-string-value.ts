@@ -194,10 +194,12 @@ export function useMessageContentStringValue(message: Nullable<IConversationMess
 
   const addedMemberDisplayInfos = usePreferredDisplayInfoBatch({
     xmtpInboxIds: addedMemberInboxIds,
+    caller: "useMessageContentStringValue",
   })
 
   const removedMemberDisplayInfos = usePreferredDisplayInfoBatch({
     xmtpInboxIds: removedMemberInboxIds,
+    caller: "useMessageContentStringValue",
   })
 
   return useMemo(() => {

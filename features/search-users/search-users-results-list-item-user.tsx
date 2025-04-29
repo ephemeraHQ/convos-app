@@ -20,6 +20,7 @@ export const SearchUsersResultsListItemUser = memo(function SearchUsersResultsLi
 
   const { displayName, avatarUrl, username } = usePreferredDisplayInfo({
     inboxId,
+    caller: "SearchUsersResultsListItemUser",
   })
 
   return (

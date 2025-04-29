@@ -287,9 +287,12 @@ const EditableProfileContactCardAvatar = memo(function EditableProfileContactCar
       if (error instanceof UserCancelledError) {
         return
       }
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Failed to add avatar" }), {
-        message: "Failed to add avatar"
-      })
+      captureErrorWithToast(
+        new GenericError({ error, additionalMessage: "Failed to add avatar" }),
+        {
+          message: "Failed to add avatar",
+        },
+      )
     }
   }, [addPFP, profileMeStore])
 

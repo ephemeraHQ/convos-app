@@ -1,13 +1,10 @@
-import { usePrivy } from "@privy-io/expo"
+import { useTurnkey } from "@turnkey/sdk-react-native"
 import { AxiosError } from "axios"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { formatRandomUsername } from "@/features/auth-onboarding/utils/format-random-user-name"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { IPrivyUserId } from "@/features/authentication/authentication.types"
-import {
-  getMultiInboxStoreSenders,
-  getSafeCurrentSender,
-} from "@/features/authentication/multi-inbox.store"
+import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
+import { getAllSenders, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   createIdentity,
   fetchDeviceIdentities,
@@ -26,7 +23,6 @@ import {
   getDevicePushNotificationsToken,
   getExpoPushNotificationsToken,
 } from "@/features/notifications/notifications.service"
-import { useSmartWalletClient } from "@/features/wallets/smart-wallet"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -38,13 +34,8 @@ import { invalidateCurrentUserQuery } from "./current-user.query"
 /**
  * Handles the device registration and identity creation/linking flow
  */
-async function makeSureDeviceAndIdentitiesAreCreated(args: {
-  userId: IConvosUserID
-  privyUserId: IPrivyUserId
-  // privyAddress: IEthereumAddress
-  // xmtpId: IXmtpInboxId
-}) {
-  const { userId, privyUserId } = args
+async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUserID }) {
+  const { userId } = args
 
   // 1. Check for existing deviceId in SecureStore
   let deviceId = await getStoredDeviceId({ userId })
@@ -102,7 +93,7 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
     })
   }
 
-  const senders = getMultiInboxStoreSenders()
+  const senders = getAllSenders()
 
   const missingIdentities = senders.filter(
     (sender) => !identities.some((identity) => identity.xmtpId === sender.inboxId),
@@ -114,7 +105,7 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
     await createIdentity({
       deviceId,
       input: {
-        privyAddress: sender.ethereumAddress, // What if it's not a privy address and we connected via EOA?
+        turnkeyAddress: sender.ethereumAddress, // What if it's not a Turnkey address and we connected via EOA?
         xmtpId: sender.inboxId,
       },
     })
@@ -122,16 +113,11 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
   }
 
   // 5. Refresh current user data to include new device/identity
-  await invalidateCurrentUserQuery({
-    privyUserId,
-  })
+  await invalidateCurrentUserQuery()
 }
 
-async function startFlow(args: {
-  privyUserId: IPrivyUserId
-  smartWalletClientAddress: IEthereumAddress
-}) {
-  const { privyUserId, smartWalletClientAddress } = args
+async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEthereumAddress }) {
+  const { turnkeyUserId, ethAddress } = args
 
   const { data: currentUser, error: fetchCurrentUserError } = await tryCatch(fetchCurrentUser())
 
@@ -140,7 +126,6 @@ async function startFlow(args: {
     authLogger.debug("User exists, ensuring device and identities are created")
     return makeSureDeviceAndIdentitiesAreCreated({
       userId: currentUser.id,
-      privyUserId,
     })
   }
 
@@ -156,8 +141,8 @@ async function startFlow(args: {
     const currentSender = getSafeCurrentSender()
     const createdUser = await createUserMutation({
       inboxId: currentSender.inboxId,
-      privyUserId,
-      smartContractWalletAddress: smartWalletClientAddress,
+      turnkeyUserId: turnkeyUserId,
+      smartContractWalletAddress: ethAddress,
       profile: getRandomProfile(),
     })
 
@@ -165,7 +150,6 @@ async function startFlow(args: {
 
     await makeSureDeviceAndIdentitiesAreCreated({
       userId: createdUser.id,
-      privyUserId,
     })
     return
   }
@@ -177,33 +161,13 @@ async function startFlow(args: {
 }
 
 /**
- * Ensures user profile exists in backend after Privy signup, creating it if missing
+ * Ensures user profile exists in backend after Turnkey signup, creating it if missing
  * This handles edge cases like app closure during onboarding
  */
 export function useCreateUserIfNoExist() {
-  const { user: privyUser } = usePrivy()
-  const { smartWalletClient } = useSmartWalletClient()
-
-  const isSubscribedRef = useRef(false)
+  const { user } = useTurnkey()
 
   useEffect(() => {
-    if (!privyUser) {
-      //   authLogger.debug("Privy user not found, skipping user creation")
-      return
-    }
-
-    if (!smartWalletClient) {
-      //   authLogger.debug("Smart contract client not found, skipping user creation")
-      return
-    }
-
-    if (isSubscribedRef.current) {
-      //   authLogger.debug("Already subscribed to authentication store, skipping user creation")
-      return
-    }
-
-    isSubscribedRef.current = true
-
     const unsubscribe = useAuthenticationStore.subscribe(
       (state) => state.status,
       (status) => {
@@ -211,15 +175,13 @@ export function useCreateUserIfNoExist() {
           return
         }
 
-        if (!smartWalletClient) {
-          throw new AuthenticationError({
-            error: new Error("Smart contract client not found"),
-          })
+        if (!user) {
+          return
         }
 
         startFlow({
-          privyUserId: privyUser.id as IPrivyUserId,
-          smartWalletClientAddress: smartWalletClient.account.address as IEthereumAddress,
+          turnkeyUserId: user.id as ITurnkeyUserId,
+          ethAddress: user.wallets[0].accounts[0].address as IEthereumAddress,
         }).catch(captureError)
       },
       {
@@ -230,7 +192,7 @@ export function useCreateUserIfNoExist() {
     return () => {
       unsubscribe()
     }
-  }, [privyUser, smartWalletClient])
+  }, [user])
 }
 
 const firstNames = [

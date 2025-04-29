@@ -1,6 +1,5 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { getInboxStates } from "@xmtp/react-native-sdk"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 
@@ -11,12 +10,12 @@ export async function xmtpInboxIdExists(args: {
   const { inboxId, clientInboxId } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     const inboxStates = await wrapXmtpCallWithDuration("inboxStates", () =>
-      getInboxStates(installationId, true, [inboxId]),
+      client.inboxStates(true, [inboxId]),
     )
     return inboxStates.length > 0
   } catch (error) {

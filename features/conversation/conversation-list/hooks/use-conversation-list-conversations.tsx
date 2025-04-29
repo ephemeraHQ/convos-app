@@ -74,7 +74,13 @@ export const useConversationListConversations = () => {
       const messageId = lastMessageIdByConversationId[conversationId]
       const lastMessageQuery = lastMessageQueries.find((query) => query.data?.xmtpId === messageId)
       const lastMessage = lastMessageQuery?.data
-      const timestamp = lastMessage?.sentNs ?? 0
+      // Use last message timestamp if available, otherwise use conversation created timestamp
+      let timestamp = 0
+      if (lastMessage) {
+        timestamp = lastMessage.sentMs
+      } else if (conversation?.createdAt) {
+        timestamp = conversation.createdAt
+      }
 
       // Add to accumulator with timestamp for sorting
       acc.push({

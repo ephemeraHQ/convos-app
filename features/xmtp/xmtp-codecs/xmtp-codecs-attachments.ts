@@ -1,10 +1,6 @@
-import {
-  decryptAttachment,
-  encryptAttachment,
-  RemoteAttachmentMetadata,
-} from "@xmtp/react-native-sdk"
+import { RemoteAttachmentMetadata } from "@xmtp/react-native-sdk"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { XMTPError } from "@/utils/error"
@@ -19,12 +15,12 @@ export const encryptXmtpAttachment = async (args: {
 }) => {
   const { fileUri, mimeType, clientInboxId = getSafeCurrentSender().inboxId } = args
 
-  const installationId = await ensureXmtpInstallationQueryData({
+  const client = await getXmtpClientByInboxId({
     inboxId: clientInboxId,
   })
 
   const encryptedAttachment = await wrapXmtpCallWithDuration("encryptAttachment", () =>
-    encryptAttachment(installationId, { fileUri, mimeType }),
+    client.encryptAttachment({ fileUri, mimeType }),
   )
 
   // Calculate and verify content digest
@@ -66,12 +62,12 @@ export const decryptXmtpAttachment = async (args: {
     })
   }
 
-  const installationId = await ensureXmtpInstallationQueryData({
+  const client = await getXmtpClientByInboxId({
     inboxId: clientInboxId,
   })
 
   const decryptedAttachment = await wrapXmtpCallWithDuration("decryptAttachment", () =>
-    decryptAttachment(installationId, { encryptedLocalFileUri, metadata }),
+    client.decryptAttachment({ encryptedLocalFileUri, metadata }),
   )
 
   return decryptedAttachment

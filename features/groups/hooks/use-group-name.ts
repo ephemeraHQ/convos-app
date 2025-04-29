@@ -41,6 +41,7 @@ export const useGroupName = (args: { xmtpConversationId: IXmtpConversationId }) 
   const memberProfiles = usePreferredDisplayInfoBatch({
     // For now just showing first 4 members
     xmtpInboxIds: group?.memberIds.slice(0, 4) ?? [],
+    caller: "useGroupName",
   })
 
   // Create a fallback name based on member profiles

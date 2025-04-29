@@ -1,5 +1,5 @@
-import { findInboxIdFromIdentity, PublicIdentity } from "@xmtp/react-native-sdk"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { PublicIdentity } from "@xmtp/react-native-sdk"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { GenericError, XMTPError } from "@/utils/error"
@@ -31,12 +31,12 @@ export async function getInboxIdFromEthAddress(args: {
   }
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     const inboxId = (await wrapXmtpCallWithDuration("findInboxIdFromIdentity", () =>
-      findInboxIdFromIdentity(installationId, new PublicIdentity(targetEthAddress, "ETHEREUM")),
+      client.findInboxIdFromIdentity(new PublicIdentity(targetEthAddress, "ETHEREUM")),
     )) as unknown as IXmtpInboxId
 
     return inboxId

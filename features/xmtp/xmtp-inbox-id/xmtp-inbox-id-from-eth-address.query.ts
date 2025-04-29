@@ -14,11 +14,12 @@ type IStrictArgs = {
   targetEthAddress: IEthereumAddress
 }
 
-export function getXmtpInboxIdFromEthAddressQueryOptions(args: IArgs) {
-  const { clientInboxId, targetEthAddress } = args
+export function getXmtpInboxIdFromEthAddressQueryOptions(args: IArgs & { caller?: string }) {
+  const { clientInboxId, targetEthAddress, caller } = args
 
   return queryOptions({
     queryKey: ["xmtp-inbox-id-from-eth-address", clientInboxId, targetEthAddress],
+    meta: { caller },
     queryFn:
       clientInboxId && targetEthAddress
         ? () => {
@@ -31,7 +32,7 @@ export function getXmtpInboxIdFromEthAddressQueryOptions(args: IArgs) {
   })
 }
 
-export function useXmtpInboxIdFromEthAddressQuery(args: IArgs) {
+export function useXmtpInboxIdFromEthAddressQuery(args: IArgs & { caller: string }) {
   return useQuery(getXmtpInboxIdFromEthAddressQueryOptions(args))
 }
 
@@ -42,6 +43,6 @@ export async function invalidateXmtpInboxIdFromEthAddressQuery(args: IStrictArgs
 export function getXmtpInboxIdFromEthAddressQueryData(args: IArgs) {
   return reactQueryClient.getQueryData(getXmtpInboxIdFromEthAddressQueryOptions(args).queryKey)
 }
-export function ensureXmtpInboxIdFromEthAddressQueryData(args: IArgs) {
+export function ensureXmtpInboxIdFromEthAddressQueryData(args: IArgs & { caller: string }) {
   return reactQueryClient.ensureQueryData(getXmtpInboxIdFromEthAddressQueryOptions(args))
 }

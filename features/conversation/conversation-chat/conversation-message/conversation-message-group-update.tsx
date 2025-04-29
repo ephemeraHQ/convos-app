@@ -9,7 +9,6 @@ import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-p
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { logJson } from "@/utils/logger/logger"
 import {
   IConversationMessageGroupUpdated,
   IGroupUpdatedMetadataEntry,
@@ -69,7 +68,10 @@ type IChatGroupMemberLeftProps = {
 
 function ChatGroupMemberLeft({ inboxId }: IChatGroupMemberLeftProps) {
   const { themed, theme } = useAppTheme()
-  const { displayName, avatarUrl } = usePreferredDisplayInfo({ inboxId })
+  const { displayName, avatarUrl } = usePreferredDisplayInfo({
+    inboxId,
+    caller: "ChatGroupMemberLeft",
+  })
 
   return (
     <HStack style={themed($memberContainer)}>
@@ -95,7 +97,10 @@ type IChatGroupMemberJoinedProps = {
 
 function ChatGroupMemberJoined({ inboxId }: IChatGroupMemberJoinedProps) {
   const { themed, theme } = useAppTheme()
-  const { displayName, avatarUrl } = usePreferredDisplayInfo({ inboxId })
+  const { displayName, avatarUrl } = usePreferredDisplayInfo({
+    inboxId,
+    caller: "ChatGroupMemberJoined",
+  })
 
   return (
     <HStack style={themed($memberContainer)}>
@@ -152,6 +157,7 @@ function ChatGroupMetadataUpdate({
   const { themed, theme } = useAppTheme()
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: initiatorInboxId,
+    caller: "ChatGroupMetadataUpdate",
   })
 
   let updateMessage = ""

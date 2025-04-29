@@ -275,6 +275,7 @@ const DmConversationTitle = memo(function DmConversationTitle({
 
   const { displayName, avatarUrl, isLoading } = usePreferredDisplayInfo({
     inboxId: peerInboxId,
+    caller: "DmConversationTitle",
   })
 
   const onPress = useCallback(() => {

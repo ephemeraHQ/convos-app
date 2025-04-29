@@ -1,7 +1,7 @@
 import { memo, useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { IWallet } from "@/features/wallets/connect-wallet/connect-wallet.types"
-import { supportedWallets } from "@/features/wallets/supported-wallets"
+import { supportedWallets } from "@/features/wallets/utils/supported-wallets"
 import { addWalletToInboxId } from "@/features/xmtp/xmtp-inbox-id/add-wallet-to-inbox-id"
 import { invalidateXmtpInboxIdFromEthAddressQuery } from "@/features/xmtp/xmtp-inbox-id/xmtp-inbox-id-from-eth-address.query"
 import { getXmtpSigner } from "@/features/xmtp/xmtp-signer/get-xmtp-signer"
@@ -70,8 +70,8 @@ export const ConnectWalletLinkToInbox = memo(function ConnectWalletLinkToInbox(
       captureErrorWithToast(
         new ConnectWalletError({ error, additionalMessage: "Error linking wallet to inbox" }),
         {
-          message: "Error linking wallet to inbox"
-        }
+          message: "Error linking wallet to inbox",
+        },
       )
     }
   }, [activeWallet])

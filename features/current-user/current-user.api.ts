@@ -7,7 +7,7 @@ export async function fetchCurrentUser() {
   // Trying to get the device id for this specific device
   // If we didn't store the device id or can't get it, it will return the current user with all identities for now
   // const { data: deviceId, error: getStoredDeviceIdError } = await tryCatch(
-  //   getStoredDeviceId({ privyUserId }),
+  //   getStoredDeviceId({ turnkeyUserId }),
   // )
 
   // if (getStoredDeviceIdError) {
