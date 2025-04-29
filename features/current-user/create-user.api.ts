@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { IPrivyUserId } from "@/features/authentication/authentication.types"
+import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { IConvosUserID, identitySchema } from "@/features/current-user/current-user.types"
 import { deviceSchema } from "@/features/devices/devices.types"
 import { getDeviceModelId, getDeviceOs } from "@/features/devices/devices.utils"
@@ -34,7 +34,7 @@ export type ICreateUserApiRequestBody = z.infer<typeof createUserApiRequestBodyS
 
 const createUserApiResponseSchema = z.object({
   id: z.custom<IConvosUserID>(),
-  privyUserId: z.custom<IPrivyUserId>(),
+  privyUserId: z.custom<ITurnkeyUserId>(),
   device: deviceSchema.pick({
     id: true,
     os: true,
@@ -58,7 +58,7 @@ type CreateUserResponse = z.infer<typeof createUserApiResponseSchema>
 
 export type ICreateUserArgs = {
   inboxId: IXmtpInboxId
-  privyUserId: IPrivyUserId
+  privyUserId: ITurnkeyUserId
   smartContractWalletAddress: IEthereumAddress
   profile: Pick<IConvosProfile, "name" | "username" | "avatar" | "description">
 }

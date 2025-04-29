@@ -166,8 +166,8 @@ export const DisappearingMessagesHeaderAction = ({
             additionalMessage: "Failed to update disappearing message settings",
           }),
           {
-            message: "Failed to update disappearing message settings"
-          }
+            message: "Failed to update disappearing message settings",
+          },
         )
       }
     },

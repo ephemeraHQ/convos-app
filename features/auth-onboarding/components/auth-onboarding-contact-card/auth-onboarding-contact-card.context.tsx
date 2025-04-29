@@ -3,7 +3,7 @@ import { isAxiosError } from "axios"
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react"
 import { z } from "zod"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
-import { IPrivyUserId } from "@/features/authentication/authentication.types"
+import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useCreateUserMutation } from "@/features/current-user/create-user.mutation"
@@ -81,7 +81,7 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
 
       await createUserAsync({
         inboxId: currentSender.inboxId,
-        privyUserId: user?.id as IPrivyUserId,
+        privyUserId: user?.id as ITurnkeyUserId,
         smartContractWalletAddress: currentSender.ethereumAddress,
         profile: {
           name: store.name,

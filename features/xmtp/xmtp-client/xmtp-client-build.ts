@@ -9,7 +9,6 @@ import {
 import { getXmtpLocalUrl } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
 import { ISupportedXmtpCodecs, supportedXmtpCodecs } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { isXmtpDbEncryptionKeyError } from "@/features/xmtp/xmtp-errors"
-import { setXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress, lowercaseEthAddress } from "@/utils/evm/address"
@@ -41,11 +40,6 @@ async function _buildXmtpClient(args: {
   const typedClient = client as IXmtpClientWithCodecs
 
   clientByInboxId.set(typedClient.inboxId, Promise.resolve(typedClient))
-
-  setXmtpInstallationQueryData({
-    inboxId: typedClient.inboxId,
-    installationId: typedClient.installationId,
-  })
 
   return typedClient
 }

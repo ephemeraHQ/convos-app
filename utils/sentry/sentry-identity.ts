@@ -114,7 +114,7 @@ function cleanupSentryIdentityTracking() {
 
 // Function to update Sentry user identity with latest data
 function updateSentryIdentity(inboxId: IXmtpInboxId) {
-  const currentUser = getCurrentUserQueryData({ caller: "updateSentryIdentity" })
+  const currentUser = getCurrentUserQueryData()
 
   if (!currentUser?.id) {
     return

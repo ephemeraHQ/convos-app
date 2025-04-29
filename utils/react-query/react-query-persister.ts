@@ -69,13 +69,11 @@ function createReactQueryPersister(storage: IStorage): ReactQueryPersister {
 
         const client = JSON.parse(clientString) as ReactQueryPersistedClient
 
-        if (__DEV__) {
-          persistLogger.debug("React Query hydration complete", {
-            lastHydrationTime: stopTimer(timerId),
-            lastHydrationSize: clientString.length,
-            lastHydrationQueryCount: client.clientState.queries.length,
-          })
-        }
+        persistLogger.debug("React Query client restored", {
+          lastHydrationTime: stopTimer(timerId),
+          lastHydrationSize: clientString.length,
+          lastHydrationQueryCount: client.clientState.queries.length,
+        })
 
         return client
       } catch (error) {

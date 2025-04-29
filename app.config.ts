@@ -171,6 +171,8 @@ export default () => {
       entitlements: {
         // App check stuff
         "com.apple.developer.devicecheck.appattest-environment": "production",
+        // Add this for keychain access
+        "keychain-access-groups": [`FY4NZR34Z3.${config.ios.bundleIdentifier}`],
       },
       infoPlist: {
         LSApplicationQueriesSchemes: [

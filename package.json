@@ -79,6 +79,7 @@
     "@turnkey/http": "^3.0.0",
     "@turnkey/react-native-passkey-stamper": "^1.0.10",
     "@turnkey/sdk-react-native": "^1.2.0",
+    "@turnkey/viem": "^0.9.0",
     "@walletconnect/react-native-compat": "^2.19.0",
     "@xmtp/content-type-primitives": "^2.0.0",
     "@xmtp/react-native-sdk": "4.2.0-dev.73f1217",

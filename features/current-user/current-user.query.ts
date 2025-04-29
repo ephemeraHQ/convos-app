@@ -1,12 +1,10 @@
 import { queryOptions } from "@tanstack/react-query"
+import { IConvosCurrentUser } from "@/features/current-user/current-user.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { fetchCurrentUser } from "./current-user.api"
-import { IConvosCurrentUser } from "./current-user.types"
 
-type ICurrentUserQueryArgs = {}
-
-export function getCurrentUserQueryOptions(args: ICurrentUserQueryArgs & { caller?: string }) {
+export function getCurrentUserQueryOptions(args: { caller?: string }) {
   const { caller } = args
 
   return queryOptions({
@@ -20,24 +18,22 @@ export function getCurrentUserQueryOptions(args: ICurrentUserQueryArgs & { calle
   })
 }
 
-export function setCurrentUserQueryData(
-  args: ICurrentUserQueryArgs & { user: IConvosCurrentUser },
-) {
+export function setCurrentUserQueryData(args: { user: IConvosCurrentUser }) {
   const { user } = args
   return reactQueryClient.setQueryData(getCurrentUserQueryOptions({}).queryKey, user)
 }
 
-export function invalidateCurrentUserQuery(args: ICurrentUserQueryArgs) {
+export function invalidateCurrentUserQuery() {
   return reactQueryClient.invalidateQueries({
     queryKey: getCurrentUserQueryOptions({}).queryKey,
   })
 }
 
-export function getCurrentUserQueryData(args: ICurrentUserQueryArgs) {
+export function getCurrentUserQueryData() {
   return reactQueryClient.getQueryData(getCurrentUserQueryOptions({}).queryKey)
 }
 
-export function ensureCurrentUserQueryData(args: ICurrentUserQueryArgs & { caller: string }) {
+export function ensureCurrentUserQueryData(args: { caller: string }) {
   const { caller } = args
   return reactQueryClient.ensureQueryData(getCurrentUserQueryOptions({ caller }))
 }

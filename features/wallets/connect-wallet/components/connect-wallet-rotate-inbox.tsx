@@ -69,10 +69,7 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
       })
 
       // Add the turnkey EOA to the new client inbox
-      await newXmtpClient.addAccount(
-        createXmtpSignerFromTurnkey({ walletAddress: ethTurnkeyWalletAddress }),
-        true,
-      )
+      await newXmtpClient.addAccount(createXmtpSignerFromTurnkey(), true)
 
       // Set the new inbox ID as the current sender
       useMultiInboxStore.getState().actions.setCurrentSender({
@@ -92,12 +89,7 @@ export const ConnectWalletRotateInbox = memo(function ConnectWalletRotateInbox(
         },
       )
     }
-  }, [
-    activeWallet,
-    setHasRotatedWalletAddress,
-    createXmtpSignerFromTurnkey,
-    ethTurnkeyWalletAddress,
-  ])
+  }, [activeWallet, setHasRotatedWalletAddress, createXmtpSignerFromTurnkey])
 
   if (!isHasRotatedWalletAddressLoaded) {
     return <ConnectWalletLoadingContent />

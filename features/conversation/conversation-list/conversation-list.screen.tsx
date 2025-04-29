@@ -18,6 +18,7 @@ import {
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
+import { getCurrentUserQueryData } from "@/features/current-user/current-user.query"
 import { registerPushNotifications } from "@/features/notifications/notifications.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { NavigationParamList } from "@/navigation/navigation.types"
@@ -47,7 +48,9 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   useConversationListScreenHeader()
 
   useEffect(() => {
-    registerPushNotifications().catch(captureError)
+    if (getCurrentUserQueryData()) {
+      registerPushNotifications().catch(captureError)
+    }
   }, [])
 
   // Temporary comment until we solve performance issues

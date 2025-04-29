@@ -1,6 +1,14 @@
 import { createPasskey, isSupported, PasskeyStamper } from "@turnkey/react-native-passkey-stamper"
 import { TurnkeyClient, useTurnkey } from "@turnkey/sdk-react-native"
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react"
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { v4 as uuidv4 } from "uuid"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
@@ -43,7 +51,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     createSession,
     createSessionFromEmbeddedKey,
     client: turnkeyClient,
-    signRawPayload,
     session,
   } = useTurnkey()
 
@@ -53,6 +60,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
   const flowType = useRef<"login" | "signup">("login")
   const isCreatingXmtpClient = useRef(false)
+  const [readyForXmtpClient, setReadyForXmtpClient] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -62,25 +70,20 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
   }, [])
 
   useEffect(() => {
-    if (isCreatingXmtpClient.current || !turnkeyClient || !session) {
+    if (isCreatingXmtpClient.current || !turnkeyClient || !session || !readyForXmtpClient) {
       return
     }
 
     ;(async () => {
       try {
         const walletAddress = session.user?.wallets[0].accounts[0].address as IEthereumAddress
-        const subOrgId = session.user?.organizationId
-
-        if (!subOrgId) {
-          throw new Error("Sub organization ID not found")
-        }
 
         isCreatingXmtpClient.current = true
         authLogger.debug(`Creating XMTP client for wallet: ${walletAddress}`)
 
         const { data: xmtpClient, error: xmtpError } = await tryCatch(
           createXmtpClient({
-            inboxSigner: createXmtpSignerFromTurnkey({ walletAddress }),
+            inboxSigner: createXmtpSignerFromTurnkey(),
           }),
         )
         authLogger.debug("XMTP client created successfully")
@@ -117,7 +120,10 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         }
       } catch (error) {
         captureErrorWithToast(
-          new AuthenticationError({ error, additionalMessage: "Failed to sign in with passkey" }),
+          new AuthenticationError({
+            error,
+            additionalMessage: "Failed to create XMTP client flow",
+          }),
           {
             message: "Failed to sign in with passkey",
           },
@@ -129,7 +135,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
       }
     })()
-  }, [turnkeyClient, session, signRawPayload, logout, createXmtpSignerFromTurnkey])
+  }, [turnkeyClient, session, logout, readyForXmtpClient, createXmtpSignerFromTurnkey])
 
   const login = useCallback(async () => {
     if (!isSupported()) {
@@ -180,6 +186,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         bundle: credentialBundle,
       })
       authLogger.debug("Session created successfully")
+
+      setReadyForXmtpClient(true)
     } catch (error) {
       const ensuredError = ensureError(error)
 
@@ -195,6 +203,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       logout({ caller: "AuthContextProvider.login" }).catch(captureError)
       useAuthOnboardingStore.getState().actions.reset()
     } finally {
+      setReadyForXmtpClient(false)
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
   }, [createEmbeddedKey, createSession, logout])
@@ -252,6 +261,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         subOrganizationId: subOrgId,
       })
       authLogger.debug("Session created successfully")
+
+      setReadyForXmtpClient(true)
     } catch (error) {
       const ensuredError = ensureError(error)
 
@@ -267,6 +278,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       logout({ caller: "AuthContextProvider.signup" }).catch(captureError)
       useAuthOnboardingStore.getState().actions.reset()
     } finally {
+      setReadyForXmtpClient(false)
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
   }, [createEmbeddedKey, createSessionFromEmbeddedKey, logout])

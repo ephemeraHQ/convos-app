@@ -16,7 +16,7 @@ export const useLogout = () => {
 
   const logout = useCallback(
     async (args: { caller: string }) => {
-      authLogger.debug(`Logging out called by ${args.caller}`)
+      authLogger.debug(`Logging out called by "${args.caller}"`)
 
       try {
         const senders = getAllSenders()
@@ -69,18 +69,19 @@ export const useLogout = () => {
 
         await clearTurnkeySessions()
 
-        // Might want to only clear certain queries later but okay for now
-        clearReacyQueryQueriesAndCache()
-
         // Doing this at the end because we want to make sure that we cleared everything before showing auth screen
         useAuthenticationStore.getState().actions.setStatus("signedOut")
 
-        // This needs to be last because at many places we use useSafeCurrentSender()
+        // This needs to be at the end because at many places we use useSafeCurrentSender()
         // and it will throw error if we reset the store too early
         // Need the setTimeout because for some reason the navigation is not updated immediately when we set auth status to signed out
         setTimeout(() => {
           resetMultiInboxStore()
         }, 0)
+
+        // Might want to only clear certain queries later but okay for now
+        // Put this last because otherwise some useQuery hook triggers even tho we're logging out
+        clearReacyQueryQueriesAndCache()
 
         authLogger.debug("Successfully logged out")
       } catch (error) {

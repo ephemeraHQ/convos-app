@@ -3,7 +3,7 @@ import { AxiosError } from "axios"
 import { useEffect } from "react"
 import { formatRandomUsername } from "@/features/auth-onboarding/utils/format-random-user-name"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { IPrivyUserId } from "@/features/authentication/authentication.types"
+import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { getAllSenders, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   createIdentity,
@@ -34,13 +34,8 @@ import { invalidateCurrentUserQuery } from "./current-user.query"
 /**
  * Handles the device registration and identity creation/linking flow
  */
-async function makeSureDeviceAndIdentitiesAreCreated(args: {
-  userId: IConvosUserID
-  privyUserId: IPrivyUserId
-  // privyAddress: IEthereumAddress
-  // xmtpId: IXmtpInboxId
-}) {
-  const { userId, privyUserId } = args
+async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUserID }) {
+  const { userId } = args
 
   // 1. Check for existing deviceId in SecureStore
   let deviceId = await getStoredDeviceId({ userId })
@@ -118,13 +113,11 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: {
   }
 
   // 5. Refresh current user data to include new device/identity
-  await invalidateCurrentUserQuery({
-    privyUserId,
-  })
+  await invalidateCurrentUserQuery()
 }
 
-async function startFlow(args: { privyUserId: IPrivyUserId; ethAddress: IEthereumAddress }) {
-  const { privyUserId, ethAddress } = args
+async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEthereumAddress }) {
+  const { turnkeyUserId, ethAddress } = args
 
   const { data: currentUser, error: fetchCurrentUserError } = await tryCatch(fetchCurrentUser())
 
@@ -133,7 +126,6 @@ async function startFlow(args: { privyUserId: IPrivyUserId; ethAddress: IEthereu
     authLogger.debug("User exists, ensuring device and identities are created")
     return makeSureDeviceAndIdentitiesAreCreated({
       userId: currentUser.id,
-      privyUserId,
     })
   }
 
@@ -149,7 +141,7 @@ async function startFlow(args: { privyUserId: IPrivyUserId; ethAddress: IEthereu
     const currentSender = getSafeCurrentSender()
     const createdUser = await createUserMutation({
       inboxId: currentSender.inboxId,
-      privyUserId,
+      privyUserId: turnkeyUserId,
       smartContractWalletAddress: ethAddress,
       profile: getRandomProfile(),
     })
@@ -158,7 +150,6 @@ async function startFlow(args: { privyUserId: IPrivyUserId; ethAddress: IEthereu
 
     await makeSureDeviceAndIdentitiesAreCreated({
       userId: createdUser.id,
-      privyUserId,
     })
     return
   }
@@ -189,7 +180,7 @@ export function useCreateUserIfNoExist() {
         }
 
         startFlow({
-          privyUserId: user.id as IPrivyUserId,
+          turnkeyUserId: user.id as ITurnkeyUserId,
           ethAddress: user.wallets[0].accounts[0].address as IEthereumAddress,
         }).catch(captureError)
       },

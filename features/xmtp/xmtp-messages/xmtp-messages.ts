@@ -3,6 +3,7 @@ import {
   findMessage,
   processMessage,
 } from "@xmtp/react-native-sdk"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import {
   ISupportedXmtpCodecs,
   isXmtpGroupUpdatedContentType,
@@ -13,7 +14,6 @@ import {
   isXmtpStaticAttachmentContentType,
   isXmtpTextContentType,
 } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
@@ -42,13 +42,13 @@ export async function getXmtpConversationMessages(args: {
   const { clientInboxId, conversationId, limit = 30, afterNs, beforeNs, direction = "next" } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     const messagesWithMetrics = await wrapXmtpCallWithDuration("conversationMessages", () =>
       conversationMessagesWithMetrics<ISupportedXmtpCodecs>(
-        installationId,
+        client.installationId,
         conversationId,
         limit,
         beforeNs,
@@ -72,12 +72,12 @@ export async function getXmtpConversationMessage(args: {
 }) {
   const { messageId, clientInboxId } = args
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     const message = await wrapXmtpCallWithDuration("findMessage", () =>
-      findMessage(installationId, messageId),
+      findMessage(client.installationId, messageId),
     )
 
     return message
@@ -97,12 +97,12 @@ export async function decryptXmtpMessage(args: {
   const { encryptedMessage, xmtpConversationId, clientInboxId } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     const message = await wrapXmtpCallWithDuration("processMessage", () =>
-      processMessage(installationId, xmtpConversationId, encryptedMessage),
+      processMessage(client.installationId, xmtpConversationId, encryptedMessage),
     )
 
     return message
