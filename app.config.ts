@@ -172,6 +172,7 @@ export default () => {
         // App check stuff
         "com.apple.developer.devicecheck.appattest-environment": "production",
         "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // for key sharing
+        "aps-environment": "production",
       },
       infoPlist: {
         LSApplicationQueriesSchemes: [
