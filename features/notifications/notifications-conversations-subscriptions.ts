@@ -75,8 +75,8 @@ export function useConversationsNotificationsSubscriptions() {
 
     async function manageSubscriptions() {
       // For each inbox/query result
-      for (let i = 0; i < senders.length; i++) {
-        const inboxId = senders[i].inboxId
+      for (const sender of senders) {
+        const inboxId = sender.inboxId
         const conversationIds = senderWithConversationIdsMap.get(inboxId) || []
 
         // Get previously subscribed conversations for this inbox
