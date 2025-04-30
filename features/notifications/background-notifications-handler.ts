@@ -1,9 +1,7 @@
-import { useQuery } from "@tanstack/react-query"
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { useEffect } from "react"
-import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
@@ -15,14 +13,12 @@ import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/co
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
 import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
-import { IXmtpConversationId, IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
-import { usePrevious } from "@/hooks/use-previous-value"
+import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
 import { useAppStateStore } from "@/stores/use-app-state-store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
@@ -190,26 +186,30 @@ export async function unregisterBackgroundNotificationTask() {
 }
 
 export function useRegisterBackgroundNotificationTask() {
-  const authStatus = useAuthenticationStore((state) => state.status)
-  const { data: hasNotificationPermission } = useQuery({
-    ...getNotificationsPermissionsQueryConfig(),
-    select: (data) => data.status === "granted",
-  })
-  const previousNotificationPermission = usePrevious(hasNotificationPermission)
-
   useEffect(() => {
-    // Only register if signed in and has notification permission
-    if (authStatus === "signedIn" && hasNotificationPermission) {
-      registerBackgroundNotificationTask().catch(captureError)
-    }
-  }, [authStatus, hasNotificationPermission])
+    registerBackgroundNotificationTask().catch(captureError)
+  }, [])
 
-  useEffect(() => {
-    // Unregister if notification permission removed
-    if (previousNotificationPermission && !hasNotificationPermission) {
-      unregisterBackgroundNotificationTask()?.catch(captureError)
-    }
-  }, [hasNotificationPermission, previousNotificationPermission])
+  // const authStatus = useAuthenticationStore((state) => state.status)
+  // const { data: hasNotificationPermission } = useQuery({
+  //   ...getNotificationsPermissionsQueryConfig(),
+  //   select: (data) => data.status === "granted",
+  // })
+  // const previousNotificationPermission = usePrevious(hasNotificationPermission)
+
+  // useEffect(() => {
+  //   // Only register if signed in and has notification permission
+  //   if (authStatus === "signedIn" && hasNotificationPermission) {
+  //     registerBackgroundNotificationTask().catch(captureError)
+  //   }
+  // }, [authStatus, hasNotificationPermission])
+
+  // useEffect(() => {
+  //   // Unregister if notification permission removed
+  //   if (previousNotificationPermission && !hasNotificationPermission) {
+  //     unregisterBackgroundNotificationTask()?.catch(captureError)
+  //   }
+  // }, [hasNotificationPermission, previousNotificationPermission])
 }
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
@@ -407,64 +407,6 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
     throw new NotificationError({
       error,
       additionalMessage: "Failed to display local notification",
-    })
-  }
-}
-
-export async function clearNotificationsForConversation(args: {
-  xmtpConversationId: IXmtpConversationId
-}) {
-  try {
-    notificationsLogger.debug("Clearing notifications for conversation:", args.xmtpConversationId)
-
-    // Get all current notifications
-    const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
-
-    if (presentedNotifications.length === 0) {
-      notificationsLogger.debug("No notifications to clear")
-      return
-    }
-
-    // Find notifications related to this conversation
-    const notificationsToRemove = presentedNotifications.filter((notification) => {
-      // Check if notification has data and message
-      const data = notification.request.content.data as
-        | INotificationMessageDataConverted
-        | undefined
-
-      if (!data || !data.message) {
-        return false
-      }
-
-      // Check if the message's conversation ID matches
-      return data.message.xmtpConversationId === args.xmtpConversationId
-    })
-
-    if (notificationsToRemove.length === 0) {
-      notificationsLogger.debug(
-        `No notifications to clear found for conversation ${args.xmtpConversationId}`,
-      )
-      return
-    }
-
-    notificationsLogger.debug(
-      `Found ${notificationsToRemove.length} notifications to clear for conversation ${args.xmtpConversationId}`,
-    )
-
-    // Dismiss each notification
-    await Promise.all(
-      notificationsToRemove.map((notification) =>
-        Notifications.dismissNotificationAsync(notification.request.identifier),
-      ),
-    )
-
-    notificationsLogger.debug(
-      `Successfully cleared ${notificationsToRemove.length} notifications for conversation ${args.xmtpConversationId}`,
-    )
-  } catch (error) {
-    throw new NotificationError({
-      error,
-      additionalMessage: `Failed to clear notifications for conversation ${args.xmtpConversationId}`,
     })
   }
 }

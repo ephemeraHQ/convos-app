@@ -16,7 +16,7 @@ import { useNotificationListeners } from "@/features/notifications/notifications
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
-import { useAppStateStore } from "@/stores/use-app-state-store"
+import { useAppLaunchedForBackgroundStuff } from "@/stores/use-app-state-store"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { captureError } from "@/utils/capture-error"
@@ -41,11 +41,7 @@ sentryInit()
 configureForegroundNotificationBehavior()
 
 export function App() {
-  return (
-    <ReactQueryProvider>
-      <Main />
-    </ReactQueryProvider>
-  )
+  return <Main />
 }
 
 const Main = memo(function Main() {
@@ -56,9 +52,9 @@ const Main = memo(function Main() {
     unregisterBackgroundNotificationTaskSmall().catch(captureError)
   }, [])
 
-  const currentState = useAppStateStore((state) => state.currentState)
+  const isLaunchedForBackgroundStuff = useAppLaunchedForBackgroundStuff()
 
-  if (currentState !== "active") {
+  if (isLaunchedForBackgroundStuff) {
     return null
   }
 
@@ -80,26 +76,28 @@ function Content() {
   // useSyncQueries({ queryClient: reactQueryClient })
 
   return (
-    <TurnkeyProvider>
-      <ThirdwebProvider>
-        <SafeAreaProvider>
-          <KeyboardProvider>
-            <ActionSheetProvider>
-              <GestureHandlerRootView style={$globalStyles.flex1}>
-                <BottomSheetModalProvider>
-                  <AppNavigator />
-                  {/* {__DEV__ && <DevToolsBubble />} */}
-                  <Handlers />
-                  <Snackbars />
-                  <ActionSheet />
-                  <XmtpLogFilesModal />
-                </BottomSheetModalProvider>
-              </GestureHandlerRootView>
-            </ActionSheetProvider>
-          </KeyboardProvider>
-        </SafeAreaProvider>
-      </ThirdwebProvider>
-    </TurnkeyProvider>
+    <ReactQueryProvider>
+      <TurnkeyProvider>
+        <ThirdwebProvider>
+          <SafeAreaProvider>
+            <KeyboardProvider>
+              <ActionSheetProvider>
+                <GestureHandlerRootView style={$globalStyles.flex1}>
+                  <BottomSheetModalProvider>
+                    <AppNavigator />
+                    {/* {__DEV__ && <DevToolsBubble />} */}
+                    <Handlers />
+                    <Snackbars />
+                    <ActionSheet />
+                    <XmtpLogFilesModal />
+                  </BottomSheetModalProvider>
+                </GestureHandlerRootView>
+              </ActionSheetProvider>
+            </KeyboardProvider>
+          </SafeAreaProvider>
+        </ThirdwebProvider>
+      </TurnkeyProvider>
+    </ReactQueryProvider>
   )
 }
 
