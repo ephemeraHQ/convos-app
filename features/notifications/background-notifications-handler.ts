@@ -16,13 +16,10 @@ import {
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
-import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
-import { useAppStateStore } from "@/stores/use-app-state-store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { storage } from "@/utils/storage/storage"
-import { displayLocalNotification } from "./notifications.service"
 
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
 const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
@@ -240,28 +237,126 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     const { conversationTopic, encryptedMessage } = notificationData
 
     // Increment received notifications counter
-    incrementReceivedNotificationsCount()
+    // incrementReceivedNotificationsCount()
 
     // Check if we've already processed this message
-    if (await hasProcessedMessage(encryptedMessage)) {
-      notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
+    // if (await hasProcessedMessage(encryptedMessage)) {
+    //   notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
+    //   return
+    // }
+
+    // Mark message as processed as soon as possible
+    // await markMessageAsProcessed(encryptedMessage)
+
+    const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
+
+    const clientInboxId = getSafeCurrentSender().inboxId
+
+    notificationsLogger.debug("Fetching conversation and decrypting message...")
+    const [conversation, xmtpDecryptedMessage] = await Promise.all([
+      getXmtpConversation({
+        clientInboxId,
+        conversationId: xmtpConversationId,
+      }),
+      // ensureConversationQueryData({
+      //   clientInboxId,
+      //   xmtpConversationId,
+      //   caller: "notifications-foreground-handler",
+      // }),
+      decryptXmtpMessage({
+        encryptedMessage,
+        xmtpConversationId,
+        clientInboxId,
+      }),
+    ])
+
+    if (!conversation) {
+      throw new NotificationError({
+        error: `Conversation (${xmtpConversationId}) not found in background notification task`,
+      })
+    }
+
+    notificationsLogger.debug("Fetched conversation and decrypted message", {
+      conversation,
+      xmtpDecryptedMessage,
+    })
+
+    if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
+      notificationsLogger.debug(
+        `Skipping notification because message is not supported`,
+        xmtpDecryptedMessage,
+      )
       return
     }
 
-    // Mark message as processed as soon as possible
-    await markMessageAsProcessed(encryptedMessage)
+    const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
 
-    try {
-      await maybeDisplayLocalNewMessageNotification({
-        encryptedMessage,
-        conversationTopic,
-      })
+    notificationsLogger.debug("Fetching message content and sender info...")
+    // const [messageContentString, { displayName: senderDisplayName }] = await Promise.all([
+    //   ensureMessageContentStringValue(convoMessage),
+    //   ensurePreferredDisplayInfo({
+    //     inboxId: convoMessage.senderInboxId,
+    //   }),
+    // ])
+    const messageContentString = "message"
+    const senderDisplayName = "test"
+    notificationsLogger.debug("Message content:", messageContentString)
+    notificationsLogger.debug("Sender display name:", senderDisplayName)
 
-      // If we reached here, the notification was displayed successfully
-      incrementDisplayedNotificationsCount()
-    } catch (error) {
-      notificationsLogger.error("Failed to display notification", error)
-    }
+    // setConversationMessageQueryData({
+    //   clientInboxId,
+    //   xmtpMessageId: xmtpDecryptedMessage.id,
+    //   message: convoMessage,
+    // })
+
+    // addMessageToConversationMessagesInfiniteQueryData({
+    //   clientInboxId,
+    //   xmtpConversationId,
+    //   messageId: xmtpDecryptedMessage.id,
+    // })
+
+    // if (useAppStateStore.getState().currentState === "active") {
+    //   notificationsLogger.debug("Skipping showing notification because app is active")
+    //   return
+    // }
+
+    notificationsLogger.debug("Displaying local notification...")
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: senderDisplayName,
+        body: messageContentString,
+        data: {
+          message: convoMessage,
+          isProcessedByConvo: true,
+        } satisfies INotificationMessageDataConverted,
+        ...(messageContentIsRemoteAttachment(convoMessage.content)
+          ? {
+              attachments: [
+                {
+                  identifier: convoMessage.content.url,
+                  type: "image",
+                  url: convoMessage.content.url,
+                },
+              ],
+            }
+          : messageContentIsMultiRemoteAttachment(convoMessage.content)
+            ? {
+                attachments: convoMessage.content.attachments.map((attachment) => ({
+                  identifier: attachment.url,
+                  type: "image",
+                  url: attachment.url,
+                })),
+              }
+            : {}),
+      },
+      trigger: null,
+    })
+
+    notificationsLogger.debug("Local notification displayed")
+
+    // If we reached here, the notification was displayed successfully
+    // If we reached here, the notification was displayed successfully
+    // incrementDisplayedNotificationsCount()
   } catch (error) {
     captureError(
       new NotificationError({
@@ -274,143 +369,3 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     )
   }
 })
-
-const TIMEOUT_MS = 15000 // 15 seconds
-const TIMEOUT_SECONDS = TIMEOUT_MS / 1000
-
-export async function maybeDisplayLocalNewMessageNotification(args: {
-  encryptedMessage: string
-  conversationTopic: IXmtpConversationTopic
-}) {
-  try {
-    let timeoutId: NodeJS.Timeout | undefined
-
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error(`Notification processing timed out after ${TIMEOUT_SECONDS} seconds`))
-      }, TIMEOUT_MS)
-    })
-
-    const processNotificationPromise = (async () => {
-      const { encryptedMessage, conversationTopic } = args
-
-      notificationsLogger.debug("Processing notification with topic:", conversationTopic)
-      const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
-      notificationsLogger.debug("Extracted conversation ID:", xmtpConversationId)
-
-      const clientInboxId = getSafeCurrentSender().inboxId
-
-      notificationsLogger.debug("Fetching conversation and decrypting message...")
-      const [conversation, xmtpDecryptedMessage] = await Promise.all([
-        getXmtpConversation({
-          clientInboxId,
-          conversationId: xmtpConversationId,
-        }),
-        // ensureConversationQueryData({
-        //   clientInboxId,
-        //   xmtpConversationId,
-        //   caller: "notifications-foreground-handler",
-        // }),
-        decryptXmtpMessage({
-          encryptedMessage,
-          xmtpConversationId,
-          clientInboxId,
-        }),
-      ])
-      notificationsLogger.debug("Decrypted message:", xmtpDecryptedMessage)
-
-      if (!conversation) {
-        throw new NotificationError({
-          error: `Conversation (${xmtpConversationId}) not found`,
-        })
-      }
-
-      if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
-        notificationsLogger.debug(
-          `Skipping notification because message is not supported`,
-          xmtpDecryptedMessage,
-        )
-        return
-      }
-
-      const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
-
-      notificationsLogger.debug("Fetching message content and sender info...")
-      // const [messageContentString, { displayName: senderDisplayName }] = await Promise.all([
-      //   ensureMessageContentStringValue(convoMessage),
-      //   ensurePreferredDisplayInfo({
-      //     inboxId: convoMessage.senderInboxId,
-      //   }),
-      // ])
-      const messageContentString = "message"
-      const senderDisplayName = "test"
-      notificationsLogger.debug("Message content:", messageContentString)
-      notificationsLogger.debug("Sender display name:", senderDisplayName)
-
-      // setConversationMessageQueryData({
-      //   clientInboxId,
-      //   xmtpMessageId: xmtpDecryptedMessage.id,
-      //   message: convoMessage,
-      // })
-
-      // addMessageToConversationMessagesInfiniteQueryData({
-      //   clientInboxId,
-      //   xmtpConversationId,
-      //   messageId: xmtpDecryptedMessage.id,
-      // })
-
-      if (useAppStateStore.getState().currentState === "active") {
-        notificationsLogger.debug("Skipping showing notification because app is active")
-        return
-      }
-
-      notificationsLogger.debug("Displaying local notification...")
-      await displayLocalNotification({
-        content: {
-          title: senderDisplayName,
-          body: messageContentString,
-          data: {
-            message: convoMessage,
-            isProcessedByConvo: true,
-          } satisfies INotificationMessageDataConverted,
-          ...(messageContentIsRemoteAttachment(convoMessage.content)
-            ? {
-                attachments: [
-                  {
-                    identifier: convoMessage.content.url,
-                    type: "image",
-                    url: convoMessage.content.url,
-                  },
-                ],
-              }
-            : messageContentIsMultiRemoteAttachment(convoMessage.content)
-              ? {
-                  attachments: convoMessage.content.attachments.map((attachment) => ({
-                    identifier: attachment.url,
-                    type: "image",
-                    url: attachment.url,
-                  })),
-                }
-              : {}),
-        },
-        trigger: null,
-      })
-
-      notificationsLogger.debug("Local notification displayed")
-    })()
-
-    try {
-      await Promise.race([processNotificationPromise, timeoutPromise])
-    } finally {
-      // Clear the timeout to prevent memory leaks
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-    }
-  } catch (error) {
-    throw new NotificationError({
-      error,
-      additionalMessage: "Failed to display local notification",
-    })
-  }
-}
