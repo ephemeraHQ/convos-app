@@ -1,9 +1,11 @@
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { getAppConfig } from "@/features/app-settings/app-settings.api"
+import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
-import { authLogger, logger } from "@/utils/logger/logger"
+import { notificationsLogger } from "@/utils/logger/logger"
 
 const BACKGROUND_NOTIFICATION_TASK_SMALL = "com.convos.background-notification-small"
 
@@ -49,7 +51,7 @@ export async function registerBackgroundNotificationTaskSmall() {
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK_SMALL, async ({ data, error }) => {
   try {
-    logger.debug("BACKGROUND_NOTIFICATION_TASK_SMALL", { data, error })
+    notificationsLogger.debug("BACKGROUND_NOTIFICATION_TASK_SMALL", { data, error })
 
     if (error || !data) {
       return
@@ -57,12 +59,21 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK_SMALL, async ({ data, error 
 
     const message = extractBasicMessageData(data)
 
-    authLogger.debug("message:", message)
+    notificationsLogger.debug("message:", message)
 
     // We want to check if we can make a network call
     const appSettings = await getAppConfig()
 
-    authLogger.debug("appSettings:", appSettings)
+    notificationsLogger.debug("appSettings:", appSettings)
+
+    const currentUser = getCurrentSender()
+
+    if (!currentUser) {
+      notificationsLogger.debug("No current user to show notification")
+      return
+    }
+
+    await getXmtpClientByInboxId({ inboxId: currentUser.inboxId })
 
     if (message) {
       await Notifications.scheduleNotificationAsync({
