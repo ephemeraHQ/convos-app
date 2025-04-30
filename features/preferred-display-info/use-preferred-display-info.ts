@@ -34,24 +34,15 @@ import { mergeArraysObjects } from "@/utils/array"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { reactQueryFreshDataQueryOptions } from "@/utils/react-query/react-query.constants"
 
-// At least one of these properties must be defined
 type PreferredDisplayInfoArgs = {
+  inboxId?: IXmtpInboxId
+  ethAddress?: IEthereumAddress
   freshData?: boolean
   enabled?: boolean
-} & (
-  | {
-      inboxId: IXmtpInboxId | undefined
-      ethAddress?: IEthereumAddress
-    }
-  | {
-      inboxId?: IXmtpInboxId
-      ethAddress: IEthereumAddress | undefined
-    }
-)
+}
 
 export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { caller: string }) {
   const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData, caller: callerArg } = args
-
   const currentSender = useSafeCurrentSender()
   const caller = `${callerArg}:usePreferredDisplayInfo`
 
@@ -73,21 +64,14 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
     caller: "usePreferredDisplayInfo",
   })
 
-  // TODO: Check if caller is accepted in the query options
   const { data: ethAddressesForXmtpInboxId } = useQuery({
     ...ethAddressesOptions,
-    //enabled: enabled && ethAddressesOptions.enabled !== false,
-    caller,
+    enabled: args.enabled !== false && ethAddressesOptions.enabled !== false,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
-  // Get Convos profile data
-  const profileOptions = getProfileQueryConfig({
-    xmtpId: inboxId,
-    caller: "usePreferredDisplayInfo",
-  })
-
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    // Get Convos profile data
     ...getProfileQueryConfig({ xmtpId: inboxId, caller }),
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
@@ -113,6 +97,18 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
       }),
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     })
+
+  // Check that we have at least one of inboxId or ethAddress
+  if (!inboxIdArg && !ethAddressArg) {
+    console.warn(`[${callerArg}] usePreferredDisplayInfo called without inboxId or ethAddress`)
+    return {
+      displayName: undefined,
+      avatarUrl: undefined,
+      username: undefined,
+      ethAddress: undefined,
+      isLoading: false,
+    }
+  }
 
   const socialProfiles = mergeArraysObjects({
     arr1: socialProfilesForInboxId ?? [],
