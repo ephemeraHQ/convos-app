@@ -9,8 +9,8 @@ import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
-import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
-import { registerBackgroundNotificationTaskSmall } from "@/features/notifications/background-notifications-handler-small"
+import { useRegisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
+import { unregisterBackgroundNotificationTaskSmall } from "@/features/notifications/background-notifications-handler-small"
 import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
@@ -21,7 +21,6 @@ import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
-import { GenericError } from "@/utils/error"
 import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
@@ -39,26 +38,32 @@ import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
 preventSplashScreenAutoHide()
 sentryInit()
+configureForegroundNotificationBehavior()
 
 export function App() {
+  return (
+    <ReactQueryProvider>
+      <Main />
+    </ReactQueryProvider>
+  )
+}
+
+const Main = memo(function Main() {
+  useRegisterBackgroundNotificationTask()
+
+  // Keep temporary
   useEffect(() => {
-    unregisterBackgroundNotificationTask().catch(captureError)
-    registerBackgroundNotificationTaskSmall().catch(captureError)
+    unregisterBackgroundNotificationTaskSmall().catch(captureError)
   }, [])
 
   const currentState = useAppStateStore((state) => state.currentState)
 
   if (currentState !== "active") {
-    captureError(
-      new GenericError({
-        error: `App is not active it's ${currentState}`,
-      }),
-    )
     return null
   }
 
   return <Content />
-}
+})
 
 function Content() {
   useMonitorNetworkConnectivity()
@@ -66,7 +71,6 @@ function Content() {
   useSetupStreamingSubscriptions()
   useCachedResources()
   useCoinbaseWalletListener()
-  configureForegroundNotificationBehavior()
 
   useEffect(() => {
     setupConvosApi()
@@ -76,28 +80,26 @@ function Content() {
   // useSyncQueries({ queryClient: reactQueryClient })
 
   return (
-    <ReactQueryProvider>
-      <TurnkeyProvider>
-        <ThirdwebProvider>
-          <SafeAreaProvider>
-            <KeyboardProvider>
-              <ActionSheetProvider>
-                <GestureHandlerRootView style={$globalStyles.flex1}>
-                  <BottomSheetModalProvider>
-                    <AppNavigator />
-                    {/* {__DEV__ && <DevToolsBubble />} */}
-                    <Handlers />
-                    <Snackbars />
-                    <ActionSheet />
-                    <XmtpLogFilesModal />
-                  </BottomSheetModalProvider>
-                </GestureHandlerRootView>
-              </ActionSheetProvider>
-            </KeyboardProvider>
-          </SafeAreaProvider>
-        </ThirdwebProvider>
-      </TurnkeyProvider>
-    </ReactQueryProvider>
+    <TurnkeyProvider>
+      <ThirdwebProvider>
+        <SafeAreaProvider>
+          <KeyboardProvider>
+            <ActionSheetProvider>
+              <GestureHandlerRootView style={$globalStyles.flex1}>
+                <BottomSheetModalProvider>
+                  <AppNavigator />
+                  {/* {__DEV__ && <DevToolsBubble />} */}
+                  <Handlers />
+                  <Snackbars />
+                  <ActionSheet />
+                  <XmtpLogFilesModal />
+                </BottomSheetModalProvider>
+              </GestureHandlerRootView>
+            </ActionSheetProvider>
+          </KeyboardProvider>
+        </SafeAreaProvider>
+      </ThirdwebProvider>
+    </TurnkeyProvider>
   )
 }
 
@@ -107,7 +109,6 @@ const Handlers = memo(function Handlers() {
   useCreateUserIfNoExist()
   useNotificationListeners()
   useConversationsNotificationsSubscriptions()
-  // useRegisterBackgroundNotificationTask()
   useReactQueryInit()
 
   return null

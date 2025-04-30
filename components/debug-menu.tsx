@@ -33,6 +33,7 @@ import { navigate } from "@/navigation/navigation.utils"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { getEnv } from "@/utils/getEnv"
+import { Haptics } from "@/utils/haptics"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
@@ -49,6 +50,7 @@ export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: Re
 
   const longPressGesture = Gesture.LongPress()
     .onStart(() => {
+      Haptics.softImpactAsyncAnimated()
       runOnJS(showDebugMenu)()
     })
     .minDuration(1000)

@@ -10,14 +10,6 @@ import { notificationsLogger } from "@/utils/logger/logger"
 
 const BACKGROUND_NOTIFICATION_TASK_SMALL = "com.convos.background-notification-small"
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-})
-
 export async function unregisterBackgroundNotificationTaskSmall() {
   try {
     if (await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK_SMALL)) {

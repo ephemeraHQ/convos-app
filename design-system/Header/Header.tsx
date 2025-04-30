@@ -1,6 +1,6 @@
 import { ReactElement } from "react"
 import { StyleProp, TextStyle, ViewStyle } from "react-native"
-import { DebugMenuWrapper } from "@/components/debug-provider"
+import { DebugMenuWrapper } from "@/components/debug-menu"
 import { IPicto } from "@/components/Picto/Picto.types"
 import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
 import { useHeaderHeight } from "@/design-system/Header/Header.utils"
