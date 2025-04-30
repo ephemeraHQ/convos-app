@@ -2,7 +2,6 @@ import { ConsentState, syncAllConversations, syncConversation } from "@xmtp/reac
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { XMTPError } from "@/utils/error"
-import { xmtpLogger } from "@/utils/logger/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 // Cache to prevent multiple sync operations for the same conversation
