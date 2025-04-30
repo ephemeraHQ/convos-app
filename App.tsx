@@ -33,6 +33,7 @@ import { ThirdwebProvider } from "thirdweb/react"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
+import * as Sentry from "@sentry/react-native"
 import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
@@ -43,10 +44,6 @@ setupConvosApi()
 
 // TMP
 unregisterBackgroundNotificationTaskSmall()
-
-export function App() {
-  return <Main />
-}
 
 const Main = memo(function Main() {
   const isLaunchedForBackgroundStuff = useAppLaunchedForBackgroundStuff()
@@ -64,6 +61,8 @@ const Main = memo(function Main() {
 
   return <Content />
 })
+
+export const App = Sentry.wrap(Main)
 
 function Content() {
   useMonitorNetworkConnectivity()

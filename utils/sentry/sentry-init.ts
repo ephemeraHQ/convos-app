@@ -4,6 +4,10 @@ import * as Updates from "expo-updates"
 import { config } from "@/config"
 import { getEnv } from "@/utils/getEnv"
 
+export const navigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: true,
+})
+
 export function sentryInit() {
   Sentry.init({
     dsn: config.sentry.dsn,
@@ -14,6 +18,10 @@ export function sentryInit() {
     sendDefaultPii: true, // getEnv() !== "production",
     // Attach stacktraces to all messages for more context
     attachStacktrace: true, // getEnv() !== "production",
+
+    // @see https://docs.sentry.io/platforms/react-native/tracing/#configure
+    tracesSampleRate: 1.0,
+    integrations: [navigationIntegration],
 
     beforeSend: (event: ErrorEvent, hint: EventHint) => {
       event.tags = {

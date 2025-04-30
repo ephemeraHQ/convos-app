@@ -32,6 +32,7 @@ import { useAppStore } from "@/stores/app-store"
 import { useAppLaunchedForBackgroundStuff, useAppStateStore } from "@/stores/use-app-state-store"
 import { useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
+import { navigationIntegration } from "@/utils/sentry/sentry-init"
 import { hideSplashScreen } from "@/utils/splash/splash"
 
 const prefix = Linking.createURL("/")
@@ -129,6 +130,9 @@ export const AppNavigator = memo(function AppNavigator() {
         theme={navigationTheme}
         linking={linking}
         ref={navigationRef}
+        onReady={() => {
+          navigationIntegration.registerNavigationContainer(navigationRef)
+        }}
       >
         <DeepLinkHandler />
         <AppStacks />
