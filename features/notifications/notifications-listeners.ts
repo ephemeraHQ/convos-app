@@ -1,14 +1,12 @@
 import * as Notifications from "expo-notifications"
 import { useEffect, useRef } from "react"
-import {
-  isConvosModifiedNotification,
-  isNotificationXmtpNewMessageNotification,
-} from "@/features/notifications/notification-assertions"
-import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
+import { isConvosModifiedNotification } from "@/features/notifications/notification-assertions"
 import { navigate } from "@/navigation/navigation.utils"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
+import { waitUntilPromise } from "@/utils/wait-until-promise"
 
 export function useNotificationListeners() {
   const foregroundNotificationListener = useRef<Notifications.Subscription>()
@@ -29,24 +27,22 @@ export function useNotificationListeners() {
         try {
           notificationsLogger.debug(`Notification tapped: ${JSON.stringify(response)}`)
 
+          // Sometimes we tap on a notification while the app is killed and this is triggered
+          // before we finished hydrating auth so we push to a screen that isn't in the navigator yet
+          await waitUntilPromise({
+            checkFn: () => {
+              return useAuthenticationStore.getState().status === "signedIn"
+            },
+          })
+
           if (isConvosModifiedNotification(response.notification)) {
-            navigate("Conversation", {
+            return navigate("Conversation", {
               xmtpConversationId:
                 response.notification.request.content.data.message.xmtpConversationId,
-            }).catch(captureError)
-          } else if (isNotificationXmtpNewMessageNotification(response.notification)) {
-            navigate("Conversation", {
-              xmtpConversationId: getXmtpConversationIdFromXmtpTopic(
-                response.notification.request.trigger.payload.topic,
-              ),
-            }).catch(captureError)
-          } else {
-            captureError(
-              new NotificationError({
-                error: `Unknown notification type: ${JSON.stringify(response.notification)}`,
-              }),
-            )
+            })
           }
+
+          throw new Error(`Unknown notification type: ${JSON.stringify(response.notification)}`)
         } catch (error) {
           captureError(
             new NotificationError({
@@ -81,21 +77,5 @@ export function useNotificationListeners() {
       //   Notifications.removeNotificationSubscription(systemDropListener.current)
       // }
     }
-  }, [])
-}
-
-/**
- * Hook to handle when app was launched from a killed state by tapping a notification.
- * This is different from onNotificationTappedWhileRunning because it handles the case
- * where the app was completely closed when the user tapped the notification.
- */
-export function useNotificationTappedWhileKilled() {
-  useEffect(() => {
-    // Check if app was launched by tapping a notification while killed
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        // TODO
-      }
-    })
   }, [])
 }

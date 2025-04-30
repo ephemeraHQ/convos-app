@@ -25,12 +25,11 @@ import { usePrevious } from "@/hooks/use-previous-value"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
-import { storage } from "@/utils/storage/storage"
 import { tryCatch } from "@/utils/try-catch"
 
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
-const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
-const NOTIFICATION_ID_TTL = 1000 * 60 * 5 // 5 minutes in milliseconds
+// const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
+// const NOTIFICATION_ID_TTL = 1000 * 60 * 5 // 5 minutes in milliseconds
 export const RECEIVED_NOTIFICATIONS_COUNT_KEY = "received_notifications_count"
 export const DISPLAYED_NOTIFICATIONS_COUNT_KEY = "displayed_notifications_count"
 const processedMessageIds = new Set<string>()
@@ -86,23 +85,23 @@ function extractNotificationData(
   return null
 }
 
-function incrementReceivedNotificationsCount(): void {
-  try {
-    const currentCount = storage.getNumber(RECEIVED_NOTIFICATIONS_COUNT_KEY) || 0
-    storage.set(RECEIVED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
-  } catch (error) {
-    notificationsLogger.error("Error incrementing received notifications count", error)
-  }
-}
+// function incrementReceivedNotificationsCount(): void {
+//   try {
+//     const currentCount = storage.getNumber(RECEIVED_NOTIFICATIONS_COUNT_KEY) || 0
+//     storage.set(RECEIVED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
+//   } catch (error) {
+//     notificationsLogger.error("Error incrementing received notifications count", error)
+//   }
+// }
 
-function incrementDisplayedNotificationsCount(): void {
-  try {
-    const currentCount = storage.getNumber(DISPLAYED_NOTIFICATIONS_COUNT_KEY) || 0
-    storage.set(DISPLAYED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
-  } catch (error) {
-    notificationsLogger.error("Error incrementing displayed notifications count", error)
-  }
-}
+// function incrementDisplayedNotificationsCount(): void {
+//   try {
+//     const currentCount = storage.getNumber(DISPLAYED_NOTIFICATIONS_COUNT_KEY) || 0
+//     storage.set(DISPLAYED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
+//   } catch (error) {
+//     notificationsLogger.error("Error incrementing displayed notifications count", error)
+//   }
+// }
 
 /**
  * Register a task to handle background notifications
@@ -235,11 +234,6 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       })
     }
 
-    notificationsLogger.debug("Fetched conversation and decrypted message", {
-      conversation,
-      xmtpDecryptedMessage,
-    })
-
     if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
       notificationsLogger.debug(
         `Skipping notification because message is not supported`,
@@ -251,7 +245,10 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
 
     notificationsLogger.debug("Fetching message content and sender info...")
-    const [messageContentResult, profileResult] = await Promise.all([
+    const [
+      { data: messageContentString, error: messageContentError },
+      { data: profile, error: profileError },
+    ] = await Promise.all([
       // ensureMessageContentStringValue(convoMessage),
       tryCatch(
         Promise.resolve(
@@ -270,11 +267,23 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       // }),
     ])
 
-    notificationsLogger.debug("Message content result", messageContentResult)
-    notificationsLogger.debug("Profile result", profileResult)
+    if (messageContentError) {
+      captureError(
+        new NotificationError({
+          error: messageContentError,
+          additionalMessage: "Error fetching message content",
+        }),
+      )
+    }
 
-    const messageContentString = messageContentResult.data || ""
-    const profile = profileResult.data
+    if (profileError) {
+      captureError(
+        new NotificationError({
+          error: profileError,
+          additionalMessage: "Error fetching profile",
+        }),
+      )
+    }
 
     const senderDisplayName = profile?.name || "New message"
 

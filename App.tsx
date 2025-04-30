@@ -24,7 +24,7 @@ import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
 import "expo-dev-client"
-import React, { memo, useEffect } from "react"
+import React, { memo } from "react"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -38,6 +38,7 @@ import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 preventSplashScreenAutoHide()
 sentryInit()
 configureForegroundNotificationBehavior()
+setupConvosApi()
 
 export function App() {
   return <Main />
@@ -66,10 +67,6 @@ function Content() {
   useSetupStreamingSubscriptions()
   useCachedResources()
   useCoinbaseWalletListener()
-
-  useEffect(() => {
-    setupConvosApi()
-  }, [])
 
   // Seems to be slowing the app. Need to investigate
   // useSyncQueries({ queryClient: reactQueryClient })

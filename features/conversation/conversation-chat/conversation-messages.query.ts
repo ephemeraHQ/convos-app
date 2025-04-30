@@ -202,8 +202,35 @@ export function getConversationMessagesInfiniteQueryOptions(
       Boolean(clientInboxId) &&
       Boolean(xmtpConversationId) &&
       !isTmpConversation(xmtpConversationId),
-    refetchOnMount: true,
+    refetchOnMount: (query) => {
+      const { clientInboxId, xmtpConversationId } = args
+
+      const allowedConversationIds =
+        getAllowedConsentConversationsQueryData({
+          clientInboxId,
+        }) || []
+
+      // We only want to refetch if the conversation has been allowed
+      if (!allowedConversationIds.includes(xmtpConversationId)) {
+        return false
+      }
+
+      const isRecent = conversationHasRecentActivities({
+        clientInboxId,
+        xmtpConversationId,
+      })
+
+      if (isRecent) {
+        queryLogger.debug(
+          `Refetching conversation messages infinite query on window focus for ${xmtpConversationId}`,
+        )
+      }
+
+      return isRecent ? "always" : true
+    },
     refetchOnWindowFocus: (query) => {
+      const { clientInboxId, xmtpConversationId } = args
+
       const allowedConversationIds =
         getAllowedConsentConversationsQueryData({
           clientInboxId,
