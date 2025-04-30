@@ -44,21 +44,21 @@ export function getFormattedDisappearingDuration(nanoseconds: number | undefined
   const minutes = seconds / 60
   const hours = minutes / 60
   const days = hours / 24
-
+  
   if (days >= 1 && days % 7 === 0) {
     const weeks = Math.floor(days / 7)
     return `${weeks} ${weeks === 1 ? "week" : "weeks"}`
-  } 
+  }
   
   if (days >= 1) {
     const daysValue = Math.floor(days)
     return `${daysValue} ${daysValue === 1 ? "day" : "days"}`
-  } 
+  }
   
   if (hours >= 1) {
     const hoursValue = Math.floor(hours)
     return `${hoursValue} ${hoursValue === 1 ? "hour" : "hours"}`
-  } 
+  }
   
   if (minutes >= 1) {
     const minutesValue = Math.floor(minutes)

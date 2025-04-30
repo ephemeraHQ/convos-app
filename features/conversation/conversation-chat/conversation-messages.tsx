@@ -276,7 +276,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       scrollEventThrottle={200} // We don't need to throttle fast because we only use to know if we need to load more messages
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
-      ListFooterComponent={isGroup ? <ConversationInfoBanner xmtpConversationId={xmtpConversationId} /> : null}
+      ListFooterComponent={isGroup ? <ConversationInfoBanner /> : null}
       getItemType={getItemType}
       estimatedListSize={{
         height: theme.layout.screen.height,
