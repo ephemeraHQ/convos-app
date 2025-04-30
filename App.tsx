@@ -25,6 +25,7 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
 import "expo-dev-client"
 import React, { memo, useEffect } from "react"
+import { AppState } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -36,16 +37,28 @@ import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
 preventSplashScreenAutoHide()
-
 sentryInit()
-configureForegroundNotificationBehavior()
 
 export function App() {
+  useEffect(() => {
+    unregisterBackgroundNotificationTask().catch(captureError)
+    registerBackgroundNotificationTaskSmall().catch(captureError)
+  }, [])
+
+  if (AppState.currentState != "active") {
+    return null
+  }
+
+  return <Content />
+}
+
+function Content() {
   useMonitorNetworkConnectivity()
   useReactQueryDevTools(reactQueryClient)
   useSetupStreamingSubscriptions()
   useCachedResources()
   useCoinbaseWalletListener()
+  configureForegroundNotificationBehavior()
 
   useEffect(() => {
     setupConvosApi()
@@ -88,11 +101,6 @@ const Handlers = memo(function Handlers() {
   useConversationsNotificationsSubscriptions()
   // useRegisterBackgroundNotificationTask()
   useReactQueryInit()
-
-  useEffect(() => {
-    unregisterBackgroundNotificationTask().catch(captureError)
-    registerBackgroundNotificationTaskSmall().catch(captureError)
-  }, [])
 
   return null
 })

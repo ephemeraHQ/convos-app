@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
+import { AppState } from "react-native"
 import { getAppConfig } from "@/features/app-settings/app-settings.api"
 import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
@@ -52,6 +53,8 @@ export async function registerBackgroundNotificationTaskSmall() {
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK_SMALL, async ({ data, error }) => {
   try {
     notificationsLogger.debug("BACKGROUND_NOTIFICATION_TASK_SMALL", { data, error })
+
+    notificationsLogger.debug("AppState.currentState:", AppState.currentState)
 
     if (error || !data) {
       return
