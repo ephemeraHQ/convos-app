@@ -243,13 +243,13 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     // incrementReceivedNotificationsCount()
 
     // Check if we've already processed this message
-    // if (await hasProcessedMessage(encryptedMessage)) {
-    //   notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
-    //   return
-    // }
+    if (await hasProcessedMessage(encryptedMessage)) {
+      notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
+      return
+    }
 
     // Mark message as processed as soon as possible
-    // await markMessageAsProcessed(encryptedMessage)
+    await markMessageAsProcessed(encryptedMessage)
 
     const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
 
@@ -313,6 +313,9 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
       //   inboxId: convoMessage.senderInboxId,
       // }),
     ])
+
+    notificationsLogger.debug("Message content result", messageContentResult)
+    notificationsLogger.debug("Profile result", profileResult)
 
     const messageContentString = messageContentResult.data || ""
     const profile = profileResult.data

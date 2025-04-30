@@ -61,6 +61,7 @@ const Main = memo(function Main() {
   logger.debug("App state test", { currentAppState, previousAppState })
 
   if (isLaunchedForBackgroundStuff) {
+    logger.debug("App is launched for background stuff")
     return null
   }
 
