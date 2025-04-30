@@ -1,20 +1,20 @@
 import React, { memo } from "react"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { VStack } from "@/design-system/VStack"
 import { HStack } from "@/design-system/HStack"
 import { Text } from "@/design-system/Text"
-import { useAppTheme } from "@/theme/use-app-theme"
+import { useAppTheme, ThemedStyle } from "@/theme/use-app-theme"
 import { Icon } from "@/design-system/Icon/Icon"
 import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { GroupAvatar } from "@/components/group-avatar"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
 import { useCurrentXmtpConversationIdSafe } from "./conversation.store-context"
+import { ViewStyle, TextStyle } from "react-native"
 
 export const ConversationInfoBanner = memo(function ConversationInfoBanner() {
-  const { theme } = useAppTheme()
+  const { theme, themed } = useAppTheme()
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
@@ -39,48 +39,80 @@ export const ConversationInfoBanner = memo(function ConversationInfoBanner() {
   )
   
   return (
-    <VStack>
-      <VStack
-        style={{
-          backgroundColor: theme.colors.background.sunken,
-          paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.sm,
-          borderRadius: theme.borderRadius.lg,
-          margin: theme.spacing.md,
-          marginBottom: 0,
-          gap: theme.spacing.sm,
-        }}
-      >
-        <HStack style={{ alignItems: "center", gap: theme.spacing.xxs }}>
-          <Icon icon="lock" size={16} color={theme.colors.global.primary} />
-          <Text preset="body" color="primary">
+    <VStack style={{ gap: theme.spacing.sm }}>
+      <VStack style={themed($banner)}>
+        <HStack style={themed($bannerRow)}>
+          <Icon icon="lock.fill" size={16} color={theme.colors.global.green} />
+          <Text preset="smaller" color="secondary">
             Encrypted & decentralized
           </Text>
         </HStack>
         
-        <HStack style={{ alignItems: "center", gap: theme.spacing.xxs }}>
-          <Icon icon="clock" size={16} color={theme.colors.global.primary} />
-          <Text preset="body" color="primary">
+        <HStack style={themed($bannerRow)}>
+          <Icon icon="clock.fill" size={16} color={theme.colors.global.green} />
+          <Text preset="smaller" color="secondary">
             Earlier messages are hidden for privacy
           </Text>
         </HStack>
         
         {showDisappearingMessage && (
-          <HStack style={{ alignItems: "center", gap: theme.spacing.xxs }}>
-            <Icon icon="timer" size={16} color={theme.colors.global.primary} />
-            <Text preset="body" color="primary">
+          <HStack style={themed($bannerRow)}>
+            <Icon icon="timer" size={16} color={theme.colors.global.green} />
+            <Text preset="smaller" color="secondary">
               Messages disappear after {getFormattedDisappearingDuration(disappearingMessageSettings!.retentionDurationInNs)}
             </Text>
           </HStack>
         )}  
       </VStack>
-      <VStack style={{ alignItems: "center", marginTop: theme.spacing.lg, gap: theme.spacing.xxs }}>
-        <GroupAvatar xmtpConversationId={xmtpConversationId} size="lg" />
-        <Text preset="bigBold" style={{ textAlign: "center" }}>{groupName}</Text>
+
+      <VStack style={themed($groupSection)}>
+        <HStack style={{ gap: theme.spacing.xxxs }}>
+          <GroupAvatar xmtpConversationId={xmtpConversationId} size="sm" />
+          <Text numberOfLines={1} ellipsizeMode="tail" style={{ flexShrink: 1,}}>
+            {groupName}
+          </Text>
+        </HStack>
         {group?.description && (
-          <Text style={{ textAlign: "center" }}>{group.description}desc</Text>
+          <Text
+            preset="small"
+            color="secondary"
+            style={themed($groupDescription)}
+          >
+            {group.description}
+          </Text>
         )}
       </VStack>
     </VStack>
   )
+})
+
+const $banner: ThemedStyle<ViewStyle> = ({ spacing, borderRadius, colors }) => ({
+  padding: spacing.xs,
+  borderRadius: borderRadius.sm,
+  borderWidth: 1,
+  borderColor: colors.border.subtle,
+  gap: spacing.xxs,
+  alignItems: "center",
+  alignSelf: "center",
+  flexWrap: "wrap",
+  maxWidth: "90%",
+})
+
+const $bannerRow: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  gap: spacing.xxs,
+  flexDirection: "row",
+})
+
+const $groupSection: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  alignItems: "center",
+  alignSelf: "center",
+  gap: spacing.xxs,
+  flexWrap: "wrap",
+  maxWidth: "80%",
+  marginBottom: spacing.sm,
+})
+
+const $groupDescription: ThemedStyle<TextStyle> = () => ({
+  textAlign: "center",
 })
