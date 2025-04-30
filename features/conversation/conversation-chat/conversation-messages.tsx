@@ -8,6 +8,7 @@ import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationConsentPopupDm } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-dm"
 import { ConversationConsentPopupGroup } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-group"
+import { ConversationInfoBanner } from "@/features/conversation/conversation-chat/conversation-info-banner"
 import { ConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message"
 import { ConversationMessageHighlighted } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-highlighted"
 import { ConversationMessageLayout } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-layout"
@@ -58,6 +59,14 @@ export const ConversationMessages = memo(function ConversationMessages() {
     conversationId: xmtpConversationId,
     caller: "Conversation Messages",
   })
+  
+  const { data: conversation } = useConversationQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "ConversationMessages",
+  })
+  
+  const isGroup = conversation ? !isConversationDm(conversation) : false
 
   const {
     data: messageIds = [],
@@ -267,6 +276,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       scrollEventThrottle={200} // We don't need to throttle fast because we only use to know if we need to load more messages
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
+      ListFooterComponent={isGroup ? <ConversationInfoBanner xmtpConversationId={xmtpConversationId} /> : null}
       getItemType={getItemType}
       estimatedListSize={{
         height: theme.layout.screen.height,
