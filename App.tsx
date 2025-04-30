@@ -9,8 +9,8 @@ import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
-import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
-import { registerBackgroundNotificationTaskSmall } from "@/features/notifications/background-notifications-handler-small"
+import { useRegisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
+import { unregisterBackgroundNotificationTaskSmall } from "@/features/notifications/background-notifications-handler-small"
 import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
@@ -41,8 +41,8 @@ sentryInit()
 configureForegroundNotificationBehavior()
 setupConvosApi()
 
-registerBackgroundNotificationTaskSmall()
-unregisterBackgroundNotificationTask()
+// TMP
+unregisterBackgroundNotificationTaskSmall()
 
 export function App() {
   return <Main />
@@ -108,7 +108,7 @@ const Handlers = memo(function Handlers() {
   useNotificationListeners()
   useConversationsNotificationsSubscriptions()
   useReactQueryInit()
-  // useRegisterBackgroundNotificationTask()
+  useRegisterBackgroundNotificationTask()
 
   return null
 })

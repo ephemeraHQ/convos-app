@@ -220,12 +220,6 @@ export function getConversationMessagesInfiniteQueryOptions(
         xmtpConversationId,
       })
 
-      if (isRecent) {
-        queryLogger.debug(
-          `Refetching conversation messages infinite query on window focus for ${xmtpConversationId}`,
-        )
-      }
-
       return isRecent ? "always" : true
     },
     refetchOnWindowFocus: (query) => {
@@ -245,12 +239,6 @@ export function getConversationMessagesInfiniteQueryOptions(
         clientInboxId,
         xmtpConversationId,
       })
-
-      if (isRecent) {
-        queryLogger.debug(
-          `Refetching conversation messages infinite query on window focus for ${xmtpConversationId}`,
-        )
-      }
 
       return isRecent ? "always" : true
     },
