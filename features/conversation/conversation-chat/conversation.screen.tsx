@@ -27,6 +27,7 @@ import {
   useConversationStoreContext,
   useCurrentXmtpConversationIdSafe,
 } from "./conversation.store-context"
+import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 
 export const ConversationScreen = memo(function ConversationScreen(
   props: NativeStackScreenProps<NavigationParamList, "Conversation">,
@@ -103,7 +104,7 @@ const Content = memo(function Content() {
           ) : (
             <VStack style={$globalStyles.flex1} />
           )}
-          <ConversationComposer />
+          {(isCreatingNewConversation || (conversation && isConversationAllowed(conversation))) && <ConversationComposer />}
           <ConversationKeyboardFiller />
         </VStack>
       </VStack>
