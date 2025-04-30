@@ -10,7 +10,6 @@ import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
 import { useRegisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
-import { unregisterBackgroundNotificationTaskSmall } from "@/features/notifications/background-notifications-handler-small"
 import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
@@ -19,7 +18,6 @@ import { AppNavigator } from "@/navigation/app-navigator"
 import { useAppLaunchedForBackgroundStuff, useAppStateStore } from "@/stores/use-app-state-store"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
-import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
 import { logger } from "@/utils/logger/logger"
 import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
@@ -46,13 +44,6 @@ export function App() {
 }
 
 const Main = memo(function Main() {
-  useRegisterBackgroundNotificationTask()
-
-  // Keep temporary
-  useEffect(() => {
-    unregisterBackgroundNotificationTaskSmall().catch(captureError)
-  }, [])
-
   const isLaunchedForBackgroundStuff = useAppLaunchedForBackgroundStuff()
 
   const currentAppState = useAppStateStore((state) => state.currentState)
@@ -60,6 +51,7 @@ const Main = memo(function Main() {
 
   logger.debug("App state test", { currentAppState, previousAppState })
 
+  // Need this to prevent the whole app from loading when we launch for processing a background notification
   if (isLaunchedForBackgroundStuff) {
     logger.debug("App is launched for background stuff")
     return null
@@ -115,6 +107,7 @@ const Handlers = memo(function Handlers() {
   useNotificationListeners()
   useConversationsNotificationsSubscriptions()
   useReactQueryInit()
+  useRegisterBackgroundNotificationTask()
 
   return null
 })

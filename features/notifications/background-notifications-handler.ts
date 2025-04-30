@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query"
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { useEffect } from "react"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   messageContentIsMultiRemoteAttachment,
@@ -10,6 +12,7 @@ import {
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { getMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
+import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
 import { fetchProfile } from "@/features/profiles/profiles.api"
 import {
@@ -18,6 +21,7 @@ import {
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
+import { usePrevious } from "@/hooks/use-previous-value"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -29,6 +33,7 @@ const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
 const NOTIFICATION_ID_TTL = 1000 * 60 * 5 // 5 minutes in milliseconds
 export const RECEIVED_NOTIFICATIONS_COUNT_KEY = "received_notifications_count"
 export const DISPLAYED_NOTIFICATIONS_COUNT_KEY = "displayed_notifications_count"
+const processedMessageIds = new Set<string>()
 
 /**
  * Extracts the essential notification data (contentTopic and encryptedMessage)
@@ -79,46 +84,6 @@ function extractNotificationData(
 
   notificationsLogger.debug("No supported notification format detected")
   return null
-}
-
-async function hasProcessedMessage(encryptedMessage: string): Promise<boolean> {
-  try {
-    const processedMessagesJson = storage.getString(PROCESSED_NOTIFICATIONS_KEY)
-    if (!processedMessagesJson) return false
-
-    const processedMessages = JSON.parse(processedMessagesJson) as Array<{
-      id: string
-      timestamp: number
-    }>
-
-    return processedMessages.some((message) => message.id === encryptedMessage)
-  } catch (error) {
-    notificationsLogger.error("Error checking processed messages", error)
-    return false
-  }
-}
-
-async function markMessageAsProcessed(encryptedMessage: string): Promise<void> {
-  try {
-    const now = Date.now()
-    const processedMessagesJson = storage.getString(PROCESSED_NOTIFICATIONS_KEY)
-    let processedMessages = processedMessagesJson
-      ? (JSON.parse(processedMessagesJson) as Array<{ id: string; timestamp: number }>)
-      : []
-
-    // Remove expired entries
-    processedMessages = processedMessages.filter(
-      (message) => now - message.timestamp < NOTIFICATION_ID_TTL,
-    )
-
-    // Add new message
-    processedMessages.push({ id: encryptedMessage, timestamp: now })
-
-    // Store updated list
-    storage.set(PROCESSED_NOTIFICATIONS_KEY, JSON.stringify(processedMessages))
-  } catch (error) {
-    notificationsLogger.error("Error marking message as processed", error)
-  }
 }
 
 function incrementReceivedNotificationsCount(): void {
@@ -184,33 +149,31 @@ export async function unregisterBackgroundNotificationTask() {
 }
 
 export function useRegisterBackgroundNotificationTask() {
+  const authStatus = useAuthenticationStore((state) => state.status)
+  const { data: hasNotificationPermission } = useQuery({
+    ...getNotificationsPermissionsQueryConfig(),
+    select: (data) => data.status === "granted",
+  })
+  const previousNotificationPermission = usePrevious(hasNotificationPermission)
+
   useEffect(() => {
-    registerBackgroundNotificationTask().catch(captureError)
-  }, [])
+    // Only register if signed in and has notification permission
+    if (authStatus === "signedIn" && hasNotificationPermission) {
+      registerBackgroundNotificationTask().catch(captureError)
+    }
+  }, [authStatus, hasNotificationPermission])
 
-  // const authStatus = useAuthenticationStore((state) => state.status)
-  // const { data: hasNotificationPermission } = useQuery({
-  //   ...getNotificationsPermissionsQueryConfig(),
-  //   select: (data) => data.status === "granted",
-  // })
-  // const previousNotificationPermission = usePrevious(hasNotificationPermission)
-
-  // useEffect(() => {
-  //   // Only register if signed in and has notification permission
-  //   if (authStatus === "signedIn" && hasNotificationPermission) {
-  //     registerBackgroundNotificationTask().catch(captureError)
-  //   }
-  // }, [authStatus, hasNotificationPermission])
-
-  // useEffect(() => {
-  //   // Unregister if notification permission removed
-  //   if (previousNotificationPermission && !hasNotificationPermission) {
-  //     unregisterBackgroundNotificationTask()?.catch(captureError)
-  //   }
-  // }, [hasNotificationPermission, previousNotificationPermission])
+  useEffect(() => {
+    // Unregister if notification permission removed
+    if (previousNotificationPermission && !hasNotificationPermission) {
+      unregisterBackgroundNotificationTask()?.catch(captureError)
+    }
+  }, [hasNotificationPermission, previousNotificationPermission])
 }
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
+  let notificationId: string | null = null
+
   try {
     if (error) {
       throw new NotificationError({
@@ -239,17 +202,19 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
 
     const { conversationTopic, encryptedMessage } = notificationData
 
+    notificationId = encryptedMessage
+
     // Increment received notifications counter
     // incrementReceivedNotificationsCount()
 
     // Check if we've already processed this message
-    if (await hasProcessedMessage(encryptedMessage)) {
+    if (processedMessageIds.has(notificationId)) {
       notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
       return
     }
 
     // Mark message as processed as soon as possible
-    await markMessageAsProcessed(encryptedMessage)
+    processedMessageIds.add(notificationId)
 
     const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
 
@@ -389,5 +354,9 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
         },
       }),
     )
+  } finally {
+    if (notificationId) {
+      processedMessageIds.delete(notificationId)
+    }
   }
 })
