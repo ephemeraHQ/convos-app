@@ -16,11 +16,12 @@ import { useNotificationListeners } from "@/features/notifications/notifications
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
-import { useAppLaunchedForBackgroundStuff } from "@/stores/use-app-state-store"
+import { useAppLaunchedForBackgroundStuff, useAppStateStore } from "@/stores/use-app-state-store"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
+import { logger } from "@/utils/logger/logger"
 import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
@@ -53,6 +54,11 @@ const Main = memo(function Main() {
   }, [])
 
   const isLaunchedForBackgroundStuff = useAppLaunchedForBackgroundStuff()
+
+  const currentAppState = useAppStateStore((state) => state.currentState)
+  const previousAppState = useAppStateStore((state) => state.previousState)
+
+  logger.debug("App state test", { currentAppState, previousAppState })
 
   if (isLaunchedForBackgroundStuff) {
     return null
