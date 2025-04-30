@@ -171,6 +171,7 @@ const MessageReplyReference = memo(function MessageReplyReference(props: {
 
   const { displayName } = usePreferredDisplayInfo({
     inboxId: referencedMessage?.senderInboxId,
+    caller: "MessageReplyReference",
   })
 
   const tapGesture = Gesture.Tap()

@@ -28,6 +28,7 @@ export const SearchUsersResultsListItemGroup = memo(
 
     const preferredDisplayData = usePreferredDisplayInfoBatch({
       xmtpInboxIds: members?.ids?.slice(0, 4) ?? [],
+      caller: "SearchUsersResultsListItemGroup",
     })
 
     return (

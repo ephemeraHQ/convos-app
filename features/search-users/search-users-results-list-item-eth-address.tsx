@@ -28,10 +28,12 @@ export const SearchUsersResultsListItemEthAddress = memo(
     const { data: inboxId } = useXmtpInboxIdFromEthAddressQuery({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: ethAddress,
+      caller: "SearchUsersResultsListItemEthAddress",
     })
 
     const { displayName, avatarUrl } = usePreferredDisplayInfo({
       ethAddress,
+      caller: "SearchUsersResultsListItemEthAddress",
     })
 
     return (

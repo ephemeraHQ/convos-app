@@ -13,7 +13,7 @@ type IDeviceIdentityId = string & { readonly __brand: unique symbol }
 export const DeviceIdentitySchema = z.object({
   id: z.custom<IDeviceIdentityId>(),
   xmtpId: z.string().optional(),
-  privyAddress: z.string(),
+  turnkeyAddress: z.string(),
   userId: z.string(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -63,7 +63,7 @@ export const fetchIdentity = async (args: { identityId: IDeviceIdentityId }) => 
 
 export type ICreateIdentityInput = {
   xmtpId: IXmtpInboxId
-  privyAddress: IEthereumAddress
+  turnkeyAddress: IEthereumAddress
 }
 
 export const createIdentity = async (args: {

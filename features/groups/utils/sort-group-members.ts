@@ -6,22 +6,17 @@ import {
 
 export function sortGroupMembers(members: IGroupMember[]) {
   return members.sort((a, b) => {
-    // Sort super admins first
-    if (getGroupMemberIsSuperAdmin({ member: a }) && !getGroupMemberIsSuperAdmin({ member: b })) {
-      return -1
-    }
-    if (!getGroupMemberIsSuperAdmin({ member: a }) && getGroupMemberIsSuperAdmin({ member: b })) {
+    const getMemberPriority = (member: IGroupMember): number => {
+      if (getGroupMemberIsSuperAdmin({ member })) return 4
+      if (getGroupMemberIsAdmin({ member })) return 3
+      if (member.consentState === "allowed") return 2
+      if (member.consentState === "denied") return 0
       return 1
     }
 
-    // Then sort regular admins
-    if (getGroupMemberIsAdmin({ member: a }) && !getGroupMemberIsAdmin({ member: b })) {
-      return -1
-    }
-    if (!getGroupMemberIsAdmin({ member: a }) && getGroupMemberIsAdmin({ member: b })) {
-      return 1
-    }
+    const priorityA = getMemberPriority(a)
+    const priorityB = getMemberPriority(b)
 
-    return 0
+    return priorityB - priorityA
   })
 }

@@ -20,7 +20,7 @@ export function getPreferredDisplayName(args: {
     profile?.name || // First choice: Convos display name
     socialProfiles?.[0]?.name || // Second choice: First social profile name
     (ethAddress ? shortAddress(ethAddress) : undefined) || // Third choice: Ethereum address
-    profile?.privyAddress || // Fourth choice: Ethereum address from Convos profile
+    profile?.turnkeyAddress || // Fourth choice: Ethereum address from Convos profile
     (inboxId ? shortAddress(inboxId) : undefined) // Fifth choice: Inbox ID
   )
 }
@@ -53,7 +53,7 @@ export function getPreferredEthAddress(args: {
 
   return (
     ethAddress || // First choice: Directly provided Ethereum address
-    profile?.privyAddress || // Second choice: Ethereum address from Convos profile
+    profile?.turnkeyAddress || // Second choice: Ethereum address from Convos profile
     socialProfiles?.[0]?.address // Third choice: Ethereum address from social profile
   )
 }

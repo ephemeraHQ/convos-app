@@ -17,6 +17,7 @@ export function ConversationSenderAvatar() {
   const { senderAvatarSize } = useConversationMessageStyles()
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: currentMessageSenderInboxId,
+    caller: "ConversationSenderAvatar",
   })
 
   const router = useRouter()

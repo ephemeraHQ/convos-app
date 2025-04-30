@@ -24,7 +24,6 @@ import {
   ensureEthAddressesForXmtpInboxIdQueryData,
   getEthAddressesForXmtpInboxIdQueryData,
   getEthAddressesForXmtpInboxIdQueryOptions,
-  useEthAddressesForXmtpInboxIdQuery,
 } from "@/features/xmtp/xmtp-inbox-id/eth-addresses-for-xmtp-inbox-id.query"
 import {
   ensureXmtpInboxIdFromEthAddressQueryData,
@@ -50,19 +49,19 @@ type PreferredDisplayInfoArgs = {
     }
 )
 
-export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
-  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData, enabled = true } = args
+export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { caller: string }) {
+  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData, caller: callerArg } = args
 
   const currentSender = useSafeCurrentSender()
-
-  const xmtpInboxIdOptions = getXmtpInboxIdFromEthAddressQueryOptions({
-    clientInboxId: currentSender.inboxId,
-    targetEthAddress: ethAddressArg!, // ! because we check enabled
-  })
+  const caller = `${callerArg}:usePreferredDisplayInfo`
 
   const { data: inboxIdFromEthAddress } = useQuery({
-    ...xmtpInboxIdOptions,
-    enabled: enabled && !!ethAddressArg && xmtpInboxIdOptions.enabled !== false,
+    ...getXmtpInboxIdFromEthAddressQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      targetEthAddress: ethAddressArg!, // ! because we check enabled
+      caller,
+    }),
+    enabled: !!ethAddressArg,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
@@ -74,9 +73,11 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
     caller: "usePreferredDisplayInfo",
   })
 
+  // TODO: Check if caller is accepted in the query options
   const { data: ethAddressesForXmtpInboxId } = useQuery({
     ...ethAddressesOptions,
-    enabled: enabled && ethAddressesOptions.enabled !== false,
+    //enabled: enabled && ethAddressesOptions.enabled !== false,
+    caller,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
@@ -87,37 +88,29 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
   })
 
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
-    ...profileOptions,
-    enabled: enabled && profileOptions.enabled !== false,
+    ...getProfileQueryConfig({ xmtpId: inboxId, caller }),
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
-  })
-
-  // Get social profiles data
-  const socialProfilesOptions = getSocialProfilesForInboxIdQueryOptions({
-    inboxId,
-    clientInboxId: currentSender.inboxId,
-    caller: "usePreferredDisplayInfo",
   })
 
   const { data: socialProfilesForInboxId, isLoading: isLoadingSocialProfilesForInboxId } = useQuery(
     {
-      ...socialProfilesOptions,
-      enabled: enabled && socialProfilesOptions.enabled !== false,
+      ...getSocialProfilesForInboxIdQueryOptions({
+        inboxId,
+        clientInboxId: currentSender.inboxId,
+        caller,
+      }),
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     },
   )
 
   const ethAddress = ethAddressArg || ethAddressesForXmtpInboxId?.[0]
 
-  const socialProfilesEthOptions = getSocialProfilesForEthAddressQueryOptions({
-    ethAddress,
-    caller: "usePreferredDisplayInfo",
-  })
-
   const { data: socialProfilesForEthAddress, isLoading: isLoadingSocialProfilesForEthAddress } =
     useQuery({
-      ...socialProfilesEthOptions,
-      enabled: enabled && !!ethAddress && socialProfilesEthOptions.enabled !== false,
+      ...getSocialProfilesForEthAddressQueryOptions({
+        ethAddress,
+        caller,
+      }),
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     })
 
@@ -244,6 +237,7 @@ export async function ensurePreferredDisplayInfo(args: PreferredDisplayInfoArgs)
     inboxId = await ensureXmtpInboxIdFromEthAddressQueryData({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: ethAddressArg,
+      caller: "ensurePreferredDisplayInfo",
     })
   }
 

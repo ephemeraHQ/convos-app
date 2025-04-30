@@ -79,11 +79,11 @@ const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversa
           captureErrorWithToast(
             new GenericError({
               error,
-              additionalMessage: "Failed to load reply message"
+              additionalMessage: "Failed to load reply message",
             }),
             {
-              message: "Failed to load reply message"
-            }
+              message: "Failed to load reply message",
+            },
           )
         }
       },
@@ -94,6 +94,7 @@ const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversa
 
   const { displayName } = usePreferredDisplayInfo({
     inboxId: replyMessage?.senderInboxId,
+    caller: "ConversationComposerReplyPreview",
   })
 
   const replyingTo = replyMessage

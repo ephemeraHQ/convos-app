@@ -3,6 +3,7 @@ import {
   IXmtpInboxId,
   IXmtpMessageId,
 } from "@/features/xmtp/xmtp.types"
+import { getTodayNs } from "@/utils/date"
 import {
   IConversationMessageContent,
   IGroupUpdatedMetadataEntryFieldName,
@@ -11,7 +12,7 @@ import {
 // XMTP reply content is weird, not the same as a normal message content so we need
 // this function to convert it to our format
 export function convertXmtpReplyContentToConvosContent(
-  content: IXmtpDecodedMessageNativeContent, // that's the type of the content in the XMTP reply message
+  content: IXmtpDecodedMessageNativeContent,
 ): IConversationMessageContent {
   // Handle remote attachments
   if (content.remoteAttachment) {

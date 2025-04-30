@@ -33,6 +33,7 @@ export function ShareProfileScreen({ route, navigation }: IShareProfileScreenPro
 
   const { username, displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId,
+    caller: "ShareProfileScreen",
   })
 
   const profileUrl = generateProfileUrl({ username, inboxId })
@@ -52,9 +53,12 @@ export function ShareProfileScreen({ route, navigation }: IShareProfileScreenPro
       await Share.share(shareDict)
       setCopiedLink(true)
     } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error sharing profile" }), {
-        message: "Error sharing profile"
-      })
+      captureErrorWithToast(
+        new GenericError({ error, additionalMessage: "Error sharing profile" }),
+        {
+          message: "Error sharing profile",
+        },
+      )
     }
   }
 

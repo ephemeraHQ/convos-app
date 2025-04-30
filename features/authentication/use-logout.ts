@@ -1,9 +1,10 @@
-import { usePrivy } from "@privy-io/expo"
+import { useTurnkey } from "@turnkey/sdk-react-native"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { getCurrentSender, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { getAllSenders, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
 import { unsubscribeFromAllConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
+import { stopStreaming } from "@/features/streams/streams"
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -11,31 +12,30 @@ import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.
 import { authLogger } from "../../utils/logger/logger"
 
 export const useLogout = () => {
-  const { logout: privyLogout } = usePrivy()
+  const { clearAllSessions: clearTurnkeySessions } = useTurnkey()
 
   const logout = useCallback(
     async (args: { caller: string }) => {
-      authLogger.debug(`Logging out called by ${args.caller}`)
+      authLogger.debug(`Logging out called by "${args.caller}"`)
 
       try {
-        useAuthenticationStore.getState().actions.setStatus("signedOut")
+        const senders = getAllSenders()
 
-        const currentSender = getCurrentSender()
-
-        // Unsubscribe from all conversations notifications
-        if (currentSender) {
-          try {
-            await unsubscribeFromAllConversationsNotifications({
-              clientInboxId: currentSender.inboxId,
-            })
-          } catch (error) {
-            captureError(
-              new GenericError({
-                error,
-                additionalMessage: "Error unsubscribing from conversations notifications",
-              }),
-            )
-          }
+        try {
+          await Promise.all(
+            senders.map(async (sender) => {
+              await unsubscribeFromAllConversationsNotifications({
+                clientInboxId: sender.inboxId,
+              })
+            }),
+          )
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error unsubscribing from conversations notifications",
+            }),
+          )
         }
 
         try {
@@ -49,16 +49,37 @@ export const useLogout = () => {
           )
         }
 
-        if (currentSender) {
-          logoutXmtpClient({
-            inboxId: currentSender.inboxId,
-          }).catch(captureError)
+        try {
+          await stopStreaming(senders.map((sender) => sender.inboxId))
+        } catch (error) {
+          captureError(new GenericError({ error, additionalMessage: "Error stopping streaming" }))
         }
+
+        try {
+          await Promise.all(
+            senders.map((sender) =>
+              logoutXmtpClient({
+                inboxId: sender.inboxId,
+              }),
+            ),
+          )
+        } catch (error) {
+          captureError(new GenericError({ error, additionalMessage: "Error logging out xmtp" }))
+        }
+
+        await clearTurnkeySessions()
+
+        // Doing this at the end because we want to make sure that we cleared everything before showing auth screen
+        useAuthenticationStore.getState().actions.setStatus("signedOut")
+
+        // This needs to be at the end because at many places we use useSafeCurrentSender()
+        // and it will throw error if we reset the store too early
+        // Need the setTimeout because for some reason the navigation is not updated immediately when we set auth status to signed out
 
         resetMultiInboxStore()
 
-        await privyLogout()
-
+        // Might want to only clear certain queries later but okay for now
+        // Put this last because otherwise some useQuery hook triggers even tho we're logging out
         clearReacyQueryQueriesAndCache()
 
         authLogger.debug("Successfully logged out")
@@ -69,9 +90,7 @@ export const useLogout = () => {
         })
       }
     },
-    // Don't add privyLogout to the dependencies array. It's useless and cause lots of re-renders of callers
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [clearTurnkeySessions],
   )
 
   return { logout }

@@ -34,6 +34,7 @@ export const ConversationListPinnedConversationDm = ({
 
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: dm?.peerInboxId,
+    caller: "ConversationListPinnedConversationDm",
   })
 
   const { isUnread } = useConversationIsUnread({

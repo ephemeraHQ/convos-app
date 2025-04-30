@@ -1,21 +1,34 @@
-import { useQuery } from "@tanstack/react-query"
 import * as Device from "expo-device"
 import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { useEffect } from "react"
-import { useAuthenticationStore } from "@/features/authentication/authentication.store"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  messageContentIsMultiRemoteAttachment,
+  messageContentIsRemoteAttachment,
+} from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
+import { getMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
-import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
-import { usePrevious } from "@/hooks/use-previous-value"
+import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
+import { fetchProfile } from "@/features/profiles/profiles.api"
+import {
+  getXmtpConversation,
+  getXmtpConversationIdFromXmtpTopic,
+} from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
+import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { storage } from "@/utils/storage/storage"
-import { maybeDisplayLocalNewMessageNotification } from "./notifications.service"
+import { tryCatch } from "@/utils/try-catch"
 
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
 const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
 const NOTIFICATION_ID_TTL = 1000 * 60 * 5 // 5 minutes in milliseconds
+export const RECEIVED_NOTIFICATIONS_COUNT_KEY = "received_notifications_count"
+export const DISPLAYED_NOTIFICATIONS_COUNT_KEY = "displayed_notifications_count"
 
 /**
  * Extracts the essential notification data (contentTopic and encryptedMessage)
@@ -108,6 +121,24 @@ async function markMessageAsProcessed(encryptedMessage: string): Promise<void> {
   }
 }
 
+function incrementReceivedNotificationsCount(): void {
+  try {
+    const currentCount = storage.getNumber(RECEIVED_NOTIFICATIONS_COUNT_KEY) || 0
+    storage.set(RECEIVED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
+  } catch (error) {
+    notificationsLogger.error("Error incrementing received notifications count", error)
+  }
+}
+
+function incrementDisplayedNotificationsCount(): void {
+  try {
+    const currentCount = storage.getNumber(DISPLAYED_NOTIFICATIONS_COUNT_KEY) || 0
+    storage.set(DISPLAYED_NOTIFICATIONS_COUNT_KEY, currentCount + 1)
+  } catch (error) {
+    notificationsLogger.error("Error incrementing displayed notifications count", error)
+  }
+}
+
 /**
  * Register a task to handle background notifications
  * This is what allows us to process notifications even when the app is closed
@@ -153,26 +184,30 @@ export async function unregisterBackgroundNotificationTask() {
 }
 
 export function useRegisterBackgroundNotificationTask() {
-  const authStatus = useAuthenticationStore((state) => state.status)
-  const { data: hasNotificationPermission } = useQuery({
-    ...getNotificationsPermissionsQueryConfig(),
-    select: (data) => data.status === "granted",
-  })
-  const previousNotificationPermission = usePrevious(hasNotificationPermission)
-
   useEffect(() => {
-    // Only register if signed in and has notification permission
-    if (authStatus === "signedIn" && hasNotificationPermission) {
-      registerBackgroundNotificationTask().catch(captureError)
-    }
-  }, [authStatus, hasNotificationPermission])
+    registerBackgroundNotificationTask().catch(captureError)
+  }, [])
 
-  useEffect(() => {
-    // Unregister if notification permission removed
-    if (previousNotificationPermission && !hasNotificationPermission) {
-      unregisterBackgroundNotificationTask()?.catch(captureError)
-    }
-  }, [hasNotificationPermission, previousNotificationPermission])
+  // const authStatus = useAuthenticationStore((state) => state.status)
+  // const { data: hasNotificationPermission } = useQuery({
+  //   ...getNotificationsPermissionsQueryConfig(),
+  //   select: (data) => data.status === "granted",
+  // })
+  // const previousNotificationPermission = usePrevious(hasNotificationPermission)
+
+  // useEffect(() => {
+  //   // Only register if signed in and has notification permission
+  //   if (authStatus === "signedIn" && hasNotificationPermission) {
+  //     registerBackgroundNotificationTask().catch(captureError)
+  //   }
+  // }, [authStatus, hasNotificationPermission])
+
+  // useEffect(() => {
+  //   // Unregister if notification permission removed
+  //   if (previousNotificationPermission && !hasNotificationPermission) {
+  //     unregisterBackgroundNotificationTask()?.catch(captureError)
+  //   }
+  // }, [hasNotificationPermission, previousNotificationPermission])
 }
 
 TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
@@ -204,19 +239,143 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
 
     const { conversationTopic, encryptedMessage } = notificationData
 
+    // Increment received notifications counter
+    // incrementReceivedNotificationsCount()
+
     // Check if we've already processed this message
-    if (await hasProcessedMessage(encryptedMessage)) {
-      notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
+    // if (await hasProcessedMessage(encryptedMessage)) {
+    //   notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
+    //   return
+    // }
+
+    // Mark message as processed as soon as possible
+    // await markMessageAsProcessed(encryptedMessage)
+
+    const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
+
+    const clientInboxId = getSafeCurrentSender().inboxId
+
+    notificationsLogger.debug("Fetching conversation and decrypting message...")
+    const [conversation, xmtpDecryptedMessage] = await Promise.all([
+      getXmtpConversation({
+        clientInboxId,
+        conversationId: xmtpConversationId,
+      }),
+      // ensureConversationQueryData({
+      //   clientInboxId,
+      //   xmtpConversationId,
+      //   caller: "notifications-foreground-handler",
+      // }),
+      decryptXmtpMessage({
+        encryptedMessage,
+        xmtpConversationId,
+        clientInboxId,
+      }),
+    ])
+
+    if (!conversation) {
+      throw new NotificationError({
+        error: `Conversation (${xmtpConversationId}) not found in background notification task`,
+      })
+    }
+
+    notificationsLogger.debug("Fetched conversation and decrypted message", {
+      conversation,
+      xmtpDecryptedMessage,
+    })
+
+    if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
+      notificationsLogger.debug(
+        `Skipping notification because message is not supported`,
+        xmtpDecryptedMessage,
+      )
       return
     }
 
-    // Mark message as processed as soon as possible
-    await markMessageAsProcessed(encryptedMessage)
+    const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
 
-    await maybeDisplayLocalNewMessageNotification({
-      encryptedMessage,
-      conversationTopic,
+    notificationsLogger.debug("Fetching message content and sender info...")
+    const [messageContentResult, profileResult] = await Promise.all([
+      // ensureMessageContentStringValue(convoMessage),
+      tryCatch(
+        Promise.resolve(
+          getMessageContentStringValue({
+            messageContent: convoMessage.content,
+          }),
+        ),
+      ),
+      tryCatch(
+        fetchProfile({
+          xmtpId: convoMessage.senderInboxId,
+        }),
+      ),
+      // ensurePreferredDisplayInfo({
+      //   inboxId: convoMessage.senderInboxId,
+      // }),
+    ])
+
+    const messageContentString = messageContentResult.data || ""
+    const profile = profileResult.data
+
+    const senderDisplayName = profile?.name || "New message"
+
+    notificationsLogger.debug("Message content:", messageContentString)
+    notificationsLogger.debug("Sender display name:", senderDisplayName)
+
+    // setConversationMessageQueryData({
+    //   clientInboxId,
+    //   xmtpMessageId: xmtpDecryptedMessage.id,
+    //   message: convoMessage,
+    // })
+
+    // addMessageToConversationMessagesInfiniteQueryData({
+    //   clientInboxId,
+    //   xmtpConversationId,
+    //   messageId: xmtpDecryptedMessage.id,
+    // })
+
+    // if (useAppStateStore.getState().currentState === "active") {
+    //   notificationsLogger.debug("Skipping showing notification because app is active")
+    //   return
+    // }
+
+    notificationsLogger.debug("Displaying local notification...")
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: senderDisplayName,
+        body: messageContentString,
+        data: {
+          message: convoMessage,
+          isProcessedByConvo: true,
+        } satisfies INotificationMessageDataConverted,
+        ...(messageContentIsRemoteAttachment(convoMessage.content)
+          ? {
+              attachments: [
+                {
+                  identifier: convoMessage.content.url,
+                  type: "image",
+                  url: convoMessage.content.url,
+                },
+              ],
+            }
+          : messageContentIsMultiRemoteAttachment(convoMessage.content)
+            ? {
+                attachments: convoMessage.content.attachments.map((attachment) => ({
+                  identifier: attachment.url,
+                  type: "image",
+                  url: attachment.url,
+                })),
+              }
+            : {}),
+      },
+      trigger: null,
     })
+
+    notificationsLogger.debug("Local notification displayed")
+
+    // If we reached here, the notification was displayed successfully
+    // If we reached here, the notification was displayed successfully
+    // incrementDisplayedNotificationsCount()
   } catch (error) {
     captureError(
       new NotificationError({

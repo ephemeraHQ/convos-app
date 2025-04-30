@@ -48,6 +48,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
 
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: peerInboxId,
+    caller: "ConversationListItemDm",
   })
 
   const { isUnread } = useConversationIsUnread({ xmtpConversationId })
@@ -100,7 +101,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
       await (isDeleted ? restoreConversationAsync() : deleteDm())
     } catch (error) {
       captureErrorWithToast(new GenericError({ error, additionalMessage: "Error deleting dm" }), {
-        message: "Error deleting chat"
+        message: "Error deleting chat",
       })
     }
   }, [isDeleted, deleteDm, restoreConversationAsync])
@@ -112,8 +113,8 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error toggling read status" }),
         {
-          message: "Error toggling read status"
-        }
+          message: "Error toggling read status",
+        },
       )
     }
   }, [toggleReadStatusAsync])

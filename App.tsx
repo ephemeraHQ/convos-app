@@ -1,27 +1,27 @@
 import { BottomSheetModalProvider } from "@design-system/BottomSheet/BottomSheetModalProvider"
 import { useReactQueryDevTools } from "@dev-plugins/react-query"
 import { ActionSheetProvider } from "@expo/react-native-action-sheet"
-import { addRpcUrlOverrideToChain } from "@privy-io/chains"
-import { Chain, PrivyProvider } from "@privy-io/expo"
-import { SmartWalletsProvider } from "@privy-io/expo/smart-wallets"
 // import { DevToolsBubble } from "react-native-react-query-devtools"
 import { ActionSheet } from "@/components/action-sheet"
-import { ConditionalWrapper } from "@/components/conditional-wrapper"
-import { DebugProvider } from "@/components/debug-provider"
 import { Snackbars } from "@/components/snackbar/snackbars"
+import { XmtpLogFilesModal } from "@/components/xmtp-log-files-modal"
 import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
-import { useSignoutIfNoPrivyUser } from "@/features/authentication/use-logout-if-no-privy-user"
+import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
 import { useRegisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
+import { unregisterBackgroundNotificationTaskSmall } from "@/features/notifications/background-notifications-handler-small"
 import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
+import { useAppLaunchedForBackgroundStuff, useAppStateStore } from "@/stores/use-app-state-store"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
+import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
+import { logger } from "@/utils/logger/logger"
 import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
@@ -31,8 +31,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { ThirdwebProvider } from "thirdweb/react"
-import { base } from "viem/chains"
-import { config } from "./config"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
@@ -40,14 +38,36 @@ import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
 preventSplashScreenAutoHide()
-
-const chainOverride = addRpcUrlOverrideToChain(base, config.evm.rpcEndpoint)
-const supportedChains = [chainOverride] as [Chain, ...Chain[]]
-
 sentryInit()
 configureForegroundNotificationBehavior()
 
 export function App() {
+  return <Main />
+}
+
+const Main = memo(function Main() {
+  useRegisterBackgroundNotificationTask()
+
+  // Keep temporary
+  useEffect(() => {
+    unregisterBackgroundNotificationTaskSmall().catch(captureError)
+  }, [])
+
+  const isLaunchedForBackgroundStuff = useAppLaunchedForBackgroundStuff()
+
+  const currentAppState = useAppStateStore((state) => state.currentState)
+  const previousAppState = useAppStateStore((state) => state.previousState)
+
+  logger.debug("App state test", { currentAppState, previousAppState })
+
+  if (isLaunchedForBackgroundStuff) {
+    return null
+  }
+
+  return <Content />
+})
+
+function Content() {
   useMonitorNetworkConnectivity()
   useReactQueryDevTools(reactQueryClient)
   useSetupStreamingSubscriptions()
@@ -63,36 +83,26 @@ export function App() {
 
   return (
     <ReactQueryProvider>
-      <PrivyProvider
-        appId={config.privy.appId}
-        clientId={config.privy.clientId}
-        supportedChains={supportedChains}
-      >
-        <SmartWalletsProvider>
-          <ThirdwebProvider>
-            <SafeAreaProvider>
-              <KeyboardProvider>
-                <ActionSheetProvider>
-                  <GestureHandlerRootView style={$globalStyles.flex1}>
-                    <ConditionalWrapper
-                      condition={config.debugMenu}
-                      wrapper={(children) => <DebugProvider>{children}</DebugProvider>}
-                    >
-                      <BottomSheetModalProvider>
-                        <AppNavigator />
-                        {/* {__DEV__ && <DevToolsBubble />} */}
-                        <Handlers />
-                        <Snackbars />
-                        <ActionSheet />
-                      </BottomSheetModalProvider>
-                    </ConditionalWrapper>
-                  </GestureHandlerRootView>
-                </ActionSheetProvider>
-              </KeyboardProvider>
-            </SafeAreaProvider>
-          </ThirdwebProvider>
-        </SmartWalletsProvider>
-      </PrivyProvider>
+      <TurnkeyProvider>
+        <ThirdwebProvider>
+          <SafeAreaProvider>
+            <KeyboardProvider>
+              <ActionSheetProvider>
+                <GestureHandlerRootView style={$globalStyles.flex1}>
+                  <BottomSheetModalProvider>
+                    <AppNavigator />
+                    {/* {__DEV__ && <DevToolsBubble />} */}
+                    <Handlers />
+                    <Snackbars />
+                    <ActionSheet />
+                    <XmtpLogFilesModal />
+                  </BottomSheetModalProvider>
+                </GestureHandlerRootView>
+              </ActionSheetProvider>
+            </KeyboardProvider>
+          </SafeAreaProvider>
+        </ThirdwebProvider>
+      </TurnkeyProvider>
     </ReactQueryProvider>
   )
 }
@@ -100,11 +110,9 @@ export function App() {
 const Handlers = memo(function Handlers() {
   useIsCurrentVersionEnough()
   useRefreshJwtAxiosInterceptor()
-  useSignoutIfNoPrivyUser()
   useCreateUserIfNoExist()
   useNotificationListeners()
   useConversationsNotificationsSubscriptions()
-  useRegisterBackgroundNotificationTask()
   useReactQueryInit()
 
   return null

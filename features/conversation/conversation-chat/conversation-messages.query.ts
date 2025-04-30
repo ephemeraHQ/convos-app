@@ -19,7 +19,10 @@ import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { ensureConversationQueryData } from "../queries/conversation.query"
 import { processReactionConversationMessages } from "./conversation-message/conversation-message-reactions.query"
 import { setConversationMessageQueryData } from "./conversation-message/conversation-message.query"
-import { IConversationMessage } from "./conversation-message/conversation-message.types"
+import {
+  IConversationMessage,
+  IConversationMessageReaction,
+} from "./conversation-message/conversation-message.types"
 import { convertXmtpMessageToConvosMessage } from "./conversation-message/utils/convert-xmtp-message-to-convos-message"
 
 // Default page size for infinite queries
@@ -99,7 +102,7 @@ const conversationMessagesInfiniteQueryFn = async (
 
   // Separate messages and reactions
   const regularMessages: IConversationMessage[] = []
-  const reactionMessages: IConversationMessage[] = []
+  const reactionMessages: IConversationMessageReaction[] = []
 
   for (const message of convosMessages) {
     if (isReactionMessage(message)) {
@@ -120,7 +123,10 @@ const conversationMessagesInfiniteQueryFn = async (
 
   // Process reactions in batch for better performance
   if (reactionMessages.length > 0) {
-    processReactionConversationMessages({ clientInboxId, reactionMessages })
+    processReactionConversationMessages({
+      clientInboxId,
+      reactionMessages,
+    })
   }
 
   // Get message IDs (only from regular messages, not reactions)

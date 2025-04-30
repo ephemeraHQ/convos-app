@@ -1,6 +1,7 @@
-import { queryOptions, useQuery } from "@tanstack/react-query"
+import { Query, queryOptions, useQuery } from "@tanstack/react-query"
 import {
   IConversationMessage,
+  IConversationMessageReaction,
   IConversationMessageReactionContent,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
@@ -38,6 +39,15 @@ export function getConversationMessageReactionsQueryOptions(args: IArgs) {
         byReactionContent: {},
       } as IConversationMessageReactions
     },
+    meta: {
+      persist: (query: Query<IConversationMessageReactions>) => {
+        const data = query.state.data
+        if (!data) {
+          return false
+        }
+        return Object.values(data.bySender).some((arr) => arr.length > 0)
+      },
+    },
     // enabled: !!xmtpMessageId && !!clientInboxId,
     enabled: false, // For now we can't fetch reactions from XMTP
   })
@@ -69,7 +79,7 @@ export function getConversationMessageReactionsQueryData(
  */
 export function processReactionConversationMessages(args: {
   clientInboxId: IXmtpInboxId
-  reactionMessages: IConversationMessage[]
+  reactionMessages: IConversationMessageReaction[]
 }) {
   const { clientInboxId, reactionMessages } = args
 

@@ -31,9 +31,9 @@ export type IConfig = {
   thirdweb: {
     clientId: string
   }
-  privy: {
-    appId: string
-    clientId: string
+  turnkey: {
+    organizationId: string
+    turnkeyApiUrl: string
   }
   evm: {
     rpcEndpoint: string

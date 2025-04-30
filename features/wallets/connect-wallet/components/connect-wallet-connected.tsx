@@ -33,6 +33,7 @@ export const WalletConnected = memo(function WalletConnected(props: IWalletConne
     useXmtpInboxIdFromEthAddressQuery({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: walletAddress,
+      caller: "WalletConnected",
     })
 
   useEffect(() => {

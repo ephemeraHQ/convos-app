@@ -1,4 +1,4 @@
-import { isAddress } from "ethers/lib/utils"
+import { isAddress } from "ethers/address"
 
 /**
  * Branded type for any Ethereum address

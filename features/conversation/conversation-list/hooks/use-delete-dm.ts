@@ -29,7 +29,8 @@ export const useDeleteDm = ({
   })
 
   const { displayName } = usePreferredDisplayInfo({
-    inboxId: dm?.peerInboxId!,
+    inboxId: dm?.peerInboxId,
+    caller: "useDeleteDm",
   })
 
   const { mutateAsync: denyDmConsentAsync } = useDenyDmMutation()
@@ -81,8 +82,8 @@ export const useDeleteDm = ({
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting dm" }),
               {
-                message: "Error deleting chat"
-              }
+                message: "Error deleting chat",
+              },
             )
           }
         },
@@ -100,8 +101,8 @@ export const useDeleteDm = ({
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting dm" }),
               {
-                message: "Error deleting and blocking chat"
-              }
+                message: "Error deleting and blocking chat",
+              },
             )
           }
         },

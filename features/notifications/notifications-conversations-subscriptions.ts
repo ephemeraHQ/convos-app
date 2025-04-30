@@ -8,9 +8,9 @@ import {
 } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpConversationTopicFromXmtpId } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpHmacKeysForConversation } from "@/features/xmtp/xmtp-hmac-keys/xmtp-hmac-keys"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { usePrevious } from "@/hooks/use-previous-value"
 import { captureError } from "@/utils/capture-error"
@@ -114,7 +114,9 @@ export function useConversationsNotificationsSubscriptions() {
       // Clean up any inboxes that are no longer in the list
       const currentInboxIds = senders.map((sender) => sender.inboxId)
 
-      for (const [inboxId, conversationIds] of previousConversationsRef.current.entries()) {
+      for (const [inboxId, conversationIds] of Array.from(
+        previousConversationsRef.current.entries(),
+      )) {
         if (!currentInboxIds.includes(inboxId) && conversationIds.length > 0) {
           unsubscribeFromConversationsNotifications({
             conversationIds,
@@ -203,13 +205,13 @@ async function subscribeToConversationsNotifications(args: {
       return
     }
 
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
     // Make a single API call with all subscriptions
     await subscribeToNotificationTopicsWithMetadata({
-      installationId,
+      installationId: client.installationId,
       subscriptions: validSubscriptions,
     })
 
@@ -233,7 +235,7 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
 
   notificationsLogger.debug(`Unsubscribing from all conversations for inbox ${clientInboxId}...`)
 
-  const installationId = await ensureXmtpInstallationQueryData({
+  const client = await getXmtpClientByInboxId({
     inboxId: clientInboxId,
   })
 
@@ -241,11 +243,7 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
     clientInboxId,
   })
 
-  if (!conversationIds) {
-    throw new Error(`No conversation ids found for inbox ${clientInboxId}`)
-  }
-
-  if (conversationIds.length === 0) {
+  if (!conversationIds || conversationIds.length === 0) {
     notificationsLogger.debug(`No conversations to unsubscribe from for inbox ${clientInboxId}`)
     return
   }
@@ -253,7 +251,7 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
   const conversationTopics = conversationIds.map(getXmtpConversationTopicFromXmtpId)
 
   await unsubscribeFromNotificationTopics({
-    installationId,
+    installationId: client.installationId,
     topics: conversationTopics,
   })
 
@@ -275,7 +273,7 @@ async function unsubscribeFromConversationsNotifications(args: {
   try {
     notificationsLogger.debug(`Unsubscribing from ${conversationIds.length} conversations...`)
 
-    const installationId = await ensureXmtpInstallationQueryData({
+    const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
@@ -283,7 +281,7 @@ async function unsubscribeFromConversationsNotifications(args: {
 
     // Make a single API call to unsubscribe from all topics
     await unsubscribeFromNotificationTopics({
-      installationId,
+      installationId: client.installationId,
       topics: conversationTopics,
     })
 

@@ -160,13 +160,3 @@ jest.mock("@xmtp/react-native-sdk", () => ({
     decode: jest.fn(),
   })),
 }))
-
-jest.mock("@privy-io/expo", () => ({
-  usePrivy: jest.fn().mockReturnValue({
-    login: jest.fn(),
-    logout: jest.fn(),
-    authenticated: false,
-    ready: true,
-    user: null,
-  }),
-}))

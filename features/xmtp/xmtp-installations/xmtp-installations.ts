@@ -1,5 +1,4 @@
-import { getInboxState, signWithInstallationKey } from "@xmtp/react-native-sdk"
-import { ensureXmtpInstallationQueryData } from "@/features/xmtp/xmtp-installations/xmtp-installation.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpClientWithCodecs, IXmtpInboxId, IXmtpSigner } from "@/features/xmtp/xmtp.types"
 import { XMTPError } from "@/utils/error"
@@ -19,13 +18,13 @@ export async function validateXmtpInstallation(args: { inboxId: IXmtpInboxId }) 
   const { inboxId } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({ inboxId })
+    const client = await getXmtpClientByInboxId({ inboxId })
 
     const inboxState = await wrapXmtpCallWithDuration("getInboxState", () =>
-      getInboxState(installationId, true),
+      client.inboxState(true),
     )
     const installationsIds = inboxState.installations.map((i) => i.id)
-    return installationsIds.includes(installationId)
+    return installationsIds.includes(client.installationId)
   } catch (error) {
     throw new XMTPError({
       error,
@@ -69,10 +68,10 @@ export async function signWithXmtpInstallationId(args: {
   const { clientInboxId, message } = args
 
   try {
-    const installationId = await ensureXmtpInstallationQueryData({ inboxId: clientInboxId })
+    const client = await getXmtpClientByInboxId({ inboxId: clientInboxId })
 
     const signature = await wrapXmtpCallWithDuration("signWithInstallationKey", () =>
-      signWithInstallationKey(installationId, message),
+      client.signWithInstallationKey(message),
     )
 
     return signature

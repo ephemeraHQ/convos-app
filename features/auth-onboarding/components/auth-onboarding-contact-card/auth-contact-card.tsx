@@ -17,13 +17,16 @@ import { AuthOnboardingContactCardAvatar } from "./auth-onboarding-contact-card-
 import { AuthOnboardingContactCardFooter } from "./auth-onboarding-contact-card-footer"
 import { AuthOnboardingContactCardImport } from "./auth-onboarding-contact-card-import"
 import { AuthOnboardingContactCardNameInput } from "./auth-onboarding-contact-card-name-input"
-import { AuthOnboardingContactCardProvider, useAuthOnboardingContactCardContext } from "./auth-onboarding-contact-card.context"
+import {
+  AuthOnboardingContactCardProvider,
+  useAuthOnboardingContactCardContext,
+} from "./auth-onboarding-contact-card.context"
 
 const AuthOnboardingContactCardContent = memo(function AuthOnboardingContactCardContent() {
   const { themed, theme } = useAppTheme()
   const userFriendlyError = useAuthOnboardingStore((s) => s.userFriendlyError)
   const { handleContinue } = useAuthOnboardingContactCardContext()
-  
+
   const { container: containerStyles } = useProfileContactCardStyles()
 
   // Clear errors on mounts
@@ -43,7 +46,7 @@ const AuthOnboardingContactCardContent = memo(function AuthOnboardingContactCard
   const contentContainerHeightAV = useSharedValue(0)
   const cardContainerHeightAV = useSharedValue(0)
   const footerContainerHeightAV = useSharedValue(0)
-  
+
   // Handle keyboard submit action using context
   const handleSubmit = useCallback(() => {
     handleContinue()
@@ -113,17 +116,15 @@ const AuthOnboardingContactCardContent = memo(function AuthOnboardingContactCard
             />
           </VStack>
 
-          <Text 
-            preset="small" 
-            color={userFriendlyError ? "caution" : "secondary"} 
+          <Text
+            preset="small"
+            color={userFriendlyError ? "caution" : "secondary"}
             style={themed($footerText)}
           >
             {userFriendlyError || "You can update this anytime."}
           </Text>
 
-          <AuthOnboardingContactCardFooter 
-            footerContainerHeightAV={footerContainerHeightAV}
-          />
+          <AuthOnboardingContactCardFooter footerContainerHeightAV={footerContainerHeightAV} />
         </AnimatedVStack>
       </Screen>
     </AnimatedVStack>

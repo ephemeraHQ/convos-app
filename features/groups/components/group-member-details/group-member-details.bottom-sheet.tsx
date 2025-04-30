@@ -38,6 +38,7 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
   const { theme } = useAppTheme()
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: memberInboxId,
+    caller: "GroupMemberDetailsBottomSheet",
   })
   const router = useRouter()
   const currentSender = useSafeCurrentSender()
@@ -55,6 +56,7 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
 
   const { displayName: targetDisplayName } = usePreferredDisplayInfo({
     inboxId: memberInboxId,
+    caller: "GroupMemberDetailsBottomSheet",
   })
 
   const isCurrentUser = currentSender.inboxId === memberInboxId
@@ -127,8 +129,8 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Failed to promote to admin" }),
         {
-          message: "Failed to make admin"
-        }
+          message: "Failed to make admin",
+        },
       )
     }
   }, [memberInboxId, promoteToAdmin, targetDisplayName])
@@ -153,8 +155,8 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Failed to revoke admin" }),
         {
-          message: "Failed to revoke admin"
-        }
+          message: "Failed to revoke admin",
+        },
       )
     }
   }, [memberInboxId, revokeAdmin, targetDisplayName])
@@ -179,8 +181,8 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Failed to promote to super admin" }),
         {
-          message: "Failed to make super admin"
-        }
+          message: "Failed to make super admin",
+        },
       )
     }
   }, [memberInboxId, promoteToSuperAdmin, targetDisplayName])
@@ -205,8 +207,8 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Failed to revoke super admin" }),
         {
-          message: "Failed to revoke super admin"
-        }
+          message: "Failed to revoke super admin",
+        },
       )
     }
   }, [memberInboxId, revokeSuperAdmin, targetDisplayName])
@@ -233,8 +235,8 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Failed to remove from group" }),
         {
-          message: "Failed to remove from group"
-        }
+          message: "Failed to remove from group",
+        },
       )
     }
   }, [memberInboxId, removeMember, targetDisplayName])

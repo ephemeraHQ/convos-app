@@ -1,9 +1,9 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react"
-import { usePrivy } from "@privy-io/expo"
+import { useTurnkey } from "@turnkey/sdk-react-native"
 import { isAxiosError } from "axios"
+import React, { createContext, useCallback, useContext, useMemo, useState } from "react"
 import { z } from "zod"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
-import { IPrivyUserId } from "@/features/authentication/authentication.types"
+import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { hydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useCreateUserMutation } from "@/features/current-user/create-user.mutation"
@@ -13,7 +13,6 @@ import { GenericError } from "@/utils/error"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 import { getFirstZodValidationError, isZodValidationError } from "@/utils/zod"
 
-// Create a subset of the profile schema for just name validation
 const createProfileSchema = z.object({
   name: ConvosProfileSchema.shape.name,
 })
@@ -23,24 +22,31 @@ type IAuthOnboardingContactCardContextValue = {
   isPending: boolean
 }
 
-const AuthOnboardingContactCardContext = createContext<IAuthOnboardingContactCardContextValue | undefined>(undefined)
+const AuthOnboardingContactCardContext = createContext<
+  IAuthOnboardingContactCardContextValue | undefined
+>(undefined)
 
 export const useAuthOnboardingContactCardContext = () => {
   const context = useContext(AuthOnboardingContactCardContext)
   if (!context) {
-    throw new Error("useAuthOnboardingContactCardContext must be used within an AuthOnboardingContactCardProvider")
+    throw new Error(
+      "useAuthOnboardingContactCardContext must be used within an AuthOnboardingContactCardProvider",
+    )
   }
   return context
 }
 
-export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren> = ({
+  children,
+}) => {
   const { mutateAsync: createUserAsync, isPending: isCreatingUser } = useCreateUserMutation()
   const [pressedOnContinue, setPressedOnContinue] = useState(false)
-  const { user: privyUser } = usePrivy()
 
   const isAvatarUploading = useAuthOnboardingStore((state) => state.isAvatarUploading)
   const isProcessingWeb3Stuff = useAuthOnboardingStore((s) => s.isProcessingWeb3Stuff)
   const setUserFriendlyError = useAuthOnboardingStore((s) => s.actions.setUserFriendlyError)
+
+  const { user } = useTurnkey()
 
   const handleContinue = useCallback(async () => {
     try {
@@ -59,10 +65,6 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
         throw new Error("No current sender found, please logout")
       }
 
-      if (!privyUser) {
-        throw new Error("No Privy user found, please logout")
-      }
-
       // Validate inputs locally before sending to API
       try {
         createProfileSchema.parse({
@@ -79,7 +81,7 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
 
       await createUserAsync({
         inboxId: currentSender.inboxId,
-        privyUserId: privyUser.id as IPrivyUserId,
+        turnkeyUserId: user?.id as ITurnkeyUserId,
         smartContractWalletAddress: currentSender.ethereumAddress,
         profile: {
           name: store.name,
@@ -108,22 +110,23 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
           }),
           {
             message: "An unexpected error occurred. Please try again.",
-          }
+          },
         )
       }
     } finally {
       setPressedOnContinue(false)
     }
-  }, [createUserAsync, privyUser, setUserFriendlyError])
+  }, [createUserAsync, setUserFriendlyError, user?.id])
 
-  const isPending = isCreatingUser || isAvatarUploading || (pressedOnContinue && isProcessingWeb3Stuff)
+  const isPending =
+    isCreatingUser || isAvatarUploading || (pressedOnContinue && isProcessingWeb3Stuff)
 
   const contextValue = useMemo(
     () => ({
       handleContinue,
       isPending,
     }),
-    [handleContinue, isPending]
+    [handleContinue, isPending],
   )
 
   return (
@@ -131,4 +134,4 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
       {children}
     </AuthOnboardingContactCardContext.Provider>
   )
-} 
+}

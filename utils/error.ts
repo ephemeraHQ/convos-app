@@ -7,6 +7,11 @@ export function ensureError(error: unknown): Error {
   if (typeof error === "string") {
     return new Error(error)
   }
+  // @ts-ignore - Can happen
+  if (error && error?.message) {
+    // @ts-ignore - Can happen
+    return new Error(error.message)
+  }
   // If error is neither an instance of Error nor a string, create a generic error message
   return new Error("Unknown error occurred")
 }

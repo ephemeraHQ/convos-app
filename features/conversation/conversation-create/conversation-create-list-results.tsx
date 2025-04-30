@@ -178,6 +178,7 @@ const SearchUsersResultsListItemExternalIdentityWrapper = memo(
     const { data: inboxId, isLoading: isLoadingInboxId } = useXmtpInboxIdFromEthAddressQuery({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: externalIdentity.address,
+      caller: "SearchUsersResultsListItemExternalIdentityWrapper",
     })
 
     const handlePress = useCallback(() => {

@@ -33,6 +33,7 @@ export const AddGroupMembersConfirmButton = memo(function AddGroupMembersConfirm
 
   const selectedInboxIdsDisplayData = usePreferredDisplayInfoBatch({
     xmtpInboxIds: selectedInboxIds,
+    caller: "AddGroupMembersConfirmButton",
   })
 
   const handlePress = useCallback(async () => {

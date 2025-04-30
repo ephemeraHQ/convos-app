@@ -60,6 +60,7 @@ const SingleAttachmentDisplay = memo(function SingleAttachmentDisplay({
 }: ISingleAttachmentDisplayProps) {
   const { displayName } = usePreferredDisplayInfo({
     inboxId: senderInboxId as IXmtpInboxId,
+    caller: "MessageMultiRemoteAttachment",
   })
 
   const { url, ...metadata } = attachmentMetadata

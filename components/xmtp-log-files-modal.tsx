@@ -1,24 +1,44 @@
 import { Client } from "@xmtp/react-native-sdk"
 import { useCallback, useEffect, useState } from "react"
 import { Alert, FlatList, Modal, StyleSheet, TouchableOpacity, View } from "react-native"
+import { create } from "zustand"
 import { Center } from "@/design-system/Center"
 import { HStack } from "@/design-system/HStack"
 import { Loader } from "@/design-system/loader"
 import { Text } from "@/design-system/Text"
-import { VStack } from "@/design-system/VStack"
 import { getXmtpFilePaths } from "@/features/xmtp/xmtp-logs"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { shareContent } from "@/utils/share"
 
-type XmtpLogFilesModalProps = {
+type IXmtpLogFilesModalState = {
   visible: boolean
-  onClose: () => void
 }
 
-export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) {
+type IXmtpLogFilesModalActions = {
+  setVisible: (visible: boolean) => void
+}
+
+type IXmtpLogFilesModalStore = IXmtpLogFilesModalState & {
+  actions: IXmtpLogFilesModalActions
+}
+
+const initialState: IXmtpLogFilesModalState = {
+  visible: false,
+}
+
+const useXmtpLogFilesModalStore = create<IXmtpLogFilesModalStore>((set, get) => ({
+  ...initialState,
+  actions: {
+    setVisible: (visible: boolean) => set({ visible }),
+  },
+}))
+
+export function XmtpLogFilesModal() {
   const { theme } = useAppTheme()
+  const visible = useXmtpLogFilesModalStore((state) => state.visible)
+
   const [logFiles, setLogFiles] = useState<string[]>([])
   const [fileSizes, setFileSizes] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -108,63 +128,71 @@ export function XmtpLogFilesModal({ visible, onClose }: XmtpLogFilesModalProps) 
     }
   }, [])
 
+  const onClose = useCallback(() => {
+    useXmtpLogFilesModalStore.getState().actions.setVisible(false)
+  }, [])
+
   return (
     <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalContainer}>
-        <View style={[styles.modalContent, { backgroundColor: theme.colors.background.surface }]}>
-          <Text style={styles.modalTitle}>XMTP Log Files</Text>
+      {visible && (
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background.surface }]}>
+            <Text style={styles.modalTitle}>XMTP Log Files</Text>
 
-          {/* Display log status information */}
-          {logStatus ? (
-            <View style={styles.statusContainer}>
-              <Text preset="small" color="secondary">
-                {logStatus}
-              </Text>
-            </View>
-          ) : null}
+            {/* Display log status information */}
+            {logStatus ? (
+              <View style={styles.statusContainer}>
+                <Text preset="small" color="secondary">
+                  {logStatus}
+                </Text>
+              </View>
+            ) : null}
 
-          {isLoading ? (
-            <Center style={{ padding: theme.spacing.lg }}>
-              <Loader />
-              <Text color="secondary" style={{ marginTop: theme.spacing.sm }}>
-                Loading log files...
-              </Text>
-            </Center>
-          ) : logFiles.length === 0 ? (
-            <Center style={{ padding: theme.spacing.lg }}>
-              <Text color="secondary">No log files found</Text>
-            </Center>
-          ) : (
-            <FlatList
-              data={logFiles}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.logFileItem, { borderBottomColor: theme.colors.border.subtle }]}
-                  onPress={() => shareLogFile(item)}
-                >
-                  <Text numberOfLines={1} ellipsizeMode="middle">
-                    {item.split("/").pop()}
-                  </Text>
-                  <HStack style={{ justifyContent: "space-between", marginTop: theme.spacing.xxs }}>
-                    <Text preset="small" color="secondary">
-                      {fileSizes[item] || "Loading..."}
+            {isLoading ? (
+              <Center style={{ padding: theme.spacing.lg }}>
+                <Loader />
+                <Text color="secondary" style={{ marginTop: theme.spacing.sm }}>
+                  Loading log files...
+                </Text>
+              </Center>
+            ) : logFiles.length === 0 ? (
+              <Center style={{ padding: theme.spacing.lg }}>
+                <Text color="secondary">No log files found</Text>
+              </Center>
+            ) : (
+              <FlatList
+                data={logFiles}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.logFileItem, { borderBottomColor: theme.colors.border.subtle }]}
+                    onPress={() => shareLogFile(item)}
+                  >
+                    <Text numberOfLines={1} ellipsizeMode="middle">
+                      {item.split("/").pop()}
                     </Text>
-                    <Text preset="small" color="primary" style={{ fontStyle: "italic" }}>
-                      Tap to share
-                    </Text>
-                  </HStack>
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={{ paddingBottom: theme.spacing.md }}
-            />
-          )}
+                    <HStack
+                      style={{ justifyContent: "space-between", marginTop: theme.spacing.xxs }}
+                    >
+                      <Text preset="small" color="secondary">
+                        {fileSizes[item] || "Loading..."}
+                      </Text>
+                      <Text preset="small" color="primary" style={{ fontStyle: "italic" }}>
+                        Tap to share
+                      </Text>
+                    </HStack>
+                  </TouchableOpacity>
+                )}
+                contentContainerStyle={{ paddingBottom: theme.spacing.md }}
+              />
+            )}
 
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text>Close</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text>Close</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
     </Modal>
   )
 }

@@ -20,6 +20,7 @@ export function useConversationMessageReactionsRolledUp(args: { xmtpMessageId: I
 
   const preferredDisplayData = usePreferredDisplayInfoBatch({
     xmtpInboxIds: inboxIds,
+    caller: "useConversationMessageReactionsRolledUp",
   })
 
   return useMemo((): RolledUpReactions => {
