@@ -207,15 +207,6 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     // Increment received notifications counter
     // incrementReceivedNotificationsCount()
 
-    // Check if we've already processed this message
-    if (processedMessageIds.has(notificationId)) {
-      notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
-      return
-    }
-
-    // Mark message as processed as soon as possible
-    processedMessageIds.add(notificationId)
-
     const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
 
     const clientInboxId = getSafeCurrentSender().inboxId
@@ -307,6 +298,13 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     //   return
     // }
 
+    if (processedMessageIds.has(notificationId)) {
+      notificationsLogger.debug("Skipping already processed message", { encryptedMessage })
+      return
+    }
+
+    processedMessageIds.add(notificationId)
+
     notificationsLogger.debug("Displaying local notification...")
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -354,9 +352,5 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
         },
       }),
     )
-  } finally {
-    if (notificationId) {
-      processedMessageIds.delete(notificationId)
-    }
   }
 })
