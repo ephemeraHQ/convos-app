@@ -3,19 +3,17 @@ import * as Notifications from "expo-notifications"
 import * as TaskManager from "expo-task-manager"
 import { useEffect } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   messageContentIsMultiRemoteAttachment,
   messageContentIsRemoteAttachment,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
-import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
-import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
-import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
-import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import {
+  getXmtpConversation,
+  getXmtpConversationIdFromXmtpTopic,
+} from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
@@ -277,7 +275,7 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
   }
 })
 
-const TIMEOUT_MS = 45000 // 45 seconds
+const TIMEOUT_MS = 15000 // 15 seconds
 const TIMEOUT_SECONDS = TIMEOUT_MS / 1000
 
 export async function maybeDisplayLocalNewMessageNotification(args: {
@@ -304,11 +302,15 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
 
       notificationsLogger.debug("Fetching conversation and decrypting message...")
       const [conversation, xmtpDecryptedMessage] = await Promise.all([
-        ensureConversationQueryData({
+        getXmtpConversation({
           clientInboxId,
-          xmtpConversationId,
-          caller: "notifications-foreground-handler",
+          conversationId: xmtpConversationId,
         }),
+        // ensureConversationQueryData({
+        //   clientInboxId,
+        //   xmtpConversationId,
+        //   caller: "notifications-foreground-handler",
+        // }),
         decryptXmtpMessage({
           encryptedMessage,
           xmtpConversationId,
@@ -334,26 +336,28 @@ export async function maybeDisplayLocalNewMessageNotification(args: {
       const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
 
       notificationsLogger.debug("Fetching message content and sender info...")
-      const [messageContentString, { displayName: senderDisplayName }] = await Promise.all([
-        ensureMessageContentStringValue(convoMessage),
-        ensurePreferredDisplayInfo({
-          inboxId: convoMessage.senderInboxId,
-        }),
-      ])
+      // const [messageContentString, { displayName: senderDisplayName }] = await Promise.all([
+      //   ensureMessageContentStringValue(convoMessage),
+      //   ensurePreferredDisplayInfo({
+      //     inboxId: convoMessage.senderInboxId,
+      //   }),
+      // ])
+      const messageContentString = "message"
+      const senderDisplayName = "test"
       notificationsLogger.debug("Message content:", messageContentString)
       notificationsLogger.debug("Sender display name:", senderDisplayName)
 
-      setConversationMessageQueryData({
-        clientInboxId,
-        xmtpMessageId: xmtpDecryptedMessage.id,
-        message: convoMessage,
-      })
+      // setConversationMessageQueryData({
+      //   clientInboxId,
+      //   xmtpMessageId: xmtpDecryptedMessage.id,
+      //   message: convoMessage,
+      // })
 
-      addMessageToConversationMessagesInfiniteQueryData({
-        clientInboxId,
-        xmtpConversationId,
-        messageId: xmtpDecryptedMessage.id,
-      })
+      // addMessageToConversationMessagesInfiniteQueryData({
+      //   clientInboxId,
+      //   xmtpConversationId,
+      //   messageId: xmtpDecryptedMessage.id,
+      // })
 
       if (useAppStateStore.getState().currentState === "active") {
         notificationsLogger.debug("Skipping showing notification because app is active")
