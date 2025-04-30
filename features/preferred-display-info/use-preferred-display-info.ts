@@ -23,7 +23,7 @@ import {
 import {
   ensureEthAddressesForXmtpInboxIdQueryData,
   getEthAddressesForXmtpInboxIdQueryData,
-  useEthAddressesForXmtpInboxIdQuery,
+  getEthAddressesForXmtpInboxIdQueryOptions,
 } from "@/features/xmtp/xmtp-inbox-id/eth-addresses-for-xmtp-inbox-id.query"
 import {
   ensureXmtpInboxIdFromEthAddressQueryData,
@@ -34,23 +34,15 @@ import { mergeArraysObjects } from "@/utils/array"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { reactQueryFreshDataQueryOptions } from "@/utils/react-query/react-query.constants"
 
-// At least one of these properties must be defined
 type PreferredDisplayInfoArgs = {
+  inboxId?: IXmtpInboxId
+  ethAddress?: IEthereumAddress
   freshData?: boolean
-} & (
-  | {
-      inboxId: IXmtpInboxId | undefined
-      ethAddress?: IEthereumAddress
-    }
-  | {
-      inboxId?: IXmtpInboxId
-      ethAddress: IEthereumAddress | undefined
-    }
-)
+  enabled?: boolean
+}
 
 export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { caller: string }) {
   const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData, caller: callerArg } = args
-
   const currentSender = useSafeCurrentSender()
   const caller = `${callerArg}:usePreferredDisplayInfo`
 
@@ -66,20 +58,24 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
 
   const inboxId = inboxIdArg ?? inboxIdFromEthAddress
 
-  const { data: ethAddressesForXmtpInboxId } = useEthAddressesForXmtpInboxIdQuery({
+  const ethAddressesOptions = getEthAddressesForXmtpInboxIdQueryOptions({
     clientInboxId: currentSender.inboxId,
     inboxId,
-    caller,
+    caller: "usePreferredDisplayInfo",
+  })
+
+  const { data: ethAddressesForXmtpInboxId } = useQuery({
+    ...ethAddressesOptions,
+    enabled: args.enabled !== false && ethAddressesOptions.enabled !== false,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
-  // Get Convos profile data
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
+    // Get Convos profile data
     ...getProfileQueryConfig({ xmtpId: inboxId, caller }),
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
-  // Get social profiles data
   const { data: socialProfilesForInboxId, isLoading: isLoadingSocialProfilesForInboxId } = useQuery(
     {
       ...getSocialProfilesForInboxIdQueryOptions({
@@ -101,6 +97,18 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
       }),
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     })
+
+  // Check that we have at least one of inboxId or ethAddress
+  if (!inboxIdArg && !ethAddressArg) {
+    console.warn(`[${callerArg}] usePreferredDisplayInfo called without inboxId or ethAddress`)
+    return {
+      displayName: undefined,
+      avatarUrl: undefined,
+      username: undefined,
+      ethAddress: undefined,
+      isLoading: false,
+    }
+  }
 
   const socialProfiles = mergeArraysObjects({
     arr1: socialProfilesForInboxId ?? [],

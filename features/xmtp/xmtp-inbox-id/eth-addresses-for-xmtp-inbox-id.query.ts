@@ -20,6 +20,7 @@ type IStrictArgs = {
 
 export function getEthAddressesForXmtpInboxIdQueryOptions(args: IArgs & { caller?: string }) {
   const { clientInboxId, inboxId, caller } = args
+  const enabled = !!clientInboxId && !!inboxId
 
   return queryOptions({
     queryKey: getReactQueryKey({
@@ -30,8 +31,9 @@ export function getEthAddressesForXmtpInboxIdQueryOptions(args: IArgs & { caller
     meta: {
       caller,
     },
+    enabled,
     queryFn:
-      clientInboxId && inboxId
+      enabled
         ? () => {
             const batcher = getBatcher(clientInboxId)
             return batcher.fetch(inboxId)

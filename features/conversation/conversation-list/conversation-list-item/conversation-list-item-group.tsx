@@ -1,9 +1,10 @@
+import { useQuery } from "@tanstack/react-query"
 import { getCompactRelativeTime } from "@utils/date"
 import { memo, useCallback, useMemo } from "react"
 import { GroupAvatar } from "@/components/group-avatar"
 import { ISwipeableRenderActionsArgs } from "@/components/swipeable"
 import { MIDDLE_DOT } from "@/design-system/middle-dot"
-import { isCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { isCurrentSender, useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { isTextMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { ConversationListItemSwipeable } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable"
 import { useConversationIsUnread } from "@/features/conversation/conversation-list/hooks/use-conversation-is-unread"
@@ -12,6 +13,7 @@ import { useMessageContentStringValue } from "@/features/conversation/conversati
 import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
 import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
+import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useFocusRerender } from "@/hooks/use-focus-rerender"
@@ -29,10 +31,12 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 }: IConversationListItemGroupProps) {
   const router = useRouter()
 
+  const currentSender = useSafeCurrentSender()
+
   // To update the timestamp when the screen comes into focus
   useFocusRerender()
 
-  const { data: lastMessage } = useConversationLastMessage({
+  const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationLastMessage({
     xmtpConversationId,
   })
 
@@ -49,6 +53,21 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     caller: "ConversationListItemGroup",
   })
 
+  const { data: addedByInboxId } = useQuery({
+    ...getGroupQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "ConversationListItemGroup",
+    }),
+    select: (data) => data?.addedByInboxId,
+    enabled: !isLoadingLastMessage && !lastMessage,
+  })
+
+  const { displayName: inviterDisplayName } = usePreferredDisplayInfo({
+    inboxId: addedByInboxId,
+    caller: "ConversationListItemGroup",
+  })
+
   const onPress = useCallback(() => {
     router.navigate("Conversation", {
       xmtpConversationId,
@@ -62,7 +81,12 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   // Not in useMemo because we want to change the timestamp when we rerender
   const subtitle = (() => {
-    if (!lastMessage) return ""
+    if (!lastMessage) {
+      if (inviterDisplayName) {
+        return `${inviterDisplayName} invited you`
+      }
+      return "You were invited"
+    }
 
     const timestamp = lastMessage.sentNs ?? 0
     const timeToShow = getCompactRelativeTime(timestamp)

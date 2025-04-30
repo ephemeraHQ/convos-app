@@ -50,7 +50,12 @@ export const ConversationMessageReactions = memo(function ConversationMessageRea
         accessibilityRole="button"
         accessibilityLabel="View reactions"
       >
-        <VStack style={themed($reactionButton)}>
+        <VStack
+          style={[
+            themed($reactionButton),
+            rolledUpReactions.userReacted && { backgroundColor: theme.colors.fill.minimal },
+          ]}
+        >
           <HStack style={themed($emojiContainer)}>
             {rolledUpReactions.preview
               .slice(0, MAX_REACTION_EMOJIS_SHOWN)
