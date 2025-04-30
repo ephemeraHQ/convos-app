@@ -8,8 +8,10 @@ import {
   messageContentIsRemoteAttachment,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
+import { getMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
+import { fetchProfile } from "@/features/profiles/profiles.api"
 import {
   getXmtpConversation,
   getXmtpConversationIdFromXmtpTopic,
@@ -20,6 +22,7 @@ import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { storage } from "@/utils/storage/storage"
+import { tryCatch } from "@/utils/try-catch"
 
 const BACKGROUND_NOTIFICATION_TASK = "com.convos.background-notification"
 const PROCESSED_NOTIFICATIONS_KEY = "processed_notification_ids"
@@ -292,14 +295,30 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => 
     const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
 
     notificationsLogger.debug("Fetching message content and sender info...")
-    // const [messageContentString, { displayName: senderDisplayName }] = await Promise.all([
-    //   ensureMessageContentStringValue(convoMessage),
-    //   ensurePreferredDisplayInfo({
-    //     inboxId: convoMessage.senderInboxId,
-    //   }),
-    // ])
-    const messageContentString = "message"
-    const senderDisplayName = "test"
+    const [messageContentResult, profileResult] = await Promise.all([
+      // ensureMessageContentStringValue(convoMessage),
+      tryCatch(
+        Promise.resolve(
+          getMessageContentStringValue({
+            messageContent: convoMessage.content,
+          }),
+        ),
+      ),
+      tryCatch(
+        fetchProfile({
+          xmtpId: convoMessage.senderInboxId,
+        }),
+      ),
+      // ensurePreferredDisplayInfo({
+      //   inboxId: convoMessage.senderInboxId,
+      // }),
+    ])
+
+    const messageContentString = messageContentResult.data || ""
+    const profile = profileResult.data
+
+    const senderDisplayName = profile?.name || "New message"
+
     notificationsLogger.debug("Message content:", messageContentString)
     notificationsLogger.debug("Sender display name:", senderDisplayName)
 
