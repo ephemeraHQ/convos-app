@@ -16,16 +16,17 @@ import { useNotificationListeners } from "@/features/notifications/notifications
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
+import { useAppStateStore } from "@/stores/use-app-state-store"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { captureError } from "@/utils/capture-error"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
+import { GenericError } from "@/utils/error"
 import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
 import "expo-dev-client"
 import React, { memo, useEffect } from "react"
-import { AppState } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
@@ -45,7 +46,14 @@ export function App() {
     registerBackgroundNotificationTaskSmall().catch(captureError)
   }, [])
 
-  if (AppState.currentState != "active") {
+  const currentState = useAppStateStore((state) => state.currentState)
+
+  if (currentState !== "active") {
+    captureError(
+      new GenericError({
+        error: `App is not active it's ${currentState}`,
+      }),
+    )
     return null
   }
 
