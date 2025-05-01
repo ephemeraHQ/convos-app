@@ -55,34 +55,3 @@ export type INotificationMessageDataConverted = {
   isProcessedByConvo: boolean
   message: IConversationMessage
 }
-
-// Background notification data structure for Expo
-export type IExpoBackgroundNotificationData = {
-  body: {
-    encryptedMessage: string
-    messageType: "v3-conversation"
-    timestamp: number
-    contentTopic: IConversationTopic
-  }
-  experienceId: string
-  projectId: string
-  aps: {
-    badge: number
-    "content-available": 1
-  }
-  scopeKey: string
-}
-
-// Background notification data structure for XMTP
-// Data is nested under UIApplicationLaunchOptionsRemoteNotificationKey for iOS
-export type IXmtpNewMessageBackgroundNotificationData = {
-  UIApplicationLaunchOptionsRemoteNotificationKey: {
-    messageKind: "v3-conversation"
-    topic: string
-    encryptedMessage: string
-    aps: {
-      "mutable-content": 1
-      alert: string
-    }
-  }
-}

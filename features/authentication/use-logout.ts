@@ -2,7 +2,6 @@ import { useTurnkey } from "@turnkey/sdk-react-native"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getAllSenders, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
-import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
 import { unsubscribeFromAllConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
 import { stopStreaming } from "@/features/streams/streams"
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
@@ -34,17 +33,6 @@ export const useLogout = () => {
             new GenericError({
               error,
               additionalMessage: "Error unsubscribing from conversations notifications",
-            }),
-          )
-        }
-
-        try {
-          await unregisterBackgroundNotificationTask()
-        } catch (error) {
-          captureError(
-            new GenericError({
-              error,
-              additionalMessage: "Error unregistering background notification task",
             }),
           )
         }

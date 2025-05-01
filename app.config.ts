@@ -189,13 +189,6 @@ export default () => {
           // For local development
           NSAllowsLocalNetworking: true,
         },
-        UIBackgroundModes: ["remote-notification", "fetch", "processing"],
-        BGTaskSchedulerPermittedIdentifiers: [
-          "com.convos.background-notification",
-          "com.convos.background-notification-small",
-          "com.convos.background-fetch",
-          "com.convos.background-processing",
-        ],
       },
     },
     android: {
@@ -246,12 +239,7 @@ export default () => {
       },
     },
     plugins: [
-      [
-        "expo-notifications",
-        {
-          enableBackgroundRemoteNotifications: true,
-        },
-      ],
+      ["expo-notifications"],
       ["expo-secure-store"],
       [
         "expo-local-authentication",

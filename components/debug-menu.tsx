@@ -11,10 +11,6 @@ import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
 import { useLogout } from "@/features/authentication/use-logout"
 import {
-  DISPLAYED_NOTIFICATIONS_COUNT_KEY,
-  RECEIVED_NOTIFICATIONS_COUNT_KEY,
-} from "@/features/notifications/background-notifications-handler"
-import {
   canAskForNotificationsPermissions,
   getDevicePushNotificationsToken,
   registerPushNotifications,
@@ -38,7 +34,6 @@ import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
-import { storage } from "@/utils/storage/storage"
 import { showActionSheet } from "./action-sheet"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
@@ -244,46 +239,6 @@ function useShowDebugMenu({
             }),
           )
           Alert.alert("Error", "Failed to check notification permissions")
-        }
-      },
-      "View Notification Metrics": async () => {
-        try {
-          const receivedCount = storage.getNumber(RECEIVED_NOTIFICATIONS_COUNT_KEY) || 0
-          const displayedCount = storage.getNumber(DISPLAYED_NOTIFICATIONS_COUNT_KEY) || 0
-          const displayRate =
-            receivedCount > 0 ? ((displayedCount / receivedCount) * 100).toFixed(1) : "0"
-
-          Alert.alert(
-            "Notification Metrics",
-            [
-              `Received: ${receivedCount}`,
-              `Displayed: ${displayedCount}`,
-              `Display Rate: ${displayRate}%`,
-            ].join("\n"),
-            [
-              {
-                text: "Reset Counters",
-                style: "destructive",
-                onPress: () => {
-                  storage.set(RECEIVED_NOTIFICATIONS_COUNT_KEY, 0)
-                  storage.set(DISPLAYED_NOTIFICATIONS_COUNT_KEY, 0)
-                  Alert.alert("Counters Reset", "Notification metrics have been reset to zero.")
-                },
-              },
-              {
-                text: "OK",
-                style: "cancel",
-              },
-            ],
-          )
-        } catch (error) {
-          captureError(
-            new GenericError({
-              error,
-              additionalMessage: "Error viewing notification metrics",
-            }),
-          )
-          Alert.alert("Error", "Failed to retrieve notification metrics")
         }
       },
       "Request Notification Permissions": async () => {
