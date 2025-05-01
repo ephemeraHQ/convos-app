@@ -1,4 +1,8 @@
 import { logger } from "@/utils/logger/logger"
+import Constants from "expo-constants"
+
+// Get the app scheme from Expo constants (e.g. "convos-dev")
+const APP_SCHEME = Constants.expoConfig?.scheme as string
 
 /**
  * Deep link URL parsing
@@ -15,8 +19,18 @@ export function parseURL(url: string) {
     const parsedURL = new URL(url)
     logger.info(`Parsing deep link URL: ${url}`)
 
+    // Check if this is our app scheme
+    // URL protocol includes colon (e.g. "convos-dev:") while our APP_SCHEME is just "convos-dev"
+    const urlProtocol = `${APP_SCHEME}:`
+    const isAppScheme = parsedURL.protocol === urlProtocol
+    
     // Extract the path without leading slash
-    const path = parsedURL.pathname.replace(/^\/+/, "")
+    let path = parsedURL.pathname.replace(/^\/+/, "")
+    
+    // For app scheme URLs, include the host as the first path segment
+    if (isAppScheme && parsedURL.host) {
+      path = parsedURL.host + (path ? '/' + path : '')
+    }
 
     // Split path into segments
     const segments = path.split("/").filter(Boolean)
