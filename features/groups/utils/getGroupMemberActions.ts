@@ -21,34 +21,34 @@ export const getGroupMemberActions = ({
 }: GetGroupMemberActionsProps) => {
   const canRemove =
     !isCurrentUser &&
-    userCanDoGroupActions(
-      groupPermissionLevel,
-      "removeMemberPolicy",
-      currentAccountIsSuperAdmin,
-      currentAccountIsAdmin,
-    )
+    userCanDoGroupActions({
+      groupPermissionPolicy: groupPermissionLevel,
+      action: "removeMemberPolicy",
+      isSuperAdmin: currentAccountIsSuperAdmin,
+      isAdmin: currentAccountIsAdmin,
+    })
   const canPromoteToSuperAdmin = !isSuperAdmin && !isCurrentUser && currentAccountIsSuperAdmin
   const canPromoteToAdmin =
     !isCurrentUser &&
     !isAdmin &&
     !isSuperAdmin &&
-    userCanDoGroupActions(
-      groupPermissionLevel,
-      "addAdminPolicy",
-      currentAccountIsSuperAdmin,
-      currentAccountIsAdmin,
-    )
+    userCanDoGroupActions({
+      groupPermissionPolicy: groupPermissionLevel,
+      action: "addAdminPolicy",
+      isSuperAdmin: currentAccountIsSuperAdmin,
+      isAdmin: currentAccountIsAdmin,
+    })
 
   const canRevokeAdmin =
     !isCurrentUser &&
     isAdmin &&
     !isSuperAdmin &&
-    userCanDoGroupActions(
-      groupPermissionLevel,
-      "removeAdminPolicy",
-      currentAccountIsSuperAdmin,
-      currentAccountIsAdmin,
-    )
+    userCanDoGroupActions({
+      groupPermissionPolicy: groupPermissionLevel,
+      action: "removeAdminPolicy",
+      isSuperAdmin: currentAccountIsSuperAdmin,
+      isAdmin: currentAccountIsAdmin,
+    })
   const canRevokeSuperAdmin = !isCurrentUser && currentAccountIsSuperAdmin && isSuperAdmin
   const options = [translate("group_screen_member_actions.profile_page")]
   let cancelButtonIndex = 1

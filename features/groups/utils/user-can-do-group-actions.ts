@@ -13,12 +13,16 @@ export const getMemberRole = ({ isSuperAdmin, isAdmin }: GetMemberRoleParams): M
   return "member"
 }
 
-export const userCanDoGroupActions = (
-  groupPermissionPolicy: PermissionPolicySet | undefined,
-  action: keyof PermissionPolicySet,
-  isSuperAdmin: boolean,
-  isAdmin: boolean,
-) => {
+type UserCanDoGroupActionsParams = {
+  groupPermissionPolicy: PermissionPolicySet | undefined
+  action: keyof PermissionPolicySet
+  isSuperAdmin: boolean
+  isAdmin: boolean
+}
+
+export const userCanDoGroupActions = (args: UserCanDoGroupActionsParams) => {
+  const { groupPermissionPolicy, action, isSuperAdmin, isAdmin } = args
+  
   if (!groupPermissionPolicy) return false
   
   const memberRole = getMemberRole({ isSuperAdmin, isAdmin })

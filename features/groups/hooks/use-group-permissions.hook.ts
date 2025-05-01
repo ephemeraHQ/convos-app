@@ -52,48 +52,93 @@ export function useCurrentSenderGroupPermissions(args: { xmtpConversationId: IXm
   
   // Create permission check functions for each action
   const canAddMembers = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "addMemberPolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "addMemberPolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
   
   const canRemoveMembers = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "removeMemberPolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "removeMemberPolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
   
   const canAddAdmins = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "addAdminPolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "addAdminPolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
   
   const canRemoveAdmins = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "removeAdminPolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "removeAdminPolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
   
   const canUpdateGroupName = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "updateGroupNamePolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "updateGroupNamePolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
   
   const canUpdateGroupDescription = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "updateGroupDescriptionPolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "updateGroupDescriptionPolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
   
   const canUpdateGroupImage = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "updateGroupImagePolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "updateGroupImagePolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
   
   const canUpdateMessageDisappearing = useMemo(
-    () => userCanDoGroupActions(permissionPolicy, "updateMessageDisappearingPolicy", isSuperAdmin, isAdmin),
+    () => userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action: "updateMessageDisappearingPolicy", 
+      isSuperAdmin,
+      isAdmin
+    }),
     [permissionPolicy, isSuperAdmin, isAdmin]
   )
 
   // Function to check any permission dynamically
   const checkPermission = (action: GroupPermissionAction) => 
-    userCanDoGroupActions(permissionPolicy, action, isSuperAdmin, isAdmin)
+    userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy,
+      action, 
+      isSuperAdmin,
+      isAdmin
+    })
   
   return {
     // User roles

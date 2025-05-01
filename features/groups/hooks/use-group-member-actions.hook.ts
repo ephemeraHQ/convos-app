@@ -46,34 +46,34 @@ export function useGroupMemberActions(args: {
   
   // Check if the current user can add admins according to policy
   const hasAddAdminPermission = useMemo(() => 
-    userCanDoGroupActions(
-      permissionPolicy, 
-      "addAdminPolicy", 
-      isCurrentUserSuperAdmin, 
-      isCurrentUserAdmin
-    ),
+    userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy, 
+      action: "addAdminPolicy", 
+      isSuperAdmin: isCurrentUserSuperAdmin, 
+      isAdmin: isCurrentUserAdmin
+    }),
     [permissionPolicy, isCurrentUserSuperAdmin, isCurrentUserAdmin]
   )
   
   // Check if the current user can remove admins according to policy
   const hasRemoveAdminPermission = useMemo(() => 
-    userCanDoGroupActions(
-      permissionPolicy, 
-      "removeAdminPolicy", 
-      isCurrentUserSuperAdmin, 
-      isCurrentUserAdmin
-    ),
+    userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy, 
+      action: "removeAdminPolicy", 
+      isSuperAdmin: isCurrentUserSuperAdmin, 
+      isAdmin: isCurrentUserAdmin
+    }),
     [permissionPolicy, isCurrentUserSuperAdmin, isCurrentUserAdmin]
   )
   
   // Check if the current user can remove members according to policy
   const hasRemoveMemberPermission = useMemo(() => 
-    userCanDoGroupActions(
-      permissionPolicy, 
-      "removeMemberPolicy", 
-      isCurrentUserSuperAdmin, 
-      isCurrentUserAdmin
-    ),
+    userCanDoGroupActions({
+      groupPermissionPolicy: permissionPolicy, 
+      action: "removeMemberPolicy", 
+      isSuperAdmin: isCurrentUserSuperAdmin, 
+      isAdmin: isCurrentUserAdmin
+    }),
     [permissionPolicy, isCurrentUserSuperAdmin, isCurrentUserAdmin]
   )
   
