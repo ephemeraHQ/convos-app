@@ -1,25 +1,17 @@
 import { memo, useCallback, useMemo } from "react"
-import { HStack } from "@/design-system/HStack"
-import { IconButton } from "@/design-system/IconButton/IconButton"
-import { ListItemEndRightChevron } from "@/design-system/list-item"
-import { Pressable } from "@/design-system/Pressable"
-import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
+import { Pressable } from "@/design-system/Pressable"
+import { ListItemEndRightChevron } from "@/design-system/list-item"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
-import { useCurrentSenderGroupMember } from "@/features/groups/hooks/use-current-sender-group-member"
 import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
-import { useGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import { GroupDetailsListItem } from "@/features/groups/ui/group-details.ui"
-import {
-  getGroupMemberIsAdmin,
-  getGroupMemberIsSuperAdmin,
-} from "@/features/groups/utils/group-admin.utils"
 import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { MemberListItem } from "./group-details-members-list-item.component"
+import { GroupDetailsMembersListHeader } from "./group-details-members-list-header.component"
 
 export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(props: {
   xmtpConversationId: IXmtpConversationId
@@ -35,39 +27,9 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
     xmtpConversationId,
   })
 
-  const { data: groupPermissions } = useGroupPermissionsQuery({
-    clientInboxId: currentSenderInboxId,
-    xmtpConversationId,
-    caller: "GroupDetailsMembersList",
-  })
-
-  const { currentSenderGroupMember } = useCurrentSenderGroupMember({
-    xmtpConversationId,
-  })
-
   const sortedMembers = useMemo(() => {
     return sortGroupMembers(Object.values(members?.byId || {}).filter(Boolean))
   }, [members])
-
-  const canAddMembers = useMemo(() => {
-    if (groupPermissions?.addMemberPolicy === "allow") {
-      return true
-    }
-
-    if (!currentSenderGroupMember) {
-      return false
-    }
-
-    if (groupPermissions?.addMemberPolicy === "admin") {
-      return getGroupMemberIsAdmin({ member: currentSenderGroupMember })
-    }
-
-    if (groupPermissions?.addMemberPolicy === "superAdmin") {
-      return getGroupMemberIsSuperAdmin({ member: currentSenderGroupMember })
-    }
-
-    return false
-  }, [groupPermissions, currentSenderGroupMember])
 
   const handleAddMembersPress = useCallback(() => {
     router.push("AddGroupMembers", { xmtpConversationId })
@@ -83,36 +45,19 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
 
   return (
     <VStack
-      // {...debugBorder()}
       style={{
         backgroundColor: theme.colors.background.surface,
         paddingVertical: theme.spacing.xs,
       }}
     >
       {/* Members Header */}
-      <HStack
-        // {...debugBorder()}
-        style={{
-          paddingHorizontal: theme.spacing.lg,
-          paddingVertical: theme.spacing.sm,
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Text>Members</Text>
-        {canAddMembers && (
-          <IconButton
-            hitSlop={theme.spacing.sm}
-            iconWeight="medium"
-            iconName="plus"
-            variant="ghost"
-            size="md"
-            onPress={handleAddMembersPress}
-          />
-        )}
-      </HStack>
+      <GroupDetailsMembersListHeader
+        xmtpConversationId={xmtpConversationId}
+        memberCount={sortedMembers.length}
+        onAddMember={handleAddMembersPress}
+      />
 
-      {/* Members Grid */}
+      {/* Members List */}
       <VStack>
         {visibleMembers.map((member) => {
           return <MemberListItem key={member.inboxId} memberInboxId={member.inboxId} />

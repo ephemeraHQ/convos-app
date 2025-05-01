@@ -1,12 +1,12 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
-import { IConversationTopic } from "@/features/conversation/conversation.types"
 import {
   getGroupQueryData,
   invalidateGroupQuery,
   setGroupQueryData,
   useGroupQuery,
 } from "@/features/groups/queries/group.query"
+import { invalidateGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import { addAdminToXmtpGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 
 export const usePromoteToAdminMutation = (args: {
@@ -81,7 +81,13 @@ export const usePromoteToAdminMutation = (args: {
       })
     },
     onSuccess: () => {
+      // Invalidate both group and permissions queries to ensure UI reflects latest data
       invalidateGroupQuery({ clientInboxId, xmtpConversationId })
+      invalidateGroupPermissionsQuery({ 
+        clientInboxId, 
+        xmtpConversationId, 
+        caller: "promoteToAdminMutation" 
+      })
     },
   })
 }
