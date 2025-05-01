@@ -3,6 +3,7 @@ import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
+import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 
 export async function xmtpInboxIdCanMessageEthAddress(args: {
   inboxId: IXmtpInboxId
@@ -68,10 +69,18 @@ export async function setXmtpConsentStateForInboxId(args: {
   consent: IXmtpConsentState
 }) {
   const { peerInboxId, consent } = args
+  const currentSenderInboxId = useMultiInboxStore.getState().currentSender?.inboxId
+
+  if (!currentSenderInboxId) {
+    throw new XMTPError({
+      error: new Error("No current sender found"),
+      additionalMessage: "failed to set XMTP consent state for inboxId",
+    })
+  }
 
   try {
     const client = await getXmtpClientByInboxId({
-      inboxId: peerInboxId,
+      inboxId: currentSenderInboxId,
     })
 
     await wrapXmtpCallWithDuration("setConsentState", () =>
