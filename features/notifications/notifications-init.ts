@@ -20,6 +20,7 @@ import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/us
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
+import { getCurrentRoute } from "@/navigation/navigation.utils"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -205,6 +206,18 @@ async function maybeDisplayLocalNewMessageNotification(args: {
     xmtpConversationId,
     messageId: xmtpDecryptedMessage.id,
   })
+
+  // if we're already in the converastion, don't show the notification
+  const currentRoute = getCurrentRoute()
+  if (
+    currentRoute?.name === "Conversation" &&
+    currentRoute.params.xmtpConversationId === xmtpConversationId
+  ) {
+    notificationsLogger.debug(
+      "User is already in this conversation, don't display local notification",
+    )
+    return
+  }
 
   await Notifications.scheduleNotificationAsync({
     content: {
