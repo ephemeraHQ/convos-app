@@ -19,7 +19,7 @@ export type GroupPermissionAction =
   | "updateGroupImagePolicy"
   | "updateMessageDisappearingPolicy"
 
-export function useGroupPermissions(args: { xmtpConversationId: IXmtpConversationId }) {
+export function useCurrentSenderGroupPermissions(args: { xmtpConversationId: IXmtpConversationId }) {
   const { xmtpConversationId } = args
   const currentSender = useSafeCurrentSender()
   
@@ -32,7 +32,7 @@ export function useGroupPermissions(args: { xmtpConversationId: IXmtpConversatio
   const { data: permissionPolicy } = useGroupPermissionsQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
-    caller: "useGroupPermissions",
+    caller: "useCurrentSenderGroupPermissions",
   })
   
   // Check if the current user is an admin or super admin

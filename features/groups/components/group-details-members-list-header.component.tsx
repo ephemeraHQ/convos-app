@@ -3,7 +3,7 @@ import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { HStack } from "@/design-system/HStack"
 import { VStack } from "@/design-system/VStack"
 import { Text } from "@/design-system/Text"
-import { useGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
+import { useCurrentSenderGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
 
@@ -19,7 +19,7 @@ export const GroupDetailsMembersListHeader = memo(function GroupDetailsMembersLi
   const { xmtpConversationId, memberCount, onAddMember } = props
   const { theme } = useAppTheme()
   
-  const { canAddMembers } = useGroupPermissions({
+  const { canAddMembers } = useCurrentSenderGroupPermissions({
     xmtpConversationId,
   })
 

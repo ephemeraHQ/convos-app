@@ -12,7 +12,6 @@ import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { MemberListItem } from "./group-details-members-list-item.component"
 import { GroupDetailsMembersListHeader } from "./group-details-members-list-header.component"
-import { useGroupPermissions } from "../hooks/use-group-permissions.hook"
 
 export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(props: {
   xmtpConversationId: IXmtpConversationId

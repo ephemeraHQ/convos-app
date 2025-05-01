@@ -11,7 +11,7 @@ import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { GroupDetailsMembersList } from "@/features/groups/components/group-details-members-list.component"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
-import { useGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
+import { useCurrentSenderGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
@@ -36,7 +36,7 @@ export const GroupDetailsScreen = memo(function GroupDetailsScreen(
     xmtpConversationId,
   })
 
-  const { isSuperAdmin } = useGroupPermissions({
+  const { isSuperAdmin } = useCurrentSenderGroupPermissions({
     xmtpConversationId,
   })
 

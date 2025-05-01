@@ -1,8 +1,8 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMemo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useCurrentSenderGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
 import { useGroupMember } from "@/features/groups/hooks/use-group-member"
-import { useGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
 import { 
   getGroupMemberIsAdmin, 
   getGroupMemberIsSuperAdmin 
@@ -21,7 +21,7 @@ export function useGroupMemberActions(args: {
     isSuperAdmin: isCurrentUserSuperAdmin,
     isAdmin: isCurrentUserAdmin,
     permissionPolicy,
-  } = useGroupPermissions({
+  } = useCurrentSenderGroupPermissions({
     xmtpConversationId,
   })
   
@@ -140,4 +140,4 @@ export function useGroupMemberActions(args: {
     hasRemoveAdminPermission,
     hasRemoveMemberPermission,
   }
-} 
+}
