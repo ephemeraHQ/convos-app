@@ -49,7 +49,13 @@ export async function wrapXmtpCallWithDuration<T>(
     xmtpLogger.debug(`XMTP operation [${operationId}] "${xmtpFunctionName}" started...`)
 
     // track the XMTP call with Sentry
-    const xmtpSpanCall = Sentry.startSpan({ name: xmtpFunctionName }, () => xmtpCall())
+    const xmtpSpanCall = Sentry.startSpan(
+      {
+        name: xmtpFunctionName,
+        op: "XMTP",
+      },
+      () => xmtpCall(),
+    )
 
     // Execute the actual XMTP call with a 15-second timeout
     const result = await withTimeout({
