@@ -34,7 +34,6 @@ export function useDenyDmMutation() {
         }),
         setXmtpConsentStateForInboxId({
           peerInboxId,
-          clientInboxId: currentSenderInboxId,
           consent: "denied",
         }),
       ])
