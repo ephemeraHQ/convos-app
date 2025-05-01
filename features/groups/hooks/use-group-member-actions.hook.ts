@@ -3,7 +3,6 @@ import { useMemo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useGroupMember } from "@/features/groups/hooks/use-group-member"
 import { useGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
-import { useGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import { 
   getGroupMemberIsAdmin, 
   getGroupMemberIsSuperAdmin 
@@ -17,19 +16,13 @@ export function useGroupMemberActions(args: {
   const { memberInboxId, xmtpConversationId } = args
   const currentSender = useSafeCurrentSender()
   
-  // Get current user permissions
+  // Get current user permissions and the permission policy from a single hook
   const { 
     isSuperAdmin: isCurrentUserSuperAdmin,
     isAdmin: isCurrentUserAdmin,
+    permissionPolicy,
   } = useGroupPermissions({
     xmtpConversationId,
-  })
-  
-  // Get the group's permission policy directly
-  const { data: permissionPolicy } = useGroupPermissionsQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-    caller: "useGroupMemberActions",
   })
   
   // Get target member info - useGroupMember already handles undefined memberInboxId
