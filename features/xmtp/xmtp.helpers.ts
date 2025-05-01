@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react-native"
 import { FullMetrics } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
 import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
@@ -47,9 +48,12 @@ export async function wrapXmtpCallWithDuration<T>(
     // Log the start of the XMTP operation
     xmtpLogger.debug(`XMTP operation [${operationId}] "${xmtpFunctionName}" started...`)
 
+    // track the XMTP call with Sentry
+    const xmtpSpanCall = Sentry.startSpan({ name: xmtpFunctionName }, () => xmtpCall())
+
     // Execute the actual XMTP call with a 15-second timeout
     const result = await withTimeout({
-      promise: xmtpCall(),
+      promise: xmtpSpanCall,
       timeoutMs: 15000,
       errorMessage: `XMTP operation "${xmtpFunctionName}" timed out after 15 seconds`,
     })
