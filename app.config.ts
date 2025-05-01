@@ -242,6 +242,7 @@ export default () => {
     },
     plugins: [
       ["expo-notifications"],
+      "./plugins/my-plugin/app.plugin.js",
       ["expo-secure-store"],
       [
         "expo-local-authentication",

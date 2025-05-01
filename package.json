@@ -26,6 +26,7 @@
     "lint": "eslint --max-warnings 2500",
     "lint:errors": "eslint --quiet",
     "platform:clean:ios": "rm -rf ios",
+    "plugin:build:my-plugin": "npx tsc -p plugins/my-plugin/tsconfig.json",
     "start": "expo start --scheme=convos-dev",
     "start:preview": "EXPO_ENV=preview expo start --scheme=convos-preview",
     "start:prod": "EXPO_ENV=production expo start --scheme=convos",

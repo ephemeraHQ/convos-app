@@ -19,6 +19,7 @@ npm-debug.*
 dist/
 builds/
 build-*.apk
+build/
 
 # Expo
 .expo/
