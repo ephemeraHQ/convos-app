@@ -25,10 +25,14 @@ export const GroupDetailsMembersListHeader = memo(function GroupDetailsMembersLi
 
   return (
     <VStack style={{ 
-      paddingHorizontal: theme.spacing.lg,
+      paddingLeft: theme.spacing.lg,
+      paddingRight: theme.spacing.xxs,
       paddingVertical: theme.spacing.xs
     }}>
-      <HStack style={{ justifyContent: "space-between", alignItems: "center" }}>
+      <HStack style={{
+        justifyContent: "space-between",
+        alignItems: "center"
+      }}>
         <Text preset="small" color="secondary">
           {memberCount} {memberCount === 1 ? "MEMBER" : "MEMBERS"}
         </Text>
