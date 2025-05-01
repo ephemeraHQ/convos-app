@@ -16,74 +16,81 @@ type IDeepLinkPattern = {
   handler: (params: Record<string, string | undefined>) => Promise<void>
 }
 
+// Shared handler for conversation deep links (both "dm" and "conversation" patterns)
+async function handleConversationDeepLink(params: Record<string, string | undefined>) {
+  const inboxId = params.inboxId as IXmtpInboxId
+
+  deepLinkLogger.info(`Processing conversation for inboxId: ${inboxId}`)
+
+  if (!inboxId) {
+    throw new GenericError({
+      error: new Error("Missing inboxId"),
+      additionalMessage: "Cannot handle conversation deep link - missing inboxId",
+    })
+  }
+
+  try {
+    deepLinkLogger.info(
+      `Processing conversation for inboxId: ${inboxId}${
+        params.composerTextPrefill ? " with prefill text" : ""
+      }`,
+    )
+
+    const state = useMultiInboxStore.getState()
+    const activeInboxId = state.currentSender?.inboxId
+
+    deepLinkLogger.info(`Current active inboxId: ${activeInboxId}`)
+
+    if (!activeInboxId) {
+      throw new GenericError({
+        error: new Error("No active inbox"),
+        additionalMessage: "Cannot check conversation existence - no active inbox",
+      })
+    }
+
+    const conversation = await findConversationByInboxIds({
+      inboxIds: [inboxId],
+      clientInboxId: activeInboxId,
+    })
+
+    if (conversation) {
+      deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
+
+      await navigateFromHome("Conversation", {
+        xmtpConversationId: conversation.xmtpId,
+        isNew: false,
+        composerTextPrefill: params.composerTextPrefill,
+      })
+    } else {
+      deepLinkLogger.info(
+        `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
+      )
+
+      await navigateFromHome("Conversation", {
+        searchSelectedUserInboxIds: [inboxId],
+        isNew: true,
+        composerTextPrefill: params.composerTextPrefill,
+      })
+    }
+  } catch (error) {
+    captureError(
+      new GenericError({
+        error,
+        additionalMessage: `Failed to handle conversation deep link for inboxId: ${inboxId}`,
+        extra: { inboxId },
+      }),
+    )
+  }
+}
+
 const deepLinkPatterns: IDeepLinkPattern[] = [
   {
     pattern: "dm/:inboxId",
-    handler: async (params) => {
-      const inboxId = params.inboxId as IXmtpInboxId
-
-      deepLinkLogger.info(`Processing conversation for inboxId: ${inboxId}`)
-
-      if (!inboxId) {
-        throw new GenericError({
-          error: new Error("Missing inboxId"),
-          additionalMessage: "Cannot handle conversation deep link - missing inboxId",
-        })
-      }
-
-      try {
-        deepLinkLogger.info(
-          `Processing conversation for inboxId: ${inboxId}${
-            params.composerTextPrefill ? " with prefill text" : ""
-          }`,
-        )
-
-        const state = useMultiInboxStore.getState()
-        const activeInboxId = state.currentSender?.inboxId
-
-        deepLinkLogger.info(`Current active inboxId: ${activeInboxId}`)
-
-        if (!activeInboxId) {
-          throw new GenericError({
-            error: new Error("No active inbox"),
-            additionalMessage: "Cannot check conversation existence - no active inbox",
-          })
-        }
-
-        const conversation = await findConversationByInboxIds({
-          inboxIds: [inboxId],
-          clientInboxId: activeInboxId,
-        })
-
-        if (conversation) {
-          deepLinkLogger.info(`Found existing conversation with ID: ${conversation.xmtpId}`)
-
-          await navigateFromHome("Conversation", {
-            xmtpConversationId: conversation.xmtpId,
-            isNew: false,
-            composerTextPrefill: params.composerTextPrefill,
-          })
-        } else {
-          deepLinkLogger.info(
-            `No existing conversation found with inboxId: ${inboxId}, creating new conversation`,
-          )
-
-          await navigateFromHome("Conversation", {
-            searchSelectedUserInboxIds: [inboxId],
-            isNew: true,
-            composerTextPrefill: params.composerTextPrefill,
-          })
-        }
-      } catch (error) {
-        captureError(
-          new GenericError({
-            error,
-            additionalMessage: `Failed to handle conversation deep link for inboxId: ${inboxId}`,
-            extra: { inboxId },
-          }),
-        )
-      }
-    },
+    handler: handleConversationDeepLink,
+  },
+  {
+    pattern: "conversation/:inboxId",
+    handler: handleConversationDeepLink,
   },
   {
     pattern: "group/:groupId",
