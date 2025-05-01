@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react"
+import React, { memo, useCallback } from "react"
 import { Avatar } from "@/components/avatar"
 import { createConfirmationAlert } from "@/components/promise-alert"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
@@ -18,15 +18,12 @@ import {
 } from "@/features/groups/components/group-member-details/group-member-details.service"
 import { useGroupMemberDetailsBottomSheetStore } from "@/features/groups/components/group-member-details/group-member-details.store"
 import { useGroupMember } from "@/features/groups/hooks/use-group-member"
+import { useGroupMemberActions } from "@/features/groups/hooks/use-group-member-actions.hook"
 import { usePromoteToAdminMutation } from "@/features/groups/mutations/promote-group-member-to-admin.mutation"
 import { usePromoteToSuperAdminMutation } from "@/features/groups/mutations/promote-group-member-to-super-admin.mutation"
 import { useRemoveGroupMembersFromGroupMutation } from "@/features/groups/mutations/remove-group-members-from-group.mutation"
 import { useRevokeAdminMutation } from "@/features/groups/mutations/revoke-group-member-from-admin.mutation"
 import { useRevokeSuperAdminMutation } from "@/features/groups/mutations/revoke-group-member-from-super-admin.mutation"
-import {
-  getGroupMemberIsAdmin,
-  getGroupMemberIsSuperAdmin,
-} from "@/features/groups/utils/group-admin.utils"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { useRouteParams, useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -44,44 +41,24 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
   const currentSender = useSafeCurrentSender()
   const { xmtpConversationId } = useRouteParams<"GroupDetails">()
 
-  const { groupMember: currentSenderGroupMember } = useGroupMember({
-    memberInboxId: currentSender.inboxId,
-    xmtpConversationId,
-  })
-
-  const { groupMember: targetGroupMember } = useGroupMember({
-    memberInboxId: memberInboxId,
-    xmtpConversationId,
-  })
-
   const { displayName: targetDisplayName } = usePreferredDisplayInfo({
     inboxId: memberInboxId,
     caller: "GroupMemberDetailsBottomSheet",
   })
 
-  const isCurrentUser = currentSender.inboxId === memberInboxId
-
-  const isCurrentUserAdmin =
-    currentSenderGroupMember &&
-    getGroupMemberIsAdmin({
-      member: currentSenderGroupMember,
-    })
-  const isCurrentUserSuperAdmin =
-    currentSenderGroupMember &&
-    getGroupMemberIsSuperAdmin({
-      member: currentSenderGroupMember,
-    })
-
-  const isTargetGroupMemberAdmin =
-    targetGroupMember &&
-    getGroupMemberIsAdmin({
-      member: targetGroupMember,
-    })
-  const isTargetGroupMemberSuperAdmin =
-    targetGroupMember &&
-    getGroupMemberIsSuperAdmin({
-      member: targetGroupMember,
-    })
+  // Get action permissions for this member
+  const {
+    isTargetAdmin,
+    isTargetSuperAdmin,
+    canPromoteToAdmin,
+    canPromoteToSuperAdmin,
+    canRemoveMember,
+    canDemoteAdmin,
+    canDemoteSuperAdmin,
+  } = useGroupMemberActions({
+    memberInboxId,
+    xmtpConversationId,
+  })
 
   const { mutateAsync: promoteToAdmin } = usePromoteToAdminMutation({
     clientInboxId: currentSender.inboxId,
@@ -245,8 +222,9 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
     useGroupMemberDetailsBottomSheetStore.getState().actions.reset()
   }, [])
 
-  // Only show admin actions if current user is admin/super admin AND not viewing their own profile
-  const showAdminActions = (isCurrentUserAdmin || isCurrentUserSuperAdmin) && !isCurrentUser
+  // Check if we should show any admin actions
+  const showAnyAdminActions = canPromoteToAdmin || canDemoteAdmin || canPromoteToSuperAdmin || 
+    canDemoteSuperAdmin || canRemoveMember
 
   return (
     <BottomSheetModal
@@ -275,16 +253,18 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
             end={<ListItemEndRightChevron />}
           />
 
-          {showAdminActions && (
+          {showAnyAdminActions && (
             <>
-              {/* Show make/revoke admin based on current status */}
-              {isTargetGroupMemberAdmin ? (
+              {/* Show make/revoke admin based on current status and permissions */}
+              {isTargetAdmin && canDemoteAdmin && (
                 <ListItem
                   onPress={handleRevokeAdminPress}
                   title="Revoke admin"
                   subtitle="Remove admin privileges from this member"
                 />
-              ) : (
+              )}
+              
+              {!isTargetAdmin && !isTargetSuperAdmin && canPromoteToAdmin && (
                 <ListItem
                   onPress={handleMakeAdminPress}
                   title="Make admin"
@@ -292,29 +272,29 @@ export const GroupMemberDetailsBottomSheet = memo(function GroupMemberDetailsBot
                 />
               )}
 
-              {/* Only super admins can manage super admin status */}
-              {isCurrentUserSuperAdmin && (
-                <>
-                  {isTargetGroupMemberSuperAdmin ? (
-                    <ListItem
-                      onPress={handleRevokeSuperAdminPress}
-                      title="Revoke super admin"
-                      subtitle="Remove super admin privileges from this member"
-                    />
-                  ) : (
-                    <ListItem
-                      onPress={handleMakeSuperAdminPress}
-                      title="Make super admin"
-                      subtitle="Full control over group settings and permissions"
-                    />
-                  )}
-                </>
+              {/* Super admin management */}
+              {isTargetSuperAdmin && canDemoteSuperAdmin && (
+                <ListItem
+                  onPress={handleRevokeSuperAdminPress}
+                  title="Revoke super admin"
+                  subtitle="Remove super admin privileges from this member"
+                />
+              )}
+              
+              {!isTargetSuperAdmin && canPromoteToSuperAdmin && (
+                <ListItem
+                  onPress={handleMakeSuperAdminPress}
+                  title="Make super admin"
+                  subtitle="Full control over group settings and permissions"
+                />
               )}
 
-              <ListItem
-                onPress={handleRemoveFromGroupPress}
-                title={<ListItemTitle color="caution">Remove from group</ListItemTitle>}
-              />
+              {canRemoveMember && (
+                <ListItem
+                  onPress={handleRemoveFromGroupPress}
+                  title={<ListItemTitle color="caution">Remove from group</ListItemTitle>}
+                />
+              )}
             </>
           )}
         </VStack>

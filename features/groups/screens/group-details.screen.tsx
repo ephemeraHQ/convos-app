@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { memo } from "react"
+import { memo, useCallback } from "react"
+import { Alert } from "react-native"
 import { GroupAvatar } from "@/components/group-avatar"
 import { Screen } from "@/components/screen/screen"
 import { EmptyState } from "@/design-system/empty-state"
@@ -10,6 +11,7 @@ import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { GroupDetailsMembersList } from "@/features/groups/components/group-details-members-list.component"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
+import { useGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
@@ -34,7 +36,34 @@ export const GroupDetailsScreen = memo(function GroupDetailsScreen(
     xmtpConversationId,
   })
 
+  const { isSuperAdmin } = useGroupPermissions({
+    xmtpConversationId,
+  })
+
   useGroupDetailsScreenHeader({ xmtpConversationId })
+
+  const handleExitPress = useCallback(() => {
+    Alert.alert(
+      "Exit Group",
+      isSuperAdmin 
+        ? "You are the super admin of this group. If you exit, the group will lose its super admin."
+        : "Are you sure you want to exit this group?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Exit",
+          style: "destructive",
+          onPress: () => {
+            // Logic to exit group would go here
+            Alert.alert("Exit functionality not implemented yet")
+          },
+        },
+      ],
+    )
+  }, [isSuperAdmin])
 
   if (!group) {
     return (
@@ -86,7 +115,7 @@ export const GroupDetailsScreen = memo(function GroupDetailsScreen(
           alignItems: "center",
           backgroundColor: theme.colors.background.surface,
         }}
-        onPress={() => alert("Exit pressed")}
+        onPress={handleExitPress}
       >
         <ListItem title={<ListItemTitle color="caution">Exit</ListItemTitle>} />
       </Pressable>

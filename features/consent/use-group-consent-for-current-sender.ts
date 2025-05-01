@@ -7,7 +7,6 @@ import { useDenyGroupMutation } from "@/features/consent/use-deny-group.mutation
 import { getGroupQueryOptions, useGroupQuery } from "@/features/groups/queries/group.query"
 import { translate } from "@/i18n"
 import { useSafeCurrentSender } from "../authentication/multi-inbox.store"
-import { IConversationTopic } from "../conversation/conversation.types"
 import { setXmtpConsentStateForInboxId } from "../xmtp/xmtp-consent/xmtp-consent"
 
 export type IGroupConsentOptions = {

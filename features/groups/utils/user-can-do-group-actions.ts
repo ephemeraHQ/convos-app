@@ -7,7 +7,7 @@ type GetMemberRoleParams = {
   isAdmin: boolean
 }
 
-const getMemberRole = ({ isSuperAdmin, isAdmin }: GetMemberRoleParams): MemberRole => {
+export const getMemberRole = ({ isSuperAdmin, isAdmin }: GetMemberRoleParams): MemberRole => {
   if (isSuperAdmin) return "superAdmin"
   if (isAdmin) return "admin"
   return "member"
@@ -19,12 +19,16 @@ export const userCanDoGroupActions = (
   isSuperAdmin: boolean,
   isAdmin: boolean,
 ) => {
+  if (!groupPermissionPolicy) return false
+  
   const memberRole = getMemberRole({ isSuperAdmin, isAdmin })
-  const policy = groupPermissionPolicy?.[action]
-  // Edge cases
+  const policy = groupPermissionPolicy[action]
+
+  // Permission rules based on policy
   if (policy === "allow") return true
   if (policy === "deny") return false
   if (policy === "admin" && (memberRole === "admin" || memberRole === "superAdmin")) return true
-  if (policy === memberRole) return true
+  if (policy === "superAdmin" && memberRole === "superAdmin") return true
+  
   return false
 }

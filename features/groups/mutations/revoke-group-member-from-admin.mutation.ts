@@ -6,6 +6,7 @@ import {
   setGroupQueryData,
   useGroupQuery,
 } from "@/features/groups/queries/group.query"
+import { invalidateGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import { removeAdminFromXmtpGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 
 export const useRevokeAdminMutation = (args: {
@@ -80,6 +81,11 @@ export const useRevokeAdminMutation = (args: {
     },
     onSuccess: () => {
       invalidateGroupQuery({ clientInboxId, xmtpConversationId })
+      invalidateGroupPermissionsQuery({ 
+        clientInboxId, 
+        xmtpConversationId, 
+        caller: "revokeAdminMutation" 
+      })
     },
   })
 }

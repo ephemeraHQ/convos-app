@@ -1,6 +1,6 @@
 import { translate } from "@i18n"
 import { PermissionPolicySet } from "@xmtp/react-native-sdk/build/lib/types/PermissionPolicySet"
-import { userCanDoGroupActions } from "./userCanDoGroupActions"
+import { userCanDoGroupActions } from "./user-can-do-group-actions"
 
 type GetGroupMemberActionsProps = {
   groupPermissionLevel: PermissionPolicySet | undefined
