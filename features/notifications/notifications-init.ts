@@ -1,11 +1,13 @@
 import * as Notifications from "expo-notifications"
 import { Platform } from "react-native"
 import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   messageContentIsMultiRemoteAttachment,
   messageContentIsRemoteAttachment,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
+import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
@@ -146,6 +148,7 @@ async function maybeDisplayLocalNewMessageNotification(args: {
       clientInboxId,
     }),
   ])
+  notificationsLogger.debug("Fetched conversation and decrypted message")
 
   if (!conversation) {
     throw new NotificationError({
@@ -170,6 +173,19 @@ async function maybeDisplayLocalNewMessageNotification(args: {
       inboxId: convoMessage.senderInboxId,
     }),
   ])
+  notificationsLogger.debug("Fetched message content and sender info")
+
+  // Add to local cache
+  setConversationMessageQueryData({
+    clientInboxId,
+    xmtpMessageId: xmtpDecryptedMessage.id,
+    message: convoMessage,
+  })
+  addMessageToConversationMessagesInfiniteQueryData({
+    clientInboxId,
+    xmtpConversationId,
+    messageId: xmtpDecryptedMessage.id,
+  })
 
   await Notifications.scheduleNotificationAsync({
     content: {
