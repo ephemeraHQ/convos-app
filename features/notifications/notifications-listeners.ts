@@ -27,8 +27,6 @@ export function useNotificationListeners() {
   const handleNotificationTap = useCallback(
     async (response: Notifications.NotificationResponse) => {
       try {
-        notificationsLogger.debug(`Notification tapped: ${JSON.stringify(response)}`)
-
         // Sometimes we tap on a notification while the app is killed and this is triggered
         // before we finished hydrating auth so we push to a screen that isn't in the navigator yet
         await waitUntilPromise({
@@ -38,6 +36,9 @@ export function useNotificationListeners() {
         })
 
         if (isConvosModifiedNotification(response.notification)) {
+          notificationsLogger.debug(
+            `Convos modified notification tapped: ${JSON.stringify(response.notification)}`,
+          )
           return navigate("Conversation", {
             xmtpConversationId:
               response.notification.request.content.data.message.xmtpConversationId,
@@ -45,6 +46,9 @@ export function useNotificationListeners() {
         }
 
         if (isNotificationExpoNewMessageNotification(response.notification)) {
+          notificationsLogger.debug(
+            `Expo notification tapped: ${JSON.stringify(response.notification)}`,
+          )
           // Add the message in our cache.
           // Only here because for convos modified notifications, we already add the message to the cache
           const conversationTopic = response.notification.request.content.data.contentTopic

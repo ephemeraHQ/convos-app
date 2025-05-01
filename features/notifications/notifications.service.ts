@@ -8,7 +8,7 @@ import { updateDevice } from "@/features/devices/devices.api"
 import { ensureUserDeviceQueryData } from "@/features/devices/user-device.query"
 import { ensureNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { registerNotificationInstallation } from "@/features/notifications/notifications.api"
-import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
+import { INotificationMessageConvertedData } from "@/features/notifications/notifications.types"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { NotificationError, UserCancelledError } from "@/utils/error"
@@ -192,7 +192,7 @@ export async function clearNotificationsForConversation(args: {
     const notificationsToRemove = presentedNotifications.filter((notification) => {
       // Check if notification has data and message
       const data = notification.request.content.data as
-        | INotificationMessageDataConverted
+        | INotificationMessageConvertedData
         | undefined
 
       if (!data || !data.message) {

@@ -11,11 +11,8 @@ import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/co
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import {
-  isNotificationExpoNewMessageNotification,
-  isNotificationXmtpNewMessageNotification,
-} from "@/features/notifications/notification-assertions"
-import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
+import { isNotificationExpoNewMessageNotification } from "@/features/notifications/notification-assertions"
+import { INotificationMessageConvertedData } from "@/features/notifications/notifications.types"
 import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
@@ -87,27 +84,13 @@ async function handleNotification(notification: Notifications.Notification) {
     }
 
     if (isNotificationExpoNewMessageNotification(notification)) {
-      notificationsLogger.debug("Displaying expo local new message notification")
+      notificationsLogger.debug(
+        `Displaying expo local new message notification ${JSON.stringify(notification)}`,
+      )
       await maybeDisplayLocalNewMessageNotification({
-        encryptedMessage: notification.request.content.data.idempotencyKey,
+        encryptedMessage: notification.request.content.data.encryptedMessage,
         conversationTopic: notification.request.content.data.contentTopic,
       })
-
-      // Prevent the original notification from showing
-      return {
-        shouldShowAlert: false,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-      }
-    }
-
-    if (isNotificationXmtpNewMessageNotification(notification)) {
-      notificationsLogger.debug("Displaying xmtp local new message notification")
-      await maybeDisplayLocalNewMessageNotification({
-        encryptedMessage: notification.request.trigger.payload.encryptedMessage,
-        conversationTopic: notification.request.trigger.payload.topic,
-      })
-
       // Prevent the original notification from showing
       return {
         shouldShowAlert: false,
@@ -125,6 +108,7 @@ async function handleNotification(notification: Notifications.Notification) {
     captureError(
       new NotificationError({
         error,
+        additionalMessage: `Error handling notification: ${JSON.stringify(notification)}`,
       }),
     )
   }
@@ -226,7 +210,7 @@ async function maybeDisplayLocalNewMessageNotification(args: {
       data: {
         message: convoMessage,
         isProcessedByConvo: true,
-      } satisfies INotificationMessageDataConverted,
+      } satisfies INotificationMessageConvertedData,
       // Add attachments if the message has them
       ...(messageContentIsRemoteAttachment(convoMessage.content) && {
         attachments: [
