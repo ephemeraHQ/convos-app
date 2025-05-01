@@ -33,6 +33,7 @@ export function useAllowDmMutation() {
         setXmtpConsentStateForInboxId({
           peerInboxId: currentSenderInboxId,
           consent: "allowed",
+          clientInboxId: currentSenderInboxId,
         }),
       ])
     },
