@@ -69,13 +69,13 @@ export const ConversationMessages = memo(function ConversationMessages() {
     conversationId: xmtpConversationId,
     caller: "Conversation Messages",
   })
-  
+
   const { data: conversation } = useConversationQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "ConversationMessages",
   })
-  
+
   const isGroup = conversation ? !isConversationDm(conversation) : false
 
   const {

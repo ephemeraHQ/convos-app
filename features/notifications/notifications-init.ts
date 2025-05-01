@@ -11,7 +11,10 @@ import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/co
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { isNotificationExpoNewMessageNotification } from "@/features/notifications/notification-assertions"
+import {
+  isNotificationExpoNewMessageNotification,
+  isNotificationXmtpNewMessageNotification,
+} from "@/features/notifications/notification-assertions"
 import { INotificationMessageDataConverted } from "@/features/notifications/notifications.types"
 import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
@@ -83,9 +86,25 @@ async function handleNotification(notification: Notifications.Notification) {
     }
 
     if (isNotificationExpoNewMessageNotification(notification)) {
+      notificationsLogger.debug("Displaying expo local new message notification")
       await maybeDisplayLocalNewMessageNotification({
         encryptedMessage: notification.request.content.data.idempotencyKey,
         conversationTopic: notification.request.content.data.contentTopic,
+      })
+
+      // Prevent the original notification from showing
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      }
+    }
+
+    if (isNotificationXmtpNewMessageNotification(notification)) {
+      notificationsLogger.debug("Displaying xmtp local new message notification")
+      await maybeDisplayLocalNewMessageNotification({
+        encryptedMessage: notification.request.trigger.payload.encryptedMessage,
+        conversationTopic: notification.request.trigger.payload.topic,
       })
 
       // Prevent the original notification from showing
