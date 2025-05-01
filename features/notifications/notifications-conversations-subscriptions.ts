@@ -179,7 +179,7 @@ async function subscribeToConversationsNotifications(args: {
 
           return {
             topic: conversation.xmtpTopic,
-            isSilent: true,
+            isSilent: false,
             hmacKeys: conversationHmacKeys.values.map((key) => ({
               thirtyDayPeriodsSinceEpoch: key.thirtyDayPeriodsSinceEpoch,
               key: Buffer.from(key.hmacKey).toString("hex"),
