@@ -1,5 +1,8 @@
 import axios from "axios"
+import { apiLogger } from "@/utils/logger/logger"
 import { config } from "../../config"
+
+apiLogger.debug(`Creating convosApi instance with baseURL: ${config.app.apiUrl}`)
 
 // Authenticated API instance - requires auth headers
 export const convosApi = axios.create({
