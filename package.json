@@ -17,6 +17,8 @@
     "ios:clean": "yarn platform:clean:ios && yarn env:pull:dev && yarn ios",
     "ios:device": "expo run:ios --device",
     "ios:device:clean": "yarn platform:clean:ios && yarn env:pull:dev && yarn ios:device",
+    "ios:prebuild": "yarn env:pull:dev && expo prebuild --platform ios --clean",
+    "ios:prebuild:preview": "yarn env:pull:preview && EXPO_ENV=preview expo prebuild --platform ios --clean",
     "ios:preview": "EXPO_ENV=preview expo run:ios",
     "ios:preview:clean": "EXPO_ENV=preview yarn env:pull:preview && yarn platform:clean:ios && yarn ios:preview",
     "ios:preview:device": "EXPO_ENV=preview expo run:ios --device",

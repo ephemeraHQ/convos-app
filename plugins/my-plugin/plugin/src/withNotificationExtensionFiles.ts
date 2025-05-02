@@ -3,13 +3,19 @@ import fs from "fs"
 import path from "path"
 import { withDangerousMod, type ConfigPlugin } from "@expo/config-plugins"
 import plist from "plist"
-import { EXTENSION_DIR, EXTENSION_NAME } from "./constants"
+import { EXTENSION_DIR, EXTENSION_NAME, INFO_PLIST_FILENAME } from "./constants/constants"
 
 const APP_GROUP_KEY = "com.apple.security.application-groups"
+const CF_BUNDLE_VERSION_KEY = "CFBundleVersion"
+const CF_BUNDLE_SHORT_VERSION_STRING_KEY = "CFBundleShortVersionString"
+const CF_BUNDLE_VERSION_PLACEHOLDER = "{{CONVOS_BUILD_NUMBER}}"
+const CF_BUNDLE_SHORT_VERSION_STRING_PLACEHOLDER = "{{CONVOS_MARKETING_VERSION}}"
 
 /**
- * Copies the Swift files and Info.plist for the Notification-Service-Extension
- * into the iOS native project and modifies the NSE entitlements file.
+ * Expo Config Plugin to manage files for the Notification Service Extension (NSE).
+ * - Copies necessary Swift/Plist/Entitlements files into the native iOS project.
+ * - Modifies the copied NSE entitlements file to add the correct App Group ID.
+ * - Modifies the copied NSE Info.plist file to inject the correct version numbers.
  */
 export const withNotificationExtensionFiles: ConfigPlugin = (config) => {
   let appGroupIdentifier: string | undefined
@@ -21,6 +27,16 @@ export const withNotificationExtensionFiles: ConfigPlugin = (config) => {
     appGroupIdentifier = `group.${config.ios.bundleIdentifier}`
   }
   assert(appGroupIdentifier, "Could not determine App Group identifier.")
+
+  const marketingVersion = config.version
+  const currentProjectVersion = config.ios?.buildNumber ?? "1"
+
+  assert(marketingVersion, "Missing 'version' in app config.")
+  assert(currentProjectVersion, "Missing 'ios.buildNumber' in app config. Defaulting failed.")
+
+  console.log(
+    `[withNotificationExtensionFiles] Determined Versions: Marketing=${marketingVersion}, Build=${currentProjectVersion}`,
+  )
 
   return withDangerousMod(config, [
     "ios",
@@ -75,7 +91,46 @@ export const withNotificationExtensionFiles: ConfigPlugin = (config) => {
                 }
               } catch (modifyError) {
                 console.error(
-                  `[withNotificationExtensionFiles] Failed to modify ${dstFilePath}:`,
+                  `[withNotificationExtensionFiles] Failed to modify entitlements ${dstFilePath}:`,
+                  modifyError,
+                )
+              }
+            }
+
+            if (file === INFO_PLIST_FILENAME) {
+              console.log(
+                `[withNotificationExtensionFiles] Modifying copied Info.plist for version placeholders: ${dstFilePath}`,
+              )
+              try {
+                let plistContent = fs.readFileSync(dstFilePath, "utf8")
+
+                const originalLength = plistContent.length
+                plistContent = plistContent.replace(
+                  CF_BUNDLE_VERSION_PLACEHOLDER,
+                  currentProjectVersion,
+                )
+                plistContent = plistContent.replace(
+                  CF_BUNDLE_SHORT_VERSION_STRING_PLACEHOLDER,
+                  marketingVersion,
+                )
+
+                if (plistContent.length !== originalLength) {
+                  fs.writeFileSync(dstFilePath, plistContent)
+                  console.log(
+                    `[withNotificationExtensionFiles] Successfully replaced version placeholders in Info.plist: ${dstFilePath}`,
+                  )
+                  console.log(`  - Final ${CF_BUNDLE_VERSION_KEY}: ${currentProjectVersion}`)
+                  console.log(
+                    `  - Final ${CF_BUNDLE_SHORT_VERSION_STRING_KEY}: ${marketingVersion}`,
+                  )
+                } else {
+                  console.warn(
+                    `[withNotificationExtensionFiles] Did not find version placeholders in ${dstFilePath}. Content unchanged.`,
+                  )
+                }
+              } catch (modifyError) {
+                console.error(
+                  `[withNotificationExtensionFiles] Failed to modify Info.plist ${dstFilePath}:`,
                   modifyError,
                 )
               }

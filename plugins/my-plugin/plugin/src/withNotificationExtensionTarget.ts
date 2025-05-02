@@ -2,7 +2,12 @@ import fs from "fs"
 import path from "path"
 import { withXcodeProject, type ConfigPlugin } from "@expo/config-plugins"
 import { findNativeTargetByName } from "@expo/config-plugins/build/ios/Target"
-import { DEPLOYMENT_TARGET, EXTENSION_NAME, INFO_PLIST_FILENAME, PRODUCT_TYPE } from "./constants"
+import {
+  DEPLOYMENT_TARGET,
+  EXTENSION_NAME,
+  INFO_PLIST_FILENAME,
+  PRODUCT_TYPE,
+} from "./constants/constants"
 
 export const withNotificationExtensionTarget: ConfigPlugin = (config) => {
   return withXcodeProject(config, (mod) => {
@@ -19,102 +24,98 @@ export const withNotificationExtensionTarget: ConfigPlugin = (config) => {
 
     const bundleId = `${config.ios!.bundleIdentifier}.${EXTENSION_NAME.toLowerCase()}`
 
-    // Create a PBX group for the extension sources
-    const group = xcodeProject.addPbxGroup([], EXTENSION_NAME, EXTENSION_NAME)
-    const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup
-    xcodeProject.getPBXGroupByKey(mainGroupKey).children.push({
-      value: group.uuid,
-      comment: EXTENSION_NAME,
-    })
-    console.log(`[withNotificationExtensionTarget] Created PBXGroup '${EXTENSION_NAME}'`)
+    // --- Get file paths relative to the group ---
+    const filesDirPath = path.join(mod.modRequest.platformProjectRoot, EXTENSION_NAME)
+    const files = fs.readdirSync(filesDirPath)
+    const sourceFiles = files.filter((f) => f.endsWith(".swift")) // e.g., ["NotificationService.swift"]
+    // --- CORRECTED resourceFiles ---
+    // Only include files that NEED to be copied, EXCLUDE the main Info.plist
+    const resourceFiles = files.filter(
+      (f) =>
+        (f.endsWith(".plist") && f !== INFO_PLIST_FILENAME) || // Keep other plists (if any)
+        f.endsWith(".entitlements") || // Keep entitlements
+        // Add other resource types here if needed (e.g., .json, images)
+        (!f.endsWith(".swift") && !f.endsWith(".plist") && !f.endsWith(".entitlements")), // Catch-all for other potential resources
+    )
+    // Filter out the main Info.plist specifically if caught by the catch-all
+    const finalResourceFiles = resourceFiles.filter((f) => f !== INFO_PLIST_FILENAME)
+    // --- END CORRECTION ---
+    const allFilePathsForGroup = files // All files to be shown in the group visually
 
-    // Add a new target for the Notification Service Extension
-    const target = xcodeProject.addTarget(EXTENSION_NAME, PRODUCT_TYPE, EXTENSION_NAME, bundleId)
+    console.log(
+      `[withNotificationExtensionTarget] Found files: Sources=[${sourceFiles.join(", ")}], Resources=[${finalResourceFiles.join(", ")}] (Info.plist excluded)`,
+    )
+    // --- End Get Files ---
+
+    // --- Create Group and Add Files Visually ---
+    // Create new PBXGroup for the extension, containing references to be shown in Xcode navigator
+    const group = xcodeProject.addPbxGroup(
+      allFilePathsForGroup, // Files to show in the folder
+      EXTENSION_NAME, // Name of the folder
+      EXTENSION_NAME, // Path of the folder relative to project root
+    )
+    console.log(
+      `[withNotificationExtensionTarget] Created PBXGroup '${EXTENSION_NAME}' (UUID: ${group.uuid}) linked to files.`,
+    )
+
+    // Add the new PBXGroup to the top level group.
+    const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup
+    xcodeProject.addToPbxGroup(group.uuid, mainGroupKey)
+    console.log(
+      `[withNotificationExtensionTarget] Added PBXGroup ${group.uuid} to MainGroup ${mainGroupKey}`,
+    )
+    // --- End Group Creation ---
+
+    // --- Add Target ---
+    // This function should ideally handle basic setup like build configurations
+    const target = xcodeProject.addTarget(
+      EXTENSION_NAME,
+      PRODUCT_TYPE,
+      EXTENSION_NAME, // Product Name should match target name
+      bundleId,
+    )
     console.log(
       `[withNotificationExtensionTarget] Added Target '${EXTENSION_NAME}' (UUID: ${target.uuid})`,
     )
+    // --- End Add Target ---
 
-    // --- Manually Add Files to Correct Build Phases ---
-
-    // Get references to the build phase objects associated *with the new target*
-    const buildPhaseObjects = xcodeProject.hash.project.objects["PBXSourcesBuildPhase"] || {}
-    const resourcePhaseObjects = xcodeProject.hash.project.objects["PBXResourcesBuildPhase"] || {}
-
-    let sourcesPhaseUUID: string | null = null
-    let resourcesPhaseUUID: string | null = null
-
-    const targetBuildPhaseRefs = target.buildPhases || []
-    for (const phaseRef of targetBuildPhaseRefs) {
-      if (buildPhaseObjects[phaseRef.value]) {
-        sourcesPhaseUUID = phaseRef.value
-        console.log(
-          `[withNotificationExtensionTarget] Found Sources Phase UUID for NSE target: ${sourcesPhaseUUID}`,
-        )
-      } else if (resourcePhaseObjects[phaseRef.value]) {
-        resourcesPhaseUUID = phaseRef.value
-        console.log(
-          `[withNotificationExtensionTarget] Found Resources Phase UUID for NSE target: ${resourcesPhaseUUID}`,
-        )
-      }
-    }
-
-    if (!sourcesPhaseUUID) {
-      console.warn(
-        `[withNotificationExtensionTarget] Could not find PBXSourcesBuildPhase for target ${EXTENSION_NAME}. Swift files won't be compiled.`,
-      )
-    }
-    if (!resourcesPhaseUUID) {
-      console.warn(
-        `[withNotificationExtensionTarget] Could not find PBXResourcesBuildPhase for target ${EXTENSION_NAME}. Plist/Entitlements might not be copied.`,
-      )
-    }
-
-    // Iterate through files copied by withNotificationExtensionFiles
-    const filesDirPath = path.join(mod.modRequest.platformProjectRoot, EXTENSION_NAME)
-    const files = fs.readdirSync(filesDirPath)
-
+    // --- Add Build Phases with Files ---
+    // Add PBXSourcesBuildPhase containing the source files
+    xcodeProject.addBuildPhase(
+      sourceFiles, // Pass the array of source filenames
+      "PBXSourcesBuildPhase",
+      "Sources", // Standard name for the phase
+      target.uuid,
+    )
     console.log(
-      `[withNotificationExtensionTarget] Adding files from ${filesDirPath} to target '${EXTENSION_NAME}' phases...`,
+      `[withNotificationExtensionTarget] Added Sources Build Phase for target ${target.uuid} with files: ${sourceFiles.join(", ")}`,
     )
 
-    for (const fileName of files) {
-      const fileRelativePath = path.join(EXTENSION_NAME, fileName) // Path relative to project root (e.g., "ConvosNSE/Info.plist")
-      // Add file reference to the project, linked to the ConvosNSE group
-      const fileRef = xcodeProject.addFile(fileRelativePath, group.uuid)
+    // Use the filtered list for Resources phase
+    xcodeProject.addBuildPhase(
+      finalResourceFiles, // <--- Use the filtered list
+      "PBXResourcesBuildPhase",
+      "Resources",
+      target.uuid,
+    )
+    console.log(
+      `[withNotificationExtensionTarget] Added Resources Build Phase for target ${target.uuid} with files: ${finalResourceFiles.join(", ")}`,
+    )
 
-      if (!fileRef) {
-        console.warn(
-          `[withNotificationExtensionTarget] Failed to add file reference for ${fileRelativePath}. Skipping build phase addition.`,
-        )
-        continue
-      }
+    // Optionally add PBXFrameworksBuildPhase if needed, though often implicit
+    xcodeProject.addBuildPhase(
+      [], // No frameworks explicitly added here, system ones linked automatically
+      "PBXFrameworksBuildPhase",
+      "Frameworks",
+      target.uuid,
+    )
+    console.log(
+      `[withNotificationExtensionTarget] Added Frameworks Build Phase for target ${target.uuid}`,
+    )
+    // --- End Add Build Phases ---
 
-      console.log(`  - Added file reference for: ${fileRelativePath} (UUID: ${fileRef.uuid})`)
-
-      // Add to the correct build phase based on extension
-      if (fileName.endsWith(".swift") && sourcesPhaseUUID) {
-        // Add to Compile Sources phase of the NSE target
-        xcodeProject.addFileToPbxBuildPhase(fileRef, sourcesPhaseUUID)
-        console.log(`    - Added ${fileName} to PBXSourcesBuildPhase (${sourcesPhaseUUID})`)
-      } else if (
-        (fileName.endsWith(".plist") || fileName.endsWith(".entitlements")) &&
-        resourcesPhaseUUID
-      ) {
-        // Add to Copy Bundle Resources phase of the NSE target
-        xcodeProject.addFileToPbxBuildPhase(fileRef, resourcesPhaseUUID)
-        console.log(`    - Added ${fileName} to PBXResourcesBuildPhase (${resourcesPhaseUUID})`)
-      } else {
-        console.log(
-          `    - Skipped adding ${fileName} to build phases (unhandled extension or phase not found)`,
-        )
-      }
-    }
-    // --- End Manual File Addition ---
-
-    // Remove the old explicit phase creation - it should be automatic or handled above
-    // xcodeProject.addBuildPhase( [], "PBXResourcesBuildPhase", "Resources", target.uuid, EXTENSION_NAME );
-
-    // --- Set Build Settings (Remains the same) ---
+    // --- Set Build Settings ---
+    // This loop correctly targets the configurations associated with the NSE target
     const configurations = xcodeProject.pbxXCBuildConfigurationSection()
     for (const key in configurations) {
       if (
@@ -126,6 +127,8 @@ export const withNotificationExtensionTarget: ConfigPlugin = (config) => {
         buildSettings.IPHONEOS_DEPLOYMENT_TARGET = DEPLOYMENT_TARGET
         buildSettings.INFOPLIST_FILE = `${EXTENSION_NAME}/${INFO_PLIST_FILENAME}`
         buildSettings.CODE_SIGN_STYLE = '"Automatic"'
+        buildSettings.PRODUCT_NAME = `"${EXTENSION_NAME}"`
+        buildSettings.SWIFT_VERSION = "5.0"
       }
     }
     // --- End Set Build Settings ---

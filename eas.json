@@ -7,19 +7,26 @@
     "_shared": {
       "autoIncrement": true,
       "node": "20.18.0",
-      "resourceClass": "large"
+      "resourceClass": "large",
+      "credentialsSource": "remote"
     },
     "development": {
       "extends": "_shared",
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
-      "environment": "development"
+      "environment": "development",
+      "ios": {
+        "scheme": "com.convos.dev"
+      }
     },
     "preview": {
       "extends": "_shared",
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "ios": {
+        "scheme": "com.convos.preview"
+      }
     },
     "production": {
       "extends": "_shared",
@@ -27,6 +34,9 @@
       "environment": "production",
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "scheme": "com.convos.prod"
       }
     }
   },
