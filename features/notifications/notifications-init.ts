@@ -195,7 +195,7 @@ async function maybeDisplayLocalNewMessageNotification(args: {
   const currentRoute = getCurrentRoute()
   if (
     currentRoute?.name === "Conversation" &&
-    currentRoute.params.xmtpConversationId === xmtpConversationId
+    currentRoute?.params?.xmtpConversationId === xmtpConversationId
   ) {
     notificationsLogger.debug(
       "User is already in this conversation, don't display local notification",
@@ -212,23 +212,25 @@ async function maybeDisplayLocalNewMessageNotification(args: {
         isProcessedByConvo: true,
       } satisfies INotificationMessageConvertedData,
       // Add attachments if the message has them
-      ...(messageContentIsRemoteAttachment(convoMessage.content) && {
-        attachments: [
-          {
-            identifier: convoMessage.content.url,
-            type: "image",
-            url: convoMessage.content.url,
-          },
-        ],
-      }),
+      ...(Platform.OS === "ios" &&
+        messageContentIsRemoteAttachment(convoMessage.content) && {
+          attachments: [
+            {
+              identifier: convoMessage.content.url,
+              type: "image",
+              url: convoMessage.content.url,
+            },
+          ],
+        }),
       // Add attachments if the message has them
-      ...(messageContentIsMultiRemoteAttachment(convoMessage.content) && {
-        attachments: convoMessage.content.attachments.map((attachment) => ({
-          identifier: attachment.url,
-          type: "image",
-          url: attachment.url,
-        })),
-      }),
+      ...(Platform.OS === "ios" &&
+        messageContentIsMultiRemoteAttachment(convoMessage.content) && {
+          attachments: convoMessage.content.attachments.map((attachment) => ({
+            identifier: attachment.url,
+            type: "image",
+            url: attachment.url,
+          })),
+        }),
     },
     trigger: null,
   })
