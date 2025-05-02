@@ -3,33 +3,35 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05126F58E9AC4B1D9FC8E3DE /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7B83CF7494548EF84C22FE3 /* NotificationService.swift */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		257A04884C104B7288E46C98 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC8380AE9C354FCE9F67E8CF /* noop-file.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		68D0B811498C459EBF7B851F /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75A2339BD7C9451686F34FB2 /* NotificationService.swift */; };
-		731CAD5EFE4698E5C913917F /* Pods_ConvosPreview.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5D66FC8723580DA377B271E2 /* Pods_ConvosPreview.framework */; };
-		83CC67A89B724356AFD7BA74 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 25315F0A7DF6467CAC787D32 /* GoogleService-Info.plist */; };
-		8F3916FA2EE64FF8AF5A0E8A /* ConvosNSE.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = E21288531F9A46FA9181300A /* ConvosNSE.entitlements */; };
-		AD0FD42A9150658EABF50B4B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D712E44207B62FAB75E6F782 /* PrivacyInfo.xcprivacy */; };
+		9B57865D1BBD4B858FF13451 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9E3792A550004FD8BA18ED33 /* GoogleService-Info.plist */; };
+		A27FD35379CAA4868CF3234A /* Pods_ConvosPreview.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D2255042A725A6362979343 /* Pods_ConvosPreview.framework */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		CA98816986A54A77B670C0F1 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7D2F296A0E42C0B81D2761 /* noop-file.swift */; };
-		DCEFE7844C904CEC90989B6E /* ConvosNSE.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 1594513BDDF843B39D9BDB62 /* ConvosNSE.appex */; };
+		BF3EAD5725FE4609A113E614 /* ConvosNSE.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 32723455B1E14E7A8E0AD9E3 /* ConvosNSE.appex */; };
+		C96ED0A3A3EC4C90AE86B42F /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13695E61EA07454EB9E8F342 /* Keychain.swift */; };
+		CFC66ACB2AEC436A86CDF9F9 /* ConvosNSE.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 7709C4AA3B474EDA96D3517B /* ConvosNSE.entitlements */; };
+		D93EEE4C1FDFB4742734CBA8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8B18FF434A350DC6DED18CDD /* PrivacyInfo.xcprivacy */; };
+		E437CD583FB142B6BA08008F /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66AD261F45564A79B839158D /* Utils.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		A587FE46920A4B86ADE0B6D3 /* Copy Files */ = {
+		C1BB9840F4F14C26BE800CDB /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				DCEFE7844C904CEC90989B6E /* ConvosNSE.appex in Copy Files */,
+				BF3EAD5725FE4609A113E614 /* ConvosNSE.appex in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -37,25 +39,27 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		13695E61EA07454EB9E8F342 /* Keychain.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = Keychain.swift; path = Keychain.swift; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* ConvosPreview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConvosPreview.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = ConvosPreview/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = ConvosPreview/AppDelegate.mm; sourceTree = "<group>"; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ConvosPreview/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ConvosPreview/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = ConvosPreview/main.m; sourceTree = "<group>"; };
-		1594513BDDF843B39D9BDB62 /* ConvosNSE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = 9; includeInIndex = 0; path = ConvosNSE.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		25315F0A7DF6467CAC787D32 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "ConvosPreview/GoogleService-Info.plist"; sourceTree = "<group>"; };
-		5D66FC8723580DA377B271E2 /* Pods_ConvosPreview.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ConvosPreview.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		6AF381A237D542E08C4BED4C /* ConvosPreview-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "ConvosPreview-Bridging-Header.h"; path = "ConvosPreview/ConvosPreview-Bridging-Header.h"; sourceTree = "<group>"; };
+		32723455B1E14E7A8E0AD9E3 /* ConvosNSE.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = ConvosNSE.appex; path = ConvosNSE.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D2255042A725A6362979343 /* Pods_ConvosPreview.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ConvosPreview.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		66AD261F45564A79B839158D /* Utils.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = Utils.swift; path = Utils.swift; sourceTree = "<group>"; };
 		6C2E3173556A471DD304B334 /* Pods-ConvosPreview.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ConvosPreview.debug.xcconfig"; path = "Target Support Files/Pods-ConvosPreview/Pods-ConvosPreview.debug.xcconfig"; sourceTree = "<group>"; };
-		75A2339BD7C9451686F34FB2 /* NotificationService.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		7709C4AA3B474EDA96D3517B /* ConvosNSE.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ConvosNSE.entitlements; path = ConvosNSE.entitlements; sourceTree = "<group>"; };
 		7A4D352CD337FB3A3BF06240 /* Pods-ConvosPreview.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ConvosPreview.release.xcconfig"; path = "Target Support Files/Pods-ConvosPreview/Pods-ConvosPreview.release.xcconfig"; sourceTree = "<group>"; };
-		8E7D2F296A0E42C0B81D2761 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "ConvosPreview/noop-file.swift"; sourceTree = "<group>"; };
-		94A88C45BB7A4A42B0D9B1A9 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		8B18FF434A350DC6DED18CDD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = ConvosPreview/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		980549CDE9FF4C96B24B7C00 /* ConvosPreview-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "ConvosPreview-Bridging-Header.h"; path = "ConvosPreview/ConvosPreview-Bridging-Header.h"; sourceTree = "<group>"; };
+		9E3792A550004FD8BA18ED33 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "ConvosPreview/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = ConvosPreview/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		D712E44207B62FAB75E6F782 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = ConvosPreview/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		E21288531F9A46FA9181300A /* ConvosNSE.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = ConvosNSE.entitlements; sourceTree = "<group>"; };
+		C7B83CF7494548EF84C22FE3 /* NotificationService.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		CC8380AE9C354FCE9F67E8CF /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "ConvosPreview/noop-file.swift"; sourceTree = "<group>"; };
+		E2225380CB6B42D8B1A71624 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = Info.plist; path = Info.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-ConvosPreview/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -65,11 +69,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				731CAD5EFE4698E5C913917F /* Pods_ConvosPreview.framework in Frameworks */,
+				A27FD35379CAA4868CF3234A /* Pods_ConvosPreview.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5F7AA056FC6845E7B2B2412A /* Frameworks */ = {
+		9D57FC8DF9DF4E359880D9F3 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -89,10 +93,10 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				25315F0A7DF6467CAC787D32 /* GoogleService-Info.plist */,
-				8E7D2F296A0E42C0B81D2761 /* noop-file.swift */,
-				6AF381A237D542E08C4BED4C /* ConvosPreview-Bridging-Header.h */,
-				D712E44207B62FAB75E6F782 /* PrivacyInfo.xcprivacy */,
+				9E3792A550004FD8BA18ED33 /* GoogleService-Info.plist */,
+				CC8380AE9C354FCE9F67E8CF /* noop-file.swift */,
+				980549CDE9FF4C96B24B7C00 /* ConvosPreview-Bridging-Header.h */,
+				8B18FF434A350DC6DED18CDD /* PrivacyInfo.xcprivacy */,
 			);
 			name = ConvosPreview;
 			sourceTree = "<group>";
@@ -101,9 +105,22 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				5D66FC8723580DA377B271E2 /* Pods_ConvosPreview.framework */,
+				4D2255042A725A6362979343 /* Pods_ConvosPreview.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		6B44FEA4C69B421EAD1658B6 /* ConvosNSE */ = {
+			isa = PBXGroup;
+			children = (
+				7709C4AA3B474EDA96D3517B /* ConvosNSE.entitlements */,
+				E2225380CB6B42D8B1A71624 /* Info.plist */,
+				13695E61EA07454EB9E8F342 /* Keychain.swift */,
+				C7B83CF7494548EF84C22FE3 /* NotificationService.swift */,
+				66AD261F45564A79B839158D /* Utils.swift */,
+			);
+			name = ConvosNSE;
+			path = ConvosNSE;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -122,7 +139,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				D65327D7A22EEC0BE12398D9 /* Pods */,
 				D7E4C46ADA2E9064B798F356 /* ExpoModulesProviders */,
-				8411BFA2E1F140D780877F87 /* ConvosNSE */,
+				6B44FEA4C69B421EAD1658B6 /* ConvosNSE */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -133,19 +150,9 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* ConvosPreview.app */,
-				1594513BDDF843B39D9BDB62 /* ConvosNSE.appex */,
+				32723455B1E14E7A8E0AD9E3 /* ConvosNSE.appex */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		8411BFA2E1F140D780877F87 /* ConvosNSE */ = {
-			isa = PBXGroup;
-			children = (
-				E21288531F9A46FA9181300A /* ConvosNSE.entitlements */,
-				94A88C45BB7A4A42B0D9B1A9 /* Info.plist */,
-				75A2339BD7C9451686F34FB2 /* NotificationService.swift */,
-			);
-			path = ConvosNSE;
 			sourceTree = "<group>";
 		};
 		92DBD88DE9BF7D494EA9DA96 /* ConvosPreview */ = {
@@ -190,16 +197,16 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "ConvosPreview" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				0A305824E642832234E2C27A /* [Expo] Configure project */,
+				7BCFC10E5099F9050305F349 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				425D2CEA2E1C41348FCF7F60 /* Upload Debug Symbols to Sentry */,
-				A587FE46920A4B86ADE0B6D3 /* Copy Files */,
-				62EBFEC4F3B889A54BF9B3EF /* [CP] Embed Pods Frameworks */,
-				856DC295DE2DCC75482470AD /* [CP-User] [RNFB] Core Configuration */,
+				466F6016F5AF466190ECEBB9 /* Upload Debug Symbols to Sentry */,
+				C1BB9840F4F14C26BE800CDB /* Copy Files */,
+				71A89C4B38B9F17A4B6AD991 /* [CP] Embed Pods Frameworks */,
+				F93ECD67E4190E8AEADDF469 /* [CP-User] [RNFB] Core Configuration */,
 			);
 			buildRules = (
 			);
@@ -210,13 +217,13 @@
 			productReference = 13B07F961A680F5B00A75B9A /* ConvosPreview.app */;
 			productType = "com.apple.product-type.application";
 		};
-		35F8A3E0E1634C4EA0B7DE74 /* ConvosNSE */ = {
+		6AA31F65353F4C5BB4870D27 /* ConvosNSE */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F0CA704217454AE88ABCB2B6 /* Build configuration list for PBXNativeTarget "ConvosNSE" */;
+			buildConfigurationList = 767B914A64EC4DBDB65CCD55 /* Build configuration list for PBXNativeTarget "ConvosNSE" */;
 			buildPhases = (
-				76360C19E2DE407EAAA83983 /* Sources */,
-				BC32E2776B0341FAA63A935A /* Resources */,
-				5F7AA056FC6845E7B2B2412A /* Frameworks */,
+				12C6AD1BEF7749679A2F4339 /* Sources */,
+				1E01739E23DE420183AD94C8 /* Resources */,
+				9D57FC8DF9DF4E359880D9F3 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -224,7 +231,7 @@
 			);
 			name = ConvosNSE;
 			productName = ConvosNSE;
-			productReference = 1594513BDDF843B39D9BDB62 /* ConvosNSE.appex */;
+			productReference = 32723455B1E14E7A8E0AD9E3 /* ConvosNSE.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -254,7 +261,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* ConvosPreview */,
-				35F8A3E0E1634C4EA0B7DE74 /* ConvosNSE */,
+				6AA31F65353F4C5BB4870D27 /* ConvosNSE */,
 			);
 		};
 /* End PBXProject section */
@@ -267,16 +274,16 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				83CC67A89B724356AFD7BA74 /* GoogleService-Info.plist in Resources */,
-				AD0FD42A9150658EABF50B4B /* PrivacyInfo.xcprivacy in Resources */,
+				9B57865D1BBD4B858FF13451 /* GoogleService-Info.plist in Resources */,
+				D93EEE4C1FDFB4742734CBA8 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BC32E2776B0341FAA63A935A /* Resources */ = {
+		1E01739E23DE420183AD94C8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8F3916FA2EE64FF8AF5A0E8A /* ConvosNSE.entitlements in Resources */,
+				CFC66ACB2AEC436A86CDF9F9 /* ConvosNSE.entitlements in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,26 +327,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		0A305824E642832234E2C27A /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-ConvosPreview/expo-configure-project.sh\"\n";
-		};
-		425D2CEA2E1C41348FCF7F60 /* Upload Debug Symbols to Sentry */ = {
+		466F6016F5AF466190ECEBB9 /* Upload Debug Symbols to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -353,7 +341,7 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh `${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`";
 		};
-		62EBFEC4F3B889A54BF9B3EF /* [CP] Embed Pods Frameworks */ = {
+		71A89C4B38B9F17A4B6AD991 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -372,6 +360,25 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ConvosPreview/Pods-ConvosPreview-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		7BCFC10E5099F9050305F349 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-ConvosPreview/expo-configure-project.sh\"\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -445,7 +452,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ConvosPreview/Pods-ConvosPreview-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		856DC295DE2DCC75482470AD /* [CP-User] [RNFB] Core Configuration */ = {
+		F93ECD67E4190E8AEADDF469 /* [CP-User] [RNFB] Core Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -461,6 +468,16 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		12C6AD1BEF7749679A2F4339 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C96ED0A3A3EC4C90AE86B42F /* Keychain.swift in Sources */,
+				05126F58E9AC4B1D9FC8E3DE /* NotificationService.swift in Sources */,
+				E437CD583FB142B6BA08008F /* Utils.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		13B07F871A680F5B00A75B9A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -468,15 +485,7 @@
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */,
-				CA98816986A54A77B670C0F1 /* noop-file.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		76360C19E2DE407EAAA83983 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				68D0B811498C459EBF7B851F /* NotificationService.swift in Sources */,
+				257A04884C104B7288E46C98 /* noop-file.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,7 +500,6 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ConvosPreview/ConvosPreview.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -499,10 +507,7 @@
 				);
 				INFOPLIST_FILE = ConvosPreview/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -528,13 +533,9 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ConvosPreview/ConvosPreview.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				INFOPLIST_FILE = ConvosPreview/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -551,22 +552,32 @@
 			};
 			name = Release;
 		};
-		5FA6B9AFB0AE4A1F80B678F7 /* Debug */ = {
+		44B807B1BBAD4F5FA7F9461A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				INFOPLIST_FILE = ConvosNSE/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.convosnse;
+				PRODUCT_NAME = ConvosNSE;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		6DB42F50B1CE440084174ADC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = ConvosNSE/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.convosnse;
 				PRODUCT_NAME = ConvosNSE;
@@ -634,14 +645,14 @@
 					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					/usr/lib/swift,
-					"$(inherited)",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "/usr/lib/swift $(inherited)";
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -701,37 +712,17 @@
 					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				LD_RUNPATH_SEARCH_PATHS = (
-					/usr/lib/swift,
-					"$(inherited)",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "/usr/lib/swift $(inherited)";
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = "$(inherited)  ";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
-		F441E93DDBE34E8B8B39D66B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = FY4NZR34Z3;
-				INFOPLIST_FILE = ConvosNSE/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.convosnse;
-				PRODUCT_NAME = ConvosNSE;
-				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -747,20 +738,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		767B914A64EC4DBDB65CCD55 /* Build configuration list for PBXNativeTarget "ConvosNSE" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6DB42F50B1CE440084174ADC /* Debug */,
+				44B807B1BBAD4F5FA7F9461A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "ConvosPreview" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		F0CA704217454AE88ABCB2B6 /* Build configuration list for PBXNativeTarget "ConvosNSE" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5FA6B9AFB0AE4A1F80B678F7 /* Debug */,
-				F441E93DDBE34E8B8B39D66B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

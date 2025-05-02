@@ -36,21 +36,35 @@ final class NotificationService: UNNotificationServiceExtension {
   // Main asynchronous processing logic
   private func handleNotificationAsync(request: UNNotificationRequest) async {
     guard let currentBestAttempt = bestAttempt else {
-      os_log("Failed to get mutable copy of notification content", log: logger, type: .error)
-      contentHandler?(request.content) // Show original and exit
-      return
+      os_log("Failed to get mutable copy", log: logger, type: .error); contentHandler?(request.content); return
+    }
+    guard
+      let userInfo = request.content.userInfo as? [String: Any] // Extract userInfo
+    else {
+      os_log("Could not extract userInfo dictionary from notification content", log: logger, type: .error); contentHandler?(request.content); return
     }
 
-    // --- 1. Extract Data from Payload ---
+    // --- ADD LOGGING FOR userInfo ---
+    os_log("Received notification userInfo:", log: logger, type: .debug)
+    // Attempt to serialize userInfo to JSON string for clearer logging
+    if let jsonData = try? JSONSerialization.data(withJSONObject: userInfo, options: [.prettyPrinted]),
+       let jsonString = String(data: jsonData, encoding: .utf8) {
+      // Use %{public}@ for debugging, switch to %{private}@ if sensitive data is logged long-term
+      os_log("\n%{public}@", log: logger, type: .debug, jsonString)
+    } else {
+      // Fallback if JSON serialization fails (e.g., non-JSON compatible types)
+      os_log("Could not serialize userInfo to JSON. Raw content: %{public}@", log: logger, type: .warning, userInfo.description)
+    }
+    // --- END LOGGING ---
+
+    // --- Continue extracting specific fields ---
     guard
-      let userInfo = request.content.userInfo as? [String: Any],
       let encryptedMessage = userInfo["encryptedMessage"] as? String,
       let topic = userInfo["contentTopic"] as? String,
-      let ethAddress = userInfo["ethAddress"] as? String // Expect lowercase address from payload
+      let ethAddress = userInfo["ethAddress"] as? String
     else {
-      os_log("Missing required fields ('encryptedMessage', 'contentTopic', 'ethAddress') in notification payload userInfo", log: logger, type: .error)
-      contentHandler?(request.content) // Show original and exit
-      return
+      os_log("Missing required fields in userInfo dictionary after logging.", log: logger, type: .error)
+      contentHandler?(request.content); return
     }
     os_log("Processing message - Topic: %{public}@, EthAddress: %{private}@", log: logger, type: .debug, topic, ethAddress)
 
