@@ -1,13 +1,19 @@
-import { FlashList } from "@shopify/flash-list"
+import { FlashList, FlashListProps } from "@shopify/flash-list"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import React, { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
-import { NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
-import { FadeInDown, useAnimatedRef } from "react-native-reanimated"
+import { Platform } from "react-native"
+import Animated, {
+  FadeInDown,
+  runOnJS,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+} from "react-native-reanimated"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationConsentPopupDm } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-dm"
 import { ConversationConsentPopupGroup } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-group"
+import { ConversationInfoBanner } from "@/features/conversation/conversation-chat/conversation-info-banner"
 import { ConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message"
 import { ConversationMessageHighlighted } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-highlighted"
 import { ConversationMessageLayout } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-layout"
@@ -45,13 +51,18 @@ import {
   useCurrentXmtpConversationIdSafe,
 } from "./conversation.store-context"
 
+// AI fixed the typing
+const ReanimatedFlashList = Animated.createAnimatedComponent(
+  FlashList as React.ComponentType<FlashListProps<IXmtpMessageId>>,
+) as <T>(props: FlashListProps<T> & { ref?: React.Ref<FlashList<T>> }) => JSX.Element
+
 export const ConversationMessages = memo(function ConversationMessages() {
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
-  const refreshingRef = useRef(false)
   const scrollRef = useAnimatedRef<FlashList<IXmtpMessageId>>()
   const conversationStore = useConversationStore()
-  const hasPulledToRefreshRef = useRef(false)
+  const isRefreshingRef = useRef(false)
+  const isFetchingMoreMessagesRef = useRef(false)
   const { theme } = useAppTheme()
   const { data: disappearingMessageSettings } = useDisappearingMessageSettings({
     clientInboxId: currentSender.inboxId,
@@ -59,9 +70,16 @@ export const ConversationMessages = memo(function ConversationMessages() {
     caller: "Conversation Messages",
   })
 
+  const { data: conversation } = useConversationQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "ConversationMessages",
+  })
+
+  const isGroup = conversation ? !isConversationDm(conversation) : false
+
   const {
     data: messageIds = [],
-    isRefetching: isRefetchingMessages,
     refetch: refetchMessages,
     fetchNextPage,
     hasNextPage,
@@ -128,77 +146,77 @@ export const ConversationMessages = memo(function ConversationMessages() {
     }
   }, [conversationStore, scrollRef, messageIds])
 
-  const handleScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      // If we're already fetching, don't trigger again
-      if (refreshingRef.current || isRefetchingMessages) {
-        return
-      }
+  function handleRefetch() {
+    if (isRefreshingRef.current) {
+      return
+    }
 
-      // contentOffset: Current scroll position (y is positive when scrolling up in inverted list)
-      // contentSize: Total size of all content in the list
-      // layoutMeasurement: Size of the visible viewport
-      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
+    isRefreshingRef.current = true
 
-      // Calculate distance from top of older messages
-      // In inverted lists, we're at "top" of old messages when contentOffset.y is large
-      const distanceFromTop = contentSize.height - layoutMeasurement.height - contentOffset.y
+    logger.debug("Refetching newest messages because we're scrolled past the bottom...")
 
-      // Trigger loading when within 20% of viewport height from the top
-      const isPastTopThreshold = distanceFromTop < layoutMeasurement.height * 0.2
+    refetchMessages()
+      .then(() => {
+        logger.debug("Done refetching newest messages because we're scrolled past the bottom")
+      })
+      .catch(captureError)
+      .finally(() => {
+        isRefreshingRef.current = false
+      })
 
-      if (isPastTopThreshold && hasNextPage) {
-        refreshingRef.current = true
-        logger.debug("Fetching older messages because we're scrolled past the top...")
-        fetchNextPage()
-          .then(() => {
-            logger.debug("Done fetching older messages because we're scrolled past the top")
-          })
-          .catch(captureError)
-          .finally(() => {
-            refreshingRef.current = false
-          })
-      }
-
-      // Reset once the user has scrolled back up past the threshold
-      if (contentOffset.y >= 0) {
-        hasPulledToRefreshRef.current = false
-      }
-
-      // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
-      const isPastBottomThreshold = contentOffset.y < -25
-
-      if (isPastBottomThreshold && !hasPulledToRefreshRef.current) {
-        // Only refetch if we haven't already refreshed during this pull-down gesture
-        hasPulledToRefreshRef.current = true
-        refreshingRef.current = true
-        logger.debug("Refetching newest messages because we're scrolled past the bottom...")
-        refetchMessages()
-          .then(() => {
-            logger.debug("Done refetching newest messages because we're scrolled past the bottom")
-          })
-          .catch(captureError)
-          .finally(() => {
-            refreshingRef.current = false
-          })
-
-        // Also refetch group query so the header updates if it needs to
-        refetchGroupQuery({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId,
-          caller: "Conversation Messages",
-        }).catch(captureError)
-      }
-    },
-    [
-      fetchNextPage,
-      hasNextPage,
-      isRefetchingMessages,
-      refetchMessages,
-      currentSender.inboxId,
+    // Also refetch group query so the header updates if it needs to
+    refetchGroupQuery({
+      clientInboxId: currentSender.inboxId,
       xmtpConversationId,
-    ],
-  )
+      caller: "Conversation Messages",
+    }).catch(captureError)
+  }
+
+  function handleFetchNext() {
+    if (isFetchingMoreMessagesRef.current) {
+      return
+    }
+
+    isFetchingMoreMessagesRef.current = true
+
+    logger.debug("Fetching older messages because we're scrolled past the top...")
+
+    fetchNextPage()
+      .then(() => {
+        logger.debug("Done fetching older messages because we're scrolled past the top")
+      })
+      .catch(captureError)
+      .finally(() => {
+        isFetchingMoreMessagesRef.current = false
+      })
+  }
+
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    "worklet"
+
+    // contentOffset: Current scroll position (y is positive when scrolling up in inverted list)
+    // contentSize: Total size of all content in the list
+    // layoutMeasurement: Size of the visible viewport
+    const { contentOffset, contentSize, layoutMeasurement } = event
+
+    // Calculate distance from top of older messages
+    // In inverted lists, we're at "top" of old messages when contentOffset.y is large
+    const distanceFromTop = contentSize.height - layoutMeasurement.height - contentOffset.y
+
+    // Trigger loading when within 20% of viewport height from the top
+    const isPastTopThreshold = distanceFromTop < layoutMeasurement.height * 0.2
+
+    if (isPastTopThreshold && hasNextPage) {
+      runOnJS(handleFetchNext)()
+    }
+
+    // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
+    const isPastBottomThreshold = contentOffset.y < -25
+
+    if (isPastBottomThreshold) {
+      runOnJS(handleRefetch)()
+    }
+  })
 
   const latestXmtpMessageIdFromCurrentSender = useMemo(() => {
     return messageIds.find((xmtpMessageId) => {
@@ -251,7 +269,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   )
 
   return (
-    <FlashList
+    <ReanimatedFlashList
       ref={scrollRef}
       data={messageIds}
       renderItem={renderItem}
@@ -263,10 +281,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
-      onScroll={handleScroll}
-      scrollEventThrottle={200} // We don't need to throttle fast because we only use to know if we need to load more messages
+      onScroll={scrollHandler}
+      scrollEventThrottle={100} // We don't need to be that accurate
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
+      ListFooterComponent={isGroup ? <ConversationInfoBanner /> : null}
       getItemType={getItemType}
       estimatedListSize={{
         height: theme.layout.screen.height,

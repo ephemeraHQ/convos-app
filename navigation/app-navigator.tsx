@@ -1,7 +1,7 @@
 import { LinkingOptions, NavigationContainer } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import * as Linking from "expo-linking"
-import React, { memo, useEffect } from "react"
+import React, { memo, useEffect, useRef } from "react"
 import { config } from "@/config"
 import { AppSettingsScreen } from "@/features/app-settings/app-settings.screen"
 import { AuthOnboardingContactCardImportInfoScreen } from "@/features/auth-onboarding/screens/auth-onboarding-contact-card-import-info.screen"
@@ -28,9 +28,11 @@ import { NavigationParamList } from "@/navigation/navigation.types"
 import { navigationRef } from "@/navigation/navigation.utils"
 import { ShareProfileScreen } from "@/screens/ShareProfile"
 import { WebviewPreview } from "@/screens/WebviewPreview"
-import { useAppLaunchedForBackgroundStuff } from "@/stores/use-app-state-store"
+import { useAppStore } from "@/stores/app-store"
+import { useAppLaunchedForBackgroundStuff, useAppStateStore } from "@/stores/use-app-state-store"
 import { useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
+import { navigationIntegration } from "@/utils/sentry/sentry-init"
 import { hideSplashScreen } from "@/utils/splash/splash"
 
 const prefix = Linking.createURL("/")
@@ -99,13 +101,28 @@ export const AppNavigator = memo(function AppNavigator() {
     useThemeProvider()
 
   const isAppLaunchedForBackgroundStuff = useAppLaunchedForBackgroundStuff()
+  const isInternetReachable = useAppStore((state) => state.isInternetReachable)
+  const isActive = useAppStateStore((state) => state.currentState === "active")
+  const ranHydration = useRef(false)
 
   useEffect(() => {
     // Hydrating when the app is launched for background stuff cause some issues
-    if (!isAppLaunchedForBackgroundStuff) {
-      hydrateAuth().catch(captureError)
+    if (isAppLaunchedForBackgroundStuff) {
+      return
     }
-  }, [isAppLaunchedForBackgroundStuff])
+
+    // Sometimes in the background "isAppLaunchedForBackgroundStuff" is false but we're not online
+    if (!isInternetReachable && !isActive) {
+      return
+    }
+
+    if (ranHydration.current) {
+      return
+    }
+
+    hydrateAuth().catch(captureError)
+    ranHydration.current = true
+  }, [isAppLaunchedForBackgroundStuff, isInternetReachable, isActive])
 
   return (
     <ThemeProvider value={{ themeScheme, setThemeContextOverride }}>
@@ -113,6 +130,9 @@ export const AppNavigator = memo(function AppNavigator() {
         theme={navigationTheme}
         linking={linking}
         ref={navigationRef}
+        onReady={() => {
+          navigationIntegration.registerNavigationContainer(navigationRef)
+        }}
       >
         <DeepLinkHandler />
         <AppStacks />

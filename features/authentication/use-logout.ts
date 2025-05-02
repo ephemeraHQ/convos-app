@@ -2,7 +2,6 @@ import { useTurnkey } from "@turnkey/sdk-react-native"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getAllSenders, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
-import { unregisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
 import { unsubscribeFromAllConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
 import { stopStreaming } from "@/features/streams/streams"
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
@@ -39,17 +38,6 @@ export const useLogout = () => {
         }
 
         try {
-          await unregisterBackgroundNotificationTask()
-        } catch (error) {
-          captureError(
-            new GenericError({
-              error,
-              additionalMessage: "Error unregistering background notification task",
-            }),
-          )
-        }
-
-        try {
           await stopStreaming(senders.map((sender) => sender.inboxId))
         } catch (error) {
           captureError(new GenericError({ error, additionalMessage: "Error stopping streaming" }))
@@ -75,9 +63,8 @@ export const useLogout = () => {
         // This needs to be at the end because at many places we use useSafeCurrentSender()
         // and it will throw error if we reset the store too early
         // Need the setTimeout because for some reason the navigation is not updated immediately when we set auth status to signed out
-        setTimeout(() => {
-          resetMultiInboxStore()
-        }, 0)
+
+        resetMultiInboxStore()
 
         // Might want to only clear certain queries later but okay for now
         // Put this last because otherwise some useQuery hook triggers even tho we're logging out

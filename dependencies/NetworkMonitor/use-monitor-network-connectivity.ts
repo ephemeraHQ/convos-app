@@ -5,7 +5,7 @@ import { config } from "../../config"
 import { useAppStore } from "../../stores/app-store"
 
 NetInfo.configure({
-  reachabilityUrl: `${config.app.apiUrl}/healthcheck`,
+  reachabilityUrl: `${config.app.apiUrl}/healthcheck`, // We assume our BE is always reachable
   reachabilityMethod: "HEAD",
   reachabilityTest: async (response) => response.status === 200,
 })

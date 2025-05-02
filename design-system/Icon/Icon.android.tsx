@@ -29,8 +29,9 @@ export const iconRegistry: Record<IIconName, keyof typeof MaterialIcons.glyphMap
   "square.and.arrow.up": "ios-share",
   "doc.on.doc": "content-copy",
   "party.popper": "celebration",
-  "lock.open": "lock-open",
   lock: "lock",
+  "lock.open": "lock-open",
+  "lock.fill": "lock",
   eyes: "visibility",
   message: "message",
   checkmark: "check",
@@ -77,6 +78,7 @@ export const iconRegistry: Record<IIconName, keyof typeof MaterialIcons.glyphMap
   "person-badge-key": "person",
   clock: "access-time",
   timer: "timer",
+  "clock.fill": "access-time",
 }
 
 export function Icon(props: IIconProps) {

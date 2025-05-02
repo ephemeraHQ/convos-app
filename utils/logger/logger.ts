@@ -41,7 +41,7 @@ const breadcrumbTransport: transportFunctionType<{}> = (args) => {
 const LOG_FILE_NAME = "convos-logs.txt"
 const LOG_FILE_DIR = FileSystem.documentDirectory!
 export const LOG_FILE_PATH = `${LOG_FILE_DIR}${LOG_FILE_NAME}`
-const MAX_LOG_SIZE = 1 * 1024 * 1024 // 1MB
+const MAX_LOG_SIZE = 512 * 1024 // 0.5MB
 
 export async function clearLogFile() {
   await FileSystem.writeAsStringAsync(LOG_FILE_PATH, "")
@@ -107,7 +107,7 @@ checkLogFileSize().catch(console.error)
 // Periodic checks
 setInterval(() => {
   checkLogFileSize().catch(console.error)
-}, 5000)
+}, 20000)
 
 // Logger exports
 export const logger = baseLogger.extend("GENERAL")

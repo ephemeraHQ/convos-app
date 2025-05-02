@@ -5,7 +5,7 @@ import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useClearDisappearingMessageSettings } from "@/features/disappearing-messages/clear-disappearing-message-settings.mutation"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
-import { DisappearingMessageDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
+import { DisappearingMessageDuration, IDisappearingMessageDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useUpdateDisappearingMessageSettings } from "@/features/disappearing-messages/update-disappearing-message-settings.mutation"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -15,20 +15,21 @@ import { GenericError } from "@/utils/error"
 type IDisappearingMessageOptionId =
   | "header"
   | "off"
-  | "sixty_days"
-  | "thirty_days"
-  | "one_week"
-  | "one_day"
-  | "eight_hours"
-  | "one_hour"
-  | "one_minute"
-  | "ten_seconds"
-  | "one_second"
+  | IDisappearingMessageDuration
   | "clear"
+  | "how_it_works"
 
 type IDisappearingMessageOptionItem = Omit<IDropdownMenuAction, "id"> & {
   id: IDisappearingMessageOptionId
   retentionDurationInNs?: number
+}
+
+const createDurationOptions = () => {
+  return Object.entries(DisappearingMessageDuration).map(([key, entry]) => ({
+    id: key as IDisappearingMessageDuration,
+    title: entry.text,
+    retentionDurationInNs: entry.value,
+  }))
 }
 
 const DISAPPEARING_MESSAGE_OPTIONS: IDisappearingMessageOptionItem[] = [
@@ -42,55 +43,16 @@ const DISAPPEARING_MESSAGE_OPTIONS: IDisappearingMessageOptionItem[] = [
     id: "off",
     title: "Off",
   },
-  {
-    id: "sixty_days",
-    title: "60 days",
-    retentionDurationInNs: DisappearingMessageDuration.SIXTY_DAYS,
-  },
-  {
-    id: "thirty_days",
-    title: "30 days",
-    retentionDurationInNs: DisappearingMessageDuration.THIRTY_DAYS,
-  },
-  {
-    id: "one_week",
-    title: "7 days",
-    retentionDurationInNs: DisappearingMessageDuration.ONE_WEEK,
-  },
-  {
-    id: "one_day",
-    title: "24 hours",
-    retentionDurationInNs: DisappearingMessageDuration.ONE_DAY,
-  },
-  {
-    id: "eight_hours",
-    title: "8 hours",
-    retentionDurationInNs: DisappearingMessageDuration.EIGHT_HOURS,
-  },
-  {
-    id: "one_hour",
-    title: "1 hour",
-    retentionDurationInNs: DisappearingMessageDuration.ONE_HOUR,
-  },
-  {
-    id: "one_minute",
-    title: "1 minute",
-    retentionDurationInNs: DisappearingMessageDuration.ONE_MINUTE,
-  },
-  {
-    id: "ten_seconds",
-    title: "10 seconds",
-    retentionDurationInNs: DisappearingMessageDuration.TEN_SECONDS,
-  },
-  {
-    id: "one_second",
-    title: "1 second",
-    retentionDurationInNs: DisappearingMessageDuration.ONE_SECOND,
-  },
+  ...createDurationOptions(),
   {
     displayInline: true,
     id: "clear",
     title: "Clear chat",
+  },
+  {
+    displayInline: true,
+    id: "how_it_works",
+    title: "How it works",
   },
 ]
 
@@ -101,7 +63,7 @@ type DisappearingMessagesHeaderActionProps = {
 export const DisappearingMessagesHeaderAction = ({
   xmtpConversationId,
 }: DisappearingMessagesHeaderActionProps) => {
-  const { theme, themed } = useAppTheme()
+  const { themed } = useAppTheme()
   const currentSender = useSafeCurrentSender()
   const { mutateAsync: updateSettingsMutateAsync } = useUpdateDisappearingMessageSettings()
   const { mutateAsync: clearSettingsMutateAsync } = useClearDisappearingMessageSettings()
@@ -138,6 +100,11 @@ export const DisappearingMessagesHeaderAction = ({
           return
         }
 
+        if (option.id === "how_it_works") {
+          // TODO: Implement how it works
+          return
+        }
+
         if (!option.retentionDurationInNs) {
           throw new Error("Missing retention duration")
         }
@@ -154,8 +121,8 @@ export const DisappearingMessagesHeaderAction = ({
             additionalMessage: "Failed to update disappearing message settings",
           }),
           {
-            message: "Failed to update disappearing message settings",
-          },
+            message: "Failed to update disappearing message settings"
+          }
         )
       }
     },

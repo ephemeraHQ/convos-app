@@ -29,8 +29,9 @@ export const iconRegistry: Record<IIconName, SFSymbol> = {
   "square.and.arrow.up": "square.and.arrow.up",
   "doc.on.doc": "doc.on.doc",
   "party.popper": "party.popper",
-  "lock.open": "lock.open",
   lock: "lock",
+  "lock.open": "lock.open",
+  "lock.fill": "lock.fill",
   eyes: "eye",
   message: "message",
   checkmark: "checkmark",
@@ -76,6 +77,7 @@ export const iconRegistry: Record<IIconName, SFSymbol> = {
   "contact-card": "person.text.rectangle",
   "person-badge-key": "person.badge.key",
   clock: "clock",
+  "clock.fill": "clock.fill",
   timer: "timer",
 }
 

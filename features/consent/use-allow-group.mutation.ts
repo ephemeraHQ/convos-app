@@ -79,6 +79,7 @@ async function allowGroup({
           setXmtpConsentStateForInboxId({
             peerInboxId: clientInboxId,
             consent: "allowed",
+            clientInboxId,
           }),
         ]
       : []),

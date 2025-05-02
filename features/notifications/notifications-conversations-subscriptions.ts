@@ -75,8 +75,8 @@ export function useConversationsNotificationsSubscriptions() {
 
     async function manageSubscriptions() {
       // For each inbox/query result
-      for (let i = 0; i < senders.length; i++) {
-        const inboxId = senders[i].inboxId
+      for (const sender of senders) {
+        const inboxId = sender.inboxId
         const conversationIds = senderWithConversationIdsMap.get(inboxId) || []
 
         // Get previously subscribed conversations for this inbox
@@ -179,7 +179,7 @@ async function subscribeToConversationsNotifications(args: {
 
           return {
             topic: conversation.xmtpTopic,
-            isSilent: true,
+            isSilent: false,
             hmacKeys: conversationHmacKeys.values.map((key) => ({
               thirtyDayPeriodsSinceEpoch: key.thirtyDayPeriodsSinceEpoch,
               key: Buffer.from(key.hmacKey).toString("hex"),
@@ -243,11 +243,7 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
     clientInboxId,
   })
 
-  if (!conversationIds) {
-    throw new Error(`No conversation ids found for inbox ${clientInboxId}`)
-  }
-
-  if (conversationIds.length === 0) {
+  if (!conversationIds || conversationIds.length === 0) {
     notificationsLogger.debug(`No conversations to unsubscribe from for inbox ${clientInboxId}`)
     return
   }

@@ -25,6 +25,7 @@ import { getHumanReadableDateWithTime } from "@/utils/date"
 import { AuthenticationError, ensureError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { authLogger } from "@/utils/logger/logger"
+import { TimeUtils } from "@/utils/time.utils"
 import { tryCatch } from "@/utils/try-catch"
 
 type IAuthOnboardingContextType = {
@@ -52,6 +53,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     createSessionFromEmbeddedKey,
     client: turnkeyClient,
     session,
+    clearAllSessions,
   } = useTurnkey()
 
   const { logout } = useLogout()
@@ -149,8 +151,12 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     try {
       authLogger.debug("Starting login flow")
       flowType.current = "login"
-
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
+
+      // Clear all sessions to avoid issues with Turnkey auth
+      authLogger.debug("Clearing all Turnkey sessions")
+      await clearAllSessions()
+      authLogger.debug("All Turnkey sessions cleared")
 
       authLogger.debug("Creating PasskeyStamper")
       const stamper = new PasskeyStamper({
@@ -170,6 +176,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         organizationId: config.turnkey.organizationId, // Parent org ID
         parameters: {
           targetPublicKey,
+          expirationSeconds: TimeUtils.days(60).toSeconds().toString(),
         },
       })
       authLogger.debug("Read-write session response received")
@@ -184,6 +191,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       authLogger.debug("Creating session with credential bundle")
       await createSession({
         bundle: credentialBundle,
+        expirationSeconds: TimeUtils.days(60).toSeconds(),
       })
       authLogger.debug("Session created successfully")
 
@@ -206,7 +214,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       setReadyForXmtpClient(false)
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedKey, createSession, logout])
+  }, [createEmbeddedKey, createSession, logout, clearAllSessions])
 
   const signup = useCallback(async () => {
     if (!isSupported()) {
@@ -221,6 +229,11 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       authLogger.debug("Starting signup flow")
       flowType.current = "signup"
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
+
+      // Clear all sessions to avoid issues with Turnkey auth
+      authLogger.debug("Clearing all Turnkey sessions")
+      await clearAllSessions()
+      authLogger.debug("All Turnkey sessions cleared")
 
       const todayBeautifulString = getHumanReadableDateWithTime(new Date())
       const passkeyName = `Convos ${todayBeautifulString}`
@@ -259,6 +272,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       authLogger.debug("Creating session from embedded key")
       await createSessionFromEmbeddedKey({
         subOrganizationId: subOrgId,
+        expirationSeconds: TimeUtils.days(60).toSeconds(),
       })
       authLogger.debug("Session created successfully")
 
@@ -281,7 +295,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       setReadyForXmtpClient(false)
       useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
-  }, [createEmbeddedKey, createSessionFromEmbeddedKey, logout])
+  }, [createEmbeddedKey, createSessionFromEmbeddedKey, logout, clearAllSessions])
 
   const value = useMemo(() => ({ login, signup }), [login, signup])
 

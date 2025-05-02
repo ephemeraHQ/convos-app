@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/react-native"
+import { FullMetrics } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
 import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
@@ -5,7 +7,6 @@ import { XMTPError } from "@/utils/error"
 import { getRandomId } from "@/utils/general"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { withTimeout } from "@/utils/promise-timeout"
-import { FullMetrics } from "@xmtp/react-native-sdk"
 
 export function logErrorIfXmtpRequestTookTooLong(args: {
   durationMs: number
@@ -18,7 +19,7 @@ export function logErrorIfXmtpRequestTookTooLong(args: {
     captureError(
       new XMTPError({
         error: new Error(`Calling "${xmtpFunctionName}" took ${durationMs}ms`),
-        ...(metrics && { extra: { metrics } })
+        ...(metrics && { extra: { metrics } }),
       }),
     )
   }
@@ -47,17 +48,26 @@ export async function wrapXmtpCallWithDuration<T>(
     // Log the start of the XMTP operation
     xmtpLogger.debug(`XMTP operation [${operationId}] "${xmtpFunctionName}" started...`)
 
-    // Execute the actual XMTP call with a 30-second timeout
+    // track the XMTP call with Sentry
+    const xmtpSpanCall = Sentry.startSpan(
+      {
+        name: xmtpFunctionName,
+        op: "XMTP",
+      },
+      () => xmtpCall(),
+    )
+
+    // Execute the actual XMTP call with a 15-second timeout
     const result = await withTimeout({
-      promise: xmtpCall(),
-      timeoutMs: 30000,
-      errorMessage: `XMTP operation "${xmtpFunctionName}" timed out after 30 seconds`,
+      promise: xmtpSpanCall,
+      timeoutMs: 15000,
+      errorMessage: `XMTP operation "${xmtpFunctionName}" timed out after 15 seconds`,
     })
 
     // Record end time and calculate duration
     const endTime = Date.now()
     const durationMs = endTime - startTime
-    let metrics: FullMetrics | undefined;
+    let metrics: FullMetrics | undefined
 
     if (result && typeof result === "object" && "metrics" in result) {
       metrics = result.metrics as FullMetrics

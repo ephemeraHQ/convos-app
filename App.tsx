@@ -1,16 +1,15 @@
 import { BottomSheetModalProvider } from "@design-system/BottomSheet/BottomSheetModalProvider"
 import { useReactQueryDevTools } from "@dev-plugins/react-query"
 import { ActionSheetProvider } from "@expo/react-native-action-sheet"
+import * as Sentry from "@sentry/react-native"
 // import { DevToolsBubble } from "react-native-react-query-devtools"
 import { ActionSheet } from "@/components/action-sheet"
-import { ConditionalWrapper } from "@/components/conditional-wrapper"
-import { DebugProvider } from "@/components/debug-provider"
 import { Snackbars } from "@/components/snackbar/snackbars"
+import { XmtpLogFilesModal } from "@/components/xmtp-log-files-modal"
 import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
-import { useRegisterBackgroundNotificationTask } from "@/features/notifications/background-notifications-handler"
 import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
@@ -23,12 +22,11 @@ import { ReactQueryProvider } from "@/utils/react-query/react-query-provider"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { useReactQueryInit } from "@/utils/react-query/react-query.init"
 import "expo-dev-client"
-import React, { memo, useEffect } from "react"
+import React, { memo } from "react"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { ThirdwebProvider } from "thirdweb/react"
-import { config } from "./config"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
@@ -36,20 +34,16 @@ import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
 preventSplashScreenAutoHide()
-
 sentryInit()
 configureForegroundNotificationBehavior()
+setupConvosApi()
 
-export function App() {
+export const App = Sentry.wrap(function App() {
   useMonitorNetworkConnectivity()
   useReactQueryDevTools(reactQueryClient)
   useSetupStreamingSubscriptions()
   useCachedResources()
   useCoinbaseWalletListener()
-
-  useEffect(() => {
-    setupConvosApi()
-  }, [])
 
   // Seems to be slowing the app. Need to investigate
   // useSyncQueries({ queryClient: reactQueryClient })
@@ -62,18 +56,14 @@ export function App() {
             <KeyboardProvider>
               <ActionSheetProvider>
                 <GestureHandlerRootView style={$globalStyles.flex1}>
-                  <ConditionalWrapper
-                    condition={config.debugMenu}
-                    wrapper={(children) => <DebugProvider>{children}</DebugProvider>}
-                  >
-                    <BottomSheetModalProvider>
-                      <AppNavigator />
-                      {/* {__DEV__ && <DevToolsBubble />} */}
-                      <Handlers />
-                      <Snackbars />
-                      <ActionSheet />
-                    </BottomSheetModalProvider>
-                  </ConditionalWrapper>
+                  <BottomSheetModalProvider>
+                    <AppNavigator />
+                    {/* {__DEV__ && <DevToolsBubble />} */}
+                    <Handlers />
+                    <Snackbars />
+                    <ActionSheet />
+                    <XmtpLogFilesModal />
+                  </BottomSheetModalProvider>
                 </GestureHandlerRootView>
               </ActionSheetProvider>
             </KeyboardProvider>
@@ -82,7 +72,7 @@ export function App() {
       </TurnkeyProvider>
     </ReactQueryProvider>
   )
-}
+})
 
 const Handlers = memo(function Handlers() {
   useIsCurrentVersionEnough()
@@ -90,7 +80,6 @@ const Handlers = memo(function Handlers() {
   useCreateUserIfNoExist()
   useNotificationListeners()
   useConversationsNotificationsSubscriptions()
-  useRegisterBackgroundNotificationTask()
   useReactQueryInit()
 
   return null

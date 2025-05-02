@@ -36,9 +36,9 @@ export function useConversationLastMessage(args: IArgs) {
     })
   }, [currentSender.inboxId, xmtpConversationId])
 
-  const { data: lastMessageId } = useInfiniteQuery(queryOptions)
+  const { data: lastMessageId, isLoading: isLoadingLastMessageId } = useInfiniteQuery(queryOptions)
 
-  const { data: lastMessage } = useConversationMessageQuery({
+  const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationMessageQuery({
     clientInboxId: currentSender.inboxId,
     xmtpMessageId: lastMessageId,
     caller: "useConversationLastMessage",
@@ -46,5 +46,6 @@ export function useConversationLastMessage(args: IArgs) {
 
   return {
     data: lastMessage,
+    isLoading: isLoadingLastMessageId || isLoadingLastMessage,
   }
 }

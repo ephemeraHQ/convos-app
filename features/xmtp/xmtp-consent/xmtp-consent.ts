@@ -66,12 +66,13 @@ export async function xmtpInboxIdCanMessageEthAddress(args: {
 export async function setXmtpConsentStateForInboxId(args: {
   peerInboxId: IXmtpInboxId
   consent: IXmtpConsentState
+  clientInboxId: IXmtpInboxId
 }) {
-  const { peerInboxId, consent } = args
+  const { peerInboxId, consent, clientInboxId } = args
 
   try {
     const client = await getXmtpClientByInboxId({
-      inboxId: peerInboxId,
+      inboxId: clientInboxId,
     })
 
     await wrapXmtpCallWithDuration("setConsentState", () =>

@@ -26,8 +26,9 @@ export type IIconName =
   | "square.and.arrow.up"
   | "doc.on.doc"
   | "party.popper"
-  | "lock.open"
   | "lock"
+  | "lock.open"
+  | "lock.fill"
   | "eyes"
   | "message"
   | "checkmark"
@@ -73,6 +74,7 @@ export type IIconName =
   | "contact-card"
   | "person-badge-key"
   | "clock"
+  | "clock.fill"
   | "timer"
 
 /**

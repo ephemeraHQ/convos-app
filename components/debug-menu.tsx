@@ -3,16 +3,13 @@ import Constants from "expo-constants"
 import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useMemo } from "react"
 import { Alert, Platform } from "react-native"
+import { Gesture, GestureDetector } from "react-native-gesture-handler"
+import { runOnJS } from "react-native-reanimated"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
-import { VStack } from "@/design-system/VStack"
 import { useLogout } from "@/features/authentication/use-logout"
-import {
-  DISPLAYED_NOTIFICATIONS_COUNT_KEY,
-  RECEIVED_NOTIFICATIONS_COUNT_KEY,
-} from "@/features/notifications/background-notifications-handler"
 import {
   canAskForNotificationsPermissions,
   getDevicePushNotificationsToken,
@@ -29,69 +26,32 @@ import {
 } from "@/features/xmtp/xmtp-logs"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
-import { $globalStyles } from "@/theme/styles"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { getEnv } from "@/utils/getEnv"
+import { Haptics } from "@/utils/haptics"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
-import { storage } from "@/utils/storage/storage"
 import { showActionSheet } from "./action-sheet"
-import { XmtpLogFilesModal } from "./xmtp-log-files-modal"
 
-export function DebugProvider(props: { children: React.ReactNode }) {
+export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
 
-  const tapCountRef = useRef(0)
-  const tapTimeoutRef = useRef<NodeJS.Timeout>()
-  const [logFilesModalVisible, setLogFilesModalVisible] = useState(false)
-
   const showDebugMenu = useShowDebugMenu({
-    setLogFilesModalVisible,
+    setLogFilesModalVisible: () => {},
   })
 
-  const handleTouchStart = useCallback(() => {
-    // Increment tap count
-    tapCountRef.current += 1
+  const longPressGesture = Gesture.LongPress()
+    .onStart(() => {
+      Haptics.softImpactAsyncAnimated()
+      runOnJS(showDebugMenu)()
+    })
+    .minDuration(1000)
 
-    // Clear existing timeout
-    if (tapTimeoutRef.current) {
-      clearTimeout(tapTimeoutRef.current)
-    }
-
-    // Set new timeout to reset count after 200ms
-    tapTimeoutRef.current = setTimeout(() => {
-      tapCountRef.current = 0
-    }, 200)
-
-    // Show debug menu after 6 taps
-    if (tapCountRef.current >= 6) {
-      showDebugMenu()
-      tapCountRef.current = 0
-    }
-  }, [showDebugMenu])
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  return (
-    <VStack onTouchStart={handleTouchStart} style={$globalStyles.flex1}>
-      {children}
-      <XmtpLogFilesModal
-        visible={logFilesModalVisible}
-        onClose={() => setLogFilesModalVisible(false)}
-      />
-    </VStack>
-  )
-}
+  return <GestureDetector gesture={longPressGesture}>{children}</GestureDetector>
+})
 
 function useShowDebugMenu({
   setLogFilesModalVisible,
@@ -279,46 +239,6 @@ function useShowDebugMenu({
             }),
           )
           Alert.alert("Error", "Failed to check notification permissions")
-        }
-      },
-      "View Notification Metrics": async () => {
-        try {
-          const receivedCount = storage.getNumber(RECEIVED_NOTIFICATIONS_COUNT_KEY) || 0
-          const displayedCount = storage.getNumber(DISPLAYED_NOTIFICATIONS_COUNT_KEY) || 0
-          const displayRate =
-            receivedCount > 0 ? ((displayedCount / receivedCount) * 100).toFixed(1) : "0"
-
-          Alert.alert(
-            "Notification Metrics",
-            [
-              `Received: ${receivedCount}`,
-              `Displayed: ${displayedCount}`,
-              `Display Rate: ${displayRate}%`,
-            ].join("\n"),
-            [
-              {
-                text: "Reset Counters",
-                style: "destructive",
-                onPress: () => {
-                  storage.set(RECEIVED_NOTIFICATIONS_COUNT_KEY, 0)
-                  storage.set(DISPLAYED_NOTIFICATIONS_COUNT_KEY, 0)
-                  Alert.alert("Counters Reset", "Notification metrics have been reset to zero.")
-                },
-              },
-              {
-                text: "OK",
-                style: "cancel",
-              },
-            ],
-          )
-        } catch (error) {
-          captureError(
-            new GenericError({
-              error,
-              additionalMessage: "Error viewing notification metrics",
-            }),
-          )
-          Alert.alert("Error", "Failed to retrieve notification metrics")
         }
       },
       "Request Notification Permissions": async () => {
