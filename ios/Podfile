@@ -64,3 +64,7 @@ target 'ConvosPreview' do
     end
   end
 end
+target 'ConvosPreviewConvosNSE' do
+  use_frameworks! :linkage => :static
+  pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
+end

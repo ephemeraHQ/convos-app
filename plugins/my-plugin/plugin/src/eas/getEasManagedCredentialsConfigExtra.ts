@@ -1,5 +1,5 @@
 import { ExpoConfig } from "@expo/config-types"
-import { NSE_TARGET_NAME } from "../constants/iosConstants"
+import { EXTENSION_NAME } from "../constants"
 
 export default function getEasManagedCredentialsConfigExtra(config: ExpoConfig): {
   [k: string]: any
@@ -18,8 +18,8 @@ export default function getEasManagedCredentialsConfigExtra(config: ExpoConfig):
               ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ?? []),
               {
                 // keep in sync with native changes in NSE
-                targetName: NSE_TARGET_NAME,
-                bundleIdentifier: `${config?.ios?.bundleIdentifier}.${NSE_TARGET_NAME}`,
+                targetName: EXTENSION_NAME,
+                bundleIdentifier: `${config?.ios?.bundleIdentifier}.${EXTENSION_NAME}`,
                 entitlements: {
                   "com.apple.security.application-groups": [
                     `group.${config?.ios?.bundleIdentifier}.nse`,
