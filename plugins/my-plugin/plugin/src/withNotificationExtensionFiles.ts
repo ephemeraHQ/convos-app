@@ -10,6 +10,7 @@ const CF_BUNDLE_VERSION_KEY = "CFBundleVersion"
 const CF_BUNDLE_SHORT_VERSION_STRING_KEY = "CFBundleShortVersionString"
 const CF_BUNDLE_VERSION_PLACEHOLDER = "{{CONVOS_BUILD_NUMBER}}"
 const CF_BUNDLE_SHORT_VERSION_STRING_PLACEHOLDER = "{{CONVOS_MARKETING_VERSION}}"
+const XMTP_ENVIRONMENT_KEY = "XmtpEnvironment"
 
 /**
  * Expo Config Plugin to manage files for the Notification Service Extension (NSE).
@@ -34,8 +35,14 @@ export const withNotificationExtensionFiles: ConfigPlugin = (config) => {
   assert(marketingVersion, "Missing 'version' in app config.")
   assert(currentProjectVersion, "Missing 'ios.buildNumber' in app config. Defaulting failed.")
 
+  const xmtpEnv = (config.extra as any)?.xmtp?.env ?? "production"
+  assert(
+    ["production", "dev", "local"].includes(xmtpEnv),
+    `Invalid XMTP environment in config: ${xmtpEnv}`,
+  )
+
   console.log(
-    `[withNotificationExtensionFiles] Determined Versions: Marketing=${marketingVersion}, Build=${currentProjectVersion}`,
+    `[withNotificationExtensionFiles] Config: Group=${appGroupIdentifier}, MarketingVer=${marketingVersion}, BuildVer=${currentProjectVersion}, XmtpEnv=${xmtpEnv}`,
   )
 
   return withDangerousMod(config, [
@@ -99,33 +106,55 @@ export const withNotificationExtensionFiles: ConfigPlugin = (config) => {
 
             if (file === INFO_PLIST_FILENAME) {
               console.log(
-                `[withNotificationExtensionFiles] Modifying copied Info.plist for version placeholders: ${dstFilePath}`,
+                `[withNotificationExtensionFiles] Modifying copied Info.plist: ${dstFilePath}`,
               )
               try {
-                let plistContent = fs.readFileSync(dstFilePath, "utf8")
+                const plistContent = fs.readFileSync(dstFilePath, "utf8")
+                const plistObject = plist.parse(plistContent) as plist.PlistObject
+                let modified = false
 
-                const originalLength = plistContent.length
-                plistContent = plistContent.replace(
-                  CF_BUNDLE_VERSION_PLACEHOLDER,
-                  currentProjectVersion,
-                )
-                plistContent = plistContent.replace(
-                  CF_BUNDLE_SHORT_VERSION_STRING_PLACEHOLDER,
-                  marketingVersion,
-                )
-
-                if (plistContent.length !== originalLength) {
-                  fs.writeFileSync(dstFilePath, plistContent)
+                if (plistObject[CF_BUNDLE_VERSION_KEY] === CF_BUNDLE_VERSION_PLACEHOLDER) {
+                  plistObject[CF_BUNDLE_VERSION_KEY] = currentProjectVersion
+                  console.log(`  - Set ${CF_BUNDLE_VERSION_KEY} to ${currentProjectVersion}`)
+                  modified = true
+                } else {
+                  if (plistObject[CF_BUNDLE_VERSION_KEY] !== currentProjectVersion) {
+                    console.warn(
+                      `  - ${CF_BUNDLE_VERSION_KEY} in source plist was not placeholder '${CF_BUNDLE_VERSION_PLACEHOLDER}'. Actual: ${plistObject[CF_BUNDLE_VERSION_KEY]}`,
+                    )
+                  }
+                }
+                if (
+                  plistObject[CF_BUNDLE_SHORT_VERSION_STRING_KEY] ===
+                  CF_BUNDLE_SHORT_VERSION_STRING_PLACEHOLDER
+                ) {
+                  plistObject[CF_BUNDLE_SHORT_VERSION_STRING_KEY] = marketingVersion
                   console.log(
-                    `[withNotificationExtensionFiles] Successfully replaced version placeholders in Info.plist: ${dstFilePath}`,
+                    `  - Set ${CF_BUNDLE_SHORT_VERSION_STRING_KEY} to ${marketingVersion}`,
                   )
-                  console.log(`  - Final ${CF_BUNDLE_VERSION_KEY}: ${currentProjectVersion}`)
+                  modified = true
+                } else {
+                  if (plistObject[CF_BUNDLE_SHORT_VERSION_STRING_KEY] !== marketingVersion) {
+                    console.warn(
+                      `  - ${CF_BUNDLE_SHORT_VERSION_STRING_KEY} in source plist was not placeholder '${CF_BUNDLE_SHORT_VERSION_STRING_PLACEHOLDER}'. Actual: ${plistObject[CF_BUNDLE_SHORT_VERSION_STRING_KEY]}`,
+                    )
+                  }
+                }
+
+                if (plistObject[XMTP_ENVIRONMENT_KEY] !== xmtpEnv) {
+                  plistObject[XMTP_ENVIRONMENT_KEY] = xmtpEnv
+                  console.log(`  - Set ${XMTP_ENVIRONMENT_KEY} to ${xmtpEnv}`)
+                  modified = true
+                }
+
+                if (modified) {
+                  fs.writeFileSync(dstFilePath, plist.build(plistObject, { indent: "\t" }))
                   console.log(
-                    `  - Final ${CF_BUNDLE_SHORT_VERSION_STRING_KEY}: ${marketingVersion}`,
+                    `[withNotificationExtensionFiles] Successfully updated Info.plist: ${dstFilePath}`,
                   )
                 } else {
-                  console.warn(
-                    `[withNotificationExtensionFiles] Did not find version placeholders in ${dstFilePath}. Content unchanged.`,
+                  console.log(
+                    `[withNotificationExtensionFiles] Info.plist already up-to-date: ${dstFilePath}`,
                   )
                 }
               } catch (modifyError) {
