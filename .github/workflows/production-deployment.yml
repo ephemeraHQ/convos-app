@@ -41,6 +41,7 @@ jobs:
           git config --global user.email "actions@github.com"
 
       - name: Rebase production with main
+        if: github.ref == 'refs/heads/main'
         run: |
           git checkout production
           git rebase main
