@@ -133,6 +133,7 @@ async function getAllowedConsentConversationsQueryFn(args: IArgs) {
   const xmtpConversations = await getXmtpConversations({
     clientInboxId,
     consentStates: ["allowed"],
+    caller: "getAllowedConsentConversationsQueryFn",
   })
 
   const convosConversations = await Promise.all(

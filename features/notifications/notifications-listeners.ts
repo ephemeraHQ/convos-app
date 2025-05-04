@@ -8,7 +8,7 @@ import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/co
 import {
   isConvosModifiedNotification,
   isNotificationExpoNewMessageNotification,
-} from "@/features/notifications/notification-assertions"
+} from "@/features/notifications/notifications-assertions"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"

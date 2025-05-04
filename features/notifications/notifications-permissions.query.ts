@@ -8,7 +8,10 @@ import {
 } from "@/features/notifications/notifications-conversations-subscriptions"
 import { captureError } from "@/utils/capture-error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
-import { createQueryObserverWithPreviousData } from "@/utils/react-query/react-query.helpers"
+import {
+  createQueryObserverWithPreviousData,
+  fetchOrRefetchQuery,
+} from "@/utils/react-query/react-query.helpers"
 import { INotificationPermissionStatus } from "./notifications.types"
 
 export const getNotificationsPermissionsQueryConfig = () => {
@@ -31,12 +34,19 @@ export const getNotificationsPermissionsQueryConfig = () => {
         canAskAgain: permissions.canAskAgain,
       }
     },
+    meta: {
+      persist: false,
+    },
     staleTime: Infinity,
   })
 }
 
 export function ensureNotificationsPermissions() {
   return reactQueryClient.ensureQueryData(getNotificationsPermissionsQueryConfig())
+}
+
+export async function fetchOrRefetchNotificationsPermissions() {
+  await fetchOrRefetchQuery(getNotificationsPermissionsQueryConfig())
 }
 
 export function useStartListeningForNotificationsPermissionsQuery() {

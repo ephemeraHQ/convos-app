@@ -25,6 +25,7 @@ async function getUnknownConversationsQueryFn(args: { inboxId: IXmtpInboxId }) {
   const unknownConsentXmtpConversations = await getXmtpConversations({
     clientInboxId: inboxId,
     consentStates: ["unknown"],
+    caller: "getUnknownConversationsQueryFn",
   })
 
   const convosConversations = await Promise.all(

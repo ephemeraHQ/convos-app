@@ -11,7 +11,7 @@ import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/co
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { isNotificationExpoNewMessageNotification } from "@/features/notifications/notification-assertions"
+import { isNotificationExpoNewMessageNotification } from "@/features/notifications/notifications-assertions"
 import { INotificationMessageConvertedData } from "@/features/notifications/notifications.types"
 import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"

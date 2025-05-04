@@ -4,6 +4,7 @@ import { AppState, AppStateStatus } from "react-native"
 import { create } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
 import { getAllSenders } from "@/features/authentication/multi-inbox.store"
+import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
 import { captureError } from "@/utils/capture-error"
 import { logger } from "@/utils/logger/logger"
@@ -99,16 +100,18 @@ export function useStartListeningToAppState() {
       (currentState, previousState) => {
         logger.debug(`App state changed from '${previousState}' to '${currentState}'`)
 
-        // Start streaming when app is active after being in background
-        if (previousState === "background" && currentState === "active") {
+        const isNowActive = currentState === "active" && previousState && previousState !== "active"
+        const isNowInactive =
+          (currentState === "inactive" || currentState === "background") &&
+          previousState &&
+          previousState === "active"
+
+        if (isNowActive) {
           startStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
+          fetchOrRefetchNotificationsPermissions().catch(captureError)
         }
 
-        // Stop streaming when app is inactive after being in active
-        if (
-          (previousState === "active" && currentState === "inactive") ||
-          (previousState === "active" && currentState === "background")
-        ) {
+        if (isNowInactive) {
           stopStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
         }
       },

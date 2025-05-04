@@ -124,6 +124,14 @@ export function ensureQueryDataBetter<T>(args: UseQueryOptions<T>) {
   return reactQueryClient.ensureQueryData(args)
 }
 
+export async function fetchOrRefetchQuery<T>(args: UseQueryOptions<T>) {
+  const data = reactQueryClient.getQueryData(args.queryKey)
+  if (data) {
+    await reactQueryClient.fetchQuery(args)
+  }
+  await reactQueryClient.refetchQueries(args)
+}
+
 /**
  * Creates a query observer that tracks previous data and provides it in the callback
  * This is useful for detecting changes between query updates
@@ -143,14 +151,35 @@ export function createQueryObserverWithPreviousData<
 
   let previousData: TData | undefined
 
-  // Create the observer
   const observer = new QueryObserver<TQueryFnData, TError, TData, TQueryFnData, TQueryKey>(
     reactQueryClient,
     queryOptions,
   )
 
+  const initialResult = observer.getCurrentResult()
+
+  // If there's fresh data in the cache on mount (e.g., from persistence),
+  // trigger the callback immediately.
+  if (initialResult.data !== undefined && !initialResult.isStale) {
+    const enhancedResult = {
+      ...initialResult,
+      previousData: undefined, // No previous data on the very first trigger
+    }
+    observerCallbackFn(enhancedResult)
+    previousData = initialResult.data // Set initial previousData
+  }
+
   // Create a wrapper for the subscription callback that includes previous data
-  const subscription = observer.subscribe((result) => {
+  const unsubscribe = observer.subscribe((result) => {
+    // Avoid calling the callback again if the data is the same as the initial trigger
+    // This prevents double-firing when the subscription starts *after* the initial check
+    if (result.data !== undefined && result.data === previousData && !result.isStale) {
+      queryLogger.debug(
+        "createQueryObserverWithPreviousData: Skipping subscription trigger for initial fresh data.",
+      )
+      return
+    }
+
     const enhancedResult = {
       ...result,
       previousData,
@@ -167,7 +196,10 @@ export function createQueryObserverWithPreviousData<
   // Return the observer and a function to unsubscribe
   return {
     observer,
-    unsubscribe: subscription,
+    unsubscribe: () => {
+      unsubscribe()
+      observer.destroy()
+    },
     getCurrentData: () => observer.getCurrentResult().data,
     getPreviousData: () => previousData,
   }
