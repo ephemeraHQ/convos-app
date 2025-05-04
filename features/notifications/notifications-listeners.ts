@@ -58,18 +58,40 @@ export function useNotificationListeners() {
           notificationsLogger.debug(
             `Expo notification tapped: ${JSON.stringify(response.notification)}`,
           )
-          // Add the message in our cache.
-          // Only here because for convos modified notifications, we already add the message to the cache
-          const conversationTopic = response.notification.request.content.data.contentTopic
-          const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
-          getDecryptedMessageAndAddToCache({
-            encryptedMessage: response.notification.request.content.data.encryptedMessage,
-            xmtpConversationId,
-            clientInboxId: getSafeCurrentSender().inboxId,
-          }).catch(captureError)
 
+          // Get all presented notifications
+          const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
+          const clientInboxId = getSafeCurrentSender().inboxId
+
+          // Take all the notifications present in tray and add their message in the cache
+          presentedNotifications
+            .filter(isNotificationExpoNewMessageNotification)
+            .map(async (notification) => {
+              try {
+                const conversationTopic = notification.request.content.data.contentTopic
+                const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
+                await getDecryptedMessageAndAddToCache({
+                  encryptedMessage: notification.request.content.data.encryptedMessage,
+                  xmtpConversationId,
+                  clientInboxId,
+                })
+              } catch (error) {
+                // Capture errors for individual messages but don't block the process
+                captureError(
+                  new NotificationError({
+                    error,
+                    additionalMessage: `Failed to decrypt/cache message from presented notification: ${notification.request.identifier}`,
+                  }),
+                )
+              }
+            })
+
+          // Navigate to the conversation associated with the *tapped* notification
+          const tappedConversationTopic = response.notification.request.content.data.contentTopic
+          const tappedXmtpConversationId =
+            getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
           return navigate("Conversation", {
-            xmtpConversationId,
+            xmtpConversationId: tappedXmtpConversationId,
           })
         }
 
