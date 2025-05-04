@@ -2,20 +2,6 @@ name: Production Deployment
 
 on:
   workflow_dispatch: # Trigger manually
-  push:
-    branches:
-      - main
-    paths:
-      - "**.ts"
-      - "**.tsx"
-      - "assets/**"
-      - "package.json"
-      - "app.config.ts"
-      - "yarn.lock"
-      - "i18n/**"
-      - "patches/**"
-      - "index.js"
-      - "google-services/**"
 
 # Ensure only one workflow runs at a time
 concurrency:
