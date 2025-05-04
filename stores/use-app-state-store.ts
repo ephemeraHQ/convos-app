@@ -3,6 +3,9 @@ import { useEffect } from "react"
 import { AppState, AppStateStatus } from "react-native"
 import { create } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
+import { getAllSenders } from "@/features/authentication/multi-inbox.store"
+import { startStreaming, stopStreaming } from "@/features/streams/streams"
+import { captureError } from "@/utils/capture-error"
 import { logger } from "@/utils/logger/logger"
 
 type State = {
@@ -30,20 +33,6 @@ export const useAppStateStore = create<State & { actions: Actions }>()(
     },
   })),
 )
-
-// Just for debugging
-useAppStateStore.subscribe(
-  (state) => state.currentState,
-  (currentState, previousState) => {
-    logger.debug(`App state changed from '${previousState}' to '${currentState}'`)
-  },
-)
-
-// Update the new state
-AppState.addEventListener("change", (nextAppState) => {
-  focusManager.setFocused(nextAppState === "active")
-  useAppStateStore.getState().actions.handleAppStateChange(nextAppState)
-})
 
 type IAppStateHandlerSettings = {
   onChange?: (status: AppStateStatus) => void
@@ -96,6 +85,37 @@ export const waitUntilAppActive = async () => {
   })
 }
 
-export function useAppLaunchedForBackgroundStuff() {
-  return useAppStateStore((state) => state.currentState === "background" && !state.previousState)
+export function useStartListeningToAppState() {
+  useEffect(() => {
+    // Listen to the app state changes
+    const unsubscribeFromAppState = AppState.addEventListener("change", (nextAppState) => {
+      focusManager.setFocused(nextAppState === "active")
+      useAppStateStore.getState().actions.handleAppStateChange(nextAppState)
+    })
+
+    // Listen to the store state changes
+    const unsubscribeFromStore = useAppStateStore.subscribe(
+      (state) => state.currentState,
+      (currentState, previousState) => {
+        logger.debug(`App state changed from '${previousState}' to '${currentState}'`)
+
+        // Start streaming when app is active after being in background
+        if (previousState === "background" && currentState === "active") {
+          startStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
+        }
+
+        // Stop streaming when app is inactive after being in active
+        if (
+          (previousState === "active" && currentState === "inactive") ||
+          (previousState === "active" && currentState === "background")
+        ) {
+          stopStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
+        }
+      },
+    )
+    return () => {
+      unsubscribeFromAppState.remove()
+      unsubscribeFromStore()
+    }
+  }, [])
 }

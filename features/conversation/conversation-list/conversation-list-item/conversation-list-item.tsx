@@ -33,6 +33,7 @@ export const ConversationListItem = memo(function ConversationListItem({
 
   return (
     <TouchableHighlight
+      disabled={!onPress}
       onPress={onPress}
       // https://github.com/dominicstop/react-native-ios-context-menu/issues/9#issuecomment-1047058781
       // Need this to prevent a crash since this component is wrapped by context menu in conversation list screen.

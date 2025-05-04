@@ -59,6 +59,7 @@ async function handleNewMessage(args: {
   setConversationMessageQueryData({
     clientInboxId,
     xmtpMessageId: message.xmtpId,
+    xmtpConversationId: message.xmtpConversationId,
     message,
   })
 

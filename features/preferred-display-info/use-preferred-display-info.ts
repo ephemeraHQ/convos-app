@@ -42,7 +42,13 @@ type PreferredDisplayInfoArgs = {
 }
 
 export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { caller: string }) {
-  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, freshData, caller: callerArg } = args
+  const {
+    inboxId: inboxIdArg,
+    ethAddress: ethAddressArg,
+    freshData,
+    caller: callerArg,
+    enabled,
+  } = args
   const currentSender = useSafeCurrentSender()
   const caller = `${callerArg}:usePreferredDisplayInfo`
 
@@ -52,7 +58,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
       targetEthAddress: ethAddressArg!, // ! because we check enabled
       caller,
     }),
-    enabled: !!ethAddressArg,
+    enabled: enabled && !!ethAddressArg,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
@@ -66,13 +72,14 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
 
   const { data: ethAddressesForXmtpInboxId } = useQuery({
     ...ethAddressesOptions,
-    enabled: args.enabled !== false && ethAddressesOptions.enabled !== false,
+    enabled: enabled && ethAddressesOptions.enabled !== false,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
     // Get Convos profile data
     ...getProfileQueryConfig({ xmtpId: inboxId, caller }),
+    enabled,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
@@ -83,6 +90,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
         clientInboxId: currentSender.inboxId,
         caller,
       }),
+      enabled,
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     },
   )
@@ -95,20 +103,9 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
         ethAddress,
         caller,
       }),
+      enabled,
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     })
-
-  // Check that we have at least one of inboxId or ethAddress
-  if (!inboxIdArg && !ethAddressArg) {
-    console.warn(`[${callerArg}] usePreferredDisplayInfo called without inboxId or ethAddress`)
-    return {
-      displayName: undefined,
-      avatarUrl: undefined,
-      username: undefined,
-      ethAddress: undefined,
-      isLoading: false,
-    }
-  }
 
   const socialProfiles = mergeArraysObjects({
     arr1: socialProfilesForInboxId ?? [],

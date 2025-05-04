@@ -5,7 +5,10 @@ import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useClearDisappearingMessageSettings } from "@/features/disappearing-messages/clear-disappearing-message-settings.mutation"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
-import { DisappearingMessageDuration, IDisappearingMessageDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
+import {
+  DisappearingMessageDuration,
+  IDisappearingMessageDuration,
+} from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useUpdateDisappearingMessageSettings } from "@/features/disappearing-messages/update-disappearing-message-settings.mutation"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -44,16 +47,6 @@ const DISAPPEARING_MESSAGE_OPTIONS: IDisappearingMessageOptionItem[] = [
     title: "Off",
   },
   ...createDurationOptions(),
-  {
-    displayInline: true,
-    id: "clear",
-    title: "Clear chat",
-  },
-  {
-    displayInline: true,
-    id: "how_it_works",
-    title: "How it works",
-  },
 ]
 
 type DisappearingMessagesHeaderActionProps = {
@@ -121,8 +114,8 @@ export const DisappearingMessagesHeaderAction = ({
             additionalMessage: "Failed to update disappearing message settings",
           }),
           {
-            message: "Failed to update disappearing message settings"
-          }
+            message: "Failed to update disappearing message settings",
+          },
         )
       }
     },

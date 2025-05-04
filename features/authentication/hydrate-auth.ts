@@ -1,9 +1,10 @@
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { startStreaming } from "@/features/streams/streams"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
-import { isInternetReachable } from "@/stores/app-store"
+import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
@@ -22,7 +23,7 @@ export async function hydrateAuth() {
   getXmtpClientByInboxId({
     inboxId: currentSender.inboxId,
   }).catch((error) => {
-    if (isXmtpNoNetworkError(error) || !isInternetReachable()) {
+    if (isXmtpNoNetworkError(error) || !useAppStore.getState().isInternetReachable) {
       authLogger.debug("No network error while hydrating auth so just returning...")
       return
     }
@@ -52,5 +53,13 @@ export async function hydrateAuth() {
     .catch(captureError)
 
   authLogger.debug("Successfully hydrated auth and setting status to signed in...")
+  login()
+}
+
+function login() {
   useAuthenticationStore.getState().actions.setStatus("signedIn")
+
+  const senders = getAllSenders()
+
+  startStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
 }

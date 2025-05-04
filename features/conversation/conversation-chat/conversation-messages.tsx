@@ -380,13 +380,18 @@ const ConversationMessagesListItem = memo(
       >
         <ConversationNewMessageAnimationWrapper animateEntering={animateEntering}>
           <ConversationMessageTimestamp />
-          <ConversationMessageRepliable>
+          <ConditionalWrapper
+            condition={message.type !== "groupUpdated"}
+            wrapper={(children) => (
+              <ConversationMessageRepliable>{children}</ConversationMessageRepliable>
+            )}
+          >
             <ConversationMessageLayout
               messageComp={messageComponent}
               reactionsComp={reactionsComponent}
               messageStatusComp={statusComponent}
             />
-          </ConversationMessageRepliable>
+          </ConditionalWrapper>
         </ConversationNewMessageAnimationWrapper>
       </ConversationMessageContextStoreProvider>
     )

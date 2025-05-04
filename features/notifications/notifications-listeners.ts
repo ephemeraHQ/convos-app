@@ -14,6 +14,7 @@ import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
+import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -32,6 +33,14 @@ export function useNotificationListeners() {
         await waitUntilPromise({
           checkFn: () => {
             return useAuthenticationStore.getState().status === "signedIn"
+          },
+        })
+
+        // Because we had sometimes where we added a message to the cache but then it was overwritten
+        // by the query client so we need to wait until the query client is hydrated
+        await waitUntilPromise({
+          checkFn: () => {
+            return useAppStore.getState().reactQueryIsHydrated
           },
         })
 
@@ -146,6 +155,7 @@ async function getDecryptedMessageAndAddToCache(args: {
   setConversationMessageQueryData({
     clientInboxId: args.clientInboxId,
     xmtpMessageId: convoMessage.xmtpId,
+    xmtpConversationId,
     message: convoMessage,
   })
   addMessageToConversationMessagesInfiniteQueryData({

@@ -1,10 +1,18 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { QueryObserver, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
+import { useEffect } from "react"
+import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
+import {
+  subscribeToConversationsNotifications,
+  unsubscribeFromConversationsNotifications,
+} from "@/features/notifications/notifications-conversations-subscriptions"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
+import { captureError } from "@/utils/capture-error"
+import { createQueryObserverWithPreviousData } from "@/utils/react-query/react-query.helpers"
 import { TimeUtils } from "@/utils/time.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
 
@@ -140,4 +148,66 @@ async function getAllowedConsentConversationsQueryFn(args: IArgs) {
   }
 
   return convosConversations.map((c) => c.xmtpId)
+}
+
+export function useStartListeningForAllowedConsentConversationsQuery() {
+  const senders = useMultiInboxStore((state) => state.senders)
+
+  useEffect(() => {
+    const observers = senders.map((sender) => {
+      return createSenderAllowedConversationsObserver({
+        inboxId: sender.inboxId,
+      })
+    })
+
+    return () => {
+      observers.forEach((observer) => {
+        observer.unsubscribe()
+      })
+    }
+  }, [senders])
+}
+
+function createSenderAllowedConversationsObserver(args: { inboxId: IXmtpInboxId }) {
+  const { inboxId } = args
+
+  return createQueryObserverWithPreviousData({
+    queryOptions: getAllowedConsentConversationsQueryOptions({
+      clientInboxId: inboxId,
+    }),
+    observerCallbackFn: (result) => {
+      const previousConversationIds = result.previousData
+      const currentConversationIds = result.data
+
+      if (!currentConversationIds) {
+        return
+      }
+
+      const conversationIdsToSubscribe = currentConversationIds.filter(
+        (id) => !previousConversationIds || !previousConversationIds.includes(id),
+      )
+
+      // Subscribe to notifications for new allowed conversations
+      if (conversationIdsToSubscribe.length > 0) {
+        subscribeToConversationsNotifications({
+          conversationIds: conversationIdsToSubscribe,
+          clientInboxId: inboxId,
+        }).catch(captureError)
+      }
+
+      // Unsubscribe from notifications for conversations that are no longer allowed
+      if (previousConversationIds) {
+        const conversationIdsToUnsubscribe = previousConversationIds.filter(
+          (id) => !currentConversationIds.includes(id),
+        )
+
+        if (conversationIdsToUnsubscribe.length > 0) {
+          unsubscribeFromConversationsNotifications({
+            conversationIds: conversationIdsToUnsubscribe,
+            clientInboxId: inboxId,
+          }).catch(captureError)
+        }
+      }
+    },
+  })
 }

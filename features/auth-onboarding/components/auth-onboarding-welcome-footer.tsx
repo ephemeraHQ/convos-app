@@ -21,7 +21,8 @@ export const AuthOnboardingWelcomeFooter = memo(function AuthOnboardingWelcomeFo
       <OnboardingFooter
         text="Create your Contact Card"
         onPress={signup}
-        disabled={isProcessingWeb3Stuff} 
+        isLoading={isProcessingWeb3Stuff}
+        disabled={isProcessingWeb3Stuff}
       />
     </AnimatedVStack>
   )

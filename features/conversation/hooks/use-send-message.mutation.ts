@@ -1,7 +1,9 @@
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
+  getConversationMessageQueryData,
   invalidateConversationMessageQuery,
+  refetchConversationMessageQuery,
   setConversationMessageQueryData,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
@@ -122,21 +124,21 @@ export const getSendMessageMutationOptions = (): MutationOptions<
 > => {
   return {
     mutationFn: sendMessageOptimistically,
-    onSuccess: async (sentMessages, variables) => {
+    onSuccess: async (optimisticMessages, variables) => {
       const currentSender = getSafeCurrentSender()
 
       // Add messages to the query cache
-      for (const sentMessage of sentMessages) {
+      for (const optimisticMessage of optimisticMessages) {
         setConversationMessageQueryData({
           clientInboxId: currentSender.inboxId,
-          xmtpMessageId: sentMessage.xmtpId,
-          message: sentMessage,
+          xmtpMessageId: optimisticMessage.xmtpId,
+          message: optimisticMessage,
         })
 
         addMessageToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: variables.xmtpConversationId,
-          messageId: sentMessage.xmtpId,
+          messageId: optimisticMessage.xmtpId,
         })
       }
 
@@ -146,27 +148,32 @@ export const getSendMessageMutationOptions = (): MutationOptions<
         conversationId: variables.xmtpConversationId,
       })
         .then(async () => {
-          // Update the query cache with the full message
-          for (const sentMessage of sentMessages) {
+          // In case stream didn't update the query cache, get the message from the network and update the query cache
+          for (const optimisticMessage of optimisticMessages) {
             try {
-              const xmtpMessage = await getXmtpConversationMessage({
-                messageId: sentMessage.xmtpId,
+              const messageInCache = getConversationMessageQueryData({
                 clientInboxId: currentSender.inboxId,
+                xmtpMessageId: optimisticMessage.xmtpId,
               })
-              if (!xmtpMessage) {
-                throw new Error("Couldn't get the full xmtp message after sending")
+
+              if (!messageInCache) {
+                throw new Error("Message not found in query cache")
               }
-              const convosMessage = convertXmtpMessageToConvosMessage(xmtpMessage)
-              setConversationMessageQueryData({
+
+              if (messageInCache.status === "sent") {
+                // It was already updated by the stream
+                continue
+              }
+
+              await refetchConversationMessageQuery({
                 clientInboxId: currentSender.inboxId,
-                xmtpMessageId: sentMessage.xmtpId,
-                message: convosMessage,
+                xmtpMessageId: optimisticMessage.xmtpId,
               })
             } catch (error) {
               captureError(new ReactQueryError({ error }))
               invalidateConversationMessageQuery({
                 clientInboxId: currentSender.inboxId,
-                xmtpMessageId: sentMessage.xmtpId,
+                xmtpMessageId: optimisticMessage.xmtpId,
               }).catch(captureError)
             }
           }

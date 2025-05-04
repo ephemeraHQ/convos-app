@@ -4,6 +4,7 @@ import { IIconName } from "@/design-system/Icon/Icon.types"
 import { translate } from "@/i18n"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { Icon } from "../Icon/Icon"
+import { Loader } from "../loader"
 import { Pressable } from "../Pressable"
 import { ITextProps, Text } from "../Text"
 import { ITouchableOpacityProps, TouchableOpacity } from "../TouchableOpacity"
@@ -19,6 +20,7 @@ type HeaderActionProps = {
   ActionComponent?: ReactElement
   style?: ViewStyle
   disabled?: boolean
+  isLoading?: boolean
 }
 export function HeaderAction(props: HeaderActionProps) {
   const {
@@ -32,6 +34,7 @@ export function HeaderAction(props: HeaderActionProps) {
     iconColor,
     style,
     disabled,
+    isLoading,
   } = props
   const { themed, theme } = useAppTheme()
 
@@ -39,18 +42,22 @@ export function HeaderAction(props: HeaderActionProps) {
 
   if (ActionComponent) return ActionComponent
 
-  const disabledStyle: ViewStyle = disabled ? { opacity: 0.7 } : {}
+  const disabledStyle: ViewStyle = disabled || isLoading ? { opacity: 0.7 } : {}
 
   if (content) {
     return (
       <TouchableOpacity
         style={[themed([$actionTextContainer, { backgroundColor }]), style, disabledStyle]}
         onPress={onPress}
-        disabled={disabled || !onPress}
+        disabled={disabled || isLoading || !onPress}
         activeOpacity={0.8}
         hitSlop={theme.spacing.xxxs}
       >
-        <Text preset="body" text={content} style={themed($actionText)} />
+        {isLoading ? (
+          <Loader size="sm" />
+        ) : (
+          <Text preset="body" text={content} style={themed($actionText)} />
+        )}
       </TouchableOpacity>
     )
   }
@@ -60,11 +67,15 @@ export function HeaderAction(props: HeaderActionProps) {
       <Pressable
         // {...debugBorder()}
         onPress={onPress}
-        disabled={disabled || !onPress}
+        disabled={disabled || isLoading || !onPress}
         style={[themed([$actionIconContainer, { backgroundColor }]), style, disabledStyle]}
         hitSlop={theme.spacing.xxxs}
       >
-        <Icon size={theme.iconSize.md} icon={icon} color={iconColor} />
+        {isLoading ? (
+          <Loader size="sm" />
+        ) : (
+          <Icon size={theme.iconSize.md} icon={icon} color={iconColor} />
+        )}
       </Pressable>
     )
   }

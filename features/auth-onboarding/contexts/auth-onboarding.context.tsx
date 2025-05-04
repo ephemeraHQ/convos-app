@@ -212,7 +212,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       useAuthOnboardingStore.getState().actions.reset()
     } finally {
       setReadyForXmtpClient(false)
-      useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
   }, [createEmbeddedKey, createSession, logout, clearAllSessions])
 
@@ -293,7 +292,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       useAuthOnboardingStore.getState().actions.reset()
     } finally {
       setReadyForXmtpClient(false)
-      useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
     }
   }, [createEmbeddedKey, createSessionFromEmbeddedKey, logout, clearAllSessions])
 

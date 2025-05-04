@@ -9,12 +9,13 @@ import { XmtpLogFilesModal } from "@/components/xmtp-log-files-modal"
 import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
+import { useStartListeningForAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
-import { useConversationsNotificationsSubscriptions } from "@/features/notifications/notifications-conversations-subscriptions"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
-import { useSetupStreamingSubscriptions } from "@/features/streams/streams"
+import { useStartListeningForNotificationsPermissionsQuery } from "@/features/notifications/notifications-permissions.query"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
+import { useStartListeningToAppState } from "@/stores/use-app-state-store"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
@@ -41,7 +42,6 @@ setupConvosApi()
 export const App = Sentry.wrap(function App() {
   useMonitorNetworkConnectivity()
   useReactQueryDevTools(reactQueryClient)
-  useSetupStreamingSubscriptions()
   useCachedResources()
   useCoinbaseWalletListener()
 
@@ -79,8 +79,10 @@ const Handlers = memo(function Handlers() {
   useRefreshJwtAxiosInterceptor()
   useCreateUserIfNoExist()
   useNotificationListeners()
-  useConversationsNotificationsSubscriptions()
   useReactQueryInit()
+  useStartListeningToAppState()
+  useStartListeningForNotificationsPermissionsQuery()
+  useStartListeningForAllowedConsentConversationsQuery()
 
   return null
 })

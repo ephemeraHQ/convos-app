@@ -1,9 +1,8 @@
 import { ViewStyle } from "react-native"
-import { ActivityIndicator } from "@/design-system/activity-indicator"
+import { Button } from "@/design-system/Button/Button"
 import { IButtonVariant } from "@/design-system/Button/Button.props"
 import { IIconButtonProps } from "@/design-system/IconButton/IconButton.props"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { Button } from "@/design-system/Button/Button"
 
 type IOnboardingFooterProps = {
   text: string
@@ -29,11 +28,9 @@ export function OnboardingFooter({
       action="primary"
       disabled={disabled || isLoading}
       style={themed($buttonStyle)}
-      textStyle={(disabled || isLoading) ? { opacity: 0.6 } : undefined}
+      textStyle={disabled || isLoading ? { opacity: 0.6 } : undefined}
       onPress={onPress}
-      {...(isLoading
-        ? { LeftAccessory: () => <ActivityIndicator color={theme.colors.text.primary} /> }
-        : {})}
+      loading={isLoading}
     >
       {!isLoading && text}
     </Button>

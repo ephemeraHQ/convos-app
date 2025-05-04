@@ -18,7 +18,8 @@ import { useConversationScreenHeader } from "@/features/conversation/conversatio
 import { ConversationCreateListResults } from "@/features/conversation/conversation-create/conversation-create-list-results"
 import { ConversationCreateSearchInput } from "@/features/conversation/conversation-create/conversation-create-search-input"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
-import { clearNotificationsForConversation } from "@/features/notifications/notifications.service"
+import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
+import { clearNotificationsForConversation } from "@/features/notifications/notifications-clear"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { ConversationMessages } from "./conversation-messages"
@@ -27,7 +28,6 @@ import {
   useConversationStoreContext,
   useCurrentXmtpConversationIdSafe,
 } from "./conversation.store-context"
-import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 
 export const ConversationScreen = memo(function ConversationScreen(
   props: NativeStackScreenProps<NavigationParamList, "Conversation">,
@@ -104,7 +104,9 @@ const Content = memo(function Content() {
           ) : (
             <VStack style={$globalStyles.flex1} />
           )}
-          {(isCreatingNewConversation || (conversation && isConversationAllowed(conversation))) && <ConversationComposer />}
+          {(isCreatingNewConversation || (conversation && isConversationAllowed(conversation))) && (
+            <ConversationComposer />
+          )}
           <ConversationKeyboardFiller />
         </VStack>
       </VStack>
