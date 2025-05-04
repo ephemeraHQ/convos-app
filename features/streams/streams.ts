@@ -12,9 +12,6 @@ import { streamLogger } from "@/utils/logger/logger"
 import { startConversationStreaming } from "./stream-conversations"
 import { startMessageStreaming } from "./stream-messages"
 
-// Registry to track active streams
-const activeStreams = new Set<IXmtpInboxId>()
-
 export async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   const isSignedIn = useAuthenticationStore.getState().status === "signedIn"
 
@@ -23,127 +20,108 @@ export async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   }
 
   for (const inboxId of inboxIdsToStream) {
-    // Skip if stream is already active for this inbox
-    if (activeStreams.has(inboxId)) {
-      continue
-    }
+    streamLogger.debug(`Starting all streams for ${inboxId}...`)
 
+    // Start each stream and handle errors individually
     try {
-      // Mark this inbox as having active streams before starting
-      activeStreams.add(inboxId)
-
-      streamLogger.debug(`Starting all streams for ${inboxId}...`)
-
-      // Start all streams in parallel and handle errors individually
-      await Promise.allSettled([
-        startConversationStreaming({ clientInboxId: inboxId }).catch((error) => {
-          captureError(
-            new StreamError({
-              error,
-              additionalMessage: `Failed to start conversation streaming for ${inboxId}`,
-            }),
-          )
-        }),
-        startMessageStreaming({ clientInboxId: inboxId }).catch((error) => {
-          captureError(
-            new StreamError({
-              error,
-              additionalMessage: `Failed to start message streaming for ${inboxId}`,
-            }),
-          )
-        }),
-        startStreamingPreferences({ clientInboxId: inboxId }).catch((error) => {
-          captureError(
-            new StreamError({
-              error,
-              additionalMessage: `Failed to start preference streaming for ${inboxId}`,
-            }),
-          )
-        }),
-        // startConsentStreaming({ clientInboxId: inboxId }).catch(error => {
-        //   captureError(
-        //     new StreamError({
-        //       error,
-        //       additionalMessage: `Failed to start consent streaming for ${inboxId}`,
-        //     }),
-        //   )
-        // }),
-      ])
-
-      streamLogger.debug(`Started all streams for ${inboxId}`)
+      await startConversationStreaming({ clientInboxId: inboxId })
     } catch (error) {
-      // Remove from active streams on error
-      activeStreams.delete(inboxId)
-
       captureError(
         new StreamError({
           error,
-          additionalMessage: `Error starting streams for inbox ${inboxId}`,
+          additionalMessage: `Failed to start conversation streaming for ${inboxId}`,
         }),
       )
     }
+
+    try {
+      await startMessageStreaming({ clientInboxId: inboxId })
+    } catch (error) {
+      captureError(
+        new StreamError({
+          error,
+          additionalMessage: `Failed to start message streaming for ${inboxId}`,
+        }),
+      )
+    }
+
+    try {
+      await startStreamingPreferences({ clientInboxId: inboxId })
+    } catch (error) {
+      captureError(
+        new StreamError({
+          error,
+          additionalMessage: `Failed to start preference streaming for ${inboxId}`,
+        }),
+      )
+    }
+
+    // try {
+    //   await startConsentStreaming({ clientInboxId: inboxId })
+    // } catch (error) {
+    //   captureError(
+    //     new StreamError({
+    //       error,
+    //       additionalMessage: `Failed to start consent streaming for ${inboxId}`,
+    //     }),
+    //   )
+    // }
+
+    streamLogger.debug(`Started all streams for ${inboxId}`)
   }
 }
 
 export async function stopStreaming(inboxIds: IXmtpInboxId[]) {
   await Promise.all(
     inboxIds.map(async (inboxId) => {
-      // Skip if no active stream for this inbox
-      if (!activeStreams.has(inboxId)) {
-        return
-      }
+      streamLogger.debug(`Stopping streams for ${inboxId}...`)
 
+      // Stop each stream and handle errors individually
       try {
-        streamLogger.debug(`Stopping streams for ${inboxId}...`)
-
-        // Stop all streams in parallel and handle errors individually
-        await Promise.allSettled([
-          stopStreamingAllMessage({ inboxId }).catch((error) => {
-            captureError(
-              new StreamError({
-                error,
-                additionalMessage: `Failed to stop message streaming for ${inboxId}`,
-              }),
-            )
-          }),
-          stopStreamingConversations({ inboxId }).catch((error) => {
-            captureError(
-              new StreamError({
-                error,
-                additionalMessage: `Failed to stop conversation streaming for ${inboxId}`,
-              }),
-            )
-          }),
-          stopStreamingPreferences({ clientInboxId: inboxId }).catch((error) => {
-            captureError(
-              new StreamError({
-                error,
-                additionalMessage: `Failed to stop preference streaming for ${inboxId}`,
-              }),
-            )
-          }),
-          // stopConsentStreaming({ clientInboxId: inboxId }).catch(error => {
-          //   captureError(
-          //     new StreamError({
-          //       error,
-          //       additionalMessage: `Failed to stop consent streaming for ${inboxId}`,
-          //     }),
-          //   )
-          // }),
-        ])
-
-        streamLogger.debug(`Stopped all streams for ${inboxId}`)
+        await stopStreamingAllMessage({ inboxId })
       } catch (error) {
         captureError(
           new StreamError({
             error,
-            additionalMessage: `Unexpected error stopping streams for ${inboxId}`,
+            additionalMessage: `Failed to stop message streaming for ${inboxId}`,
           }),
         )
-      } finally {
-        // Always remove from active streams, even if there was an error
-        activeStreams.delete(inboxId)
       }
+
+      try {
+        await stopStreamingConversations({ inboxId })
+      } catch (error) {
+        captureError(
+          new StreamError({
+            error,
+            additionalMessage: `Failed to stop conversation streaming for ${inboxId}`,
+          }),
+        )
+      }
+
+      try {
+        await stopStreamingPreferences({ clientInboxId: inboxId })
+      } catch (error) {
+        captureError(
+          new StreamError({
+            error,
+            additionalMessage: `Failed to stop preference streaming for ${inboxId}`,
+          }),
+        )
+      }
+
+      // try {
+      //   await stopConsentStreaming({ clientInboxId: inboxId })
+      // } catch (error) {
+      //   captureError(
+      //     new StreamError({
+      //       error,
+      //       additionalMessage: `Failed to stop consent streaming for ${inboxId}`,
+      //     }),
+      //   )
+      // }
+
+      streamLogger.debug(`Stopped all streams for ${inboxId}`)
     }),
   )
 }
