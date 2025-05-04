@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query"
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
-import { memo } from "react"
+import { PersistQueryClientProvider as ReactQueryPersistQueryClientProvider } from "@tanstack/react-query-persist-client"
+import { memo, useEffect } from "react"
 import { config } from "@/config"
 import { useAppStore } from "@/stores/app-store"
 import { persistLogger } from "@/utils/logger/logger"
@@ -14,11 +14,27 @@ export const ReactQueryProvider = memo(function ReactQueryProvider(props: {
   const { children } = props
 
   if (!config.reactQueryPersistCacheIsEnabled || __DEV__) {
-    return <QueryClientProvider client={reactQueryClient}>{children}</QueryClientProvider>
+    return <NoPersistQueryClientProvider>{children}</NoPersistQueryClientProvider>
   }
 
+  return <PersistQueryClientProvider>{children}</PersistQueryClientProvider>
+})
+
+function NoPersistQueryClientProvider(props: { children: React.ReactNode }) {
+  const { children } = props
+
+  useEffect(() => {
+    useAppStore.getState().actions.setReactQueryIsHydrated(true)
+  }, [])
+
+  return <QueryClientProvider client={reactQueryClient}>{children}</QueryClientProvider>
+}
+
+function PersistQueryClientProvider(props: { children: React.ReactNode }) {
+  const { children } = props
+
   return (
-    <PersistQueryClientProvider
+    <ReactQueryPersistQueryClientProvider
       client={reactQueryClient}
       persistOptions={{
         persister: reactQueryPersister,
@@ -50,6 +66,6 @@ export const ReactQueryProvider = memo(function ReactQueryProvider(props: {
       }}
     >
       {children}
-    </PersistQueryClientProvider>
+    </ReactQueryPersistQueryClientProvider>
   )
-})
+}

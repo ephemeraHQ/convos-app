@@ -112,7 +112,12 @@ function useHeaderWrapper() {
             .reanimatedFadeInSpringSlow()
             .delay(ONBOARDING_ENTERING_DELAY.SIXTH)}
         >
-          <HeaderAction text="Sign in" disabled={isProcessingWeb3Stuff} onPress={login} />
+          <HeaderAction
+            text="Sign in"
+            isLoading={isProcessingWeb3Stuff}
+            disabled={isProcessingWeb3Stuff}
+            onPress={login}
+          />
         </AnimatedCenter>
       ),
       LeftActionComponent: (

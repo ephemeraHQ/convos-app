@@ -25,6 +25,7 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
   const handleChatPress = useCallback(() => {
     router.navigate("Conversation", {
       searchSelectedUserInboxIds: [inboxId],
+      isNew: true,
     })
   }, [router, inboxId])
 

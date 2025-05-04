@@ -32,7 +32,3 @@ export const useAppStore = create<AppStoreType>()(
     },
   })),
 )
-
-export function isInternetReachable() {
-  return useAppStore.getState().isInternetReachable
-}

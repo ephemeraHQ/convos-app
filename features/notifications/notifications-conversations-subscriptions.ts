@@ -1,18 +1,9 @@
-import { queryOptions, useQueries, useQuery } from "@tanstack/react-query"
-import { useEffect, useRef } from "react"
-import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
-import {
-  getAllowedConsentConversationsQueryData,
-  getAllowedConsentConversationsQueryOptions,
-} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
-import { getNotificationsPermissionsQueryConfig } from "@/features/notifications/notifications-permissions.query"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpConversationTopicFromXmtpId } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpHmacKeysForConversation } from "@/features/xmtp/xmtp-hmac-keys/xmtp-hmac-keys"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { usePrevious } from "@/hooks/use-previous-value"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -21,135 +12,27 @@ import {
   unsubscribeFromNotificationTopics,
 } from "./notifications.api"
 
-/**
- * React hook that manages conversation notifications subscriptions
- */
-export function useConversationsNotificationsSubscriptions() {
-  const authStatus = useAuthenticationStore((state) => state.status)
-  const senders = useMultiInboxStore((state) => state.senders)
+export async function subscribeToAllAllowedConsentConversationsNotifications(args: {
+  clientInboxId: IXmtpInboxId
+}) {
+  const { clientInboxId } = args
 
-  const isSignedIn = authStatus === "signedIn"
-
-  // Use react-query to directly get permissions
-  const { data: hasNotificationPermission } = useQuery({
-    ...getNotificationsPermissionsQueryConfig(),
-    select: (data) => data.status === "granted",
-  })
-  const previousNotificationPermission = usePrevious(hasNotificationPermission)
-
-  // Track previously subscribed conversations to detect changes
-  const previousConversationsRef = useRef(new Map<IXmtpInboxId, IXmtpConversationId[]>())
-
-  // Queries for all allowed conversations per inbox
-  const senderWithConversationIdsMap = useQueries({
-    queries: senders.map((sender) => {
-      return queryOptions({
-        ...getAllowedConsentConversationsQueryOptions({
-          clientInboxId: sender.inboxId,
-          caller: "useConversationsNotificationsSubscriptions",
-        }),
-        // Only enable when signed in and has notification permission
-        enabled: isSignedIn && hasNotificationPermission,
-        select: (data) => ({
-          inboxId: sender.inboxId,
-          conversationIds: data,
-        }),
-      })
-    }),
-    combine: (queries) => {
-      return queries.reduce((acc, query) => {
-        if (query.data) {
-          acc.set(query.data.inboxId, query.data.conversationIds)
-        }
-        return acc
-      }, new Map<IXmtpInboxId, IXmtpConversationId[]>())
-    },
+  const conversations = getAllowedConsentConversationsQueryData({
+    clientInboxId,
   })
 
-  // Main effect to handle subscriptions when queries data changes
-  useEffect(() => {
-    // Skip if not signed in or no permission
-    if (!isSignedIn || !hasNotificationPermission) {
-      return
-    }
+  if (!conversations) {
+    return
+  }
 
-    async function manageSubscriptions() {
-      // For each inbox/query result
-      for (const sender of senders) {
-        const inboxId = sender.inboxId
-        const conversationIds = senderWithConversationIdsMap.get(inboxId) || []
-
-        // Get previously subscribed conversations for this inbox
-        const previousConversations = previousConversationsRef.current.get(inboxId) || []
-
-        // Find which conversations to subscribe/unsubscribe
-        const conversationsToUnsubscribe = previousConversations.filter(
-          (id) => !conversationIds.includes(id),
-        )
-
-        const conversationsToSubscribe = conversationIds.filter(
-          (id) => !previousConversations.includes(id),
-        )
-
-        // Handle unsubscriptions
-        if (conversationsToUnsubscribe.length > 0) {
-          unsubscribeFromConversationsNotifications({
-            conversationIds: conversationsToUnsubscribe,
-            clientInboxId: inboxId,
-          }).catch(captureError)
-        }
-
-        // Handle subscriptions
-        if (conversationsToSubscribe.length > 0) {
-          subscribeToConversationsNotifications({
-            conversationIds: conversationsToSubscribe,
-            clientInboxId: inboxId,
-          }).catch(captureError)
-        }
-
-        // Update refs for next comparison
-        previousConversationsRef.current.set(inboxId, conversationIds)
-      }
-
-      // Clean up any inboxes that are no longer in the list
-      const currentInboxIds = senders.map((sender) => sender.inboxId)
-
-      for (const [inboxId, conversationIds] of Array.from(
-        previousConversationsRef.current.entries(),
-      )) {
-        if (!currentInboxIds.includes(inboxId) && conversationIds.length > 0) {
-          unsubscribeFromConversationsNotifications({
-            conversationIds,
-            clientInboxId: inboxId,
-          }).catch(captureError)
-
-          previousConversationsRef.current.delete(inboxId)
-        }
-      }
-    }
-
-    manageSubscriptions()
-  }, [isSignedIn, hasNotificationPermission, senders, senderWithConversationIdsMap])
-
-  useEffect(() => {
-    // Had notif permission and remove it
-    if (previousNotificationPermission && !hasNotificationPermission && isSignedIn) {
-      const senders = useMultiInboxStore.getState().senders
-      Promise.all(
-        senders.map((sender) =>
-          unsubscribeFromAllConversationsNotifications({
-            clientInboxId: sender.inboxId,
-          }),
-        ),
-      ).catch(captureError)
-    }
-  }, [hasNotificationPermission, previousNotificationPermission, isSignedIn])
-
-  return null
+  await subscribeToConversationsNotifications({
+    conversationIds: conversations,
+    clientInboxId,
+  })
 }
 
 // Keep these functions outside the hook since they're used by the hook but don't directly use React features
-async function subscribeToConversationsNotifications(args: {
+export async function subscribeToConversationsNotifications(args: {
   conversationIds: IXmtpConversationId[]
   clientInboxId: IXmtpInboxId
 }) {
@@ -235,10 +118,6 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
 
   notificationsLogger.debug(`Unsubscribing from all conversations for inbox ${clientInboxId}...`)
 
-  const client = await getXmtpClientByInboxId({
-    inboxId: clientInboxId,
-  })
-
   const conversationIds = getAllowedConsentConversationsQueryData({
     clientInboxId,
   })
@@ -248,19 +127,13 @@ export async function unsubscribeFromAllConversationsNotifications(args: {
     return
   }
 
-  const conversationTopics = conversationIds.map(getXmtpConversationTopicFromXmtpId)
-
-  await unsubscribeFromNotificationTopics({
-    installationId: client.installationId,
-    topics: conversationTopics,
+  await unsubscribeFromConversationsNotifications({
+    conversationIds,
+    clientInboxId,
   })
-
-  notificationsLogger.debug(
-    `Successfully unsubscribed from ${conversationTopics.length} conversations for inbox ${clientInboxId}`,
-  )
 }
 
-async function unsubscribeFromConversationsNotifications(args: {
+export async function unsubscribeFromConversationsNotifications(args: {
   conversationIds: IXmtpConversationId[]
   clientInboxId: IXmtpInboxId
 }) {

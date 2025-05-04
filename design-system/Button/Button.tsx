@@ -2,7 +2,6 @@ import { Icon } from "@design-system/Icon/Icon"
 import { IIconSizeKey } from "@theme/icon"
 import { useCallback, useMemo } from "react"
 import {
-  ActivityIndicator,
   GestureResponderEvent,
   Pressable,
   PressableStateCallbackType,
@@ -10,6 +9,7 @@ import {
   TextStyle,
   ViewStyle,
 } from "react-native"
+import { Loader } from "@/design-system/loader"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { Haptics } from "../../utils/haptics"
 import { Text } from "../Text"
@@ -121,7 +121,7 @@ export function Button(props: IButtonProps) {
     >
       {(state) => {
         if (loading) {
-          return <ActivityIndicator />
+          return <Loader size="xs" />
         }
 
         return (
