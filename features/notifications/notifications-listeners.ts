@@ -63,6 +63,11 @@ export function useNotificationListeners() {
           const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
           const clientInboxId = getSafeCurrentSender().inboxId
 
+          notificationsLogger.debug(
+            `Found ${presentedNotifications.length} notifications present in tray to analyze`,
+            JSON.stringify(presentedNotifications),
+          )
+
           // Take all the notifications present in tray and add their message in the cache
           presentedNotifications
             .filter(isNotificationExpoNewMessageNotification)

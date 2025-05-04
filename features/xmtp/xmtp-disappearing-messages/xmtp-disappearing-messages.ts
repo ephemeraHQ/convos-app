@@ -9,6 +9,10 @@ import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { getTodayNs } from "@/utils/date"
 import { XMTPError } from "@/utils/error"
+import { TimeUtils } from "@/utils/time.utils"
+
+export const XMTP_DISAPPEARING_MESSAGE_NO_VALUE_DEFAULT_DURATION_IN_NS =
+  TimeUtils.days(60).toNanoseconds()
 
 /**
  * Get the current disappearing message settings for a conversation

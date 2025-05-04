@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/react-native"
-import { FullMetrics } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
 import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
@@ -11,15 +10,13 @@ import { withTimeout } from "@/utils/promise-timeout"
 export function logErrorIfXmtpRequestTookTooLong(args: {
   durationMs: number
   xmtpFunctionName: string
-  metrics: FullMetrics | undefined
 }) {
-  const { durationMs, xmtpFunctionName, metrics } = args
+  const { durationMs, xmtpFunctionName } = args
 
   if (durationMs > config.xmtp.maxMsUntilLogError) {
     captureError(
       new XMTPError({
         error: new Error(`Calling "${xmtpFunctionName}" took ${durationMs}ms`),
-        ...(metrics && { extra: { metrics } }),
       }),
     )
   }
@@ -67,27 +64,13 @@ export async function wrapXmtpCallWithDuration<T>(
     // Record end time and calculate duration
     const endTime = Date.now()
     const durationMs = endTime - startTime
-    let metrics: FullMetrics | undefined
-
-    if (
-      result &&
-      typeof result === "object" &&
-      "metrics" in result &&
-      // In dev the lots are too verbose
-      !__DEV__
-    ) {
-      metrics = result.metrics as FullMetrics
-      xmtpLogger.debug(
-        `XMTP operation [${operationId}] "${xmtpFunctionName}" has the following metrics: ${JSON.stringify(metrics)}`,
-      )
-    }
 
     xmtpLogger.debug(
       `XMTP operation [${operationId}] "${xmtpFunctionName}" finished in ${durationMs}ms`,
     )
 
     // Log error if the request took too long
-    logErrorIfXmtpRequestTookTooLong({ durationMs, xmtpFunctionName, metrics })
+    logErrorIfXmtpRequestTookTooLong({ durationMs, xmtpFunctionName })
 
     return result
   } catch (error) {

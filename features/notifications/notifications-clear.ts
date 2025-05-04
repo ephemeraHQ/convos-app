@@ -17,6 +17,11 @@ export async function clearNotificationsForConversation(args: {
     // Get all current notifications
     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
 
+    notificationsLogger.debug(
+      `Found ${presentedNotifications.length} notifications present in tray`,
+      JSON.stringify(presentedNotifications),
+    )
+
     if (presentedNotifications.length === 0) {
       notificationsLogger.debug("No notifications to clear")
       return
