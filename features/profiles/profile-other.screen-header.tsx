@@ -13,14 +13,13 @@ import { useRouter } from "@/navigation/use-navigation"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { Haptics } from "@/utils/haptics"
 import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
-import { useCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 
 export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId }) {
   const { theme, themed } = useAppTheme()
   const router = useRouter()
-  const currentSender = useCurrentSender()
 
   const { displayName, username } = usePreferredDisplayInfo({
     inboxId,
@@ -28,22 +27,19 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
   })
 
   const handleChatPress = useCallback(async () => {
-    const clientInboxId = currentSender?.inboxId
-
-    if (clientInboxId) {
-      try {
-        const conversation = await findConversationByInboxIds({ inboxIds: [inboxId], clientInboxId })
-        
-        if (conversation) {
-          router.navigate("Conversation", { 
-            xmtpConversationId: conversation.xmtpId, 
-            isNew: false,
-          })
-          return
-        }
-      } catch (error) {
-        captureError(new GenericError({ error, additionalMessage: "Profile: Error checking conversation" }))
+    try {
+      const clientInboxId = getSafeCurrentSender().inboxId
+      const conversation = await findConversationByInboxIds({ inboxIds: [inboxId], clientInboxId })
+      
+      if (conversation) {
+        router.navigate("Conversation", { 
+          xmtpConversationId: conversation.xmtpId, 
+          isNew: false,
+        })
+        return
       }
+    } catch (error) {
+      captureError(new GenericError({ error, additionalMessage: "Profile: Error checking conversation" }))
     }
 
     // If no existing conversation found or on error, create a new one
@@ -51,7 +47,7 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
       searchSelectedUserInboxIds: [inboxId], 
       isNew: true,
     })
-  }, [router, inboxId, currentSender])
+  }, [router, inboxId])
 
   const handleContextMenuAction = useCallback(
     async (actionId: string) => {
