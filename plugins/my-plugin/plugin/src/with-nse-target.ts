@@ -54,6 +54,7 @@ export const withNSETarget: ConfigPlugin = (config) => {
     addTargetDependency(xcodeProject, target)
     console.log("Added target dependency")
 
+    console.log("config.modRequest?.projectRoot:", config.modRequest?.platformProjectRoot)
     addPbxGroup(xcodeProject, {
       targetName,
       platformProjectRoot: config.modRequest?.projectRoot,

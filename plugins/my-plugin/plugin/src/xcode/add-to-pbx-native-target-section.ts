@@ -1,5 +1,4 @@
 import { XcodeProject } from "expo/config-plugins"
-import { PRODUCT_TYPE } from "../constants"
 
 export function addToPbxNativeTargetSection(
   xcodeProject: XcodeProject,
@@ -22,7 +21,7 @@ export function addToPbxNativeTargetSection(
       name: targetName,
       productName: targetName,
       productReference: productFile.fileRef,
-      productType: PRODUCT_TYPE,
+      productType: `"com.apple.product-type.app-extension"`,
       buildConfigurationList: xCConfigurationList.uuid,
       buildPhases: [],
       buildRules: [],

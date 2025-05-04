@@ -1,5 +1,4 @@
 import { type ExpoConfig } from "@expo/config-types"
-import { IOSConfig } from "expo/config-plugins"
 
 export const getAppGroup = (identifier: string) => `group.${identifier}`
 
@@ -15,7 +14,8 @@ export const getShareExtensionBundleIdentifier = (config: ExpoConfig) => {
 }
 
 export const getShareExtensionName = (config: ExpoConfig) => {
-  return `${IOSConfig.XcodeUtils.sanitizedName(config.name)}ConvosNSE`
+  // return `${IOSConfig.XcodeUtils.sanitizedName(config.name)}ConvosNSE`
+  return "ConvosNSE"
 }
 
 export const getShareExtensionEntitlementsFileName = (config: ExpoConfig) => {

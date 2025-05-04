@@ -27,7 +27,8 @@ export function addPbxGroup(
   }
 
   for (const file of SWIFT_FILE_NAMES) {
-    copyFileSync(path.join(__dirname, "../../swift", file), targetPath, file)
+    const src = path.join(__dirname, "../../swift", file)
+    copyFileSync(src, targetPath, file)
   }
 
   const files = SWIFT_FILE_NAMES.map((file) => path.basename(file))

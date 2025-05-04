@@ -4,9 +4,6 @@ export const EXTENSION_DIR = "plugin/swift" // Source directory relative to plug
 export const INFO_PLIST_FILENAME = "Info.plist" // Actual filename in EXTENSION_DIR
 export const ENTITLEMENTS_FILENAME = `${EXTENSION_NAME}.entitlements` // Actual filename in EXTENSION_DIR
 
-// --- Xcode Target Configuration ---
-export const PRODUCT_TYPE = "app_extension"
-
 // --- Build Settings ---
 export const DEPLOYMENT_TARGET = "16.0" // Your chosen minimum iOS target
 export const SWIFT_VERSION = "5.0"
