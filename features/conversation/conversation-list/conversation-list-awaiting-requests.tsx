@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native"
 import { useQueries } from "@tanstack/react-query"
-import React, { memo, useCallback, useMemo } from "react"
+import React, { memo, useCallback, useEffect, useMemo } from "react"
 import { Center } from "@/design-system/Center"
 import { AnimatedHStack, HStack } from "@/design-system/HStack"
 import { Icon } from "@/design-system/Icon/Icon"
@@ -24,8 +24,15 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
   const navigation = useNavigation()
   const currentSender = useSafeCurrentSender()
 
-  const { likelyNotSpamConversationIds, isLoading: isLoadingUknownConversations } =
-    useConversationRequestsListItem()
+  const {
+    likelyNotSpamConversationIds,
+    isLoading: isLoadingUknownConversations,
+    refetch: refetchUnknownConversations,
+  } = useConversationRequestsListItem()
+
+  useEffect(() => {
+    refetchUnknownConversations()
+  }, [refetchUnknownConversations])
 
   // Fetch metadata queries
   const conversationsMetadataQueryResult = useQueries({

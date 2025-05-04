@@ -10,11 +10,11 @@ import { runOnJS } from "react-native-reanimated"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
 import { useLogout } from "@/features/authentication/use-logout"
+import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
+import { registerPushNotifications } from "@/features/notifications/notifications-register"
+import { getDevicePushNotificationsToken } from "@/features/notifications/notifications-token"
 import {
   canAskForNotificationsPermissions,
-  getDevicePushNotificationsToken,
-  registerPushNotifications,
-  requestNotificationsPermissions,
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
 import {

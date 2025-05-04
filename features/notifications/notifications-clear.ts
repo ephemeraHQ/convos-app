@@ -6,7 +6,7 @@ import { notificationsLogger } from "@/utils/logger/logger"
 import {
   isConvosModifiedNotification,
   isNotificationExpoNewMessageNotification,
-} from "./notification-assertions"
+} from "./notifications-assertions"
 
 export async function clearNotificationsForConversation(args: {
   xmtpConversationId: IXmtpConversationId

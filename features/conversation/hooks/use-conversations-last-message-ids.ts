@@ -64,13 +64,8 @@ export function useConversationLastMessageIds(args: { conversationIds: IXmtpConv
     }
   }, [conversationIds, currentSender.inboxId, setLastMessageIdForConversationMap])
 
-  const refetch = useCallback(() => {
-    setLastMessageIdForConversationMap(getInitialLastMessageIds())
-  }, [getInitialLastMessageIds])
-
   return {
     lastMessageIdByConversationId: lastMessageIdForConversationMap,
     isLoading: false,
-    refetch,
   }
 }

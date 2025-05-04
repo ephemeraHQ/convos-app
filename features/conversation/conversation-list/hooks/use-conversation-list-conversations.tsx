@@ -1,5 +1,5 @@
 import { useQueries } from "@tanstack/react-query"
-import { useCallback } from "react"
+import { useCallback, useRef } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { refetchInfiniteConversationMessages } from "@/features/conversation/conversation-chat/conversation-messages.query"
@@ -10,9 +10,12 @@ import { getConversationQueryData } from "@/features/conversation/queries/conver
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
+import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
 
 export const useConversationListConversations = () => {
   const currentSender = useSafeCurrentSender()
+  const isRefetchingRef = useRef(false)
 
   const {
     data: conversationIds = [],
@@ -23,10 +26,9 @@ export const useConversationListConversations = () => {
     caller: "useConversationListConversations",
   })
 
-  const { refetch: refetchConversationLastMessageIds, lastMessageIdByConversationId } =
-    useConversationLastMessageIds({
-      conversationIds,
-    })
+  const { lastMessageIdByConversationId } = useConversationLastMessageIds({
+    conversationIds,
+  })
 
   const lastMessageIds = Object.values(lastMessageIdByConversationId)
 
@@ -100,34 +102,41 @@ export const useConversationListConversations = () => {
 
   const sortedValidConversationIds = validConversationIds.map((item) => item.conversationId)
 
-  const handleRefetch = useCallback(
-    () => {
-      // Refetch all conversations
-      refetchConversations().catch(captureError)
-      // Refetch all metadata for all conversations
-      // Not important enough to refetch
-      // conversationMetadataQueries.forEach((query) => {
-      //   query.refetch().catch(captureError)
-      // })
-      // Refetch all messages for all conversations
-      for (const conversationId of conversationIds) {
+  const handleRefetch = useCallback(async () => {
+    if (isRefetchingRef.current) {
+      return
+    }
+
+    isRefetchingRef.current = true
+
+    const refetchPromises = [
+      refetchConversations(),
+      ...conversationIds.map((conversationId) =>
         refetchInfiniteConversationMessages({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: conversationId,
           caller: "useConversationListConversations",
-        }).catch(captureError)
-      }
+        }),
+      ),
+    ]
 
-      refetchConversationLastMessageIds()
-    },
-    // eslint-disable-next-line @tanstack/query/no-unstable-deps
-    [
-      conversationIds,
-      currentSender.inboxId,
-      refetchConversations,
-      refetchConversationLastMessageIds,
-    ],
-  )
+    // eslint-disable-next-line custom-plugin/require-promise-error-handling
+    const results = await customPromiseAllSettled(refetchPromises)
+
+    // Handle any errors
+    results.forEach((result) => {
+      if (result.status === "rejected") {
+        captureError(
+          new GenericError({
+            error: result.reason,
+            additionalMessage: "Failed to refetch conversation",
+          }),
+        )
+      }
+    })
+
+    isRefetchingRef.current = false
+  }, [currentSender.inboxId, refetchConversations, conversationIds])
 
   const hasAnyLastMessageLoading = lastMessageQueries.some(
     (query) => query.isLoading && !query.data,

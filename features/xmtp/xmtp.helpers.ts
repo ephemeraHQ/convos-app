@@ -69,7 +69,13 @@ export async function wrapXmtpCallWithDuration<T>(
     const durationMs = endTime - startTime
     let metrics: FullMetrics | undefined
 
-    if (result && typeof result === "object" && "metrics" in result) {
+    if (
+      result &&
+      typeof result === "object" &&
+      "metrics" in result &&
+      // In dev the lots are too verbose
+      !__DEV__
+    ) {
       metrics = result.metrics as FullMetrics
       xmtpLogger.debug(
         `XMTP operation [${operationId}] "${xmtpFunctionName}" has the following metrics: ${JSON.stringify(metrics)}`,

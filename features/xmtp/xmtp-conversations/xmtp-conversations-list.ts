@@ -6,6 +6,7 @@ import { XMTPError } from "@/utils/error"
 type IGetXmtpConversationsArgs = {
   clientInboxId: IXmtpInboxId
   consentStates?: IXmtpConsentState[]
+  caller: string
   limit?: number
 }
 
@@ -101,25 +102,28 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
   } = args
 
   try {
-    const conversations = await wrapXmtpCallWithDuration("listConversations", async () => {
-      const client = await getXmtpClientByInboxId({
-        inboxId: clientInboxId,
-      })
+    const conversations = await wrapXmtpCallWithDuration(
+      `${args.caller}:listConversations`,
+      async () => {
+        const client = await getXmtpClientByInboxId({
+          inboxId: clientInboxId,
+        })
 
-      return client.conversations.list(
-        {
-          addedByInboxId: true,
-          name: true,
-          imageUrl: true,
-          description: true,
-          // isActive: true,
-          // consentState: true,
-          // lastMessage: true,
-        },
-        limit,
-        consentStates,
-      )
-    })
+        return client.conversations.list(
+          {
+            addedByInboxId: true,
+            name: true,
+            imageUrl: true,
+            description: true,
+            // isActive: true,
+            // consentState: true,
+            // lastMessage: true,
+          },
+          limit,
+          consentStates,
+        )
+      },
+    )
 
     return conversations
   } catch (error) {

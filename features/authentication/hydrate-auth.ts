@@ -1,6 +1,5 @@
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { startStreaming } from "@/features/streams/streams"
+import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
@@ -53,13 +52,5 @@ export async function hydrateAuth() {
     .catch(captureError)
 
   authLogger.debug("Successfully hydrated auth and setting status to signed in...")
-  login()
-}
-
-function login() {
   useAuthenticationStore.getState().actions.setStatus("signedIn")
-
-  const senders = getAllSenders()
-
-  startStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
 }

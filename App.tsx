@@ -9,6 +9,7 @@ import { XmtpLogFilesModal } from "@/components/xmtp-log-files-modal"
 import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
+import { useStartListeningToAuthenticationStore } from "@/features/authentication/use-start-listening-to-auth-store"
 import { useStartListeningForAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
@@ -29,6 +30,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { ThirdwebProvider } from "thirdweb/react"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
+import { useStartListeningToCurrentUserQuery } from "./features/current-user/use-start-listening-to-current-user-query"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
 import { sentryInit } from "./utils/sentry/sentry-init"
@@ -80,9 +82,11 @@ const Handlers = memo(function Handlers() {
   useCreateUserIfNoExist()
   useNotificationListeners()
   useReactQueryInit()
+  useStartListeningToAuthenticationStore()
   useStartListeningToAppState()
   useStartListeningForNotificationsPermissionsQuery()
   useStartListeningForAllowedConsentConversationsQuery()
+  useStartListeningToCurrentUserQuery()
 
   return null
 })

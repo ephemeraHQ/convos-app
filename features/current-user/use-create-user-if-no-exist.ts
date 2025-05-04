@@ -19,15 +19,15 @@ import { createDevice, fetchDevice, IDeviceCreateInput } from "@/features/device
 import { IDevice } from "@/features/devices/devices.types"
 import { getDeviceModelId, getDeviceOs } from "@/features/devices/devices.utils"
 import { setUserDeviceQueryData } from "@/features/devices/user-device.query"
-import {
-  getDevicePushNotificationsToken,
-  getExpoPushNotificationsToken,
-} from "@/features/notifications/notifications.service"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { authLogger } from "@/utils/logger/logger"
 import { tryCatch } from "@/utils/try-catch"
+import {
+  getDevicePushNotificationsToken,
+  getExpoPushNotificationsToken,
+} from "../notifications/notifications-token"
 import { fetchCurrentUser } from "./current-user.api"
 import { invalidateCurrentUserQuery } from "./current-user.query"
 
