@@ -37,6 +37,7 @@ const MAX_RESULTS_WHEN_SMALL_SEARCH_QUERY = 5
 type ISearchResultItemDm = {
   type: "dm"
   xmtpConversationId: IXmtpConversationId
+  inboxId: IXmtpInboxId
 }
 
 type ISearchResultItemGroup = {
@@ -255,6 +256,7 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
         items.push({
           type: "dm" as const,
           xmtpConversationId,
+          inboxId: "" as IXmtpInboxId, // TODO: Get peer inboxId from DM
         })
       })
     }

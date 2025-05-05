@@ -109,7 +109,7 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
             defaultValue={defaultSearchTextValue}
             onChangeText={handleChangeText}
             placeholder={
-              searchSelectedUserInboxIds.length === 0 ? "Name, @username or onchain ID" : ""
+              searchSelectedUserInboxIds.length === 0 ? "Name, ENS, Base…" : ""
             }
             onKeyPress={handleKeyPress}
             autoCapitalize="none"
