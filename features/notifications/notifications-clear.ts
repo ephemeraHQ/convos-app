@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications"
+import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
@@ -11,11 +12,18 @@ import {
 export async function clearNotificationsForConversation(args: {
   xmtpConversationId: IXmtpConversationId
 }) {
+  const { xmtpConversationId } = args
+
   try {
-    notificationsLogger.debug("Clearing notifications for conversation:", args.xmtpConversationId)
+    notificationsLogger.debug("Clearing notifications for conversation:", xmtpConversationId)
 
     // Get all current notifications
     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
+
+    notificationsLogger.debug(
+      `Found ${presentedNotifications.length} notifications present in tray`,
+      JSON.stringify(presentedNotifications),
+    )
 
     if (presentedNotifications.length === 0) {
       notificationsLogger.debug("No notifications to clear")
@@ -27,14 +35,15 @@ export async function clearNotificationsForConversation(args: {
       try {
         // Handle Convos modified notifications
         if (isConvosModifiedNotification(notification)) {
-          return (
-            notification.request.content.data.message.xmtpConversationId === args.xmtpConversationId
-          )
+          return notification.request.content.data.message.xmtpConversationId === xmtpConversationId
         }
 
         // Handle Expo new message notifications
         if (isNotificationExpoNewMessageNotification(notification)) {
-          return notification.request.content.data.xmtpConversationId === args.xmtpConversationId
+          const notificationConversationId = getXmtpConversationIdFromXmtpTopic(
+            notification.request.content.data.contentTopic,
+          )
+          return notificationConversationId === xmtpConversationId
         }
 
         // Log unhandled notification type
@@ -62,13 +71,13 @@ export async function clearNotificationsForConversation(args: {
 
     if (notificationsToRemove.length === 0) {
       notificationsLogger.debug(
-        `No notifications to clear found for conversation ${args.xmtpConversationId}`,
+        `No notifications to clear found for conversation ${xmtpConversationId}`,
       )
       return
     }
 
     notificationsLogger.debug(
-      `Found ${notificationsToRemove.length} notifications to clear for conversation ${args.xmtpConversationId}`,
+      `Found ${notificationsToRemove.length} notifications to clear for conversation ${xmtpConversationId}`,
     )
 
     // Dismiss each notification
@@ -79,12 +88,12 @@ export async function clearNotificationsForConversation(args: {
     )
 
     notificationsLogger.debug(
-      `Successfully cleared ${notificationsToRemove.length} notifications for conversation ${args.xmtpConversationId}`,
+      `Successfully cleared ${notificationsToRemove.length} notifications for conversation ${xmtpConversationId}`,
     )
   } catch (error) {
     throw new NotificationError({
       error,
-      additionalMessage: `Failed to clear notifications for conversation ${args.xmtpConversationId}`,
+      additionalMessage: `Failed to clear notifications for conversation ${xmtpConversationId}`,
     })
   }
 }

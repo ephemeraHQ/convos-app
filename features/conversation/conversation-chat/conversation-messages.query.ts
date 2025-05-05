@@ -18,7 +18,10 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { ensureConversationQueryData } from "../queries/conversation.query"
 import { processReactionConversationMessages } from "./conversation-message/conversation-message-reactions.query"
-import { setConversationMessageQueryData } from "./conversation-message/conversation-message.query"
+import {
+  getConversationMessageQueryData,
+  setConversationMessageQueryData,
+} from "./conversation-message/conversation-message.query"
 import {
   IConversationMessage,
   IConversationMessageReaction,
@@ -235,8 +238,8 @@ export function useConversationMessagesInfiniteQueryAllMessageIds(args: IArgsWit
 }
 
 /**
- * Add a message to the infinite query cache
- * This will update all pages that match the query key
+ * Add a message to the infinite query cache, maintaining chronological order in the first page.
+ * This will update all pages that match the query key.
  */
 export const addMessageToConversationMessagesInfiniteQueryData = (args: {
   clientInboxId: IXmtpInboxId
@@ -268,10 +271,55 @@ export const addMessageToConversationMessagesInfiniteQueryData = (args: {
     return
   }
 
-  // Add the message ID to the first page
+  // Get the new message's data to find its sentMs
+  const newMessageData = getConversationMessageQueryData({
+    clientInboxId,
+    xmtpMessageId: messageId,
+  })
+
+  let updatedMessageIds = [...firstPage.messageIds]
+  let inserted = false
+
+  if (newMessageData) {
+    // Iterate through existing message IDs in the first page to find the correct insertion point
+    for (let i = 0; i < updatedMessageIds.length; i++) {
+      const existingMessageId = updatedMessageIds[i]
+      const existingMessageData = getConversationMessageQueryData({
+        clientInboxId,
+        xmtpMessageId: existingMessageId,
+      })
+
+      // If we can't get existing message data, skip comparison for this item
+      if (!existingMessageData) {
+        queryLogger.warn(
+          `Could not find data for existing message ${existingMessageId} in conversation ${xmtpConversationId} cache during ordered insertion. Skipping comparison.`,
+        )
+        continue
+      }
+
+      // Insert before the first message that is older (smaller sentMs)
+      if (newMessageData.sentMs >= existingMessageData.sentMs) {
+        updatedMessageIds.splice(i, 0, messageId)
+        inserted = true
+        break
+      }
+    }
+    // If not inserted, it's the oldest message in this page, append it
+    if (!inserted) {
+      updatedMessageIds.push(messageId)
+    }
+  } else {
+    // Fallback: If new message data isn't available, add to the beginning
+    queryLogger.warn(
+      `Could not find data for new message ${messageId} in conversation ${xmtpConversationId} cache. Adding to beginning of list as fallback.`,
+    )
+    updatedMessageIds.unshift(messageId)
+    inserted = true // Mark as inserted to avoid appending later
+  }
+
   const updatedFirstPage = {
     ...firstPage,
-    messageIds: [messageId, ...firstPage.messageIds],
+    messageIds: updatedMessageIds,
   }
 
   const updatedPages = pages.length ? [updatedFirstPage, ...pages.slice(1)] : [updatedFirstPage]

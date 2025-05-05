@@ -8,6 +8,7 @@ jest.mock("@/config", () => ({
   config: {
     app: {
       webDomain: "convos.org",
+      apiUrl: "https://api.test.convos.org",
     },
   },
 }))
@@ -17,6 +18,12 @@ jest.mock("@/navigation/navigation.utils")
 jest.mock("@/utils/logger/logger", () => {
   return {
     deepLinkLogger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    },
+    apiLogger: {
+      debug: jest.fn(),
       info: jest.fn(),
       warn: jest.fn(),
       error: jest.fn(),
