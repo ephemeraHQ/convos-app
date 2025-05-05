@@ -93,7 +93,7 @@ export async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; ke
 
   try {
     await secureStorage.setItem(storageKey, key)
-    xmtpLogger.debug(`Saved DB encryption key for ${ethAddress}`)
+    xmtpLogger.debug(`Saved DB encryption key for ${ethAddress} at ${storageKey}`)
     _saveToBackup(ethAddress, key)
   } catch (error) {
     throw new XMTPError({

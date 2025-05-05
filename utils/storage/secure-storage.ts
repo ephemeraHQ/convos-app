@@ -16,6 +16,7 @@ function deleteSecureItemAsync(key: string) {
 const secureStoreOptions: SecureStore.SecureStoreOptions = {
   // To make sure we don't have conflicts with other apps
   keychainService: config.app.bundleId,
+
   // Make sure the data is available after the first unlock
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
 }

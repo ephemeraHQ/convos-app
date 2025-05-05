@@ -8,11 +8,6 @@ final class NotificationService: UNNotificationServiceExtension {
   private var contentHandler: ((UNNotificationContent) -> Void)?
   private var bestAttempt:   UNMutableNotificationContent?
   private let logger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.convos.nse", category: "NotificationService")
-  
-  // --- Function to read from Info.plist --- // Added helper
-  private func getInfoPlistValue(key: String) -> String? {
-    return Bundle(for: type(of: self)).object(forInfoDictionaryKey: key) as? String
-  }
 
   // --- Dynamically read App Group ID ---
   private lazy var appGroupId: String? = {
@@ -35,6 +30,13 @@ final class NotificationService: UNNotificationServiceExtension {
     _ request: UNNotificationRequest,
     withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
   ) {
+
+    print("Starting notification processing...")
+    print("Request identifier:", request.identifier)
+    print("Content title:", request.content.title)
+    print("Content subtitle:", request.content.subtitle) 
+    print("Content body:", request.content.body)
+
     // --- LOG THE ENTIRE INCOMING REQUEST CONTENT ---
     os_log("didReceive called for request ID: %{public}@", log: logger, type: .info, request.identifier) // Changed to .info
     os_log("Full UNNotificationRequest content:\n%{public}@", log: logger, type: .info, request.content.description) // Changed to .info
@@ -97,7 +99,7 @@ final class NotificationService: UNNotificationServiceExtension {
         let bodyDict = userInfo["body"] as? [String: Any], // Get the nested body dictionary
         let encryptedMessage = bodyDict["encryptedMessage"] as? String, // Look inside bodyDict
         let topic = bodyDict["contentTopic"] as? String // Look inside bodyDict
-        // Note: ethAddress is still missing from the payload,
+        // Note: ethAddress is still missing from the payload, 
         // you might need it later for client building or keychain access.
         // Decide how to handle its absence. Maybe it's optional?
         // If required, the server MUST send it.
@@ -125,9 +127,9 @@ final class NotificationService: UNNotificationServiceExtension {
     }
     */
     // Use a hardcoded address for now
-    let hardcodedEthAddress = "0x7A80c6794f559A662ABE79a7E29d32985FAc212d"
+    let hardcodedEthAddress = "0x4cD8567E988057BE7e020b085BaB179AB6eB410f"
     // Lowercase the address before using it for the key
-    let ethAddress = hardcodedEthAddress.lowercased()
+    let ethAddress = hardcodedEthAddress.lowercased() 
     os_log("!!! USING HARDCODED ethAddress (lowercased): %{private}@", log: logger, type: .info, ethAddress)
     // --- End temporary hardcoding ---
 
@@ -141,7 +143,7 @@ final class NotificationService: UNNotificationServiceExtension {
     let xmtpEnv = getXmtpEnvironmentFromString(envString: xmtpEnvString)
 
     // Construct key using the lowercased address
-    let keychainDbKey = keychainDbKeyPrefix + ethAddress
+    let keychainDbKey = keychainDbKeyPrefix + ethAddress 
     guard let dbEncryptionKeyData = readDataFromKeychain(key: keychainDbKey, group: currentAppGroupId) else {
       os_log("Failed to read DB encryption key from shared Keychain using group %{public}@", log: logger, type: .error, currentAppGroupId)
       contentHandler?(request.content); return
@@ -235,10 +237,10 @@ final class NotificationService: UNNotificationServiceExtension {
 
       // Set both title and body to the decrypted plaintext for now
       os_log(">>> Decrypted Plaintext: '%{public}@'", log: logger, type: .info, plaintext) // Log with quotes to see if empty
-      currentBestAttempt.title = plaintext
-      currentBestAttempt.body = plaintext
+      currentBestAttempt.title = plaintext 
+      currentBestAttempt.body = plaintext 
 
-      os_log("Delivering decrypted notification.", log: logger, type: .info)
+      os_log("Delivering decrypted notification.", log: logger, type: .info) 
       contentHandler?(currentBestAttempt)
 
 
