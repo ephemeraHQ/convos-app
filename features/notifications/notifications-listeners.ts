@@ -1,18 +1,11 @@
 import * as Notifications from "expo-notifications"
 import { useCallback, useEffect, useRef } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
-import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   isConvosModifiedNotification,
   isNotificationExpoNewMessageNotification,
 } from "@/features/notifications/notifications-assertions"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
-import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
-import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
-import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
 import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
@@ -28,6 +21,8 @@ export function useNotificationListeners() {
   const handleNotificationTap = useCallback(
     async (response: Notifications.NotificationResponse) => {
       try {
+        const tappedNotification = response.notification
+
         // Sometimes we tap on a notification while the app is killed and this is triggered
         // before we finished hydrating auth so we push to a screen that isn't in the navigator yet
         await waitUntilPromise({
@@ -44,55 +39,77 @@ export function useNotificationListeners() {
           },
         })
 
-        if (isConvosModifiedNotification(response.notification)) {
+        if (isConvosModifiedNotification(tappedNotification)) {
           notificationsLogger.debug(
-            `Convos modified notification tapped: ${JSON.stringify(response.notification)}`,
+            `Convos modified notification tapped: ${JSON.stringify(tappedNotification)}`,
           )
           return navigate("Conversation", {
-            xmtpConversationId:
-              response.notification.request.content.data.message.xmtpConversationId,
+            xmtpConversationId: tappedNotification.request.content.data.message.xmtpConversationId,
           })
         }
 
-        if (isNotificationExpoNewMessageNotification(response.notification)) {
+        if (isNotificationExpoNewMessageNotification(tappedNotification)) {
           notificationsLogger.debug(
-            `Expo notification tapped: ${JSON.stringify(response.notification)}`,
+            `Expo notification tapped: ${JSON.stringify(tappedNotification)}`,
           )
 
           // Get all presented notifications
-          const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
-          const clientInboxId = getSafeCurrentSender().inboxId
+          // const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
+          // const clientInboxId = getSafeCurrentSender().inboxId
 
-          notificationsLogger.debug(
-            `Found ${presentedNotifications.length} notifications present in tray to analyze`,
-            JSON.stringify(presentedNotifications),
-          )
+          // notificationsLogger.debug(
+          //   `Found ${presentedNotifications.length} notifications present in tray to analyze`,
+          //   JSON.stringify(presentedNotifications),
+          // )
+
+          // const tappedNotificationConversationId = getXmtpConversationIdFromXmtpTopic(
+          //   tappedNotification.request.content.data.contentTopic,
+          // )
 
           // Take all the notifications present in tray and add their message in the cache
-          presentedNotifications
-            .filter(isNotificationExpoNewMessageNotification)
-            .map(async (notification) => {
-              try {
-                const conversationTopic = notification.request.content.data.contentTopic
-                const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
-                await getDecryptedMessageAndAddToCache({
-                  encryptedMessage: notification.request.content.data.encryptedMessage,
-                  xmtpConversationId,
-                  clientInboxId,
-                })
-              } catch (error) {
-                // Capture errors for individual messages but don't block the process
-                captureError(
-                  new NotificationError({
-                    error,
-                    additionalMessage: `Failed to decrypt/cache message from presented notification: ${notification.request.identifier}`,
-                  }),
-                )
-              }
-            })
+          // This is temporary until we have our ios NSE that will handle this
+          // Don't await, we want to do this in the background
+          // Finally not sure because it might clog the bridge
+          // And also the UX isn't nice because we're seeing messages appear not all at once
+          // Promise.all(
+          //   presentedNotifications
+          //     .filter((notification) => {
+          //       // Just the one related to the same conversation as the tapped notification
+          //       if (isNotificationExpoNewMessageNotification(notification)) {
+          //         return (
+          //           tappedNotificationConversationId ===
+          //           getXmtpConversationIdFromXmtpTopic(
+          //             notification.request.content.data.contentTopic,
+          //           )
+          //         )
+          //       }
 
-          // Navigate to the conversation associated with the *tapped* notification
-          const tappedConversationTopic = response.notification.request.content.data.contentTopic
+          //       return false
+          //     })
+          //     .sort((a, b) => b.request.content.data.timestamp - a.request.content.data.timestamp)
+          //     .slice(0, 5) // Too many can cause problem on the bridge
+          //     .map(async (notification) => {
+          //       try {
+          //         const conversationTopic = notification.request.content.data.contentTopic
+          //         const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
+          //         await getDecryptedMessageAndAddToCache({
+          //           encryptedMessage: notification.request.content.data.encryptedMessage,
+          //           xmtpConversationId,
+          //           clientInboxId,
+          //         })
+          //       } catch (error) {
+          //         // Capture errors for individual messages but don't block the process
+          //         captureError(
+          //           new NotificationError({
+          //             error,
+          //             additionalMessage: `Failed to decrypt/cache message from presented notification: ${notification.request.identifier}`,
+          //           }),
+          //         )
+          //       }
+          //     }),
+          // ).catch(captureError)
+
+          const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
           const tappedXmtpConversationId =
             getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
           return navigate("Conversation", {
@@ -100,7 +117,7 @@ export function useNotificationListeners() {
           })
         }
 
-        throw new Error(`Unknown notification type: ${JSON.stringify(response.notification)}`)
+        throw new Error(`Unknown notification type: ${JSON.stringify(tappedNotification)}`)
       } catch (error) {
         captureError(
           new NotificationError({
@@ -160,36 +177,36 @@ export function useNotificationListeners() {
   }, [handleNotificationTap])
 }
 
-async function getDecryptedMessageAndAddToCache(args: {
-  encryptedMessage: string
-  xmtpConversationId: IXmtpConversationId
-  clientInboxId: IXmtpInboxId
-}) {
-  const { encryptedMessage, xmtpConversationId, clientInboxId } = args
+// async function getDecryptedMessageAndAddToCache(args: {
+//   encryptedMessage: string
+//   xmtpConversationId: IXmtpConversationId
+//   clientInboxId: IXmtpInboxId
+// }) {
+//   const { encryptedMessage, xmtpConversationId, clientInboxId } = args
 
-  const xmtpDecryptedMessage = await decryptXmtpMessage({
-    encryptedMessage,
-    xmtpConversationId,
-    clientInboxId,
-  })
+//   const xmtpDecryptedMessage = await decryptXmtpMessage({
+//     encryptedMessage,
+//     xmtpConversationId,
+//     clientInboxId,
+//   })
 
-  if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
-    return
-  }
+//   if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
+//     return
+//   }
 
-  const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
+//   const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
 
-  setConversationMessageQueryData({
-    clientInboxId: args.clientInboxId,
-    xmtpMessageId: convoMessage.xmtpId,
-    xmtpConversationId,
-    message: convoMessage,
-  })
-  addMessageToConversationMessagesInfiniteQueryData({
-    clientInboxId: getSafeCurrentSender().inboxId,
-    xmtpConversationId,
-    messageId: convoMessage.xmtpId,
-  })
+//   setConversationMessageQueryData({
+//     clientInboxId: args.clientInboxId,
+//     xmtpMessageId: convoMessage.xmtpId,
+//     xmtpConversationId,
+//     message: convoMessage,
+//   })
+//   addMessageToConversationMessagesInfiniteQueryData({
+//     clientInboxId: getSafeCurrentSender().inboxId,
+//     xmtpConversationId,
+//     messageId: convoMessage.xmtpId,
+//   })
 
-  return convoMessage
-}
+//   return convoMessage
+// }

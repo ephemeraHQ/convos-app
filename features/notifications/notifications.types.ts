@@ -25,6 +25,13 @@ export type IExpoNewMessageNotification = INotificationWithData<{
   timestamp: number
 }>
 
+export type INotificationFromTray = INotificationWithData<{
+  contentTopic: IConversationTopic
+  messageType: string
+  encryptedMessage: string
+  timestamp: number
+}>
+
 // Type for notifications that have been processed by the Convo app
 export type INotificationMessageConverted = INotificationWithData<INotificationMessageConvertedData>
 
