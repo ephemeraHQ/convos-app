@@ -64,3 +64,12 @@ target 'ConvosPreview' do
     end
   end
 end
+
+
+target 'ConvosNSE' do
+  # Use the version required by the installed @xmtp/react-native-sdk
+  pod 'XMTP', '4.0.7', :modular_headers => true
+
+  # NSEs often use static frameworks. Adjust if your setup differs.
+  use_frameworks! :linkage => :static
+end

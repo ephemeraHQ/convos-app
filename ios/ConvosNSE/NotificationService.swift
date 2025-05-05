@@ -8,10 +8,18 @@ final class NotificationService: UNNotificationServiceExtension {
   private var contentHandler: ((UNNotificationContent) -> Void)?
   private var bestAttempt:   UNMutableNotificationContent?
   private let logger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.convos.nse", category: "NotificationService")
+  
+  // --- Dynamically read App Group ID ---
+  private lazy var appGroupId: String? = {
+      guard let groupId = getInfoPlistValue(key: "AppGroupIdentifier") else {
+          os_log("FATAL ERROR: AppGroupIdentifier not found in NSE Info.plist!", log: logger, type: .fault)
+          return nil
+      }
+      os_log("Using App Group ID from Info.plist: %{public}@", log: logger, type: .info, groupId)
+      return groupId
+  }()
 
-  // --- Constants ---
-  // IMPORTANT: Must match the group ID used in the main app and entitlements
-  private let appGroupId = "group.convos.shared" // Make sure this exactly matches your App Group ID
+
   // IMPORTANT: Must match the key used by the config plugin
   private let infoPlistXmtpEnvKey = "XmtpEnvironment"
   // IMPORTANT: Must match the key used by RN app to store DB key via expo-secure-store
@@ -24,6 +32,17 @@ final class NotificationService: UNNotificationServiceExtension {
   ) {
     os_log("didReceive called with request ID: %{public}@", log: logger, type: .debug, request.identifier)
     
+    // Ensure appGroupId was loaded successfully
+    guard appGroupId != nil else {
+       os_log("Cannot proceed without a valid App Group ID.", log: logger, type: .error)
+       // Fallback or handle error appropriately - maybe show generic notification
+       let mutableContent = (request.content.mutableCopy() as? UNMutableNotificationContent) ?? UNMutableNotificationContent()
+       mutableContent.title = "Notification Error"
+       mutableContent.body = "[Configuration Issue]"
+       contentHandler(mutableContent)
+       return
+    }
+
     self.contentHandler = contentHandler
     self.bestAttempt    = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
@@ -35,6 +54,13 @@ final class NotificationService: UNNotificationServiceExtension {
 
   // Main asynchronous processing logic
   private func handleNotificationAsync(request: UNNotificationRequest) async {
+     // Ensure appGroupId is valid within the async task as well
+     guard let currentAppGroupId = appGroupId else {
+         os_log("App Group ID not available in async handler.", log: logger, type: .error)
+         contentHandler?(request.content) // Or provide error content
+         return
+     }
+
     guard let currentBestAttempt = bestAttempt else {
       os_log("Failed to get mutable copy", log: logger, type: .error); contentHandler?(request.content); return
     }
@@ -53,7 +79,7 @@ final class NotificationService: UNNotificationServiceExtension {
       os_log("\n%{public}@", log: logger, type: .debug, jsonString)
     } else {
       // Fallback if JSON serialization fails (e.g., non-JSON compatible types)
-      os_log("Could not serialize userInfo to JSON. Raw content: %{public}@", log: logger, type: .warning, userInfo.description)
+      os_log("Could not serialize userInfo to JSON. Raw content: %{public}@", log: logger, type: .default, userInfo.description)
     }
     // --- END LOGGING ---
 
@@ -75,9 +101,9 @@ final class NotificationService: UNNotificationServiceExtension {
     }
     let xmtpEnv = getXmtpEnvironmentFromString(envString: xmtpEnvString)
 
-    let keychainDbKey = keychainDbKeyPrefix + ethAddress // Ensure ethAddress is lowercase if needed
-    guard let dbEncryptionKeyData = readDataFromKeychain(key: keychainDbKey, group: appGroupId) else {
-      os_log("Failed to read DB encryption key from shared Keychain", log: logger, type: .error)
+    let keychainDbKey = keychainDbKeyPrefix + ethAddress
+    guard let dbEncryptionKeyData = readDataFromKeychain(key: keychainDbKey, group: currentAppGroupId) else {
+      os_log("Failed to read DB encryption key from shared Keychain using group %{public}@", log: logger, type: .error, currentAppGroupId)
       contentHandler?(request.content); return
     }
     guard dbEncryptionKeyData.count == 32 else {
@@ -92,34 +118,31 @@ final class NotificationService: UNNotificationServiceExtension {
     }
 
     // --- 3. Build XMTP Client ---
-    // Use shared App Group directory for the database
-    guard let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?.path else {
-      os_log("Failed to get App Group container URL", log: logger, type: .error)
+    // Use shared App Group directory for the database - using the dynamic group ID
+    guard let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: currentAppGroupId)?.path else {
+      os_log("Failed to get App Group container URL for group %{public}@", log: logger, type: .error, currentAppGroupId)
       contentHandler?(request.content); return
     }
 
     let options = ClientOptions(
       api: .init(env: xmtpEnv, isSecure: true), // Assuming isSecure=true for dev/prod
       dbEncryptionKey: dbEncryptionKeyData,
-      dbDirectory: groupDir,
-      appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+      dbDirectory: groupDir
     )
-    os_log("Building XMTP client for address: %{private}@", log: logger, type: .debug, ethAddress)
+
+    let identity = PublicIdentity(kind: .ethereum, identifier: ethAddress)
 
     do {
       // Note: Building the client might be resource-intensive for an NSE. Monitor performance.
-      let client = try await Client.build(address: ethAddress, options: options)
-      os_log("XMTP client built successfully", log: logger, type: .debug)
+      let client = try await Client.build(publicIdentity: identity, options: options)
+      os_log("XMTP client built successfully for group %{public}@", log: logger, type: .debug, currentAppGroupId)
 
-      // Register necessary codecs (if needed for decryption/processing - check SDK requirements)
-      // client.register(codec: TextCodec()) // Example - TextCodec is usually built-in
 
       // --- 4. Decrypt Message ---
       os_log("Attempting to find conversation by topic: %{public}@", log: logger, type: .debug, topic)
-      guard let conversation = try? await client.findConversationByTopic(topic: topic) else {
-        os_log("Conversation not found for topic: %{public}@", log: logger, type: .warning, topic)
-        // Handle case where conversation isn't found - maybe it's new?
-        // For now, show generic notification
+    
+      guard let conversation = try? await client.conversations.findConversationByTopic(topic: topic) else {
+        os_log("Conversation not found for topic: %{public}@", log: logger, type: .default, topic)
         currentBestAttempt.title = "New Message"
         currentBestAttempt.body = "[Encrypted]"
         contentHandler?(currentBestAttempt); return
@@ -128,48 +151,57 @@ final class NotificationService: UNNotificationServiceExtension {
       try? await conversation.sync() // Best effort sync
 
       os_log("Processing message bytes...", log: logger, type: .debug)
-      guard let message = try? await conversation.processMessage(messageBytes: messageBytes) else {
+      guard let decodedMessage = try? await conversation.processMessage(messageBytes: messageBytes) else {
         os_log("Failed to process message bytes for topic: %{public}@", log: logger, type: .error, topic)
         currentBestAttempt.title = "New Message"
         currentBestAttempt.body = "[Decryption Error]"
         contentHandler?(currentBestAttempt); return
       }
 
-      os_log("Decoding message content...", log: logger, type: .debug)
-      guard let decodedMessage: DecodedMessage = try? message.decode() else {
-        os_log("Failed to decode message content for topic: %{public}@", log: logger, type: .error, topic)
-        currentBestAttempt.title = "New Message"
-        currentBestAttempt.body = "[Decoding Error]"
-        contentHandler?(currentBestAttempt); return
-      }
-
       // --- 5. Update Notification Content ---
       var plaintext = "[Encrypted Content]" // Default
-      // Basic handling for text content type
-      if decodedMessage.encodedContent.type == ContentTypeText { // Check against standard text content type ID
-        if let textContent = try? decodedMessage.content() as? String {
-          plaintext = textContent
-          os_log("Successfully decrypted text message", log: logger, type: .debug)
+
+      do {
+        let currentEncodedContent = try decodedMessage.encodedContent
+        if currentEncodedContent.type == ContentTypeText {
+          if let textContent = try? decodedMessage.content() as String {
+             plaintext = textContent
+             os_log("Successfully decrypted text message", log: logger, type: .debug)
+          } else {
+            os_log("Content type was text, but failed to decode as String or content() threw an error.", log: logger, type: .default)
+            if let fallbackText = try? decodedMessage.fallback {
+                plaintext = fallbackText
+                os_log("Used fallback content for text message.", log: logger, type: .debug)
+            } else {
+                os_log("Failed to get fallback content as well.", log: logger, type: .default)
+                plaintext = "[Decryption/Format Error]"
+            }
+          }
         } else {
-          os_log("Content type was text, but failed to decode as String", log: logger, type: .warning)
+          let contentType = "\(currentEncodedContent.type.authorityID)/\(currentEncodedContent.type.typeID):\(currentEncodedContent.type.versionMajor).\(currentEncodedContent.type.versionMinor)"
+          os_log("Received non-text message type: %{public}@", log: logger, type: .info, contentType)
+           if let fallbackText = try? decodedMessage.fallback {
+               plaintext = fallbackText
+               os_log("Used fallback content for non-text message.", log: logger, type: .debug)
+           } else {
+               os_log("Failed to get fallback content for non-text message.", log: logger, type: .default)
+               plaintext = "[Unsupported Content Type]"
+           }
         }
-      } else {
-        // Handle other content types (attachments, reactions etc.) later if needed
-        let contentType = "\(decodedMessage.encodedContent.type.authorityID)/\(decodedMessage.encodedContent.type.typeID):\(decodedMessage.encodedContent.type.versionMajor).\(decodedMessage.encodedContent.type.versionMinor)"
-        os_log("Received non-text message type: %{public}@", log: logger, type: .info, contentType)
-        plaintext = "[Unsupported Content Type]" // Or a better description
+      } catch {
+         os_log("Error accessing or decoding encodedContent: %{public}@", log: logger, type: .error, error.localizedDescription)
+         plaintext = "[Error Reading Content]"
       }
 
-      // TODO: Enhance title generation - e.g., fetch sender display name if possible?
-      currentBestAttempt.title = "New Message" // Simplified title for now
+      currentBestAttempt.title = "New Message"
       currentBestAttempt.body = plaintext
 
       os_log("Delivering decrypted notification.", log: logger, type: .debug)
       contentHandler?(currentBestAttempt)
 
+
     } catch {
       os_log("Error during XMTP client build or message processing: %{public}@", log: logger, type: .error, error.localizedDescription)
-      // Fallback: Show generic encrypted notification on error
       currentBestAttempt.title = "New Message"
       currentBestAttempt.body = "[Error Processing]"
       contentHandler?(currentBestAttempt)
@@ -183,17 +215,15 @@ final class NotificationService: UNNotificationServiceExtension {
     }
   }
 
-  // --- Helper Functions ---
-
   // Converts environment string from Info.plist to XMTP SDK Enum
   private func getXmtpEnvironmentFromString(envString: String) -> XMTPEnvironment {
     switch envString.lowercased() {
     case "production":
       return .production
     case "local":
-      return .local // Assuming local mapping if needed
+      return .local
     case "dev":
-      fallthrough // Fall through dev to default
+      fallthrough
     default:
       return .dev
     }

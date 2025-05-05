@@ -7,18 +7,24 @@ import * as fs from "fs"
 import * as path from "path"
 import {
   ConfigPlugin,
+  InfoPlist,
   withDangerousMod,
   withEntitlementsPlist,
+  withInfoPlist,
   withXcodeProject,
 } from "@expo/config-plugins"
 import { ExpoConfig } from "@expo/config-types"
+import plist from "@expo/plist"
 import getEasManagedCredentialsConfigExtra from "./eas/getEasManagedCredentialsConfigExtra"
 import { FileManager } from "./FileManager"
 import {
+  APP_GROUP_KEY,
   DEFAULT_BUNDLE_SHORT_VERSION,
   DEFAULT_BUNDLE_VERSION,
+  IOS_TEAM_ID,
   IPHONEOS_DEPLOYMENT_TARGET,
   NSE_EXT_FILES,
+  NSE_INFO_PLIST_FILE_NAME,
   NSE_SOURCE_FILES,
   NSE_TARGET_NAME,
   TARGETED_DEVICE_FAMILY,
@@ -32,41 +38,36 @@ import NseUpdaterManager from "./NseUpdaterManager"
  */
 const withAppEnvironment: ConfigPlugin = (config) => {
   return withEntitlementsPlist(config, (newConfig) => {
-    //   if (onesignalProps?.mode == null) {
-    //     throw new Error(`
-    //       Missing required "mode" key in your app.json or app.config.js file for "expo-notification-service-extension-plugin".
-    //       "mode" can be either "development" or "production".
-    //       Please see expo-notification-service-extension-plugin's README.md for more details.`
-    //     )
-    //   }
-    //   if (onesignalProps?.iosNSEFilePath == null) {
-    //     throw new Error(`
-    //       Missing required "iosNSEFilePath" key in your app.json or app.config.js file for "expo-notification-service-extension-plugin".
-    //       "iosNSEFilePath" must point to a local Notification Service file written in objective-c.
-    //       Please see expo-notification-service-extension-plugin's README.md for more details.`
-    //     )
-    //   }
-    newConfig.modResults["aps-environment"] = "production"
+    newConfig.modResults["aps-environment"] = "production" // Assuming always production for APS
     return newConfig
   })
 }
 
 /**
- * Add "App Group" permission
- * @see https://documentation.onesignal.com/docs/react-native-sdk-setup#step-4-install-for-ios-using-cocoapods-for-ios-apps (step 4.4)
+ * Add environment-specific "App Group" permission to the NSE entitlements.
  */
 const withAppGroupPermissions: ConfigPlugin = (config) => {
-  const APP_GROUP_KEY = "com.apple.security.application-groups"
+  // Construct the dynamic App Group ID based on the main app's bundle identifier
+  assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
+  const appGroupId = `group.${config.ios.bundleIdentifier}`
+
   return withEntitlementsPlist(config, (newConfig) => {
+    // Initialize the array if it doesn't exist in the NSE entitlements
     if (!Array.isArray(newConfig.modResults[APP_GROUP_KEY])) {
       newConfig.modResults[APP_GROUP_KEY] = []
     }
-    const modResultsArray = newConfig.modResults[APP_GROUP_KEY] as Array<any>
-    const entitlement = `group.${newConfig?.ios?.bundleIdentifier || ""}.nse`
-    if (modResultsArray.indexOf(entitlement) !== -1) {
+
+    const modResultsArray = newConfig.modResults[APP_GROUP_KEY] as Array<string>
+
+    // Check if the correct dynamic group ID is already present
+    if (modResultsArray.includes(appGroupId)) {
+      Log.log(`App Group '${appGroupId}' already present in NSE entitlements. Skipping addition.`)
       return newConfig
     }
-    modResultsArray.push(entitlement)
+
+    // Add the correct dynamic group ID
+    Log.log(`Adding App Group '${appGroupId}' to NSE entitlements.`)
+    modResultsArray.push(appGroupId)
 
     return newConfig
   })
@@ -86,7 +87,6 @@ const withOneSignalNSE: ConfigPlugin = (config, props) => {
         config.modRequest.projectRoot,
         "plugins/my-plugin-two/plugin/swift",
       )
-      console.log("sourceDir:", sourceDir)
       const iosPath = path.join(config.modRequest.projectRoot, "ios")
 
       /* COPY OVER EXTENSION FILES */
@@ -96,17 +96,13 @@ const withOneSignalNSE: ConfigPlugin = (config, props) => {
         const extFile = NSE_EXT_FILES[i]
         const targetFile = `${iosPath}/${NSE_TARGET_NAME}/${extFile}`
         const src = path.join(sourceDir, extFile)
-        console.log("src:", src)
-        console.log("targetFile:", targetFile)
         await FileManager.copyFile(`${src}`, targetFile)
       }
 
       // Copy NSE source file either from configuration-provided location, falling back to the default one.
       for (let i = 0; i < NSE_SOURCE_FILES.length; i++) {
         const sourceFileName = NSE_SOURCE_FILES[i]
-        console.log("sourceFile:", sourceFileName)
         const sourcePath = `${sourceDir}/${sourceFileName}`
-        console.log("sourcePath:", sourcePath)
         const targetFile = `${iosPath}/${NSE_TARGET_NAME}/${sourceFileName}`
         await FileManager.copyFile(`${sourcePath}`, targetFile)
       }
@@ -125,8 +121,13 @@ const withOneSignalXcodeProject: ConfigPlugin = (config, props) => {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults
 
+    // Construct the dynamic App Group ID again here if needed for checks, or rely on config
+    assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
+    const appGroupId = `group.${config.ios.bundleIdentifier}` // Needed for potential checks/logging
+
     if (!!xcodeProject.pbxTargetByName(NSE_TARGET_NAME)) {
       Log.log(`${NSE_TARGET_NAME} already exists in project. Skipping...`)
+      // Optionally add checks here to ensure existing target has correct App Group
       return newConfig
     }
 
@@ -151,58 +152,157 @@ const withOneSignalXcodeProject: ConfigPlugin = (config, props) => {
     })
 
     // WORK AROUND for codeProject.addTarget BUG
-    // Xcode projects don't contain these if there is only one target
-    // An upstream fix should be made to the code referenced in this link:
-    //   - https://github.com/apache/cordova-node-xcode/blob/8b98cabc5978359db88dc9ff2d4c015cba40f150/lib/pbxProject.js#L860
     const projObjects = xcodeProject.hash.project.objects
     projObjects["PBXTargetDependency"] = projObjects["PBXTargetDependency"] || {}
     projObjects["PBXContainerItemProxy"] = projObjects["PBXTargetDependency"] || {}
 
     // Add the NSE target
-    // This adds PBXTargetDependency and PBXContainerItemProxy for you
     const nseTarget = xcodeProject.addTarget(
       NSE_TARGET_NAME,
       "app_extension",
       NSE_TARGET_NAME,
+      // Use the correct NSE bundle identifier pattern if it differs from main app + NSE_TARGET_NAME
+      // Example assumes: com.example.app.ConvosNSE
       `${config.ios?.bundleIdentifier}.${NSE_TARGET_NAME}`,
     )
 
     // Add build phases to the new target
     xcodeProject.addBuildPhase(NSE_SOURCE_FILES, "PBXSourcesBuildPhase", "Sources", nseTarget.uuid)
     xcodeProject.addBuildPhase([], "PBXResourcesBuildPhase", "Resources", nseTarget.uuid)
-
     xcodeProject.addBuildPhase([], "PBXFrameworksBuildPhase", "Frameworks", nseTarget.uuid)
 
-    // Edit the Deployment info of the new Target, only IphoneOS and Targeted Device Family
-    // However, can be more
+    // Edit the Deployment info of the new Target
     const configurations = xcodeProject.pbxXCBuildConfigurationSection()
     for (const key in configurations) {
-      if (
-        typeof configurations[key].buildSettings !== "undefined" &&
-        configurations[key].buildSettings.PRODUCT_NAME == `"${NSE_TARGET_NAME}"`
-      ) {
-        const buildSettingsObj = configurations[key].buildSettings
-        buildSettingsObj.DEVELOPMENT_TEAM = "FY4NZR34Z3"
+      const buildConfig = configurations[key]
+      // Ensure we are modifying the NSE target's configurations
+      if (buildConfig.buildSettings?.PRODUCT_NAME === `"${NSE_TARGET_NAME}"`) {
+        const buildSettingsObj = buildConfig.buildSettings
+        buildSettingsObj.DEVELOPMENT_TEAM = IOS_TEAM_ID // Use teamId from config if available
         buildSettingsObj.IPHONEOS_DEPLOYMENT_TARGET = IPHONEOS_DEPLOYMENT_TARGET
         buildSettingsObj.TARGETED_DEVICE_FAMILY = TARGETED_DEVICE_FAMILY
+        // Ensure entitlements path is correct relative to the project structure
         buildSettingsObj.CODE_SIGN_ENTITLEMENTS = `${NSE_TARGET_NAME}/${NSE_TARGET_NAME}.entitlements`
         buildSettingsObj.CODE_SIGN_STYLE = "Automatic"
-        buildSettingsObj.SWIFT_VERSION = "5.0"
+        buildSettingsObj.SWIFT_VERSION = "5.0" // Ensure this matches your Swift version
       }
     }
 
     // Add development teams to both your target and the original project
-    xcodeProject.addTargetAttribute("DevelopmentTeam", "FY4NZR34Z3", nseTarget)
-    xcodeProject.addTargetAttribute("DevelopmentTeam", "FY4NZR34Z3")
+    xcodeProject.addTargetAttribute("DevelopmentTeam", IOS_TEAM_ID, nseTarget)
+    xcodeProject.addTargetAttribute("DevelopmentTeam", IOS_TEAM_ID) // For the main target
+
     return newConfig
   })
 }
 
+/**
+ * Writes environment-specific settings (XMTP Env, App Group ID) to the NSE's Info.plist.
+ */
+const withNseInfoPlist: ConfigPlugin = (config) => {
+  // Construct the dynamic App Group ID
+  assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
+  const appGroupId = `group.${config.ios.bundleIdentifier}`
+
+  return withInfoPlist(config, (config) => {
+    const targetName = NSE_TARGET_NAME
+    const nsePlistPath = path.join(
+      config.modRequest.platformProjectRoot,
+      targetName,
+      NSE_INFO_PLIST_FILE_NAME,
+    )
+
+    Log.log(`Attempting to modify NSE Info.plist at: ${nsePlistPath}`)
+
+    let nsePlistContents: InfoPlist
+    try {
+      nsePlistContents = plist.parse(fs.readFileSync(nsePlistPath, "utf8"))
+    } catch (e: any) {
+      Log.log(`Error parsing NSE Info.plist: ${e.message}. Skipping modification.`)
+      return config
+    }
+
+    // --- Set XMTP Environment ---
+    const expoEnv = process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
+    let xmtpEnvironment = "local"
+
+    if (expoEnv === "production") {
+      xmtpEnvironment = "production"
+    } else if (expoEnv === "preview") {
+      xmtpEnvironment = "dev" // Keep preview on dev for XMTP
+    } else if (expoEnv === "development") {
+      xmtpEnvironment = "local"
+    }
+
+    Log.log(
+      `Setting XmtpEnvironment in ${targetName}/${NSE_INFO_PLIST_FILE_NAME} to: ${xmtpEnvironment}`,
+    )
+    nsePlistContents.XmtpEnvironment = xmtpEnvironment
+
+    // --- Set App Group Identifier ---
+    Log.log(
+      `Setting AppGroupIdentifier in ${targetName}/${NSE_INFO_PLIST_FILE_NAME} to: ${appGroupId}`,
+    )
+    nsePlistContents.AppGroupIdentifier = appGroupId // Use a distinct key
+
+    try {
+      fs.writeFileSync(nsePlistPath, plist.build(nsePlistContents))
+      Log.log(`Successfully updated ${targetName}/${NSE_INFO_PLIST_FILE_NAME}`)
+    } catch (e: any) {
+      Log.log(`Error writing updated ${targetName}/${NSE_INFO_PLIST_FILE_NAME}: ${e.message}`)
+    }
+
+    return config
+  })
+}
+
+const withPodfile: ConfigPlugin = (config) => {
+  return withDangerousMod(config, [
+    "ios",
+    async (config) => {
+      const podfilePath = path.join(config.modRequest.platformProjectRoot, "Podfile")
+      let podfileContent = fs.readFileSync(podfilePath).toString()
+
+      // Check if the target already exists to avoid duplicates
+      if (podfileContent.includes(`target '${NSE_TARGET_NAME}'`)) {
+        Log.log(`${NSE_TARGET_NAME} target already exists in Podfile. Skipping...`)
+        // Even if skipping, ensure the version inside is correct (optional robustness)
+        // This part is more complex, might be better to just ensure clean state first
+        return config
+      }
+
+      // Use the version required by @xmtp/react-native-sdk@4.0.5
+      // TODO: Dynamically read this from package.json if possible
+      const requiredXmtpVersion = "4.0.7"
+
+      const nseTargetBlock = `
+
+target '${NSE_TARGET_NAME}' do
+  # Use the version required by the installed @xmtp/react-native-sdk
+  pod 'XMTP', '${requiredXmtpVersion}', :modular_headers => true
+
+  # NSEs often use static frameworks. Adjust if your setup differs.
+  use_frameworks! :linkage => :static
+end
+`
+
+      // Append the new target block to the end of the file
+      podfileContent += nseTargetBlock
+
+      fs.writeFileSync(podfilePath, podfileContent)
+
+      return config
+    },
+  ])
+}
+
 export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
-  config = withAppEnvironment(config, props)
-  config = withAppGroupPermissions(config, props)
+  config = withAppEnvironment(config, props) // Keep this if needed for APS env
+  config = withAppGroupPermissions(config, props) // Now uses dynamic group ID
   config = withOneSignalNSE(config, props)
   config = withOneSignalXcodeProject(config, props)
+  config = withNseInfoPlist(config) // Now writes dynamic group ID to plist
+  config = withPodfile(config)
   config = withEasManagedCredentials(config, props)
   return config
 }

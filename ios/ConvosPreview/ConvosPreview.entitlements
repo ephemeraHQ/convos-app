@@ -15,8 +15,7 @@
     <string>production</string>
     <key>com.apple.security.application-groups</key>
     <array>
-      <string>group.convos.shared</string>
-      <string>group.com.convos.preview.nse</string>
+      <string>group.com.convos.preview</string>
     </array>
   </dict>
 </plist>

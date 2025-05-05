@@ -18,8 +18,6 @@ import { IEthereumAddress, lowercaseEthAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { isXmtpDbEncryptionKeyError } from "../xmtp-errors"
 
-console.log("config.xmtp.env:", config.xmtp.env)
-
 async function _createXmtpClient(args: {
   inboxSigner: IXmtpSigner
   dbEncryptionKey: Uint8Array
