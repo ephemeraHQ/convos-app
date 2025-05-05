@@ -1,5 +1,7 @@
+import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useLogout } from "@/features/authentication/use-logout"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
@@ -8,49 +10,57 @@ import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
 
-export async function hydrateAuth() {
+export function useHydrateAuth() {
   authLogger.debug("Hydrating auth...")
 
-  const currentSender = getCurrentSender()
+  const { logout } = useLogout()
 
-  if (!currentSender) {
-    authLogger.debug("No current sender while hydrating auth so setting status to signed out...")
-    useAuthenticationStore.getState().actions.setStatus("signedOut")
-    return
-  }
+  const hydrateAuth = useCallback(() => {
+    authLogger.debug("Hydrating auth...")
 
-  getXmtpClientByInboxId({
-    inboxId: currentSender.inboxId,
-  }).catch((error) => {
-    if (isXmtpNoNetworkError(error) || !useAppStore.getState().isInternetReachable) {
-      authLogger.debug("No network error while hydrating auth so just returning...")
+    const currentSender = getCurrentSender()
+
+    if (!currentSender) {
+      authLogger.debug("No current sender while hydrating auth so setting status to signed out...")
+      logout({ caller: "useHydrateAuth no current sender" })
       return
     }
 
-    captureError(
-      new AuthenticationError({
-        error,
-        additionalMessage: "Error while hydrating auth so signing out...",
-      }),
-    )
-    useAuthenticationStore.getState().actions.setStatus("signedOut")
-    return
-  })
-
-  // Don't do it with await because we prefer doing it in the background and letting user continue
-  validateXmtpInstallation({
-    inboxId: currentSender.inboxId,
-  })
-    .then((isValid) => {
-      if (!isValid) {
-        authLogger.debug("Invalid XMTP installation while hydrating auth so signing out...")
-        useAuthenticationStore.getState().actions.setStatus("signedOut")
-      } else {
-        authLogger.debug("Valid XMTP installation")
+    getXmtpClientByInboxId({
+      inboxId: currentSender.inboxId,
+    }).catch((error) => {
+      if (isXmtpNoNetworkError(error) || !useAppStore.getState().isInternetReachable) {
+        authLogger.debug("No network error while hydrating auth so just returning...")
+        return
       }
-    })
-    .catch(captureError)
 
-  authLogger.debug("Successfully hydrated auth and setting status to signed in...")
-  useAuthenticationStore.getState().actions.setStatus("signedIn")
+      captureError(
+        new AuthenticationError({
+          error,
+          additionalMessage: "Error while hydrating auth so signing out...",
+        }),
+      )
+      logout({ caller: "useHydrateAuth xmtp client error" })
+      return
+    })
+
+    // Don't do it with await because we prefer doing it in the background and letting user continue
+    validateXmtpInstallation({
+      inboxId: currentSender.inboxId,
+    })
+      .then((isValid) => {
+        if (!isValid) {
+          authLogger.debug("Invalid XMTP installation while hydrating auth so signing out...")
+          logout({ caller: "useHydrateAuth xmtp installation error" })
+        } else {
+          authLogger.debug("Valid XMTP installation")
+        }
+      })
+      .catch(captureError)
+
+    authLogger.debug("Successfully hydrated auth and setting status to signed in...")
+    useAuthenticationStore.getState().actions.setStatus("signedIn")
+  }, [logout])
+
+  return { hydrateAuth }
 }

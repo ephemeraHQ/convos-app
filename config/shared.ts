@@ -28,6 +28,11 @@ function maybeReplaceLocalhost(uri: string) {
 
 const appConfigExtra = Constants.expoConfig?.extra as IExpoAppConfigExtra
 
+const bundleId =
+  Platform.OS === "android"
+    ? (Constants.expoConfig?.android?.package as string)
+    : (Constants.expoConfig?.ios?.bundleIdentifier as string)
+
 // Base configuration shared across all environments
 export const shared = {
   debugMenu: true,
@@ -41,10 +46,7 @@ export const shared = {
     name: Constants.expoConfig?.name as string,
     version: Constants.expoConfig?.version as string,
     storeUrl: "",
-    bundleId:
-      Platform.OS === "android"
-        ? (Constants.expoConfig?.android?.package as string)
-        : (Constants.expoConfig?.ios?.bundleIdentifier as string),
+    bundleId,
     universalLinks: [appConfigExtra.webDomain].flatMap((domain) => [
       `https://${domain}`,
       `http://${domain}`,
@@ -52,6 +54,9 @@ export const shared = {
     ]),
     apiUrl: maybeReplaceLocalhost(process.env.EXPO_PUBLIC_CONVOS_API_URI),
     webDomain: appConfigExtra.webDomain,
+  },
+  ios: {
+    appGroupId: `group.${bundleId}`,
   },
   expo: {
     projectId: appConfigExtra.eas.projectId,

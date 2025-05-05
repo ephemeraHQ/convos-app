@@ -6,7 +6,10 @@ import {
   getBackupXmtpDbEncryptionKey,
   getOrCreateXmtpDbEncryptionKey,
 } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key"
-import { getXmtpLocalUrl } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
+import {
+  getSharedAppGroupDirectory,
+  getXmtpLocalUrl,
+} from "@/features/xmtp/xmtp-client/xmtp-client-utils"
 import { ISupportedXmtpCodecs, supportedXmtpCodecs } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { xmtpIdentityIsEthereumAddress } from "@/features/xmtp/xmtp-identifier/xmtp-identifier"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
@@ -23,11 +26,21 @@ async function _createXmtpClient(args: {
 }): Promise<IXmtpClientWithCodecs> {
   const { inboxSigner, dbEncryptionKey, operationName, ethAddress } = args
 
+  const dbDirectory = await getSharedAppGroupDirectory()
+
+  if (!dbDirectory) {
+    throw new XMTPError({
+      error: new Error("Failed to get shared app group directory"),
+      additionalMessage: "Failed to get shared app group directory",
+    })
+  }
+
   const xmtpClientResult = await wrapXmtpCallWithDuration(operationName, () =>
     XmtpClient.create<ISupportedXmtpCodecs>(inboxSigner, {
       env: config.xmtp.env,
       dbEncryptionKey,
       codecs: supportedXmtpCodecs,
+      dbDirectory,
       ...(config.xmtp.env === "local" && {
         customLocalUrl: getXmtpLocalUrl(),
       }),

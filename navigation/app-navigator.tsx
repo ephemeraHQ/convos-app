@@ -7,7 +7,7 @@ import { AppSettingsScreen } from "@/features/app-settings/app-settings.screen"
 import { AuthOnboardingContactCardImportInfoScreen } from "@/features/auth-onboarding/screens/auth-onboarding-contact-card-import-info.screen"
 import { AuthOnboardingScreen } from "@/features/auth-onboarding/screens/auth-onboarding.screen"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { hydrateAuth } from "@/features/authentication/hydrate-auth"
+import { useHydrateAuth } from "@/features/authentication/hydrate-auth"
 import { BlockedConversationsScreen } from "@/features/blocked-conversations/blocked-conversations.screen"
 import { ConversationScreen } from "@/features/conversation/conversation-chat/conversation.screen"
 import { ConversationListScreen } from "@/features/conversation/conversation-list/conversation-list.screen"
@@ -23,6 +23,7 @@ import { GroupMembersListScreen } from "@/features/groups/screens/group-members-
 import { ProfileImportInfoScreen } from "@/features/profiles/profile-import-info.screen"
 import { ProfileScreen } from "@/features/profiles/profile.screen"
 import { XmtpActivityScreen } from "@/features/xmtp/xmtp-activity.screen"
+import { useEffectOnce } from "@/hooks/use-effect-once"
 import { translate } from "@/i18n"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { navigationRef } from "@/navigation/navigation.utils"
@@ -98,9 +99,11 @@ export const AppNavigator = memo(function AppNavigator() {
   const { themeScheme, navigationTheme, setThemeContextOverride, ThemeProvider } =
     useThemeProvider()
 
-  useEffect(() => {
-    hydrateAuth().catch(captureError)
-  }, [])
+  const { hydrateAuth } = useHydrateAuth()
+
+  useEffectOnce(() => {
+    hydrateAuth()
+  })
 
   return (
     <ThemeProvider value={{ themeScheme, setThemeContextOverride }}>

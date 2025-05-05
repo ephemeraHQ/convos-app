@@ -30,6 +30,7 @@ import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { logger } from "@/utils/logger/logger"
 import { ConversationListAwaitingRequests } from "./conversation-list-awaiting-requests"
 import { ConversationListEmpty } from "./conversation-list-empty"
 import { ConversationListStartNewConvoBanner } from "./conversation-list-start-new-convo-banner"
@@ -65,10 +66,11 @@ export const ConversationListScreen = memo(function ConversationListScreen(
           xmtpConversationId: conversationId,
         })
       ) {
+        logger.debug(`Refetching messages on mount for conversation ${conversationId}...`)
         refetchConversationMessagesInfiniteQuery({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: conversationId,
-          caller: "ConversationListScreen",
+          caller: "ConversationListScreen on mount refetch",
         }).catch(captureError)
       }
     })
