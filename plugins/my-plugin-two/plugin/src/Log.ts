@@ -1,9 +1,9 @@
 export class Log {
   static log(str: string) {
-    console.log(`\texpo-notification-service-extension-plugin: ${str}`)
+    console.log(`\tmy-plugin-two: ${str}`)
   }
 
   static error(str: string) {
-    console.error(`\texpo-notification-service-extension-plugin: ${str}`)
+    console.error(`\tmy-plugin-two: ${str}`)
   }
 }

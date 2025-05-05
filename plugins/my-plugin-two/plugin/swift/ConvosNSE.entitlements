@@ -4,7 +4,11 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<!-- The plugin will add the correct group identifier here -->
+		<!-- The plugin will add the correct file sharing group identifier here -->
+	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<!-- The plugin will add the correct keychain sharing group identifier here -->
 	</array>
 </dict>
 </plist>

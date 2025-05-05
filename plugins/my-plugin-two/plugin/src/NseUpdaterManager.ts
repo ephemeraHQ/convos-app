@@ -15,16 +15,11 @@ export default class NseUpdaterManager {
     this.nsePath = `${iosPath}/${NSE_TARGET_NAME}`
   }
 
-  async updateNSEEntitlements(groupIdentifier: string, filtering?: boolean): Promise<void> {
+  async updateNSEEntitlements(groupIdentifier: string): Promise<void> {
     const entitlementsFilePath = `${this.nsePath}/${entitlementsFileName}`
     let entitlementsFile = await FileManager.readFile(entitlementsFilePath)
 
     entitlementsFile = entitlementsFile.replace(GROUP_IDENTIFIER_TEMPLATE_REGEX, groupIdentifier)
-
-    if (filtering) {
-      const filteringKey = `  <key>com.apple.developer.usernotifications.filtering</key>\n  <true/>`
-      entitlementsFile = entitlementsFile.replace("</dict>", `${filteringKey}\n</dict>`)
-    }
 
     await FileManager.writeFile(entitlementsFilePath, entitlementsFile)
   }

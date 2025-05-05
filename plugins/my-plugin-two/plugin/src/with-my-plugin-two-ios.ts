@@ -1,21 +1,8 @@
-/**
- * Expo config plugin for copying NSE to XCode
- */
-
 import assert from "assert"
 import * as fs from "fs"
 import * as path from "path"
-import {
-  ConfigPlugin,
-  InfoPlist,
-  withDangerousMod,
-  withEntitlementsPlist,
-  withInfoPlist,
-  withXcodeProject,
-} from "@expo/config-plugins"
-import { ExpoConfig } from "@expo/config-types"
+import { ConfigPlugin, InfoPlist, withDangerousMod, withXcodeProject } from "@expo/config-plugins"
 import plist from "@expo/plist"
-import getEasManagedCredentialsConfigExtra from "./eas/getEasManagedCredentialsConfigExtra"
 import { FileManager } from "./FileManager"
 import {
   APP_GROUP_KEY,
@@ -30,56 +17,16 @@ import {
   TARGETED_DEVICE_FAMILY,
 } from "./iosConstants"
 import { Log } from "./Log"
-import NseUpdaterManager from "./NseUpdaterManager"
 
-/**
- * Add 'aps-environment' record with current environment to '<project-name>.entitlements' file
- * @see https://documentation.onesignal.com/docs/react-native-sdk-setup#step-4-install-for-ios-using-cocoapods-for-ios-apps
- */
-const withAppEnvironment: ConfigPlugin = (config) => {
-  return withEntitlementsPlist(config, (newConfig) => {
-    newConfig.modResults["aps-environment"] = "production" // Assuming always production for APS
-    return newConfig
-  })
-}
-
-/**
- * Add environment-specific "App Group" permission to the NSE entitlements.
- */
-const withAppGroupPermissions: ConfigPlugin = (config) => {
-  // Construct the dynamic App Group ID based on the main app's bundle identifier
+const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
   assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
   const appGroupId = `group.${config.ios.bundleIdentifier}`
+  const keychainGroup = `$(AppIdentifierPrefix)${appGroupId}` // Prefix needed for keychain-access-groups
+  const KEYCHAIN_ACCESS_GROUP_KEY = "keychain-access-groups"
+  const targetName = NSE_TARGET_NAME
+  const entitlementsFilename = `${targetName}.entitlements`
+  const infoPlistFilename = NSE_INFO_PLIST_FILE_NAME // Already defined in constants
 
-  return withEntitlementsPlist(config, (newConfig) => {
-    // Initialize the array if it doesn't exist in the NSE entitlements
-    if (!Array.isArray(newConfig.modResults[APP_GROUP_KEY])) {
-      newConfig.modResults[APP_GROUP_KEY] = []
-    }
-
-    const modResultsArray = newConfig.modResults[APP_GROUP_KEY] as Array<string>
-
-    // Check if the correct dynamic group ID is already present
-    if (modResultsArray.includes(appGroupId)) {
-      Log.log(`App Group '${appGroupId}' already present in NSE entitlements. Skipping addition.`)
-      return newConfig
-    }
-
-    // Add the correct dynamic group ID
-    Log.log(`Adding App Group '${appGroupId}' to NSE entitlements.`)
-    modResultsArray.push(appGroupId)
-
-    return newConfig
-  })
-}
-
-const withEasManagedCredentials: ConfigPlugin = (config) => {
-  assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
-  config.extra = getEasManagedCredentialsConfigExtra(config as ExpoConfig)
-  return config
-}
-
-const withOneSignalNSE: ConfigPlugin = (config, props) => {
   return withDangerousMod(config, [
     "ios",
     async (config) => {
@@ -87,46 +34,131 @@ const withOneSignalNSE: ConfigPlugin = (config, props) => {
         config.modRequest.projectRoot,
         "plugins/my-plugin-two/plugin/swift",
       )
-      const iosPath = path.join(config.modRequest.projectRoot, "ios")
+      const platformProjectRoot = config.modRequest.platformProjectRoot
+      const nseDir = path.join(platformProjectRoot, targetName)
 
-      /* COPY OVER EXTENSION FILES */
-      fs.mkdirSync(`${iosPath}/${NSE_TARGET_NAME}`, { recursive: true })
+      Log.log(`Ensuring NSE directory exists: ${nseDir}`)
+      fs.mkdirSync(nseDir, { recursive: true })
 
-      for (let i = 0; i < NSE_EXT_FILES.length; i++) {
-        const extFile = NSE_EXT_FILES[i]
-        const targetFile = `${iosPath}/${NSE_TARGET_NAME}/${extFile}`
+      Log.log(`Copying NSE template files from ${sourceDir} to ${nseDir}`)
+      /* --- COPY ALL FILES --- */
+      // Copy Swift files
+      for (const sourceFileName of NSE_SOURCE_FILES) {
+        const sourcePath = path.join(sourceDir, sourceFileName)
+        const targetFile = path.join(nseDir, sourceFileName)
+        await FileManager.copyFile(sourcePath, targetFile)
+      }
+      // Copy plist and entitlements templates
+      for (const extFile of NSE_EXT_FILES) {
+        const targetFile = path.join(nseDir, extFile)
         const src = path.join(sourceDir, extFile)
-        await FileManager.copyFile(`${src}`, targetFile)
+        await FileManager.copyFile(src, targetFile)
       }
+      /* --- END COPY ALL FILES --- */
 
-      // Copy NSE source file either from configuration-provided location, falling back to the default one.
-      for (let i = 0; i < NSE_SOURCE_FILES.length; i++) {
-        const sourceFileName = NSE_SOURCE_FILES[i]
-        const sourcePath = `${sourceDir}/${sourceFileName}`
-        const targetFile = `${iosPath}/${NSE_TARGET_NAME}/${sourceFileName}`
-        await FileManager.copyFile(`${sourcePath}`, targetFile)
+      /* --- MODIFY ENTITLEMENTS --- */
+      const entitlementsPath = path.join(nseDir, entitlementsFilename)
+      Log.log(`Attempting to modify NSE entitlements file at: ${entitlementsPath}`)
+      if (fs.existsSync(entitlementsPath)) {
+        let entitlements
+
+        try {
+          entitlements = plist.parse(fs.readFileSync(entitlementsPath, "utf8"))
+          entitlements = entitlements || {} // Ensure entitlements is an object
+
+          // Add App Group
+          if (!Array.isArray(entitlements[APP_GROUP_KEY])) entitlements[APP_GROUP_KEY] = []
+          const appGroups = entitlements[APP_GROUP_KEY] as Array<string>
+          if (!appGroups.includes(appGroupId)) {
+            Log.log(`Adding App Group '${appGroupId}' to NSE entitlements.`)
+            appGroups.push(appGroupId)
+          }
+
+          // Add Keychain Access Group
+          if (!Array.isArray(entitlements[KEYCHAIN_ACCESS_GROUP_KEY]))
+            entitlements[KEYCHAIN_ACCESS_GROUP_KEY] = []
+          const keychainGroups = entitlements[KEYCHAIN_ACCESS_GROUP_KEY] as Array<string>
+          if (!keychainGroups.includes(keychainGroup)) {
+            Log.log(`Adding Keychain Group '${keychainGroup}' to NSE entitlements.`)
+            keychainGroups.push(keychainGroup)
+            // Add default group too, might be needed sometimes
+            const defaultKeychainGroup = `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}.${targetName}`
+            if (!keychainGroups.includes(defaultKeychainGroup)) {
+              keychainGroups.push(defaultKeychainGroup)
+            }
+          }
+
+          // Add APS Environment if needed for NSE specifically
+          entitlements["aps-environment"] = "production"
+
+          fs.writeFileSync(entitlementsPath, plist.build(entitlements))
+          Log.log(`Successfully updated ${entitlementsFilename}`)
+        } catch (e: any) {
+          Log.log(`Error processing NSE entitlements plist: ${e.message}.`)
+        }
+      } else {
+        Log.log(
+          `NSE entitlements file not found at ${entitlementsPath} after copy. Skipping modification.`,
+        )
       }
+      /* --- END MODIFY ENTITLEMENTS --- */
 
-      /* MODIFY COPIED EXTENSION FILES */
-      const nseUpdater = new NseUpdaterManager(iosPath)
-      await nseUpdater.updateNSEBundleVersion(config.ios?.buildNumber ?? DEFAULT_BUNDLE_VERSION)
-      await nseUpdater.updateNSEBundleShortVersion(config?.version ?? DEFAULT_BUNDLE_SHORT_VERSION)
+      /* --- MODIFY INFO.PLIST --- */
+      const infoPlistPath = path.join(nseDir, infoPlistFilename)
+      Log.log(`Attempting to modify NSE Info.plist at: ${infoPlistPath}`)
+      if (fs.existsSync(infoPlistPath)) {
+        let infoPlistContents: InfoPlist
+        try {
+          infoPlistContents = plist.parse(fs.readFileSync(infoPlistPath, "utf8")) as InfoPlist
+
+          // Update Bundle Versions
+          const bundleVersion = config.ios?.buildNumber ?? DEFAULT_BUNDLE_VERSION
+          const shortVersion = config.version ?? DEFAULT_BUNDLE_SHORT_VERSION
+          Log.log(`Setting CFBundleVersion to ${bundleVersion} in ${infoPlistFilename}`)
+          infoPlistContents.CFBundleVersion = bundleVersion
+          Log.log(`Setting CFBundleShortVersionString to ${shortVersion} in ${infoPlistFilename}`)
+          infoPlistContents.CFBundleShortVersionString = shortVersion
+
+          // Set XMTP Environment
+          const expoEnv =
+            process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
+          let xmtpEnvironment = "local"
+          if (expoEnv === "production") xmtpEnvironment = "production"
+          else if (expoEnv === "preview") xmtpEnvironment = "dev"
+          else if (expoEnv === "development") xmtpEnvironment = "local"
+          Log.log(`Setting XmtpEnvironment in ${infoPlistFilename} to: ${xmtpEnvironment}`)
+          infoPlistContents.XmtpEnvironment = xmtpEnvironment
+
+          // Set App Group Identifier
+          Log.log(`Setting AppGroupIdentifier in ${infoPlistFilename} to: ${appGroupId}`)
+          infoPlistContents.AppGroupIdentifier = appGroupId
+
+          fs.writeFileSync(infoPlistPath, plist.build(infoPlistContents))
+          Log.log(`Successfully updated ${infoPlistFilename}`)
+        } catch (e: any) {
+          Log.log(`Error processing NSE Info.plist: ${e.message}.`)
+        }
+      } else {
+        Log.log(`NSE Info.plist not found at ${infoPlistPath} after copy. Skipping modification.`)
+      }
+      /* --- END MODIFY INFO.PLIST --- */
 
       return config
     },
   ])
 }
 
-const withOneSignalXcodeProject: ConfigPlugin = (config, props) => {
+const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults
 
     // Construct the dynamic App Group ID again here if needed for checks, or rely on config
     assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
     const appGroupId = `group.${config.ios.bundleIdentifier}` // Needed for potential checks/logging
+    const entitlementsFilename = `${NSE_TARGET_NAME}.entitlements`
 
     if (!!xcodeProject.pbxTargetByName(NSE_TARGET_NAME)) {
-      Log.log(`${NSE_TARGET_NAME} already exists in project. Skipping...`)
+      Log.log(`${NSE_TARGET_NAME} target already exists in project. Skipping...`)
       // Optionally add checks here to ensure existing target has correct App Group
       return newConfig
     }
@@ -182,7 +214,7 @@ const withOneSignalXcodeProject: ConfigPlugin = (config, props) => {
         buildSettingsObj.IPHONEOS_DEPLOYMENT_TARGET = IPHONEOS_DEPLOYMENT_TARGET
         buildSettingsObj.TARGETED_DEVICE_FAMILY = TARGETED_DEVICE_FAMILY
         // Ensure entitlements path is correct relative to the project structure
-        buildSettingsObj.CODE_SIGN_ENTITLEMENTS = `${NSE_TARGET_NAME}/${NSE_TARGET_NAME}.entitlements`
+        buildSettingsObj.CODE_SIGN_ENTITLEMENTS = `${NSE_TARGET_NAME}/${entitlementsFilename}` // Use variable
         buildSettingsObj.CODE_SIGN_STYLE = "Automatic"
         buildSettingsObj.SWIFT_VERSION = "5.0" // Ensure this matches your Swift version
       }
@@ -196,66 +228,6 @@ const withOneSignalXcodeProject: ConfigPlugin = (config, props) => {
   })
 }
 
-/**
- * Writes environment-specific settings (XMTP Env, App Group ID) to the NSE's Info.plist.
- */
-const withNseInfoPlist: ConfigPlugin = (config) => {
-  // Construct the dynamic App Group ID
-  assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
-  const appGroupId = `group.${config.ios.bundleIdentifier}`
-
-  return withInfoPlist(config, (config) => {
-    const targetName = NSE_TARGET_NAME
-    const nsePlistPath = path.join(
-      config.modRequest.platformProjectRoot,
-      targetName,
-      NSE_INFO_PLIST_FILE_NAME,
-    )
-
-    Log.log(`Attempting to modify NSE Info.plist at: ${nsePlistPath}`)
-
-    let nsePlistContents: InfoPlist
-    try {
-      nsePlistContents = plist.parse(fs.readFileSync(nsePlistPath, "utf8"))
-    } catch (e: any) {
-      Log.log(`Error parsing NSE Info.plist: ${e.message}. Skipping modification.`)
-      return config
-    }
-
-    // --- Set XMTP Environment ---
-    const expoEnv = process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
-    let xmtpEnvironment = "local"
-
-    if (expoEnv === "production") {
-      xmtpEnvironment = "production"
-    } else if (expoEnv === "preview") {
-      xmtpEnvironment = "dev" // Keep preview on dev for XMTP
-    } else if (expoEnv === "development") {
-      xmtpEnvironment = "local"
-    }
-
-    Log.log(
-      `Setting XmtpEnvironment in ${targetName}/${NSE_INFO_PLIST_FILE_NAME} to: ${xmtpEnvironment}`,
-    )
-    nsePlistContents.XmtpEnvironment = xmtpEnvironment
-
-    // --- Set App Group Identifier ---
-    Log.log(
-      `Setting AppGroupIdentifier in ${targetName}/${NSE_INFO_PLIST_FILE_NAME} to: ${appGroupId}`,
-    )
-    nsePlistContents.AppGroupIdentifier = appGroupId // Use a distinct key
-
-    try {
-      fs.writeFileSync(nsePlistPath, plist.build(nsePlistContents))
-      Log.log(`Successfully updated ${targetName}/${NSE_INFO_PLIST_FILE_NAME}`)
-    } catch (e: any) {
-      Log.log(`Error writing updated ${targetName}/${NSE_INFO_PLIST_FILE_NAME}: ${e.message}`)
-    }
-
-    return config
-  })
-}
-
 const withPodfile: ConfigPlugin = (config) => {
   return withDangerousMod(config, [
     "ios",
@@ -266,13 +238,10 @@ const withPodfile: ConfigPlugin = (config) => {
       // Check if the target already exists to avoid duplicates
       if (podfileContent.includes(`target '${NSE_TARGET_NAME}'`)) {
         Log.log(`${NSE_TARGET_NAME} target already exists in Podfile. Skipping...`)
-        // Even if skipping, ensure the version inside is correct (optional robustness)
-        // This part is more complex, might be better to just ensure clean state first
         return config
       }
 
-      // Use the version required by @xmtp/react-native-sdk@4.0.5
-      // TODO: Dynamically read this from package.json if possible
+      // TODO: Dynamically read this from package.json dependencies/peerDependencies if possible
       const requiredXmtpVersion = "4.0.7"
 
       const nseTargetBlock = `
@@ -297,12 +266,16 @@ end
 }
 
 export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
-  config = withAppEnvironment(config, props) // Keep this if needed for APS env
-  config = withAppGroupPermissions(config, props) // Now uses dynamic group ID
-  config = withOneSignalNSE(config, props)
-  config = withOneSignalXcodeProject(config, props)
-  config = withNseInfoPlist(config) // Now writes dynamic group ID to plist
+  // 1. Copy files AND modify copied entitlements/Info.plist
+  config = withNseFilesAndPlistMods(config)
+  // 2. Set up the Xcode project target, linking files and setting build settings
+  config = withXcodeProjectSettings(config, props)
+  // 3. Modify the Podfile
   config = withPodfile(config)
-  config = withEasManagedCredentials(config, props)
+
+  // Optional: These might modify main app settings/entitlements if needed
+  // config = withAppEnvironment(config, props);
+  // config = withEasManagedCredentials(config, props);
+
   return config
 }
