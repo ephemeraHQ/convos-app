@@ -32,6 +32,9 @@ import { captureError } from "@/utils/capture-error"
 import { navigateFromHome } from "@/navigation/navigation.utils"
 import { GenericError } from "@/utils/error"
 
+// Delay in ms before redirecting on errors or missing conversation
+const REDIRECT_DELAY_MS = 300
+
 export const ConversationScreen = memo(function ConversationScreen(
   props: NativeStackScreenProps<NavigationParamList, "Conversation">,
 ) {
@@ -68,7 +71,7 @@ const Content = memo(function Content() {
   )
   
   // Timeout reference for loading states
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { data: conversation, isLoading: isLoadingConversation, error } = useQuery({
     ...getConversationQueryOptions({
@@ -95,7 +98,7 @@ const Content = memo(function Content() {
       // Add a small delay before navigating to make the transition smoother
       const redirectTimer = setTimeout(() => {
         navigateFromHome("Chats")
-      }, 300)
+      }, REDIRECT_DELAY_MS)
       
       return () => clearTimeout(redirectTimer)
     }
@@ -121,7 +124,7 @@ const Content = memo(function Content() {
           // Add a small delay before navigating
           setTimeout(() => {
             navigateFromHome("Chats")
-          }, 300)
+          }, REDIRECT_DELAY_MS)
         }
       }, 5000) // 5 second timeout
     }
@@ -134,6 +137,20 @@ const Content = memo(function Content() {
       }
     }
   }, [isLoadingConversation, isCreatingNewConversation, xmtpConversationId])
+
+  // Handle missing conversation data
+  useEffect(() => {
+    if (!isCreatingNewConversation && !conversation && !isLoadingConversation && xmtpConversationId) {
+      captureError(
+        new GenericError({
+          error: new Error("No conversation data after loading"),
+          additionalMessage: `Conversation data not available, redirecting to Chats`,
+        }),
+      )
+      const timer = setTimeout(() => navigateFromHome("Chats"), REDIRECT_DELAY_MS)
+      return () => clearTimeout(timer)
+    }
+  }, [isCreatingNewConversation, conversation, isLoadingConversation, xmtpConversationId])
 
   useEffect(() => {
     if (xmtpConversationId) {
@@ -150,19 +167,13 @@ const Content = memo(function Content() {
     )
   }
   
-  // If we're not creating a new conversation and don't have conversation data, redirect
+  // Show loading indicator while we're about to redirect
   if (!isCreatingNewConversation && !conversation && xmtpConversationId) {
-    captureError(
-      new GenericError({
-        error: new Error("No conversation data after loading"),
-        additionalMessage: `Conversation data not available, redirecting to Chats`,
-      }),
+    return (
+      <Center style={$globalStyles.flex1}>
+        <ActivityIndicator />
+      </Center>
     )
-    // Add a small delay before navigating
-    setTimeout(() => {
-      navigateFromHome("Chats")
-    }, 300)
-    return <Center style={$globalStyles.flex1}><ActivityIndicator /></Center>
   }
 
   return (
