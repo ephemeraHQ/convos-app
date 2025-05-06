@@ -6,12 +6,15 @@ import {
   isNotificationExpoNewMessageNotification,
 } from "@/features/notifications/notifications-assertions"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
-import { navigate } from "@/navigation/navigation.utils"
+import { navigate, navigateFromHome } from "@/navigation/navigation.utils"
 import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
+import { getConversationQueryData, ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 
 export function useNotificationListeners() {
   const foregroundNotificationListener = useRef<Notifications.Subscription>()
@@ -43,9 +46,41 @@ export function useNotificationListeners() {
           notificationsLogger.debug(
             `Convos modified notification tapped: ${JSON.stringify(tappedNotification)}`,
           )
-          return navigate("Conversation", {
-            xmtpConversationId: tappedNotification.request.content.data.message.xmtpConversationId,
-          })
+          
+          // Check if conversation exists before navigating
+          const xmtpConversationId = tappedNotification.request.content.data.message.xmtpConversationId
+          const currentSender = getSafeCurrentSender()
+          
+          try {
+            // Prepare the conversation before navigating
+            const conversationExists = await ensureConversationExistsWithRetry({
+              clientInboxId: currentSender.inboxId,
+              xmtpConversationId,
+            })
+            
+            if (!conversationExists) {
+              notificationsLogger.debug(
+                `Conversation not found after retries, navigating to Chats instead`
+              )
+              return navigateFromHome("Chats")
+            }
+            
+            // If we got here, the conversation exists, so navigate to it
+            return navigateFromHome("Conversation", {
+              xmtpConversationId,
+            })
+          } catch (error) {
+            notificationsLogger.debug(`Error ensuring conversation existence, navigating to Chats`)
+            captureError(
+              new NotificationError({
+                error,
+                additionalMessage: `Error ensuring conversation exists`,
+              })
+            )
+            // Add a small delay before navigating to make transitions smooth
+            await new Promise(resolve => setTimeout(resolve, 300))
+            return navigateFromHome("Chats")
+          }
         }
 
         if (isNotificationExpoNewMessageNotification(tappedNotification)) {
@@ -112,9 +147,40 @@ export function useNotificationListeners() {
           const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
           const tappedXmtpConversationId =
             getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
-          return navigate("Conversation", {
-            xmtpConversationId: tappedXmtpConversationId,
-          })
+            
+          // Check if conversation exists before navigating
+          const currentSender = getSafeCurrentSender()
+          
+          try {
+            // Prepare the conversation before navigating
+            const conversationExists = await ensureConversationExistsWithRetry({
+              clientInboxId: currentSender.inboxId,
+              xmtpConversationId: tappedXmtpConversationId,
+            })
+            
+            if (!conversationExists) {
+              notificationsLogger.debug(
+                `Conversation not found after retries, navigating to Chats instead`
+              )
+              return navigateFromHome("Chats")
+            }
+            
+            // If we got here, the conversation exists, so navigate to it
+            return navigateFromHome("Conversation", {
+              xmtpConversationId: tappedXmtpConversationId,
+            })
+          } catch (error) {
+            notificationsLogger.debug(`Error ensuring conversation existence, navigating to Chats`)
+            captureError(
+              new NotificationError({
+                error,
+                additionalMessage: `Error ensuring conversation exists`,
+              })
+            )
+            // Add a small delay before navigating to make transitions smooth
+            await new Promise(resolve => setTimeout(resolve, 300))
+            return navigateFromHome("Chats")
+          }
         }
 
         throw new Error(`Unknown notification type: ${JSON.stringify(tappedNotification)}`)
@@ -125,6 +191,8 @@ export function useNotificationListeners() {
             additionalMessage: "Error handling notification tap",
           }),
         )
+        // If any error occurs during notification handling, navigate to Chats
+        navigateFromHome("Chats")
       }
     },
     [],
@@ -175,6 +243,75 @@ export function useNotificationListeners() {
       // }
     }
   }, [handleNotificationTap])
+}
+
+/**
+ * Helper function to check if a conversation exists
+ * Uses ensureConversationQueryData which will try to fetch conversation data if it doesn't exist in cache
+ */
+async function doesConversationExist(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  try {
+    // First check if it's in the cache
+    const cachedConversation = getConversationQueryData(args)
+    if (cachedConversation) {
+      return true
+    }
+    
+    // If not in cache, try to fetch it
+    const conversation = await ensureConversationQueryData({
+      ...args,
+      caller: 'notificationConversationCheck',
+    })
+    
+    // If conversation was fetched successfully, it exists
+    return !!conversation
+  } catch (error) {
+    // If there was an error fetching the conversation, it either doesn't exist
+    // or there was a network issue - in either case, safer to return false
+    notificationsLogger.debug(`Error checking conversation existence: ${error}`)
+    return false
+  }
+}
+
+/**
+ * Ensures a conversation exists with retry mechanism
+ * Will retry multiple times with increasing delays before giving up
+ */
+async function ensureConversationExistsWithRetry(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+}): Promise<boolean> {
+  const maxRetries = 3
+  const initialDelayMs = 500
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // Try to fetch the conversation
+    const exists = await doesConversationExist(args)
+    
+    if (exists) {
+      // If found on this attempt, return success
+      if (attempt > 0) {
+        notificationsLogger.debug(`Conversation found on retry attempt ${attempt + 1}`)
+      }
+      return true
+    }
+    
+    // If this is the last attempt, don't wait
+    if (attempt === maxRetries - 1) {
+      break
+    }
+    
+    // Wait with exponential backoff before retrying
+    const delayMs = initialDelayMs * Math.pow(2, attempt)
+    notificationsLogger.debug(`Conversation not found on attempt ${attempt + 1}, retrying in ${delayMs}ms`)
+    await new Promise(resolve => setTimeout(resolve, delayMs))
+  }
+  
+  notificationsLogger.debug(`Conversation not found after ${maxRetries} attempts`)
+  return false
 }
 
 // async function getDecryptedMessageAndAddToCache(args: {
