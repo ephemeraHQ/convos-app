@@ -133,6 +133,12 @@ function useHeaderWrapper() {
               contentFit="contain"
             />
             <Text preset="body">Convos</Text>
+            <Text
+              preset="smaller"
+              color="secondary"
+              // This is to make the text look centered vertically
+              style={{ paddingLeft: theme.spacing.xxs, paddingTop: 3 }}
+            >EARLY</Text>
           </HStack>
         </AnimatedCenter>
       ),
