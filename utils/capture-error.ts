@@ -2,6 +2,7 @@ import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import {
   BaseError,
   ensureError,
+  ExternalCancellationError,
   FeedbackError,
   GenericError,
   UserCancelledError,
@@ -16,13 +17,15 @@ export async function captureError(error: BaseError) {
   }
 
   try {
+    if (error.hasErrorType(ExternalCancellationError)) {
+      return
+    }
+
     if (error.hasErrorType(FeedbackError)) {
-      console.log("FeedbackError")
       return
     }
 
     if (error.hasErrorType(UserCancelledError)) {
-      console.log("UserCancelledError")
       return
     }
 

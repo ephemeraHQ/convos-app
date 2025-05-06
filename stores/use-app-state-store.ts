@@ -1,4 +1,4 @@
-import { focusManager } from "@tanstack/react-query"
+import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppState, AppStateStatus } from "react-native"
 import { create } from "zustand"
@@ -6,7 +6,9 @@ import { subscribeWithSelector } from "zustand/middleware"
 import { getAllSenders } from "@/features/authentication/multi-inbox.store"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
+import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
+import { ExternalCancellationError } from "@/utils/error"
 import { logger } from "@/utils/logger/logger"
 
 type State = {
@@ -88,9 +90,9 @@ export const waitUntilAppActive = async () => {
 
 export function useStartListeningToAppState() {
   useEffect(() => {
-    // Listen to the app state changes
     const unsubscribeFromAppState = AppState.addEventListener("change", (nextAppState) => {
-      focusManager.setFocused(nextAppState === "active")
+      const isNowActive = nextAppState === "active"
+      reactQueryFocusManager.setFocused(isNowActive)
       useAppStateStore.getState().actions.handleAppStateChange(nextAppState)
     })
 
@@ -105,17 +107,24 @@ export function useStartListeningToAppState() {
           (currentState === "inactive" || currentState === "background") &&
           previousState &&
           previousState === "active"
+        const isNowBackground = currentState === "background"
 
         if (isNowActive) {
           startStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
           fetchOrRefetchNotificationsPermissions().catch(captureError)
         }
 
-        if (isNowInactive) {
+        if (isNowInactive || isNowBackground) {
           stopStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
+          useXmtpActivityStore.getState().actions.cancelAllActiveOperations(
+            new ExternalCancellationError({
+              error: new Error("App state changed to inactive or background"),
+            }),
+          )
         }
       },
     )
+
     return () => {
       unsubscribeFromAppState.remove()
       unsubscribeFromStore()

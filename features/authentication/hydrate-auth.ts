@@ -7,12 +7,10 @@ import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
-import { AuthenticationError } from "@/utils/error"
+import { AuthenticationError, BaseError, ExternalCancellationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
 
 export function useHydrateAuth() {
-  authLogger.debug("Hydrating auth...")
-
   const { logout } = useLogout()
 
   const hydrateAuth = useCallback(() => {
@@ -31,6 +29,11 @@ export function useHydrateAuth() {
     }).catch((error) => {
       if (isXmtpNoNetworkError(error) || !useAppStore.getState().isInternetReachable) {
         authLogger.debug("No network error while hydrating auth so just returning...")
+        return
+      }
+
+      if (error instanceof BaseError && error.hasErrorType(ExternalCancellationError)) {
+        authLogger.debug("External cancellation error while hydrating auth so just returning...")
         return
       }
 

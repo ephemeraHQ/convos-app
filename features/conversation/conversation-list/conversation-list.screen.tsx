@@ -24,7 +24,7 @@ import {
 import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useEffectWhenCondition } from "@/hooks/use-effect-once-when-condition"
+import { useEffectOnce } from "@/hooks/use-effect-once"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -52,29 +52,32 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   const currentSender = useSafeCurrentSender()
 
   // ONLY when we mount, we want to refetch messages for recent conversations
-  useEffectWhenCondition(() => {
-    conversationsIds?.forEach((conversationId) => {
-      const conversation = getConversationQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-      })
-
-      if (
-        conversation &&
-        conversationHasRecentActivities({
+  useEffectOnce(() => {
+    conversationsIds
+      // Max 5 because otherwise we have performance issues
+      .slice(0, 5)
+      .forEach((conversationId) => {
+        const conversation = getConversationQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: conversationId,
         })
-      ) {
-        logger.debug(`Refetching messages on mount for conversation ${conversationId}...`)
-        refetchConversationMessagesInfiniteQuery({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
-          caller: "ConversationListScreen on mount refetch",
-        }).catch(captureError)
-      }
-    })
-  }, true)
+
+        if (
+          conversation &&
+          conversationHasRecentActivities({
+            clientInboxId: currentSender.inboxId,
+            xmtpConversationId: conversationId,
+          })
+        ) {
+          logger.debug(`Refetching messages on mount for conversation ${conversationId}...`)
+          refetchConversationMessagesInfiniteQuery({
+            clientInboxId: currentSender.inboxId,
+            xmtpConversationId: conversationId,
+            caller: "ConversationListScreen on mount refetch",
+          }).catch(captureError)
+        }
+      })
+  })
 
   useConversationListScreenHeader()
 

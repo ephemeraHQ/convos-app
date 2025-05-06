@@ -22,7 +22,6 @@ import { GroupDetailsScreen } from "@/features/groups/screens/group-details.scre
 import { GroupMembersListScreen } from "@/features/groups/screens/group-members-list.screen"
 import { ProfileImportInfoScreen } from "@/features/profiles/profile-import-info.screen"
 import { ProfileScreen } from "@/features/profiles/profile.screen"
-import { XmtpActivityScreen } from "@/features/xmtp/xmtp-activity.screen"
 import { useEffectOnce } from "@/hooks/use-effect-once"
 import { translate } from "@/i18n"
 import { NavigationParamList } from "@/navigation/navigation.types"
@@ -221,13 +220,6 @@ const AppStacks = memo(function AppStacks() {
           <AppNativeStack.Screen name="Profile" component={ProfileScreen} />
           <AppNativeStack.Screen name="GroupDetails" component={GroupDetailsScreen} />
           <AppNativeStack.Screen name="AddGroupMembers" component={AddGroupMembersScreen} />
-          <AppNativeStack.Screen
-            options={{
-              presentation: "modal",
-            }}
-            name="XmtpActivity"
-            component={XmtpActivityScreen}
-          />
           <AppNativeStack.Screen
             options={{
               title: translate("edit_group"),
