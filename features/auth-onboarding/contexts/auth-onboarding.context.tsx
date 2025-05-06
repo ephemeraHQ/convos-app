@@ -17,7 +17,11 @@ import { createSubOrganization } from "@/features/authentication/authentication.
 import { useHydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
-import { useCreateXmtpSignerFromTurnkey } from "@/features/wallets/hooks/use-create-xmtp-signer-from-turnkey"
+import {
+  useCreateXmtpSignerFromTurnkey,
+  useCreateXmtpSignerFromTurnkeyThree,
+  useCreateXmtpSignerFromTurnkeyTwo,
+} from "@/features/wallets/hooks/use-create-xmtp-signer-from-turnkey"
 import { createXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client-create"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
@@ -60,6 +64,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
   const { hydrateAuth } = useHydrateAuth()
 
   const createXmtpSignerFromTurnkey = useCreateXmtpSignerFromTurnkey()
+  const createXmtpSignerFromTurnkeyTwo = useCreateXmtpSignerFromTurnkeyTwo()
+  const createXmtpSignerFromTurnkeyThree = useCreateXmtpSignerFromTurnkeyThree()
 
   const flowType = useRef<"login" | "signup">("login")
   const isCreatingXmtpClient = useRef(false)
@@ -84,14 +90,51 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         isCreatingXmtpClient.current = true
         authLogger.debug(`Creating XMTP client for wallet: ${walletAddress}`)
 
-        const { data: xmtpClient, error: xmtpError } = await tryCatch(
+        // Try first signer
+        let { data: xmtpClient, error: xmtpError } = await tryCatch(
           createXmtpClient({
             inboxSigner: createXmtpSignerFromTurnkey(),
           }),
         )
 
         if (xmtpError) {
-          throw xmtpError
+          captureError(
+            new AuthenticationError({
+              error: xmtpError,
+              additionalMessage: "Failed to create XMTP client with first signer",
+            }),
+          )
+
+          // Try second signer if first fails
+          const secondTryResult = await tryCatch(
+            createXmtpClient({
+              inboxSigner: createXmtpSignerFromTurnkeyTwo(),
+            }),
+          )
+          xmtpClient = secondTryResult.data
+          xmtpError = secondTryResult.error
+
+          if (xmtpError) {
+            captureError(
+              new AuthenticationError({
+                error: xmtpError,
+                additionalMessage: "Failed to create XMTP client with second signer",
+              }),
+            )
+
+            const thirdTryResult = await tryCatch(
+              createXmtpClient({
+                inboxSigner: createXmtpSignerFromTurnkeyThree(),
+              }),
+            )
+            xmtpClient = thirdTryResult.data
+            xmtpError = thirdTryResult.error
+
+            // If all three signers fail, throw the error
+            if (xmtpError) {
+              throw xmtpError
+            }
+          }
         }
 
         if (!xmtpClient) {
@@ -139,7 +182,16 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
       }
     })()
-  }, [turnkeyClient, session, logout, readyForXmtpClient, createXmtpSignerFromTurnkey, hydrateAuth])
+  }, [
+    turnkeyClient,
+    session,
+    logout,
+    readyForXmtpClient,
+    createXmtpSignerFromTurnkey,
+    createXmtpSignerFromTurnkeyTwo,
+    createXmtpSignerFromTurnkeyThree,
+    hydrateAuth,
+  ])
 
   const login = useCallback(async () => {
     if (!isSupported()) {
