@@ -14,6 +14,7 @@ export type IPresets =
   | "formHelper"
   | "formLabel"
   | "emojiSymbol"
+  | "uncensoredTitle"
 
 export const textPresets: Record<IPresets, ThemedStyleArray<TextStyle>> = {
   title: [textBaseStyle, textSizeStyles.xl, textFontWeightStyles.bold],
@@ -45,4 +46,11 @@ export const textPresets: Record<IPresets, ThemedStyleArray<TextStyle>> = {
   ],
 
   emojiSymbol: [textBaseStyle, { fontSize: 22, lineHeight: 28 }],
+
+  uncensoredTitle: [textBaseStyle, {
+    fontSize: 56,
+    lineHeight: 56,
+    fontFamily: 'Helvetica Neue',
+    fontWeight: 500,
+  }],
 }
