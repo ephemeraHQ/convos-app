@@ -19,7 +19,7 @@ export const streamAllMessages = async (args: {
     // Not wrapping the stream initiation itself as it's long-running
     await client.conversations.streamAllMessages((newMessage) => {
       if (!isSupportedXmtpMessage(newMessage)) {
-        xmtpLogger.debug(`Skipping message streamed because it's not supported`, newMessage)
+        xmtpLogger.debug(`Skipping message streamed because it's not supported`)
         return Promise.resolve()
       }
       return onNewMessage(newMessage)
