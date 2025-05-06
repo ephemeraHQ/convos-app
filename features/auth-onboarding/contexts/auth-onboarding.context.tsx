@@ -89,7 +89,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
             inboxSigner: createXmtpSignerFromTurnkey(),
           }),
         )
-        authLogger.debug("XMTP client created successfully")
 
         if (xmtpError) {
           throw xmtpError
@@ -98,6 +97,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         if (!xmtpClient) {
           throw new Error("XMTP client creation failed")
         }
+
+        authLogger.debug("XMTP client created successfully")
 
         authLogger.debug("Validating XMTP installation")
         const isValid = await validateXmtpInstallation({
