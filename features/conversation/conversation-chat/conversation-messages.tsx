@@ -268,6 +268,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
     [currentSender.inboxId],
   )
 
+  logger.debug(`Rendering ${messageIds.length} messages`)
+
   return (
     <ReanimatedFlashList
       ref={scrollRef}

@@ -14,7 +14,7 @@ import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { config } from "@/config"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { createSubOrganization } from "@/features/authentication/authentication.api"
-import { hydrateAuth } from "@/features/authentication/hydrate-auth"
+import { useHydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
 import { useCreateXmtpSignerFromTurnkey } from "@/features/wallets/hooks/use-create-xmtp-signer-from-turnkey"
@@ -57,6 +57,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
   } = useTurnkey()
 
   const { logout } = useLogout()
+  const { hydrateAuth } = useHydrateAuth()
 
   const createXmtpSignerFromTurnkey = useCreateXmtpSignerFromTurnkey()
 
@@ -88,7 +89,6 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
             inboxSigner: createXmtpSignerFromTurnkey(),
           }),
         )
-        authLogger.debug("XMTP client created successfully")
 
         if (xmtpError) {
           throw xmtpError
@@ -97,6 +97,8 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         if (!xmtpClient) {
           throw new Error("XMTP client creation failed")
         }
+
+        authLogger.debug("XMTP client created successfully")
 
         authLogger.debug("Validating XMTP installation")
         const isValid = await validateXmtpInstallation({
@@ -137,7 +139,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
       }
     })()
-  }, [turnkeyClient, session, logout, readyForXmtpClient, createXmtpSignerFromTurnkey])
+  }, [turnkeyClient, session, logout, readyForXmtpClient, createXmtpSignerFromTurnkey, hydrateAuth])
 
   const login = useCallback(async () => {
     if (!isSupported()) {

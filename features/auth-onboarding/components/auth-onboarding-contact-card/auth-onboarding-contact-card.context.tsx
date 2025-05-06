@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { z } from "zod"
 import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-onboarding.store"
 import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
-import { hydrateAuth } from "@/features/authentication/hydrate-auth"
+import { useHydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useCreateUserMutation } from "@/features/current-user/create-user.mutation"
 import { ConvosProfileSchema } from "@/features/profiles/profiles.types"
@@ -47,6 +47,7 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
   const setUserFriendlyError = useAuthOnboardingStore((s) => s.actions.setUserFriendlyError)
 
   const { user } = useTurnkey()
+  const { hydrateAuth } = useHydrateAuth()
 
   const handleContinue = useCallback(async () => {
     try {
@@ -116,7 +117,7 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
     } finally {
       setPressedOnContinue(false)
     }
-  }, [createUserAsync, setUserFriendlyError, user?.id])
+  }, [createUserAsync, setUserFriendlyError, user?.id, hydrateAuth])
 
   const isPending =
     isCreatingUser || isAvatarUploading || (pressedOnContinue && isProcessingWeb3Stuff)

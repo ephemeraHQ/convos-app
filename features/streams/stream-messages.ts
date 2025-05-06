@@ -48,8 +48,6 @@ async function handleNewMessage(args: {
 }) {
   const { clientInboxId, message } = args
 
-  streamLogger.debug(`New message:`, message)
-
   // Process reaction messages
   if (isReactionMessage(message)) {
     processReactionConversationMessages({ clientInboxId, reactionMessages: [message] })

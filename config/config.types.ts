@@ -19,6 +19,9 @@ export type IConfig = {
     apiUrl: string
     webDomain: string
   }
+  ios: {
+    appGroupId: string
+  }
   expo: {
     projectId: string
   }
