@@ -10,7 +10,7 @@ import {
 import { useSearchExistingDmsQuery } from "@/features/conversation/conversation-create/queries/search-existing-dms.query"
 import { useSearchExistingGroupsByGroupMembersQuery } from "@/features/conversation/conversation-create/queries/search-existing-groups-by-group-members.query"
 import { useSearchExistingGroupsByGroupNameQuery } from "@/features/conversation/conversation-create/queries/search-existing-groups-by-group-name.query"
-import { useDmQuery, getDmQueryOptions } from "@/features/dm/dm.query"
+import { useDmQuery, getDmQueryData } from "@/features/dm/dm.query"
 import { useSearchConvosUsersQuery } from "@/features/search-users/queries/search-convos-users.query"
 import {
   useBaseNameResolution,
@@ -23,7 +23,6 @@ import { useAnimatedKeyboard } from "@/hooks/use-animated-keyboard"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { IEthereumAddress, isEthereumAddress } from "@/utils/evm/address"
-import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { SearchUsersResultsList } from "@/features/search-users/search-users-results-list"
 import { SearchUsersResultsListItemEthAddress } from "@/features/search-users/search-users-results-list-item-eth-address"
 import { SearchUsersResultsListItemGroup } from "@/features/search-users/search-users-results-list-item-group"
@@ -38,7 +37,6 @@ const MAX_RESULTS_WHEN_SMALL_SEARCH_QUERY = 5
 type ISearchResultItemDm = {
   type: "dm"
   xmtpConversationId: IXmtpConversationId
-  inboxId: IXmtpInboxId
 }
 
 type ISearchResultItemGroup = {
@@ -245,32 +243,17 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
   const { data: baseEthAddressResolution } = useBaseNameResolution(searchTextValue)
   const { data: unstoppableDomainEthAddressResolution } =
     useUnstoppableDomainNameResolution(searchTextValue)
-
-  // Fetch DM data to get peerInboxIds
-  const dmsWithPeerInboxIds = useMemo(() => {
-    const result: { xmtpConversationId: IXmtpConversationId; peerInboxId?: IXmtpInboxId }[] = []
+  
+  const getDmKey = useCallback((xmtpConversationId: IXmtpConversationId) => {
+    const dmData = getDmQueryData({
+      clientInboxId: currentUserInboxId,
+      xmtpConversationId,
+    })
     
-    for (const xmtpConversationId of existingDm) {
-      const dmData = reactQueryClient.getQueryData(
-        getDmQueryOptions({
-          clientInboxId: currentUserInboxId,
-          xmtpConversationId,
-          caller: "ConversationCreateListResults",
-        }).queryKey
-      )
-      
-      if (dmData?.peerInboxId) {
-        result.push({
-          xmtpConversationId,
-          peerInboxId: dmData.peerInboxId,
-        })
-      } else {
-        result.push({ xmtpConversationId })
-      }
-    }
-    
-    return result
-  }, [existingDm, currentUserInboxId])
+    return dmData?.peerInboxId 
+      ? `user-${dmData.peerInboxId}` 
+      : `dm-${xmtpConversationId}`
+  }, [currentUserInboxId])
 
   const listData = useMemo(() => {
     const items: SearchResultItem[] = []
@@ -279,11 +262,10 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
 
     // 1. Add DMs first if no selected users
     if (selectedSearchUserInboxIds.length === 0) {
-      dmsWithPeerInboxIds.forEach(({ xmtpConversationId, peerInboxId }) => {
+      existingDm.forEach((xmtpConversationId) => {
         items.push({
           type: "dm" as const,
           xmtpConversationId,
-          inboxId: peerInboxId as IXmtpInboxId || "" as IXmtpInboxId,
         })
       })
     }
@@ -348,8 +330,9 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
       let key: string
 
       if (searchResultIsDm(item)) {
-        // Use inboxId for DM if available, otherwise fallback to conversation ID
-        key = item.inboxId ? `user-${item.inboxId}` : `dm-${item.xmtpConversationId}`
+        // For DMs, try to get the peer inbox ID to use in the key
+        // This helps eliminate duplicates in case we have both a DM and a profile for the same user
+        key = getDmKey(item.xmtpConversationId)
       } else if (searchResultIsGroup(item)) {
         key = `group-${item.xmtpConversationId}`
       } else if (searchResultIsProfile(item)) {
@@ -385,7 +368,7 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
 
     return result
   }, [
-    dmsWithPeerInboxIds,
+    existingDm,
     existingGroupsByMemberName,
     existingGroupsByGroupName,
     searchConvosUsersData,
@@ -394,6 +377,7 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
     ensEthAddressResolution,
     baseEthAddressResolution,
     unstoppableDomainEthAddressResolution,
+    getDmKey,
   ])
 
   const isStillLoadingSearchResults =
@@ -423,8 +407,8 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
 
   const keyExtractor = (item: SearchResultItem, index: number) => {
     if (searchResultIsDm(item)) {
-      // Use inboxId for DM if available, otherwise fallback to conversation ID
-      return item.inboxId ? `user-${item.inboxId}` : `dm-${item.xmtpConversationId}`
+      // For DMs, try to get the peer inbox ID to use in the key
+      return getDmKey(item.xmtpConversationId)
     }
     if (searchResultIsGroup(item)) {
       return `group-${item.xmtpConversationId}`
