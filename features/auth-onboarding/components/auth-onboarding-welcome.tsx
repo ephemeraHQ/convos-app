@@ -37,6 +37,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
         <VStack>
           {/* This is a really custom text. No preset */}
           <AnimatedText
+            preset="uncensoredTitle"
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
               .delay(ONBOARDING_ENTERING_DELAY.FIRST)}
@@ -46,7 +47,7 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
             messaging
           </AnimatedText>
           <AnimatedText
-            preset="smaller"
+            preset="small"
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
               .delay(ONBOARDING_ENTERING_DELAY.SECOND)}
@@ -73,15 +74,16 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
             color="secondary"
             style={{
               textAlign: "center",
+              lineHeight: theme.spacing.md,
             }}
           >
-            When you create a contact card, you agree{"\n"}to the Convos{" "}
+            When you continue, you agree to the{"\n"}Convos{" "}
             <Link
               preset="smaller"
               color="secondary"
               onPress={() => openLink({ url: "https://convos.org/terms-of-service" })}
             >
-              Terms of Service
+              Terms
             </Link>{" "}
             and{" "}
             <Link
@@ -161,12 +163,9 @@ const $subtextStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
 })
 
 const $titleStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  fontSize: 56,
-  lineHeight: 56,
   textAlign: "center",
-  fontWeight: "bold",
   marginTop: spacing.xs,
-  marginBottom: spacing.sm,
+  marginBottom: spacing.xxs,
 })
 
 const $logoImage: ThemedStyle<ImageStyle> = () => ({
