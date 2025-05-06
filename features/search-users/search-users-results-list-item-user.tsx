@@ -27,7 +27,7 @@ export const SearchUsersResultsListItemUser = memo(function SearchUsersResultsLi
     <SearchUsersResultListItem
       avatar={<Avatar name={displayName} uri={avatarUrl} sizeNumber={theme.avatarSize.md} />}
       title={displayName ?? " "}
-      subtitle={username ?? ""}
+      subtitle={username ? `@${username}` : displayName || " "}
       onPress={onPress}
       {...rest}
     />
