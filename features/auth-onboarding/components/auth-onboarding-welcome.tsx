@@ -42,17 +42,19 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
               .delay(ONBOARDING_ENTERING_DELAY.FIRST)}
             style={themed($titleStyle)}
           >
-            Not another{"\n"}chat app
+            Uncensored{"\n"}
+            messaging
           </AnimatedText>
           <AnimatedText
             preset="smaller"
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
               .delay(ONBOARDING_ENTERING_DELAY.SECOND)}
-            style={$subtextStyle}
+            style={themed($subtextStyle)}
             color={"secondary"}
           >
-            Super secure · Decentralized · Universal
+            Secure. Decentralized.{"\n"}
+            No phone number required.
           </AnimatedText>
         </VStack>
       </Center>
@@ -153,9 +155,10 @@ const $termsContainer: ThemedStyle<ViewStyle> = ({ spacing, borderRadius, colors
   borderRadius: borderRadius.xxs,
 })
 
-const $subtextStyle: TextStyle = {
+const $subtextStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
   textAlign: "center",
-}
+  lineHeight: spacing.md,
+})
 
 const $titleStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
   fontSize: 56,
