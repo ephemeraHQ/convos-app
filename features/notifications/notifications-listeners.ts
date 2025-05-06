@@ -6,7 +6,7 @@ import {
   isNotificationExpoNewMessageNotification,
 } from "@/features/notifications/notifications-assertions"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
-import { navigate, navigateFromHome } from "@/navigation/navigation.utils"
+import { navigateFromHome } from "@/navigation/navigation.utils"
 import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
