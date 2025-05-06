@@ -150,3 +150,9 @@ export class ConnectWalletError extends BaseError {
     super("[Connect Wallet]", args)
   }
 }
+
+export class ExternalCancellationError extends BaseError {
+  constructor(args: BaseErrorArgs) {
+    super("[External Cancellation]", args)
+  }
+}

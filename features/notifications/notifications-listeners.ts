@@ -5,6 +5,7 @@ import {
   isConvosModifiedNotification,
   isNotificationExpoNewMessageNotification,
 } from "@/features/notifications/notifications-assertions"
+import { useNotificationsStore } from "@/features/notifications/notifications.store"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { navigate } from "@/navigation/navigation.utils"
 import { useAppStore } from "@/stores/app-store"
@@ -22,6 +23,10 @@ export function useNotificationListeners() {
     async (response: Notifications.NotificationResponse) => {
       try {
         const tappedNotification = response.notification
+
+        useNotificationsStore
+          .getState()
+          .actions.setLastTappedNotificationId(tappedNotification.request.identifier)
 
         // Sometimes we tap on a notification while the app is killed and this is triggered
         // before we finished hydrating auth so we push to a screen that isn't in the navigator yet
