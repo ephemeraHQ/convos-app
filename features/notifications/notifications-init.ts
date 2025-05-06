@@ -162,8 +162,7 @@ async function maybeDisplayLocalNewMessageNotification(args: {
 
   if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
     notificationsLogger.debug(
-      `Skipping notification because message is not supported`,
-      xmtpDecryptedMessage,
+      `Skipping notification because message is not supported`
     )
     return
   }
