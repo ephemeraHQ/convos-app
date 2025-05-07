@@ -26,18 +26,6 @@ final class NotificationService: UNNotificationServiceExtension {
 
   // Main asynchronous processing logic
   private func handleNotificationAsync(request: UNNotificationRequest) async {
-     var ethAddressToUse = "0x916955d77401c13cdfddda8e40b100a743ea689f".lowercased()
-    //  if let bodyDict = request.content.userInfo["body"] as? [String: Any],
-    //     let ethAddressFromNotif = bodyDict["ethAddress"] as? String {
-    //      os_log("Found ethAddress in notification body: %{public}@", log: logger, type: .info, ethAddressFromNotif)
-    //      ethAddresoksToUse = ethAddressFromNotif
-    //  } else {
-    //      os_log("No ethAddress found in notification body, using default", log: logger, type: .info)
-    //      contentHandler?(request.content);
-    //      return
-    //  }
-     let ethAddress = ethAddressToUse.lowercased()
-
     guard let currentBestAttempt = bestAttempt else {
       os_log("Failed to get mutable copy", log: logger, type: .error); contentHandler?(request.content); return
     }
@@ -65,6 +53,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
     let encryptedMessage: String
     let topic: String
+    let ethAddress: String
 
     do {
         // Convert the userInfo dictionary to Data
@@ -76,6 +65,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
         encryptedMessage = payload.body.encryptedMessage
         topic = payload.body.contentTopic
+        ethAddress = payload.body.ethAddress.lowercased()
         
     } catch {
         // Log detailed error information if decoding fails
@@ -83,10 +73,13 @@ final class NotificationService: UNNotificationServiceExtension {
         contentHandler?(request.content); return
     }
 
-    guard let messageBytes = Data(base64Encoded: Data(encryptedMessage.utf8)) else {
-      os_log("Failed to decode base64 encryptedMessage payload", log: logger, type: .error)
-      contentHandler?(request.content); return
+    // Make sure we have a valid ethAddress
+    guard !ethAddress.isEmpty else {
+        os_log("ethAddress is empty after decoding, cannot proceed.", log: logger, type: .error)
+        contentHandler?(request.content); return
     }
+
+    
 
     do {
       // Note: Building the client might be resource-intensive for an NSE. Monitor performance.
@@ -99,8 +92,14 @@ final class NotificationService: UNNotificationServiceExtension {
         os_log("Conversation not found for topic: %{public}@", log: logger, type: .default, topic)
         contentHandler?(currentBestAttempt); return
       }
+      
       os_log("Conversation found. Syncing...", log: logger, type: .info) // Changed to .info
       try? await conversation.sync()
+
+      guard let messageBytes = Data(base64Encoded: Data(encryptedMessage.utf8)) else {
+      os_log("Failed to decode base64 encryptedMessage payload", log: logger, type: .error)
+      contentHandler?(request.content); return
+    }
 
       os_log("Processing message bytes...", log: logger, type: .info) // Changed to .info
       guard let decodedMessage = try? await conversation.processMessage(messageBytes: messageBytes) else {
