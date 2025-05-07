@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications"
-import { Platform } from "react-native"
+import { AppState, Platform } from "react-native"
 import { getCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
@@ -17,7 +17,6 @@ import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/us
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
-import { getCurrentRoute } from "@/navigation/navigation.utils"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -190,16 +189,13 @@ async function maybeDisplayLocalNewMessageNotification(args: {
     messageId: xmtpDecryptedMessage.id,
   })
 
-  // if we're already in the converastion, don't show the notification
-  const currentRoute = getCurrentRoute()
-  if (
-    currentRoute?.name === "Conversation" &&
-    currentRoute?.params?.xmtpConversationId === xmtpConversationId
-  ) {
-    notificationsLogger.debug(
-      "User is already in this conversation, don't display local notification",
-    )
+  // Don't show notifications when app is in foreground
+  const appState = AppState.currentState
+  if (appState === 'active') {
+    notificationsLogger.debug("App is in foreground (active state), don't display local notification")
     return
+  } else {
+    notificationsLogger.debug(`App is not in foreground (${appState}), display local notification`)
   }
 
   await Notifications.scheduleNotificationAsync({
