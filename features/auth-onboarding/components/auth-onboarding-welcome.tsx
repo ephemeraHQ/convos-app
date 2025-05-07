@@ -37,22 +37,25 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
         <VStack>
           {/* This is a really custom text. No preset */}
           <AnimatedText
+            preset="uncensoredTitle"
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
               .delay(ONBOARDING_ENTERING_DELAY.FIRST)}
             style={themed($titleStyle)}
           >
-            Not another{"\n"}chat app
+            Uncensored{"\n"}
+            messaging
           </AnimatedText>
           <AnimatedText
-            preset="smaller"
+            preset="small"
             entering={theme.animation
               .reanimatedFadeInSpringSlow()
               .delay(ONBOARDING_ENTERING_DELAY.SECOND)}
-            style={$subtextStyle}
+            style={themed($subtextStyle)}
             color={"secondary"}
           >
-            Super secure · Decentralized · Universal
+            Secure. Decentralized.{"\n"}
+            No phone number required.
           </AnimatedText>
         </VStack>
       </Center>
@@ -71,15 +74,16 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
             color="secondary"
             style={{
               textAlign: "center",
+              lineHeight: theme.spacing.md,
             }}
           >
-            When you create a contact card, you agree{"\n"}to the Convos{" "}
+            When you continue, you agree to the{"\n"}Convos{" "}
             <Link
               preset="smaller"
               color="secondary"
               onPress={() => openLink({ url: "https://convos.org/terms-of-service" })}
             >
-              Terms of Service
+              Terms
             </Link>{" "}
             and{" "}
             <Link
@@ -133,6 +137,12 @@ function useHeaderWrapper() {
               contentFit="contain"
             />
             <Text preset="body">Convos</Text>
+            <Text
+              preset="smaller"
+              color="secondary"
+              // This is to make the text look centered vertically
+              style={{ paddingLeft: theme.spacing.xxs, paddingTop: 3 }}
+            >EARLY</Text>
           </HStack>
         </AnimatedCenter>
       ),
@@ -147,17 +157,15 @@ const $termsContainer: ThemedStyle<ViewStyle> = ({ spacing, borderRadius, colors
   borderRadius: borderRadius.xxs,
 })
 
-const $subtextStyle: TextStyle = {
+const $subtextStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
   textAlign: "center",
-}
+  lineHeight: spacing.md,
+})
 
 const $titleStyle: ThemedStyle<TextStyle> = ({ spacing }) => ({
-  fontSize: 56,
-  lineHeight: 56,
   textAlign: "center",
-  fontWeight: "bold",
   marginTop: spacing.xs,
-  marginBottom: spacing.sm,
+  marginBottom: spacing.xxs,
 })
 
 const $logoImage: ThemedStyle<ImageStyle> = () => ({

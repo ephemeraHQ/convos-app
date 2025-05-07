@@ -27,9 +27,6 @@ export function useCreateXmtpSignerFromTurnkey() {
       throw new Error("Wallet address not found while creating XMTP signer")
     }
 
-    console.log("walletAddress:", walletAddress)
-    console.log("session.user?.organizationId:", session.user?.organizationId)
-
     return {
       getIdentifier: async () => new PublicIdentity(walletAddress, "ETHEREUM"),
       getChainId: () => undefined,
@@ -43,15 +40,11 @@ export function useCreateXmtpSignerFromTurnkey() {
           ethereumAddress: walletAddress,
         })
 
-        console.log("viemAccount.address:", viemAccount.address)
-
         const viemClient = createWalletClient({
           account: viemAccount,
           chain: mainnet,
           transport: http(),
         })
-
-        console.log("viemClient.account:", viemClient.account)
 
         const signedMessage = await viemClient.signMessage({
           message: message,
@@ -91,8 +84,6 @@ export function useCreateXmtpSignerFromTurnkeyTwo() {
           encoding: "PAYLOAD_ENCODING_HEXADECIMAL",
           hashFunction: "HASH_FUNCTION_SHA256",
         })
-
-        console.log("result:", result)
 
         return {
           signature: `0x${result.r}${result.s}${result.v}`,
