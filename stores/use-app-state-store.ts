@@ -6,9 +6,7 @@ import { subscribeWithSelector } from "zustand/middleware"
 import { getAllSenders } from "@/features/authentication/multi-inbox.store"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
-import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
-import { ExternalCancellationError } from "@/utils/error"
 import { logger } from "@/utils/logger/logger"
 
 type State = {
@@ -36,6 +34,22 @@ export const useAppStateStore = create<State & { actions: Actions }>()(
     },
   })),
 )
+
+export function appCameBackFromBackground() {
+  return (
+    useAppStateStore.getState().currentState === "active" &&
+    useAppStateStore.getState().previousState &&
+    useAppStateStore.getState().previousState !== "active"
+  )
+}
+
+export function appHasGoneToBackground() {
+  return useAppStateStore.getState().currentState === "background"
+}
+
+export function appHasGoneToInactive() {
+  return useAppStateStore.getState().currentState === "inactive"
+}
 
 type IAppStateHandlerSettings = {
   onChange?: (status: AppStateStatus) => void
