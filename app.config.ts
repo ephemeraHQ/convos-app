@@ -167,7 +167,10 @@ export default () => {
         usesNonExemptEncryption: false,
       },
       entitlements: {
-        // App check stuff
+        "keychain-access-groups": [
+          `$(AppIdentifierPrefix)group.${config.ios.bundleIdentifier}`,
+          `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}`,
+        ],
         "com.apple.developer.devicecheck.appattest-environment": "production",
         "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // for key sharing
         "aps-environment": "production",

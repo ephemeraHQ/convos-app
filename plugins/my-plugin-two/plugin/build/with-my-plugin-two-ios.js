@@ -146,6 +146,9 @@ const withNseFilesAndPlistMods = (config) => {
                     // Set App Group Identifier
                     Log_1.Log.log(`Setting AppGroupIdentifier in ${infoPlistFilename} to: ${appGroupId}`);
                     infoPlistContents.AppGroupIdentifier = appGroupId;
+                    // Set Main App Bundle Identifier
+                    Log_1.Log.log(`Setting MainAppBundleIdentifier in ${infoPlistFilename} to: ${config.ios.bundleIdentifier}`);
+                    infoPlistContents.MainAppBundleIdentifier = config.ios.bundleIdentifier;
                     fs.writeFileSync(infoPlistPath, plist_1.default.build(infoPlistContents));
                     Log_1.Log.log(`Successfully updated ${infoPlistFilename}`);
                 }
@@ -166,7 +169,6 @@ const withXcodeProjectSettings = (config, props) => {
         const xcodeProject = newConfig.modResults;
         // Construct the dynamic App Group ID again here if needed for checks, or rely on config
         (0, assert_1.default)(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.");
-        const appGroupId = `group.${config.ios.bundleIdentifier}`; // Needed for potential checks/logging
         const entitlementsFilename = `${iosConstants_1.NSE_TARGET_NAME}.entitlements`;
         if (!!xcodeProject.pbxTargetByName(iosConstants_1.NSE_TARGET_NAME)) {
             Log_1.Log.log(`${iosConstants_1.NSE_TARGET_NAME} target already exists in project. Skipping...`);

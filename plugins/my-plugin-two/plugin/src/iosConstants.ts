@@ -21,6 +21,13 @@ export const APP_GROUP_KEY = "com.apple.security.application-groups"
 export const IOS_TEAM_ID = "FY4NZR34Z3"
 
 export const NSE_TARGET_NAME = "ConvosNSE"
-export const NSE_SOURCE_FILES = ["NotificationService.swift", "Utils.swift", "Keychain.swift"]
+export const NSE_SOURCE_FILES = [
+  "NotificationService.swift",
+  "Utils.swift",
+  "Keychain.swift",
+  "Logger.swift",
+  "MMKV.swift",
+  "SharedDefaults.swift",
+]
 export const NSE_INFO_PLIST_FILE_NAME = `${NSE_TARGET_NAME}-Info.plist`
 export const NSE_EXT_FILES = [`${NSE_TARGET_NAME}.entitlements`, NSE_INFO_PLIST_FILE_NAME]

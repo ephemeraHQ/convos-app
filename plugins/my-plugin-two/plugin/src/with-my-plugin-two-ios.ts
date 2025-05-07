@@ -133,6 +133,12 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
           Log.log(`Setting AppGroupIdentifier in ${infoPlistFilename} to: ${appGroupId}`)
           infoPlistContents.AppGroupIdentifier = appGroupId
 
+          // Set Main App Bundle Identifier
+          Log.log(
+            `Setting MainAppBundleIdentifier in ${infoPlistFilename} to: ${config.ios.bundleIdentifier}`,
+          )
+          infoPlistContents.MainAppBundleIdentifier = config.ios.bundleIdentifier
+
           fs.writeFileSync(infoPlistPath, plist.build(infoPlistContents))
           Log.log(`Successfully updated ${infoPlistFilename}`)
         } catch (e: any) {
@@ -154,7 +160,6 @@ const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
 
     // Construct the dynamic App Group ID again here if needed for checks, or rely on config
     assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
-    const appGroupId = `group.${config.ios.bundleIdentifier}` // Needed for potential checks/logging
     const entitlementsFilename = `${NSE_TARGET_NAME}.entitlements`
 
     if (!!xcodeProject.pbxTargetByName(NSE_TARGET_NAME)) {
@@ -241,14 +246,12 @@ const withPodfile: ConfigPlugin = (config) => {
         return config
       }
 
-      // TODO: Dynamically read this from package.json dependencies/peerDependencies if possible
-      const requiredXmtpVersion = "4.0.7"
-
       const nseTargetBlock = `
 
 target '${NSE_TARGET_NAME}' do
   # Use the version required by the installed @xmtp/react-native-sdk
-  pod 'XMTP', '${requiredXmtpVersion}', :modular_headers => true
+  pod 'XMTP', '4.0.7', :modular_headers => true
+  pod 'MMKV', '2.2.1', :modular_headers => true
 
   # NSEs often use static frameworks. Adjust if your setup differs.
   use_frameworks! :linkage => :static

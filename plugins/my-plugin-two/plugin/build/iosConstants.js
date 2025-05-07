@@ -17,6 +17,12 @@ exports.DEFAULT_BUNDLE_SHORT_VERSION = "1.0";
 exports.APP_GROUP_KEY = "com.apple.security.application-groups";
 exports.IOS_TEAM_ID = "FY4NZR34Z3";
 exports.NSE_TARGET_NAME = "ConvosNSE";
-exports.NSE_SOURCE_FILES = ["NotificationService.swift", "Utils.swift", "Keychain.swift"];
+exports.NSE_SOURCE_FILES = [
+    "NotificationService.swift",
+    "Utils.swift",
+    "Keychain.swift",
+    "Logger.swift",
+    "MMKV.swift",
+];
 exports.NSE_INFO_PLIST_FILE_NAME = `${exports.NSE_TARGET_NAME}-Info.plist`;
 exports.NSE_EXT_FILES = [`${exports.NSE_TARGET_NAME}.entitlements`, exports.NSE_INFO_PLIST_FILE_NAME];

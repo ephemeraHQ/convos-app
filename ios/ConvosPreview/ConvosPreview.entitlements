@@ -17,5 +17,10 @@
     <array>
       <string>group.com.convos.preview</string>
     </array>
+    <key>keychain-access-groups</key>
+    <array>
+      <string>$(AppIdentifierPrefix)group.com.convos.preview</string>
+      <string>$(AppIdentifierPrefix)com.convos.preview</string>
+    </array>
   </dict>
 </plist>

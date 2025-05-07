@@ -19,6 +19,9 @@ const secureStoreOptions: SecureStore.SecureStoreOptions = {
 
   // Make sure the data is available after the first unlock
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+
+  // We need to access it from ios NSE
+  // accessGroup: `group.${config.app.bundleId}`,
 }
 
 export const secureStorage = {

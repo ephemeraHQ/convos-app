@@ -1,54 +1,132 @@
 import Foundation
-import Security // Import the Security framework for Keychain services
+import Security
 import os.log
 
-// Logger specifically for Keychain operations
-private let keychainLogger = OSLog(subsystem: Bundle.main.bundleIdentifier ?? "com.convos.nse.keychain", category: "Keychain")
+func getKeychainQuery(key: String, requireAuthentication: Bool? = nil) -> [String : Any] {
+  var service = getInfoPlistValue(key: "MainAppBundleIdentifier")
+  if let requireAuthentication {
+    service?.append(":\(requireAuthentication ? "auth" : "no-auth")")
+  }
 
-/**
- Reads data associated with a specific key from the shared Keychain access group.
- Designed to read data stored by expo-secure-store or similar methods that use kSecClassGenericPassword.
+  log("Service for keychain query: \(service ?? "nil"), Key: \(key), RequireAuth: \(String(describing: requireAuthentication))", type: .debug, category: "keychainQuery")
 
- - Parameters:
-    - key: The unique key identifying the Keychain item (e.g., "LIBXMTP_DB_ENCRYPTION_KEY_0x...")
-    - group: The Keychain Access Group identifier (e.g., "group.com.yourcompany.yourapp") shared between the app and extension.
- - Returns: The raw Data associated with the key, or nil if not found or an error occurs.
- */
-func readDataFromKeychain(key: String, group: String) -> Data? {
-    os_log("Attempting to read Keychain item: Key=%{private}@, Group=%{public}@", log: keychainLogger, type: .debug, key, group)
+  let encodedKey = Data(key.utf8)
+  var query = [
+    kSecClass as String: kSecClassGenericPassword,
+    kSecAttrService as String: service,
+    kSecAttrGeneric as String: encodedKey,
+    kSecAttrAccount as String: encodedKey,
+  ] as [String : Any]
+  
+  // IMPORTANT: For shared keychain items, you MUST specify kSecAttrAccessGroup
+  // This should be the shared keychain group, e.g., "YOUR_TEAM_ID.group.com.convos.preview"
+  // The actual AppIdentifierPrefix (Team ID) will be prepended by the system if you use "$(AppIdentifierPrefix)" in entitlements.
+  // For direct keychain API calls, you usually need the full string including the Team ID.
+  // Let's assume you have a helper to get this full group ID or you'll hardcode it for now.
+  // query[kSecAttrAccessGroup as String] = "YOUR_APP_IDENTIFIER_PREFIX.group.com.convos.preview" // Replace with your actual group ID
+  // For now, I will comment this out as your NotificationService.swift might be handling the group ID differently.
+  // If readDataFromKeychain in NotificationService.swift already adds this, it's fine.
 
-    // Base query to search for a generic password item
-    let query: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword, // Item type
-        kSecAttrAccount as String: key,                // Unique key for the item (maps to expo-secure-store's key)
-        kSecAttrAccessGroup as String: group,          // *** CRUCIAL: Specify the shared access group ***
-        kSecMatchLimit as String: kSecMatchLimitOne,   // We only expect one item
-        kSecReturnData as String: kCFBooleanTrue!      // Request the actual data to be returned
-        // kSecAttrService might be needed if RN app explicitly sets it (often defaults to BundleID)
-        // kSecAttrService as String: Bundle.main.bundleIdentifier ?? "com.convos.app.service" // Example if needed
-    ]
+  log("Keychain query constructed: \(query as NSDictionary)", type: .debug, category: "keychainQuery")
+  return query
+}
 
-    var item: CFTypeRef? // Variable to hold the retrieved data reference
-    let status = SecItemCopyMatching(query as CFDictionary, &item) // Perform the search
+func _getKeychainValue(forKey: String, requireAuthentication: Bool? = nil) -> String? {
+  var query = getKeychainQuery(key: forKey, requireAuthentication: requireAuthentication)
+  query[kSecMatchLimit as String] = kSecMatchLimitOne
+  query[kSecReturnData as String] = kCFBooleanTrue
+  // If you're sharing keychain items, ensure kSecAttrAccessGroup is part of the query here as well.
+  // It should be added in getKeychainQuery or directly here if not universally added there.
+  // query[kSecAttrAccessGroup as String] = "YOUR_APP_IDENTIFIER_PREFIX.group.com.convos.preview" // Example
 
-    switch status {
+  log("Attempting to get keychain value for key: \(forKey), RequireAuth: \(String(describing: requireAuthentication))", type: .debug, category: "keychainRead")
+  var item: CFTypeRef?
+  let status = SecItemCopyMatching(query as CFDictionary, &item)
+  
+  log("SecItemCopyMatching status: \(status) for key: \(forKey)", type: .debug, category: "keychainRead")
+
+  switch status {
+  case errSecSuccess:
+    guard let itemData = item as? Data else {
+      log("Keychain item found for key: \(forKey), but failed to cast to Data.", type: .error, category: "keychainRead")
+      return nil
+    }
+    log("Successfully retrieved and cast keychain item for key: \(forKey).", type: .debug, category: "keychainRead")
+    return String(data: itemData, encoding: .utf8)
+  case errSecItemNotFound:
+    log("Keychain item not found for key: \(forKey). Status: errSecItemNotFound (\(status))", type: .debug, category: "keychainRead")
+    return nil
+  default:
+    log("Failed to get keychain item for key: \(forKey). Status: \(status), OSStatus: \(status.description)", type: .error, category: "keychainRead")
+    return nil
+  }
+}
+
+func getKeychainValue(forKey: String) -> String? {
+  log("Getting keychain value for key: \(forKey) (trying unauthenticated, authenticated, legacy)", type: .debug, category: "keychainRead")
+  if let unauthenticatedItem = _getKeychainValue(forKey: forKey, requireAuthentication: false) {
+    log("Found unauthenticated keychain item for key: \(forKey)", type: .debug, category: "keychainRead")
+    return unauthenticatedItem
+  }
+  if let authenticatedItem = _getKeychainValue(forKey: forKey, requireAuthentication: true) {
+    log("Found authenticated keychain item for key: \(forKey)", type: .debug, category: "keychainRead")
+    return authenticatedItem
+  }
+  if let legacyItem = _getKeychainValue(forKey: forKey) { // This calls _getKeychainValue with requireAuthentication = nil
+    log("Found legacy (auth unspecified) keychain item for key: \(forKey)", type: .debug, category: "keychainRead")
+    return legacyItem
+  }
+  log("No keychain item found for key: \(forKey) after trying all methods.", type: .debug, category: "keychainRead")
+  return nil
+}
+
+func setKeychainValue(value: String, forKey: String) throws -> Bool {
+  var query = getKeychainQuery(key: forKey, requireAuthentication: false) // Assuming items are set without requiring auth for get
+  // If you're sharing, ensure kSecAttrAccessGroup is part of the query here as well.
+  // query[kSecAttrAccessGroup as String] = "YOUR_APP_IDENTIFIER_PREFIX.group.com.convos.preview" // Example
+
+  let valueData = value.data(using: .utf8)
+  query[kSecValueData as String] = valueData
+  let accessibility = kSecAttrAccessibleAfterFirstUnlock // Consider kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly if not syncing to iCloud
+  query[kSecAttrAccessible as String] = accessibility
+
+  log("Attempting to set keychain value for key: \(forKey). Query: \(query as NSDictionary)", type: .debug, category: "keychainWrite")
+
+  let status = SecItemAdd(query as CFDictionary, nil)
+  log("SecItemAdd status: \(status) for key: \(forKey)", type: .debug, category: "keychainWrite")
+
+  switch status {
     case errSecSuccess:
-        // Successfully found the item and retrieved data
-        guard let data = item as? Data else {
-            os_log("Keychain read successful for key %{private}@, but failed to cast result to Data.", log: keychainLogger, type: .error, key)
-            return nil
-        }
-        os_log("Keychain read successful for key %{private}@, data length: %d", log: keychainLogger, type: .debug, key, data.count)
-        return data
-    case errSecItemNotFound:
-        // Item simply wasn't found - not necessarily an error in many cases
-        os_log("Keychain item not found for key %{private}@", log: keychainLogger, type: .info, key)
-        return nil
+      log("Successfully added keychain item for key: \(forKey)", type: .debug, category: "keychainWrite")
+      return true
+    case errSecDuplicateItem:
+      log("Keychain item for key: \(forKey) already exists, attempting to update. Status: errSecDuplicateItem (\(status))", type: .debug, category: "keychainWrite")
+      return try updateKeychainValue(value: value, forKey: forKey)
     default:
-        // Any other status indicates a problem (permissions, configuration, etc.)
-        os_log("Keychain read failed for key %{private}@ with unexpected status: %d", log: keychainLogger, type: .error, key, status)
-        return nil
+      log("Failed to add keychain item for key: \(forKey). Status: \(status), OSStatus: \(status.description)", type: .error, category: "keychainWrite")
+      return false
     }
 }
 
-// NOTE: This file currently only implements READING. 
+func updateKeychainValue(value: String, forKey: String) throws -> Bool {
+  let query = getKeychainQuery(key: forKey, requireAuthentication: false) // Assuming items are set without requiring auth for get
+  // If you're sharing, ensure kSecAttrAccessGroup is part of the query here as well.
+  // query[kSecAttrAccessGroup as String] = "YOUR_APP_IDENTIFIER_PREFIX.group.com.convos.preview" // Example
+
+  let valueData = value.data(using: .utf8)
+  let updateDictionary = [kSecValueData as String: valueData]
+
+  log("Attempting to update keychain value for key: \(forKey). Query: \(query as NSDictionary), Updates: \(updateDictionary as NSDictionary)", type: .debug, category: "keychainWrite")
+
+  let status = SecItemUpdate(query as CFDictionary, updateDictionary as CFDictionary)
+  log("SecItemUpdate status: \(status) for key: \(forKey)", type: .debug, category: "keychainWrite")
+
+  if status == errSecSuccess {
+    log("Successfully updated keychain item for key: \(forKey)", type: .debug, category: "keychainWrite")
+    return true
+  } else {
+    log("Failed to update keychain item for key: \(forKey). Status: \(status), OSStatus: \(status.description)", type: .error, category: "keychainWrite")
+    return false
+  }
+}
+// ... existing code ...

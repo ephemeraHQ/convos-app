@@ -25,5 +25,7 @@
     <string>dev</string>
     <key>AppGroupIdentifier</key>
     <string>group.com.convos.preview</string>
+    <key>MainAppBundleIdentifier</key>
+    <string>com.convos.preview</string>
   </dict>
 </plist>

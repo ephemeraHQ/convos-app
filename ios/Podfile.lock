@@ -2458,6 +2458,7 @@ DEPENDENCIES:
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - MMKV (= 2.2.1)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -3044,6 +3045,6 @@ SPEC CHECKSUMS:
   XMTPReactNative: b78fcbeef6b4c435aace72cee0b1b354cf3ca090
   Yoga: 1259c7a8cbaccf7b4c3ddf8ee36ca11be9dee407
 
-PODFILE CHECKSUM: 6108be4de7c529e12bc6fdaa13319dbbc9b71554
+PODFILE CHECKSUM: 806ff7de1dff70efe09e6447eedb6ee94768accf
 
 COCOAPODS: 1.16.2
