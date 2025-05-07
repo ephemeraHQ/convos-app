@@ -1,10 +1,11 @@
 import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { messageShouldShowDateChange } from "@/features/conversation/utils/message-should-show-date-change"
+import { Nullable } from "@/types/general"
 import { IConversationMessage } from "../conversation-chat/conversation-message/conversation-message.types"
 
 type HasNextMessageInSeriesPayload = {
-  currentMessage: IConversationMessage
-  nextMessage: IConversationMessage | undefined
+  currentMessage: Nullable<IConversationMessage>
+  nextMessage: Nullable<IConversationMessage>
 }
 
 export const getHasNextMessageInSeries = ({
@@ -25,6 +26,10 @@ export const getHasNextMessageInSeries = ({
       messageTwo: currentMessage,
     })
   ) {
+    return false
+  }
+
+  if (!currentMessage) {
     return false
   }
 

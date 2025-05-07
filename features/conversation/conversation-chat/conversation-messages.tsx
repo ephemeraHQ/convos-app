@@ -225,11 +225,12 @@ export const ConversationMessages = memo(function ConversationMessages() {
     return messageIds.find((xmtpMessageId) => {
       const message = getConversationMessageQueryData({
         xmtpMessageId,
+        xmtpConversationId,
         clientInboxId: currentSender.inboxId,
       })
       return message?.senderInboxId === currentSender.inboxId
     })
-  }, [messageIds, currentSender.inboxId])
+  }, [messageIds, currentSender.inboxId, xmtpConversationId])
 
   const renderItem = useCallback(
     ({ item, index }: { item: IXmtpMessageId; index: number }) => {
@@ -247,12 +248,13 @@ export const ConversationMessages = memo(function ConversationMessages() {
             getConversationMessageQueryData({
               xmtpMessageId: item,
               clientInboxId: currentSender.inboxId,
+              xmtpConversationId,
             })?.status === "sending"
           }
         />
       )
     },
-    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIds],
+    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIds, xmtpConversationId],
   )
 
   const getItemType = useCallback(
@@ -260,6 +262,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       const message = getConversationMessageQueryData({
         xmtpMessageId: item,
         clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
       })
 
       if (!message) return "message"
@@ -268,7 +271,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       if (isGroupUpdatedMessage(message)) return "groupUpdate"
       return "incoming"
     },
-    [currentSender.inboxId],
+    [currentSender.inboxId, xmtpConversationId],
   )
 
   logger.debug(`Rendering ${messageIds.length} messages`)
@@ -328,11 +331,12 @@ const ConversationMessagesListItem = memo(
     } = props
 
     const currentSender = useSafeCurrentSender()
-
+    const xmtpConversationId = useCurrentXmtpConversationIdSafe()
     const { data: message } = useConversationMessageQuery({
       xmtpMessageId,
       clientInboxId: currentSender.inboxId,
       caller: "ConversationMessagesListItem",
+      xmtpConversationId,
     })
 
     const messageComponent = useMemo(
@@ -365,12 +369,14 @@ const ConversationMessagesListItem = memo(
       xmtpMessageId: previousXmtpMessageId,
       clientInboxId: currentSender.inboxId,
       caller: "ConversationMessagesListItem",
+      xmtpConversationId,
     })
 
     const { data: nextMessage } = useConversationMessageQuery({
       xmtpMessageId: nextXmtpMessageId,
       clientInboxId: currentSender.inboxId,
       caller: "ConversationMessagesListItem",
+      xmtpConversationId,
     })
 
     if (!message) {

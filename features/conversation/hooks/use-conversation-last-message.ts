@@ -31,6 +31,7 @@ export function useConversationLastMessage(args: IArgs) {
   const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationMessageQuery({
     clientInboxId: currentSender.inboxId,
     xmtpMessageId: lastMessageId,
+    xmtpConversationId,
     caller: "useConversationLastMessage",
   })
 

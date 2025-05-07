@@ -59,6 +59,7 @@ export function getConversationSpamQueryOptions(args: IArgs) {
       const lastMessage = await ensureConversationMessageQueryData({
         clientInboxId,
         xmtpMessageId: firstMessageId,
+        xmtpConversationId,
         caller: "getConversationSpamQueryOptions",
       })
 

@@ -45,6 +45,7 @@ export function useConversationLastMessageIds(args: { conversationIds: IXmtpConv
           const message = getConversationMessageQueryData({
             clientInboxId: currentSender.inboxId,
             xmtpMessageId: messageId,
+            xmtpConversationId: conversationId,
           })
           return message && !isReactionMessage(message)
         })

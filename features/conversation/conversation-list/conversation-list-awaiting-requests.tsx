@@ -18,6 +18,7 @@ import { useConversationLastMessageIds } from "@/features/conversation/hooks/use
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { ObjectTyped } from "@/utils/object-typed"
 
 export const ConversationListAwaitingRequests = memo(function ConversationListAwaitingRequests() {
   const { theme } = useAppTheme()
@@ -60,16 +61,17 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     conversationIds: likelyNotSpamConversationIds,
   })
 
-  const lastMessageIds = Object.values(lastMessageIdByConversationId)
-
   const lastMessageQueries = useQueries({
-    queries: lastMessageIds.map((messageId) => ({
-      ...getConversationMessageQueryOptions({
-        clientInboxId: currentSender.inboxId,
-        xmtpMessageId: messageId,
-        caller: "ConversationListAwaitingRequests",
+    queries: ObjectTyped.entries(lastMessageIdByConversationId).map(
+      ([conversationId, messageId]) => ({
+        ...getConversationMessageQueryOptions({
+          clientInboxId: currentSender.inboxId,
+          xmtpMessageId: messageId,
+          xmtpConversationId: conversationId,
+          caller: "ConversationListAwaitingRequests",
+        }),
       }),
-    })),
+    ),
   })
 
   // Combine the results

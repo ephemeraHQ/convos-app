@@ -16,8 +16,8 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.store-context"
 import { useConversationMessageContextMenuStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-context-menu/conversation-message-context-menu.styles"
 import { useConversationMessageReactionsQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
+import { getConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
-import { getMessageFromConversationSafe } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-from-conversation"
 import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useReactOnMessage } from "@/features/conversation/conversation-chat/use-react-on-message.mutation"
@@ -59,9 +59,10 @@ const Content = memo(function Content(props: {
   })
 
   const { message, previousMessage, nextMessage } = useMemo(() => {
-    const message = getMessageFromConversationSafe({
-      messageId,
+    const message = getConversationMessageQueryData({
+      xmtpMessageId: messageId,
       clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
     })
 
     const messageIds =
@@ -76,16 +77,18 @@ const Content = memo(function Content(props: {
     const previousMessageId = messageIndex ? messageIds[messageIndex - 1] : undefined
 
     const nextMessage = nextMessageId
-      ? getMessageFromConversationSafe({
-          messageId: nextMessageId,
+      ? getConversationMessageQueryData({
+          xmtpMessageId: nextMessageId,
           clientInboxId: currentSender.inboxId,
+          xmtpConversationId,
         })
       : undefined
 
     const previousMessage = previousMessageId
-      ? getMessageFromConversationSafe({
-          messageId: previousMessageId,
+      ? getConversationMessageQueryData({
+          xmtpMessageId: previousMessageId,
           clientInboxId: currentSender.inboxId,
+          xmtpConversationId,
         })
       : undefined
 
@@ -96,7 +99,7 @@ const Content = memo(function Content(props: {
     }
   }, [messageId, xmtpConversationId, currentSender])
 
-  const fromMe = messageIsFromCurrentSenderInboxId({ message })
+  const fromMe = Boolean(message && messageIsFromCurrentSenderInboxId({ message }))
   const menuItems = useMessageContextMenuItems({
     messageId: messageId,
     xmtpConversationId,
@@ -181,14 +184,16 @@ const Content = memo(function Content(props: {
                   }}
                 />
 
-                <ConversationMessageContextStoreProvider
-                  currentMessage={message}
-                  nextMessage={nextMessage}
-                  previousMessage={previousMessage}
-                >
-                  {/* TODO: maybe make ConversationMessage more dumb to not need any context? */}
-                  <ConversationMessage />
-                </ConversationMessageContextStoreProvider>
+                {message && (
+                  <ConversationMessageContextStoreProvider
+                    currentMessage={message}
+                    nextMessage={nextMessage}
+                    previousMessage={previousMessage}
+                  >
+                    {/* TODO: maybe make ConversationMessage more dumb to not need any context? */}
+                    <ConversationMessage />
+                  </ConversationMessageContextStoreProvider>
+                )}
 
                 <MessageContextMenuItems
                   originX={fromMe ? itemRectX + itemRectWidth : itemRectX}
