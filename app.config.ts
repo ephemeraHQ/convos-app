@@ -193,6 +193,7 @@ export default () => {
           NSAllowsLocalNetworking: true,
         },
         // MMKV seems to use "AppGroup" value in info.plist since we are not on new architecture and can't upgrade to v3
+        // Related to https://github.com/mrousavy/react-native-mmkv/pull/703
         AppGroup: `group.${config.ios.bundleIdentifier}`,
         AppGroupName: `group.${config.ios.bundleIdentifier}`,
       },
