@@ -31,7 +31,10 @@ import {
   messageContentIsStaticAttachment,
   messageContentIsText,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
+import {
+  useConversationStore,
+  useCurrentXmtpConversationIdSafe,
+} from "@/features/conversation/conversation-chat/conversation.store-context"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useSelect } from "@/stores/stores.utils"
@@ -158,13 +161,13 @@ const MessageReplyReference = memo(function MessageReplyReference(props: {
   const { theme } = useAppTheme()
 
   const { fromMe } = useConversationMessageContextSelector(useSelect(["fromMe"]))
-
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const conversationStore = useConversationStore()
-
   const currentSender = useSafeCurrentSender()
 
   const { data: referencedMessage } = useConversationMessageQuery({
     xmtpMessageId: referenceMessageId,
+    xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "MessageReplyReference",
   })

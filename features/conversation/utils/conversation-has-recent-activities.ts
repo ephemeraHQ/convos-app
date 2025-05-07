@@ -33,6 +33,7 @@ export function conversationHasRecentActivities(args: {
   const lastMessage = getConversationMessageQueryData({
     clientInboxId,
     xmtpMessageId: lastMessageId,
+    xmtpConversationId,
   })
 
   if (!lastMessage) {

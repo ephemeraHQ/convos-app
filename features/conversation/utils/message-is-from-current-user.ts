@@ -6,7 +6,7 @@ import {
 } from "@/features/authentication/multi-inbox.store"
 import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { isSameInboxId } from "@/features/xmtp/xmtp-inbox-id/xmtp-inbox-id.utils"
-import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { logger } from "@/utils/logger/logger"
 import { IConversationMessage } from "../conversation-chat/conversation-message/conversation-message.types"
 
@@ -31,8 +31,11 @@ export function messageIsFromCurrentSenderInboxId({ message }: MessageFromCurren
   return isSameInboxId(messageSenderInboxId, currentSender.inboxId)
 }
 
-export function useMessageIsFromCurrentSenderInboxId(args: { xmtpMessageId: IXmtpMessageId }) {
-  const { xmtpMessageId } = args
+export function useMessageIsFromCurrentSenderInboxId(args: {
+  xmtpMessageId: IXmtpMessageId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  const { xmtpMessageId, xmtpConversationId } = args
 
   const currentSender = useSafeCurrentSender()
 
@@ -42,8 +45,9 @@ export function useMessageIsFromCurrentSenderInboxId(args: { xmtpMessageId: IXmt
 
   return useQuery({
     ...getConversationMessageQueryOptions({
-      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
       xmtpMessageId,
+      clientInboxId: currentSender.inboxId,
       caller: "useMessageIsFromCurrentSenderInboxId",
     }),
     select,

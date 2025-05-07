@@ -121,6 +121,7 @@ const conversationMessagesInfiniteQueryFn = async (
     setConversationMessageQueryData({
       clientInboxId,
       xmtpMessageId: message.xmtpId,
+      xmtpConversationId,
       message,
     })
   }
@@ -276,6 +277,7 @@ export const addMessageToConversationMessagesInfiniteQueryData = (args: {
   const newMessageData = getConversationMessageQueryData({
     clientInboxId,
     xmtpMessageId: messageId,
+    xmtpConversationId,
   })
 
   let updatedMessageIds = [...firstPage.messageIds]
@@ -288,6 +290,7 @@ export const addMessageToConversationMessagesInfiniteQueryData = (args: {
       const existingMessageData = getConversationMessageQueryData({
         clientInboxId,
         xmtpMessageId: existingMessageId,
+        xmtpConversationId,
       })
 
       // If we can't get existing message data, skip comparison for this item

@@ -31,5 +31,6 @@ export function getConversationNextMessage(args: {
   return getConversationMessageQueryData({
     clientInboxId: currentSender.inboxId,
     xmtpMessageId: nextMessageId,
+    xmtpConversationId,
   })
 }

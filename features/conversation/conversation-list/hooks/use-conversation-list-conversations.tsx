@@ -11,6 +11,7 @@ import { isConversationAllowed } from "@/features/conversation/utils/is-conversa
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { ObjectTyped } from "@/utils/object-typed"
 import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
 
 export const useConversationListConversations = () => {
@@ -30,16 +31,17 @@ export const useConversationListConversations = () => {
     conversationIds,
   })
 
-  const lastMessageIds = Object.values(lastMessageIdByConversationId)
-
   const lastMessageQueries = useQueries({
-    queries: lastMessageIds.map((messageId) => ({
-      ...getConversationMessageQueryOptions({
-        clientInboxId: currentSender.inboxId,
-        xmtpMessageId: messageId,
-        caller: "useConversationListConversations",
+    queries: ObjectTyped.entries(lastMessageIdByConversationId).map(
+      ([conversationId, messageId]) => ({
+        ...getConversationMessageQueryOptions({
+          clientInboxId: currentSender.inboxId,
+          xmtpMessageId: messageId,
+          xmtpConversationId: conversationId,
+          caller: "useConversationListConversations",
+        }),
       }),
-    })),
+    ),
   })
 
   const conversationMetadataQueries = useQueries({
