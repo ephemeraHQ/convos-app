@@ -172,8 +172,8 @@ export default () => {
           `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}`,
         ],
         "com.apple.developer.devicecheck.appattest-environment": "production",
-        "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // for key sharing
-        "aps-environment": "production",
+        "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // For key sharing between app and NSE
+        "aps-environment": "production", // For now until we really have the correct setup to test notification in local
       },
       infoPlist: {
         LSApplicationQueriesSchemes: [
