@@ -1,7 +1,5 @@
-// ConvosNSE/Keychain.swift
-// ... existing code ...
 import Foundation
-import Security // Import the Security framework for Keychain services
+import Security
 import os.log
 
 func getKeychainQuery(key: String, requireAuthentication: Bool? = nil) -> [String : Any] {

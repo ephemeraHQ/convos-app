@@ -192,6 +192,9 @@ export default () => {
           // For local development
           NSAllowsLocalNetworking: true,
         },
+        // MMKV seems to use "AppGroup" value in info.plist since we are not on new architecture and can't upgrade to v3
+        AppGroup: `group.${config.ios.bundleIdentifier}`,
+        AppGroupName: `group.${config.ios.bundleIdentifier}`,
       },
     },
     android: {
@@ -243,8 +246,7 @@ export default () => {
     },
     plugins: [
       ["expo-notifications"],
-      // "./plugins/my-plugin/app.plugin.js",
-      "./plugins/my-plugin-two/app.plugin.js",
+      "./plugins/notification-service-extension/app.plugin.js",
       ["expo-secure-store"],
       [
         "expo-local-authentication",

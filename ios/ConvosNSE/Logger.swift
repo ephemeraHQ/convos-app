@@ -1,4 +1,3 @@
-// ... existing code ...
 import os.log
 
 let logger = OSLog(subsystem: "com.convos.nse", category: "default")

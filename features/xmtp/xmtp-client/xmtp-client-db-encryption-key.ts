@@ -209,3 +209,16 @@ export async function getBackupXmtpDbEncryptionKey(args: {
 
   return _formatKey(backupKey)
 }
+
+// For debugging ios notification extensions
+// const ethAddress = "0x916955d77401c13cdfddda8e40b100a743ea689f" as ILowercaseEthereumAddress
+
+// const sharedDefaultValue = sharedDefaults.getValue(_getSharedDefaultsStorageKey(ethAddress))
+// console.log("test:", sharedDefaultValue)
+
+// const backupValue = _getFromBackup(ethAddress)
+// console.log("backupKey:", backupValue)
+
+// _getFromSecureStorage(ethAddress).then((value) => {
+//   console.log("secureValue:", value)
+// })
