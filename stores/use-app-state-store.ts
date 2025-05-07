@@ -116,11 +116,13 @@ export function useStartListeningToAppState() {
 
         if (isNowInactive || isNowBackground) {
           stopStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
-          useXmtpActivityStore.getState().actions.cancelAllActiveOperations(
-            new ExternalCancellationError({
-              error: new Error("App state changed to inactive or background"),
-            }),
-          )
+
+          // Try this logic later
+          // useXmtpActivityStore.getState().actions.cancelAllActiveOperations(
+          //   new ExternalCancellationError({
+          //     error: new Error("App state changed to inactive or background"),
+          //   }),
+          // )
         }
       },
     )

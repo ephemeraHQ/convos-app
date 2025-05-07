@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/react-native"
 import { config } from "@/config"
-import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
+// import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
 import { getRandomId } from "@/utils/general"
@@ -32,7 +32,7 @@ export async function wrapXmtpCallWithDuration<T>(
   xmtpCall: () => Promise<T>,
 ): Promise<T> {
   const operationId = getRandomId()
-  const { addOperation, removeOperation } = useXmtpActivityStore.getState().actions
+  // const { addOperation, removeOperation } = useXmtpActivityStore.getState().actions
   const startTime = Date.now()
 
   try {
@@ -46,19 +46,22 @@ export async function wrapXmtpCallWithDuration<T>(
     })
 
     // Execute with the modified timeout, getting the promise and cancel function
-    const { promise: timedPromise, cancel } = withTimeout({
+    const {
+      promise: timedPromise,
+      // cancel
+    } = withTimeout({
       promise: xmtpSpanCall,
       timeoutMs: 15000, // Timeout remains as a safety net
       errorMessage: `Operation "${xmtpFunctionName}" timed out after 15 seconds`,
     })
 
     // NOW add the operation to the store with the ACTUAL cancel function
-    addOperation({
-      id: operationId,
-      name: xmtpFunctionName,
-      startTime,
-      cancel,
-    })
+    // addOperation({
+    //   id: operationId,
+    //   name: xmtpFunctionName,
+    //   startTime,
+    //   cancel,
+    // })
 
     // Await the result (this promise will reject if cancelled externally or timed out)
     const result = await timedPromise
@@ -76,6 +79,6 @@ export async function wrapXmtpCallWithDuration<T>(
     xmtpLogger.error(`Operation [${operationId}] "${xmtpFunctionName}" failed: ${error}`)
     throw error
   } finally {
-    removeOperation(operationId)
+    // removeOperation(operationId)
   }
 }
