@@ -3,21 +3,18 @@ import XMTP
 
 func getXmtpClient(ethAddress: String) async -> XMTP.Client? {
     do {
-        guard let encryptionKey = try? getDbEncryptionKey(ethAddress: ethAddress) else {
-            log("Db Encryption Key is undefined", type: .error)
+        guard let encryptionKey = getDbEncryptionKey(ethAddress: ethAddress) else {
+            log.error("Db Encryption Key is undefined")
             return nil
         }
 
         let xmtpEnv = getXmtpEnv()
         let groupId = getInfoPlistValue(key: "AppGroupIdentifier")
-
-        if (groupId == nil) {
-            log("AppGroupIdentifier is undefined", type: .error, category: "xmtpClient")
+        let groupUrl = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: groupId)
+        guard let groupUrl else {
             return nil
         }
-
-        let groupUrl = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: groupId ?? "")!
         let groupDir = groupUrl.path
 
         let options = ClientOptions(
@@ -40,16 +37,11 @@ func getXmtpClient(ethAddress: String) async -> XMTP.Client? {
 func getXmtpEnv() -> XMTP.XMTPEnvironment {
     let env = getInfoPlistValue(key: "XmtpEnvironment")
 
-    if (env == nil) {
-        log("XmtpEnvironment is undefined setting to local", type: .error, category: "xmtpClient")
-        return .local
-    }
-
-    if (env == "production") {
+    if env == "production" {
         return .production
     }
 
-    if (env == "dev") {
+    if env == "dev" {
         return .dev
     }
 

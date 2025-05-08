@@ -2,89 +2,81 @@ import Foundation
 import os.log
 
 struct SharedDefaults {
-  var standardDefaults: UserDefaults
-  var groupDefaults: UserDefaults
-  var bundleDefaults: UserDefaults
+    var standardDefaults: UserDefaults
+    var groupDefaults: UserDefaults
+    var bundleDefaults: UserDefaults
 
-  init() throws {
-    let bundleId = try! getInfoPlistValue(key: "MainAppBundleIdentifier")
-    standardDefaults = UserDefaults.standard
+    init() throws {
+        let bundleId = try! getInfoPlistValue(key: "MainAppBundleIdentifier")
+        standardDefaults = UserDefaults.standard
 
-    let groupSuiteName = "group.\(bundleId)"
-    groupDefaults = UserDefaults(suiteName: groupSuiteName)!
+        let groupSuiteName = "group.\(bundleId)"
+        groupDefaults = UserDefaults(suiteName: groupSuiteName)!
 
-    let bundleSuiteName = bundleId
-    bundleDefaults = UserDefaults(suiteName: bundleSuiteName)!
+        let bundleSuiteName = bundleId
+        bundleDefaults = UserDefaults(suiteName: bundleSuiteName)!
 
-    log("SharedDefaults initialized with:", type: .debug, category: "userDefaults")
-    log("- Standard defaults: \(standardDefaults)", type: .debug, category: "userDefaults")
-    log(
-      "- Group defaults (\(groupSuiteName)): \(groupDefaults)", type: .debug,
-      category: "userDefaults")
-    log(
-      "- Bundle defaults (\(bundleSuiteName)): \(bundleDefaults)", type: .debug,
-      category: "userDefaults")
-  }
-
-  func string(forKey: String) -> String? {
-    log("Fetching value for key: \(forKey)", type: .debug, category: "userDefaults")
-
-    if let value = standardDefaults.string(forKey: forKey) {
-      log("Found value in standard defaults: \(value)", type: .debug, category: "userDefaults")
-      return value
-    } else {
-      log("No value found in standard defaults", type: .debug, category: "userDefaults")
+        log.debug("SharedDefaults initialized with:")
+        log.debug("- Standard defaults: \(standardDefaults)")
+        log.debug("- Group defaults (\(groupSuiteName)): \(groupDefaults)")
+        log.debug("- Bundle defaults (\(bundleSuiteName)): \(bundleDefaults)")
     }
 
-    if let value = groupDefaults.string(forKey: forKey) {
-      log("Found value in group defaults: \(value)", type: .debug, category: "userDefaults")
-      return value
-    } else {
-      log("No value found in group defaults", type: .debug, category: "userDefaults")
+    func string(forKey: String) -> String? {
+        log.debug("Fetching value for key: \(forKey)")
+
+        if let value = standardDefaults.string(forKey: forKey) {
+            log.debug("Found value in standard defaults: \(value)")
+            return value
+        } else {
+            log.error("No value found in standard defaults")
+        }
+
+        if let value = groupDefaults.string(forKey: forKey) {
+            log.debug("Found value in group defaults: \(value)")
+            return value
+        } else {
+            log.error("No value found in group defaults")
+        }
+
+        if let value = bundleDefaults.string(forKey: forKey) {
+            log.debug("Found value in bundle defaults: \(value)")
+            return value
+        } else {
+            log.error("No value found in bundle defaults")
+        }
+
+        log.error("No value found for key: \(forKey)")
+        return nil
     }
 
-    if let value = bundleDefaults.string(forKey: forKey) {
-      log("Found value in bundle defaults: \(value)", type: .debug, category: "userDefaults")
-      return value
-    } else {
-      log("No value found in bundle defaults", type: .debug, category: "userDefaults")
+    func set(_ value: Any?, forKey defaultName: String) {
+        log.debug("Setting value for key: \(defaultName)")
+
+        standardDefaults.set(value, forKey: defaultName)
+        groupDefaults.set(value, forKey: defaultName)
+        bundleDefaults.set(value, forKey: defaultName)
+
+        log.debug("Value set in all UserDefaults instances")
     }
-
-    log("No value found for key: \(forKey)", type: .debug, category: "userDefaults")
-    return nil
-  }
-
-  func set(_ value: Any?, forKey defaultName: String) {
-    log("Setting value for key: \(defaultName)", type: .debug, category: "userDefaults")
-
-    standardDefaults.set(value, forKey: defaultName)
-    groupDefaults.set(value, forKey: defaultName)
-    bundleDefaults.set(value, forKey: defaultName)
-
-    log("Value set in all UserDefaults instances", type: .debug, category: "userDefaults")
-  }
 }
 
 func getSharedDefaultsValue(key: String) -> String? {
-  do {
-    let sharedDefaults = try SharedDefaults()
-    return sharedDefaults.string(forKey: key)
-  } catch {
-    log(
-      "Failed to initialize SharedDefaults while getting value", type: .error,
-      category: "userDefaults")
-    return nil
-  }
+    do {
+        let sharedDefaults = try SharedDefaults()
+        return sharedDefaults.string(forKey: key)
+    } catch {
+        log.error("Failed to initialize SharedDefaults while getting value")
+        return nil
+    }
 }
 
 func setSharedDefaultsValue(key: String, value: String) {
-  do {
-    let sharedDefaults = try SharedDefaults()
-    sharedDefaults.set(value, forKey: key)
-  } catch {
-    log(
-      "Failed to initialize SharedDefaults while setting value", type: .error,
-      category: "userDefaults")
-    return
-  }
+    do {
+        let sharedDefaults = try SharedDefaults()
+        sharedDefaults.set(value, forKey: key)
+    } catch {
+        log.error("Failed to initialize SharedDefaults while setting value")
+        return
+    }
 }

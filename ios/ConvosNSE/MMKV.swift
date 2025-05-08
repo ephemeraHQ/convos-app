@@ -9,10 +9,13 @@ private var mmkvInitialized = false
 func initializeMmkv() {
     if (!mmkvInitialized) {
         mmkvInitialized = true
-        guard let bundleId = getInfoPlistValue(key: "MainAppBundleIdentifier") else { return }
+        let bundleId = getInfoPlistValue(key: "MainAppBundleIdentifier")
         let groupId = "group.\(bundleId)"
         let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupId)?.path
-        guard let groupDir else { return }
+        guard let groupDir else {
+            log.error("Failed to get bundleId + group: \(#function)")
+            return
+        }
 
         // Initialize MMKV with group directory
         MMKV.initialize(rootDir: nil, groupDir: groupDir, logLevel: MMKVLogLevel.warning)
@@ -39,21 +42,21 @@ func getValueFromMmkv(key: String, id: String? = nil) -> String? {
 
     // Try getting from group instance first
     if let value = mmkvWithGroup?.string(forKey: key) {
-        log("Found value in group instance for key \(key): \(value)", type: .debug, category: "mmkv")
+        log.debug("Found value in group instance for key \(key): \(value)")
         return value
     } else {
-        log("No value found in group instance for key \(key)", type: .debug, category: "mmkv")
+        log.error("No value found in group instance for key \(key)")
     }
 
     // Try getting from non-group instance
     if let value = mmkvNoGroup?.string(forKey: key) {
-        log("Found value in non-group instance for key \(key): \(value)", type: .debug, category: "mmkv")
+        log.debug("Found value in non-group instance for key \(key): \(value)")
         return value
     } else {
-        log("No value found in non-group instance for key \(key)", type: .debug, category: "mmkv")
+        log.error("No value found in non-group instance for key \(key)")
     }
 
-    log("No value found for key: \(key)", type: .debug, category: "mmkv")
+    log.error("No value found in either MMKV instance for key \(key)")
     return nil
 }
 
