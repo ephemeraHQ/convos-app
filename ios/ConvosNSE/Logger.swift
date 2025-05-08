@@ -10,9 +10,9 @@ struct Logging {
         let message = messages.map { String(describing: $0) }.joined(separator: " ")
         os_log("[DEBUG] xDEBUG 🐞 %{public}@", log: logger, type: .debug, message)
         #if DEBUG
-        if logToRemote {
-            LogServer.debug("🐞 \(message)")
-        }
+            if logToRemote {
+                LogServer.debug("🐞 \(message)")
+            }
         #endif
     }
 
@@ -23,9 +23,9 @@ struct Logging {
         }
         os_log("[ERROR] xDEBUG ❌ %{public}@", log: logger, type: .error, message)
         #if DEBUG
-        if logToRemote {
-            LogServer.error(" ❌ \(message)")
-        }
+            if logToRemote {
+                LogServer.error(" ❌ \(message)")
+            }
         #endif
     }
 
@@ -33,9 +33,9 @@ struct Logging {
         let message = messages.map { String(describing: $0) }.joined(separator: " ")
         os_log("[WARN] xDEBUG ⚠️ %{public}@", log: logger, type: .info, message)
         #if DEBUG
-        if logToRemote {
-            LogServer.debug("⚠️ \(message)")
-        }
+            if logToRemote {
+                LogServer.debug("⚠️ \(message)")
+            }
         #endif
     }
 }
@@ -47,20 +47,24 @@ func prettyPrint(dictionary: [AnyHashable: Any]) {
 
 func getPrettyPrintString(dictionary: [AnyHashable: Any]) -> String {
     do {
-        let serializedData = try JSONSerialization.data(withJSONObject: dictionary, options: .prettyPrinted)
+        let serializedData = try JSONSerialization.data(
+            withJSONObject: dictionary, options: .prettyPrinted)
         if let asString = String(data: serializedData, encoding: .utf8) {
             return asString
         } else {
-            throw NSError(domain: "PrettyPrintError",
-                          code: 0,
-                          userInfo: [NSLocalizedDescriptionKey: "Failed to pretty print dictionary. To string failed."])
+            throw NSError(
+                domain: "PrettyPrintError",
+                code: 0,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Failed to pretty print dictionary. To string failed."
+                ])
         }
     } catch {
         log.debug("Failed to pretty print dictionary: \(error)")
         return "Failed to pretty print dictionary: \(error)"
     }
 }
-
 
 let logger = OSLog(subsystem: "com.convos.nse", category: "default")
 
@@ -84,8 +88,8 @@ enum LogServer {
     }
 
     private static func sendLog(message: String, isError: Bool) {
-//        guard let url = URL(string: "http://joe-m4max.tailf1b4c.ts.net:3000/log") else { return }
-        guard let url = URL(string: "http://100.105.129.38:3000/log") else { return }
+        //        guard let url = URL(string: "http://joe-m4max.tailf1b4c.ts.net:3000/log") else { return }
+        guard let url = URL(string: "http://192.168.6.66:3000/log") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -93,7 +97,7 @@ enum LogServer {
 
         let body: [String: Any] = [
             "message": message,
-            "isError": isError
+            "isError": isError,
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         URLSession.shared.dataTask(with: request) { _, response, error in

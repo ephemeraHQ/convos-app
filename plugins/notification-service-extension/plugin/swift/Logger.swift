@@ -89,7 +89,7 @@ enum LogServer {
 
     private static func sendLog(message: String, isError: Bool) {
         //        guard let url = URL(string: "http://joe-m4max.tailf1b4c.ts.net:3000/log") else { return }
-        guard let url = URL(string: "http://100.105.129.38:3000/log") else { return }
+        guard let url = URL(string: "http://192.168.6.66:3000/log") else { return }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

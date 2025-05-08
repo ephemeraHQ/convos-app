@@ -35,7 +35,7 @@ struct SharedDefaults {
         if let value = groupDefaults.string(forKey: forKey) {
             log.debug("Found value in group defaults: \(value)")
             return value
-        }else {
+        } else {
             log.error("No value found in group defaults")
         }
 

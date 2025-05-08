@@ -11,7 +11,8 @@ func initializeMmkv() {
         mmkvInitialized = true
         let bundleId = getInfoPlistValue(key: "MainAppBundleIdentifier")
         let groupId = "group.\(bundleId)"
-        let groupDir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupId)?.path
+        let groupDir = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: groupId)?.path
         guard let groupDir else {
             log.error("Failed to get bundleId + group: \(#function)")
             return
@@ -59,4 +60,3 @@ func getValueFromMmkv(key: String, id: String? = nil) -> String? {
     log.error("No value found in either MMKV instance for key \(key)")
     return nil
 }
-

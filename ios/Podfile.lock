@@ -408,7 +408,7 @@ PODS:
   - MessagePacker (0.4.7)
   - MMKV (2.2.1):
     - MMKVCore (~> 2.2.1)
-  - MMKVCore (2.2.1)
+  - MMKVCore (2.2.2)
   - OpenSSL-Universal (3.3.3001)
   - PromisesObjC (2.4.0)
   - RCT-Folly (2024.10.14.00):
@@ -2940,7 +2940,7 @@ SPEC CHECKSUMS:
   LibXMTP: 80e594671ce3f19f58fa4068403f98d5629d5111
   MessagePacker: ab2fe250e86ea7aedd1a9ee47a37083edd41fd02
   MMKV: 383ccfa10ae23ff2a9c0f6130b7136b37b55ac10
-  MMKVCore: b0e4c420da85636d7adaa535a53dfade59a22f5c
+  MMKVCore: a255341a3746955f50da2ad9121b18cb2b346e61
   OpenSSL-Universal: 6082b0bf950e5636fe0d78def171184e2b3899c2
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: ea9d9256ba7f9322ef911169a9f696e5857b9e17
