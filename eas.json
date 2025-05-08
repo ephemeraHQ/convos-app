@@ -30,6 +30,23 @@
             "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
             "$(AppIdentifierPrefix)com.convos.preview"
           ]
+        },
+        "targets": {
+          "ConvosNSE": {
+            "entitlements": {
+              "com.apple.security.application-groups": [
+                "group.com.convos.preview",
+                "group.com.convos.dev",
+                "group.com.convos.preview.nse"
+              ],
+              "keychain-access-groups": [
+                "$(AppIdentifierPrefix)group.com.convos.preview",
+                "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
+                "$(AppIdentifierPrefix)com.convos.preview"
+              ],
+              "aps-environment": "production"
+            }
+          }
         }
       }
     },
@@ -51,6 +68,23 @@
             "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
             "$(AppIdentifierPrefix)com.convos.preview"
           ]
+        },
+        "targets": {
+          "ConvosNSE": {
+            "entitlements": {
+              "com.apple.security.application-groups": [
+                "group.com.convos.preview",
+                "group.com.convos.dev",
+                "group.com.convos.preview.nse"
+              ],
+              "keychain-access-groups": [
+                "$(AppIdentifierPrefix)group.com.convos.preview",
+                "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
+                "$(AppIdentifierPrefix)com.convos.preview"
+              ],
+              "aps-environment": "production"
+            }
+          }
         }
       }
     },
@@ -75,6 +109,23 @@
             "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
             "$(AppIdentifierPrefix)com.convos.preview"
           ]
+        },
+        "targets": {
+          "ConvosNSE": {
+            "entitlements": {
+              "com.apple.security.application-groups": [
+                "group.com.convos.preview",
+                "group.com.convos.dev",
+                "group.com.convos.preview.nse"
+              ],
+              "keychain-access-groups": [
+                "$(AppIdentifierPrefix)group.com.convos.preview",
+                "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
+                "$(AppIdentifierPrefix)com.convos.preview"
+              ],
+              "aps-environment": "production"
+            }
+          }
         }
       }
     }
