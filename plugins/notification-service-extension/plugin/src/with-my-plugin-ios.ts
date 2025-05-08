@@ -89,8 +89,14 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
           // Add APS Environment if needed for NSE specifically
           entitlements["aps-environment"] = "production"
 
-          fs.writeFileSync(entitlementsPath, plist.build(entitlements))
+          // Ensure the entitlements file is written with proper permissions
+          fs.writeFileSync(entitlementsPath, plist.build(entitlements), { mode: 0o644 })
           Log.log(`Successfully updated ${entitlementsFilename}`)
+
+          // Also copy the entitlements file to the project root for EAS build
+          const projectRootEntitlementsPath = path.join(platformProjectRoot, entitlementsFilename)
+          fs.copyFileSync(entitlementsPath, projectRootEntitlementsPath)
+          Log.log(`Copied entitlements file to project root: ${projectRootEntitlementsPath}`)
         } catch (e: any) {
           Log.log(`Error processing NSE entitlements plist: ${e.message}.`)
         }
@@ -222,9 +228,13 @@ const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
         buildSettingsObj.IPHONEOS_DEPLOYMENT_TARGET = IPHONEOS_DEPLOYMENT_TARGET
         buildSettingsObj.TARGETED_DEVICE_FAMILY = TARGETED_DEVICE_FAMILY
         // Ensure entitlements path is correct relative to the project structure
-        buildSettingsObj.CODE_SIGN_ENTITLEMENTS = `${NSE_TARGET_NAME}/${entitlementsFilename}` // Use variable
+        buildSettingsObj.CODE_SIGN_ENTITLEMENTS = entitlementsFilename // Use just the filename since it's in the same directory
         buildSettingsObj.CODE_SIGN_STYLE = "Automatic"
         buildSettingsObj.SWIFT_VERSION = "5.0" // Ensure this matches your Swift version
+        // Add explicit signing settings
+        buildSettingsObj.CODE_SIGN_IDENTITY = "Apple Distribution"
+        buildSettingsObj.PROVISIONING_PROFILE_SPECIFIER = "" // Let EAS handle this
+        buildSettingsObj.DEVELOPMENT_TEAM = IOS_TEAM_ID
       }
     }
 
