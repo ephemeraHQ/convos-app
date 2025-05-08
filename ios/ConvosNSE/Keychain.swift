@@ -3,15 +3,17 @@ import Security
 import os.log
 
 func getKeychainQuery(key: String, requireAuthentication: Bool? = nil) -> [String : Any] {
-  var service = getInfoPlistValue(key: "MainAppBundleIdentifier")
+  var service = getInfoPlistValue(key: "MainAppBundleIdentifier") ?? "com.convos.preview"
   if let requireAuthentication {
-    service?.append(":\(requireAuthentication ? "auth" : "no-auth")")
+    service.append(":\(requireAuthentication ? "auth" : "no-auth")")
   }
 
-  log("Service for keychain query: \(service ?? "nil"), Key: \(key), RequireAuth: \(String(describing: requireAuthentication))", type: .debug, category: "keychainQuery")
+  log.debug(
+    "Service for keychain query: \(service), Key: \(key), RequireAuth: \(String(describing: requireAuthentication))"
+  )
 
   let encodedKey = Data(key.utf8)
-  var query = [
+  let query = [
     kSecClass as String: kSecClassGenericPassword,
     kSecAttrService as String: service,
     kSecAttrGeneric as String: encodedKey,
@@ -27,7 +29,7 @@ func getKeychainQuery(key: String, requireAuthentication: Bool? = nil) -> [Strin
   // For now, I will comment this out as your NotificationService.swift might be handling the group ID differently.
   // If readDataFromKeychain in NotificationService.swift already adds this, it's fine.
 
-  log("Keychain query constructed: \(query as NSDictionary)", type: .debug, category: "keychainQuery")
+  log("Keychain query constructed: \(query)", type: .debug, category: "keychainQuery")
   return query
 }
 
