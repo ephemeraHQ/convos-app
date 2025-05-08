@@ -1,4 +1,3 @@
-import { XMTP_DISAPPEARING_MESSAGE_NO_VALUE_DEFAULT_DURATION_IN_NS } from "@/features/xmtp/xmtp-disappearing-messages/xmtp-disappearing-messages"
 import { getTodayNs } from "@/utils/date"
 import { TimeUtils } from "@/utils/time.utils"
 
@@ -24,15 +23,15 @@ export type IDisappearingMessageSettings = {
 
 export const defaultConversationDisappearingMessageSettings: IDisappearingMessageSettings = {
   disappearStartingAtNs: getTodayNs(),
-  retentionDurationInNs: DisappearingMessageDuration.THIRTY_DAYS.value,
+  retentionDurationInNs: 0,
 }
 
 /**
  * Get a formatted display value for a disappearing message duration in nanoseconds
  */
 export function getFormattedDisappearingDuration(nanoseconds: number | undefined): string {
-  if (!nanoseconds) {
-    nanoseconds = XMTP_DISAPPEARING_MESSAGE_NO_VALUE_DEFAULT_DURATION_IN_NS
+  if (!nanoseconds || nanoseconds === 0) {
+    return "off";
   }
 
   // First check if this matches one of our predefined durations
