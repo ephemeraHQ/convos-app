@@ -6,7 +6,6 @@ import XMTP
 final class NotificationService: UNNotificationServiceExtension {
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttempt:   UNMutableNotificationContent?
-    private let logger = OSLog(subsystem: "com.convos.nse", category: "NotificationService")
 
     override func didReceive(
         _ request: UNNotificationRequest,
@@ -38,18 +37,6 @@ final class NotificationService: UNNotificationServiceExtension {
 
         // Log the received userInfo for debugging
         log.debug("Received notification userInfo: \(getPrettyPrintString(dictionary: userInfo))")
-
-        // Define Decodable structs for parsing the notification payload.
-        // These are typically defined at the class or file level if they represent common data models.
-        struct NotificationBody: Decodable {
-            let encryptedMessage: String
-            let contentTopic: String
-            let ethAddress: String
-        }
-
-        struct NotificationPayload: Decodable {
-            let body: NotificationBody
-        }
 
         let encryptedMessage: String
         let topic: String
@@ -91,7 +78,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
                 guard let conversation = try await client?.conversations.findConversationByTopic(topic: topic) else {
                     log.error("Conversation not found for topic: ", topic)
-//                    contentHandler?(currentBestAttempt)
+                    contentHandler?(currentBestAttempt)
                     return
                 }
 
@@ -151,7 +138,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
                 // Set both title and body to the decrypted plaintext for now
                 log.debug(">>> Decrypted Plaintext:", "'\(plaintext)'") // Log with quotes to see if empty
-                currentBestAttempt.title = "--- New message"
+                currentBestAttempt.title = "New message"
                 currentBestAttempt.body = plaintext
 
                 prettyPrint(dictionary: currentBestAttempt.userInfo)
@@ -178,45 +165,15 @@ final class NotificationService: UNNotificationServiceExtension {
     }
 }
 
-let log: Logging = Logging()
-
-struct Logging {
-    func debug(_ messages: Any...) {
-        let message = messages.map { String(describing: $0) }.joined(separator: " ")
-        os_log("[DEBUG] xDEBUG 🐞 %{public}@", log: OSLog.default, type: .debug, message)
+extension NotificationService {
+    // Define Decodable structs for parsing the notification payload.
+    struct NotificationBody: Decodable {
+        let encryptedMessage: String
+        let contentTopic: String
+        let ethAddress: String
     }
 
-    func error(_ messages: Any..., error: Error? = nil) {
-        var message = messages.map { String(describing: $0) }.joined(separator: " ")
-        if let error {
-            message += " | Error: \(error)"
-        }
-        os_log("[ERROR] xDEBUG ❌ %{public}@", log: OSLog.default, type: .error, message)
-    }
-
-    func warn(_ messages: Any..., Error: Error? = nil) {
-        let message = messages.map { String(describing: $0) }.joined(separator: " ")
-        os_log("[WARN] xDEBUG ⚠️ %{public}@", log: OSLog.default, type: .info, message)
-    }
-}
-
-func prettyPrint(dictionary: [AnyHashable: Any]) {
-    let prettyPrintedString = getPrettyPrintString(dictionary: dictionary)
-    log.debug(prettyPrintedString)
-}
-
-func getPrettyPrintString(dictionary: [AnyHashable: Any]) -> String {
-    do {
-        let serializedData = try JSONSerialization.data(withJSONObject: dictionary, options: .prettyPrinted)
-        if let asString = String(data: serializedData, encoding: .utf8) {
-            return asString
-        } else {
-            throw NSError(domain: "PrettyPrintError",
-                          code: 0,
-                          userInfo: [NSLocalizedDescriptionKey: "Failed to pretty print dictionary. To string failed."])
-        }
-    } catch {
-        log.debug("Failed to pretty print dictionary: \(error)")
-        return "Failed to pretty print dictionary: \(error)"
+    struct NotificationPayload: Decodable {
+        let body: NotificationBody
     }
 }
