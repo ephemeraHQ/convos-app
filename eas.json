@@ -15,12 +15,44 @@
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
-      "environment": "development"
+      "environment": "development",
+      "ios": {
+        "resourceClass": "m-medium",
+        "credentialsSource": "remote",
+        "entitlements": {
+          "com.apple.security.application-groups": [
+            "group.com.convos.preview",
+            "group.com.convos.dev",
+            "group.com.convos.preview.nse"
+          ],
+          "keychain-access-groups": [
+            "$(AppIdentifierPrefix)group.com.convos.preview",
+            "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
+            "$(AppIdentifierPrefix)com.convos.preview"
+          ]
+        }
+      }
     },
     "preview": {
       "extends": "_shared",
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "ios": {
+        "resourceClass": "m-medium",
+        "credentialsSource": "remote",
+        "entitlements": {
+          "com.apple.security.application-groups": [
+            "group.com.convos.preview",
+            "group.com.convos.dev",
+            "group.com.convos.preview.nse"
+          ],
+          "keychain-access-groups": [
+            "$(AppIdentifierPrefix)group.com.convos.preview",
+            "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
+            "$(AppIdentifierPrefix)com.convos.preview"
+          ]
+        }
+      }
     },
     "production": {
       "extends": "_shared",
@@ -28,6 +60,22 @@
       "environment": "production",
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "resourceClass": "m-medium",
+        "credentialsSource": "remote",
+        "entitlements": {
+          "com.apple.security.application-groups": [
+            "group.com.convos.preview",
+            "group.com.convos.dev",
+            "group.com.convos.preview.nse"
+          ],
+          "keychain-access-groups": [
+            "$(AppIdentifierPrefix)group.com.convos.preview",
+            "$(AppIdentifierPrefix)com.convos.preview.ConvosNSE",
+            "$(AppIdentifierPrefix)com.convos.preview"
+          ]
+        }
       }
     }
   },
