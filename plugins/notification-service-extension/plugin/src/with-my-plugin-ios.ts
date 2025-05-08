@@ -217,6 +217,17 @@ const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
     xcodeProject.addBuildPhase([], "PBXResourcesBuildPhase", "Resources", nseTarget.uuid)
     xcodeProject.addBuildPhase([], "PBXFrameworksBuildPhase", "Frameworks", nseTarget.uuid)
 
+    // Add entitlements file to the project
+    const entitlementsFile = xcodeProject.addFile(
+      entitlementsFilename,
+      nseTarget.uuid,
+      { lastKnownFileType: "text.plist.entitlements" }
+    )
+    if (entitlementsFile) {
+      xcodeProject.addToPbxBuildFileSection(entitlementsFile)
+      xcodeProject.addToPbxResourcesBuildPhase(entitlementsFile)
+    }
+
     // Edit the Deployment info of the new Target
     const configurations = xcodeProject.pbxXCBuildConfigurationSection()
     for (const key in configurations) {
@@ -228,13 +239,16 @@ const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
         buildSettingsObj.IPHONEOS_DEPLOYMENT_TARGET = IPHONEOS_DEPLOYMENT_TARGET
         buildSettingsObj.TARGETED_DEVICE_FAMILY = TARGETED_DEVICE_FAMILY
         // Ensure entitlements path is correct relative to the project structure
-        buildSettingsObj.CODE_SIGN_ENTITLEMENTS = entitlementsFilename // Use just the filename since it's in the same directory
+        buildSettingsObj.CODE_SIGN_ENTITLEMENTS = `${NSE_TARGET_NAME}/${entitlementsFilename}` // Use full path relative to project
         buildSettingsObj.CODE_SIGN_STYLE = "Automatic"
         buildSettingsObj.SWIFT_VERSION = "5.0" // Ensure this matches your Swift version
         // Add explicit signing settings
         buildSettingsObj.CODE_SIGN_IDENTITY = "Apple Distribution"
         buildSettingsObj.PROVISIONING_PROFILE_SPECIFIER = "" // Let EAS handle this
         buildSettingsObj.DEVELOPMENT_TEAM = IOS_TEAM_ID
+        // Add additional build settings for entitlements
+        buildSettingsObj.CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = "YES"
+        buildSettingsObj.CODE_SIGN_INJECT_BASE_ENTITLEMENTS = "YES"
       }
     }
 
