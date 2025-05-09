@@ -58,102 +58,111 @@ class ProfileNameResolver {
 }
 
 extension Group {
-    var memberNames: [String?] {
-        get async throws {
-            let members = try await members
-            let memberInboxIds = members.map { $0.inboxId }
-            return await withTaskGroup(of: String?.self) { group in
-                for id in memberInboxIds {
-                    group.addTask {
-                        await ProfileNameResolver.shared.resolveProfileName(for: id)
-                    }
-                }
-
-                var names: [String?] = []
-                for await name in group {
-                    names.append(name)
-                }
-                return names
-            }
+  var memberNames: [String?] {
+    get async throws {
+      let members = try await members
+      let memberInboxIds = members.map { $0.inboxId }
+      return await withTaskGroup(of: String?.self) { group in
+        for id in memberInboxIds {
+          group.addTask {
+            await ProfileNameResolver.shared.resolveProfileName(for: id)
+          }
         }
-    }
 
-    /// if you set `currentInboxId`, that member's profile name will be replaced with "You"
-    func membersString(for currentInboxId: String? = nil,
+        var names: [String?] = []
+        for await name in group {
+          names.append(name)
+        }
+        return names
+      }
+    }
+  }
+
+  /// if you set `currentInboxId`, that member's profile name will be replaced with "You"
+  func membersString(for currentInboxId: String? = nil,
                      excluding: [String] = []) async throws -> String {
-        let excludingSet = Set(excluding)
-        let members = try await members
+    let excludingSet = Set(excluding)
+    let members = try await members
+    let maxMemberNamesToShow: Int = 5
+    let replaceWithString: String = "you"
 
-        let maxMemberNamesToShow: Int = 5
-
-        // Build the list with currentInboxId first
-        var memberInboxIds = members.map { $0.inboxId }
-        if let currentInboxId, let idx = memberInboxIds.firstIndex(of: currentInboxId) {
-            memberInboxIds.remove(at: idx)
-            memberInboxIds.insert(currentInboxId, at: 0)
-        }
-
-        // Remove excluded IDs (except currentInboxId)
-        memberInboxIds = memberInboxIds.filter { !excludingSet.contains($0) }
-
-        // Show a max number of members, but always include currentInboxId if present
-        let limitedMemberInboxIds: [String]
-        if let currentInboxId, memberInboxIds.first == currentInboxId {
-            limitedMemberInboxIds = [currentInboxId] + Array(memberInboxIds.dropFirst()).prefix(maxMemberNamesToShow - 1)
-        } else {
-            limitedMemberInboxIds = Array(memberInboxIds.prefix(maxMemberNamesToShow))
-        }
-        let numberOfOthers = members.count - limitedMemberInboxIds.count - (currentInboxId == nil ? 0 : 1)
-
-        let replaceWithString: String = "you"
-        return await withTaskGroup(of: (String, String?).self) { group in
-            for id in memberInboxIds {
-                group.addTask {
-                    let name = await ProfileNameResolver.shared.resolveProfileName(for: id)
-                    return (id, name)
-                }
-            }
-
-            var namesDict: [String: String] = [:]
-            var unknownCount = numberOfOthers
-            for await (id, name) in group {
-                if let name {
-                    namesDict[id] = name
-                } else {
-                    unknownCount += 1
-                }
-            }
-
-            // empty profile names
-            guard !namesDict.isEmpty else {
-                if currentInboxId == nil {
-                    return "No members"
-                } else {
-                    return "You and \(unknownCount) others"
-                }
-            }
-
-            // Build the names array, replacing with a string if needed
-            var names = memberInboxIds.map { id in
-                if let currentInboxId, id == currentInboxId {
-                    return replaceWithString
-                } else {
-                    return namesDict[id] ?? id
-                }
-            }
-            // Move "You" to the front if present
-            if let youIndex = names.firstIndex(of: replaceWithString) {
-                let you = names.remove(at: youIndex)
-                names.insert(you, at: 0)
-            }
-            if unknownCount > 0 {
-                names.append("\(unknownCount) \(unknownCount == 1 ? "other" : "others")")
-            }
-            return ((names.count == 2) ?
-                    names.joined(separator: " and ") :
-                        names.joined(separator: ", "))
-        }
+    // Build the list with currentInboxId first
+    var memberInboxIds = members.map { $0.inboxId }
+    if let currentInboxId, let idx = memberInboxIds.firstIndex(of: currentInboxId) {
+      memberInboxIds.remove(at: idx)
+      memberInboxIds.insert(currentInboxId, at: 0)
     }
+
+    // Remove excluded IDs (except currentInboxId)
+    memberInboxIds = memberInboxIds.filter { !excludingSet.contains($0) }
+
+    // Determine the limited list to display
+    let limitedMemberInboxIds: [String]
+    if let currentInboxId, memberInboxIds.first == currentInboxId {
+      limitedMemberInboxIds = [currentInboxId] + Array(memberInboxIds.dropFirst()).prefix(maxMemberNamesToShow - 1)
+    } else {
+      limitedMemberInboxIds = Array(memberInboxIds.prefix(maxMemberNamesToShow))
+    }
+
+    // Calculate truly unshown inbox IDs (excluding ones filtered out)
+    let shownIds = Set(limitedMemberInboxIds)
+    let unshownIds = memberInboxIds.filter { !shownIds.contains($0) }
+
+    var unknownCount = unshownIds.count
+
+    return await withTaskGroup(of: (String, String?).self) { group in
+      for id in limitedMemberInboxIds {
+        group.addTask {
+          let name = await ProfileNameResolver.shared.resolveProfileName(for: id)
+          return (id, name)
+        }
+      }
+
+      var namesDict: [String: String] = [:]
+      for await (id, name) in group {
+        if let name {
+          namesDict[id] = name
+        } else {
+          unknownCount += 1
+        }
+      }
+
+      // No resolved names at all
+      if namesDict.isEmpty {
+        if currentInboxId == nil {
+          return "No members"
+        } else {
+          return "You and \(unknownCount) others"
+        }
+      }
+
+      // Build the final names list
+      guard !namesDict.isEmpty else {
+        return currentInboxId == nil ? "No members" : "You and \(unknownCount) others"
+      }
+
+      var names = limitedMemberInboxIds.compactMap { id in
+        if let currentInboxId, id == currentInboxId {
+          return replaceWithString
+        } else {
+          return namesDict[id] // exclude unresolved IDs
+        }
+      }
+
+      // Move "you" to front if needed
+      if let youIndex = names.firstIndex(of: replaceWithString) {
+        names.remove(at: youIndex)
+        names.insert(replaceWithString, at: 0)
+      }
+
+      if unknownCount > 0 {
+        names.append("\(unknownCount) \(unknownCount == 1 ? "other" : "others")")
+      }
+
+      return names.count == 2 ? names.joined(separator: " and ") : names.joined(separator: ", ")
+    }
+  }
+
 }
 
 extension Reaction {

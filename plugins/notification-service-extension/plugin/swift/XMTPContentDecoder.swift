@@ -1,5 +1,5 @@
 import Foundation
-import XMTPiOS
+import XMTP
 
 extension Reaction: @retroactive Equatable {
     public static func == (lhs: Reaction, rhs: Reaction) -> Bool {
@@ -53,6 +53,7 @@ class XMTPContentDecoder {
              reaction(Reaction),
              attachment(Attachment),
              remoteAttachment(RemoteAttachment),
+             remoteURL(URL),
              unknown
     }
 
@@ -81,10 +82,14 @@ class XMTPContentDecoder {
             }
             return .attachment(attachment)
         case ContentTypeRemoteAttachment:
-            guard let remoteAttachment = content as? RemoteAttachment else {
-                throw XMTPDecoderError.mismatchedContentType("Could not decode content as remote attachment")
-            }
+          if let remoteAttachment = content as? RemoteAttachment {
             return .remoteAttachment(remoteAttachment)
+          } else if let urlString = content as? String,
+                    let url = URL(string: urlString) {
+            return .remoteURL(url)
+          } else {
+            fallthrough
+          }
         default:
             return .unknown
         }
