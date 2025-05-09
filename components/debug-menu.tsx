@@ -76,7 +76,6 @@ function useShowDebugMenu({
       "Display current session logs": async () => {
         navigate("WebviewPreview", { uri: LOG_FILE_PATH }).catch(captureError)
       },
-      "-": () => Promise.resolve(), // Separator
       "Start Libxmtp File Logging": async () => {
         startXmtpFileLogging()
         showSnackbar({
@@ -116,7 +115,6 @@ function useShowDebugMenu({
           ],
         )
       },
-      "--": () => Promise.resolve(), // Separator
       "Clear XMTP logs": async () => {
         try {
           await clearXmtpLogs()

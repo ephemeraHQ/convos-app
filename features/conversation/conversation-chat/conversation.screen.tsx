@@ -22,6 +22,7 @@ import { isConversationAllowed } from "@/features/conversation/utils/is-conversa
 import { clearNotificationsForConversation } from "@/features/notifications/notifications-clear"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
+import { captureError } from "@/utils/capture-error"
 import { ConversationMessages } from "./conversation-messages"
 import {
   ConversationStoreProvider,
@@ -78,7 +79,7 @@ const Content = memo(function Content() {
 
   useEffect(() => {
     if (xmtpConversationId) {
-      clearNotificationsForConversation({ xmtpConversationId })
+      clearNotificationsForConversation({ xmtpConversationId }).catch(captureError)
     }
   }, [xmtpConversationId])
 
