@@ -9,7 +9,7 @@ import { startTimer, stopTimer } from "@/utils/perf/perf-timer"
 import { createStorage, IStorage } from "@/utils/storage/storage"
 
 const REACT_QUERY_PERSISTER_STORAGE_ID = "convos-react-query-persister"
-export const reactQueryPersitingStorage = createStorage(REACT_QUERY_PERSISTER_STORAGE_ID)
+export const reactQueryPersitingStorage = createStorage({ id: REACT_QUERY_PERSISTER_STORAGE_ID })
 export const reactQueryPersister = createReactQueryPersister(reactQueryPersitingStorage)
 const REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY = "react-query-client"
 

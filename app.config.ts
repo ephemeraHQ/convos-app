@@ -146,9 +146,7 @@ export default () => {
     userInterfaceStyle: "automatic",
     version: version,
     assetBundlePatterns: ["**/*"],
-    runtimeVersion: {
-      policy: "appVersion",
-    },
+    runtimeVersion: version,
     updates: {
       url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
     },
@@ -169,9 +167,13 @@ export default () => {
         usesNonExemptEncryption: false,
       },
       entitlements: {
-        // App check stuff
+        "keychain-access-groups": [
+          `$(AppIdentifierPrefix)group.${config.ios.bundleIdentifier}`,
+          `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}`,
+        ],
         "com.apple.developer.devicecheck.appattest-environment": "production",
-        "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // for key sharing
+        "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // For key sharing between app and NSE
+        "aps-environment": "production", // For now until we really have the correct setup to test notification in local
       },
       infoPlist: {
         LSApplicationQueriesSchemes: [
@@ -190,6 +192,10 @@ export default () => {
           // For local development
           NSAllowsLocalNetworking: true,
         },
+        // MMKV seems to use "AppGroup" value in info.plist since we are not on new architecture and can't upgrade to v3
+        // Related to https://github.com/mrousavy/react-native-mmkv/pull/703
+        AppGroup: `group.${config.ios.bundleIdentifier}`,
+        AppGroupName: `group.${config.ios.bundleIdentifier}`,
       },
     },
     android: {
@@ -241,6 +247,7 @@ export default () => {
     },
     plugins: [
       ["expo-notifications"],
+      "./plugins/notification-service-extension/app.plugin.js",
       ["expo-secure-store"],
       [
         "expo-local-authentication",

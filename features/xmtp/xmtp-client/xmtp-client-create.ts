@@ -42,7 +42,7 @@ async function _createXmtpClient(args: {
       codecs: supportedXmtpCodecs,
       dbDirectory,
       ...(config.xmtp.env === "local" && {
-        customLocalUrl: getXmtpLocalUrl(),
+        customLocalHost: getXmtpLocalUrl(),
       }),
     }),
   )

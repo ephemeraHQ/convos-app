@@ -1,14 +1,18 @@
 import { getRandomBytesAsync } from "expo-crypto"
+import { config } from "@/config"
 import { XMTPError } from "@/utils/error"
 import { ILowercaseEthereumAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { secureStorage } from "@/utils/storage/secure-storage"
-import { storage } from "@/utils/storage/storage"
+import { sharedDefaults } from "@/utils/storage/shared-defaults"
+import { createStorage } from "@/utils/storage/storage"
 
 // Constants
 const DB_ENCRYPTION_KEY_STORAGE_KEY_STRING = "LIBXMTP_DB_ENCRYPTION_KEY" // NEVER CHANGE THIS
 const BACKUP_PREFIX = "BACKUP_XMTP_KEY_" // NEVER CHANGE THIS
+const SHARED_DEFAULTS_PREFIX = "SHARED_DEFAULTS_XMTP_KEY_" // NEVER CHANGE THIS
 const XMTP_KEY_LENGTH = 32
+const backupStorage = createStorage({ id: config.app.bundleId })
 
 // Storage key utilities
 function _getSecureStorageKey(ethAddress: ILowercaseEthereumAddress) {
@@ -17,6 +21,10 @@ function _getSecureStorageKey(ethAddress: ILowercaseEthereumAddress) {
 
 function _getBackupStorageKey(ethAddress: ILowercaseEthereumAddress) {
   return `${BACKUP_PREFIX}${ethAddress}`
+}
+
+function _getSharedDefaultsStorageKey(ethAddress: ILowercaseEthereumAddress) {
+  return `${SHARED_DEFAULTS_PREFIX}${ethAddress}`
 }
 
 // Key format utilities
@@ -71,19 +79,38 @@ export async function deleteDbKey(args: { ethAddress: ILowercaseEthereumAddress 
 // Backup storage operations
 function _saveToBackup(ethAddress: ILowercaseEthereumAddress, value: string) {
   const backupKey = _getBackupStorageKey(ethAddress)
-  storage.set(backupKey, value)
+  backupStorage.set(backupKey, value)
   xmtpLogger.debug(`Saved encryption key to backup for ${ethAddress}`)
 }
 
 function _getFromBackup(ethAddress: ILowercaseEthereumAddress): string | null {
   const backupKey = _getBackupStorageKey(ethAddress)
-  const value = storage.getString(backupKey)
+  const value = backupStorage.getString(backupKey)
   return value || null
 }
 
 function _deleteFromBackup(ethAddress: ILowercaseEthereumAddress) {
   const backupKey = _getBackupStorageKey(ethAddress)
-  storage.delete(backupKey)
+  backupStorage.delete(backupKey)
+}
+
+// Shared defaults storage operations
+function _saveToSharedDefaults(ethAddress: ILowercaseEthereumAddress, value: string) {
+  const sharedDefaultsKey = _getSharedDefaultsStorageKey(ethAddress)
+  sharedDefaults.setValue(sharedDefaultsKey, value)
+  xmtpLogger.debug(`Saved encryption key to shared defaults for ${ethAddress}`)
+}
+
+function _getFromSharedDefaults(ethAddress: ILowercaseEthereumAddress): string | null {
+  const sharedDefaultsKey = _getSharedDefaultsStorageKey(ethAddress)
+  const value = sharedDefaults.getValue(sharedDefaultsKey)
+  return typeof value === "string" ? value : null
+}
+
+function _deleteFromSharedDefaults(ethAddress: ILowercaseEthereumAddress) {
+  const sharedDefaultsKey = _getSharedDefaultsStorageKey(ethAddress)
+  sharedDefaults.setValue(sharedDefaultsKey, "")
+  xmtpLogger.debug(`"Deleted" encryption key from shared defaults for ${ethAddress}`)
 }
 
 // Key management operations
@@ -93,8 +120,9 @@ export async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; ke
 
   try {
     await secureStorage.setItem(storageKey, key)
-    xmtpLogger.debug(`Saved DB encryption key for ${ethAddress}`)
+    xmtpLogger.debug(`Saved DB encryption key for ${ethAddress} at ${storageKey}`)
     _saveToBackup(ethAddress, key)
+    _saveToSharedDefaults(ethAddress, key)
   } catch (error) {
     throw new XMTPError({
       error,
@@ -108,6 +136,7 @@ export async function cleanXmtpDbEncryptionKey(args: { ethAddress: ILowercaseEth
   const { ethAddress } = args
   await deleteDbKey({ ethAddress })
   _deleteFromBackup(ethAddress)
+  _deleteFromSharedDefaults(ethAddress)
 }
 
 export async function getOrCreateXmtpDbEncryptionKey(args: {
@@ -119,9 +148,32 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
 
   try {
     // Check if key exists in secure storage
-    const existingKey = await _getFromSecureStorage(ethAddress)
+    let existingKey = await _getFromSecureStorage(ethAddress)
     if (existingKey) {
-      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress}`)
+      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in secure storage`)
+      // Ensure backups are consistent
+      _saveToBackup(ethAddress, existingKey)
+      _saveToSharedDefaults(ethAddress, existingKey)
+      return _formatKey(existingKey)
+    }
+
+    // Check if key exists in backup storage
+    existingKey = _getFromBackup(ethAddress)
+    if (existingKey) {
+      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in backup storage`)
+      // Restore to secure storage and shared defaults
+      await secureStorage.setItem(_getSecureStorageKey(ethAddress), existingKey)
+      _saveToSharedDefaults(ethAddress, existingKey)
+      return _formatKey(existingKey)
+    }
+
+    // Check if key exists in shared defaults
+    existingKey = _getFromSharedDefaults(ethAddress)
+    if (existingKey) {
+      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in shared defaults`)
+      // Restore to secure storage and backup
+      await secureStorage.setItem(_getSecureStorageKey(ethAddress), existingKey)
+      _saveToBackup(ethAddress, existingKey)
       return _formatKey(existingKey)
     }
 
@@ -129,7 +181,7 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
     xmtpLogger.debug(`Creating new DB encryption key for ${ethAddress}`)
     const newKey = await _generateKey()
 
-    // Save to secure storage and backup
+    // Save to secure storage and backups
     await _saveKey({ ethAddress, key: newKey })
 
     return _formatKey(newKey)
@@ -157,3 +209,16 @@ export async function getBackupXmtpDbEncryptionKey(args: {
 
   return _formatKey(backupKey)
 }
+
+// For debugging ios notification extensions
+// const ethAddress = "0x916955d77401c13cdfddda8e40b100a743ea689f" as ILowercaseEthereumAddress
+
+// const sharedDefaultValue = sharedDefaults.getValue(_getSharedDefaultsStorageKey(ethAddress))
+// console.log("test:", sharedDefaultValue)
+
+// const backupValue = _getFromBackup(ethAddress)
+// console.log("backupKey:", backupValue)
+
+// _getFromSecureStorage(ethAddress).then((value) => {
+//   console.log("secureValue:", value)
+// })
