@@ -20,6 +20,7 @@
 		75C33FEE132E43BCAEFF385F /* SharedDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1C9FEE18ED449B949117D8 /* SharedDefaults.swift */; };
 		78033470F8F559E5658B8610 /* Pods_ConvosPreview.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E5A9C4D2EE451109386B57F3 /* Pods_ConvosPreview.framework */; };
 		798A89D0406D40DBBB5D7395 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB4AA68001DC4DCD94338A20 /* noop-file.swift */; };
+		7A39EA6F2DCEC0D3001F2137 /* Group+MemberNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A39EA6E2DCEC0CE001F2137 /* Group+MemberNames.swift */; };
 		89CF051956FD4975856C8533 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4307E53129440F183B7433C /* Logger.swift */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		B365CDCB25E40DBD89663241 /* Pods_ConvosNSE.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F2D1E88CEAFE143C2B81F55 /* Pods_ConvosNSE.framework */; };
@@ -70,6 +71,7 @@
 		4956BD9C806047A097E83E1A /* XmtpDbEncryptionKey.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; path = XmtpDbEncryptionKey.swift; sourceTree = "<group>"; };
 		4AB91F487471488AA6A2828C /* ConvosNSE-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; path = "ConvosNSE-Info.plist"; sourceTree = "<group>"; };
 		6C2E3173556A471DD304B334 /* Pods-ConvosPreview.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ConvosPreview.debug.xcconfig"; path = "Target Support Files/Pods-ConvosPreview/Pods-ConvosPreview.debug.xcconfig"; sourceTree = "<group>"; };
+		7A39EA6E2DCEC0CE001F2137 /* Group+MemberNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Group+MemberNames.swift"; sourceTree = "<group>"; };
 		7A4D352CD337FB3A3BF06240 /* Pods-ConvosPreview.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ConvosPreview.release.xcconfig"; path = "Target Support Files/Pods-ConvosPreview/Pods-ConvosPreview.release.xcconfig"; sourceTree = "<group>"; };
 		7A91A95CD5C64080971735C2 /* Keychain.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
 		85C7AC9AC76EBF6AA5DDC1BC /* Pods-ConvosNSE.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ConvosNSE.debug.xcconfig"; path = "Target Support Files/Pods-ConvosNSE/Pods-ConvosNSE.debug.xcconfig"; sourceTree = "<group>"; };
@@ -221,6 +223,7 @@
 				1618304E042B48D8ADC82BFE /* XmtpClient.swift */,
 				4956BD9C806047A097E83E1A /* XmtpDbEncryptionKey.swift */,
 				C0320A4673E64DDBB04D4508 /* PushNotificationContentFactory.swift */,
+				7A39EA6E2DCEC0CE001F2137 /* Group+MemberNames.swift */,
 				EDF415180DE441AE83159D64 /* XMTPContentDecoder.swift */,
 			);
 			path = ConvosNSE;
@@ -573,6 +576,7 @@
 				11B919E287BD4D619C383589 /* Utils.swift in Sources */,
 				B7711A14966A4CD6BC0A2214 /* Keychain.swift in Sources */,
 				89CF051956FD4975856C8533 /* Logger.swift in Sources */,
+				7A39EA6F2DCEC0D3001F2137 /* Group+MemberNames.swift in Sources */,
 				25B499CED4FC4324A8EA6700 /* MMKV.swift in Sources */,
 				75C33FEE132E43BCAEFF385F /* SharedDefaults.swift in Sources */,
 				3D3BAC72DA1B4B7DBEE12D49 /* XmtpClient.swift in Sources */,
