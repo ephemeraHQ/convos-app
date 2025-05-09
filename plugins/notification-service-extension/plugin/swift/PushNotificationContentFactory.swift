@@ -1,11 +1,22 @@
 import Foundation
 import UniformTypeIdentifiers
 import UserNotifications
-import XMTPiOS
+import XMTP
+
+extension Attachment {
+  func saveToTmpFile() throws -> URL {
+    let tempDir = FileManager.default.temporaryDirectory
+    let fileName = UUID().uuidString + filename
+    let fileURL = tempDir.appendingPathComponent(fileName)
+    try data.write(to: fileURL)
+    return fileURL
+  }
+}
 
 class ProfileNameResolver {
     private struct Response: Codable {
-        let username: String
+      let name: String?
+      let username: String
     }
 
     static let shared = ProfileNameResolver()
@@ -24,125 +35,134 @@ class ProfileNameResolver {
             let (data, response) = try await URLSession.shared.data(from: url)
 
             guard let httpResponse = response as? HTTPURLResponse else {
-//                log.error("Failed to get HTTP response for inboxId \(inboxId)")
+                log.error("Failed to get HTTP response for inboxId \(inboxId)")
                 return nil
             }
 
             guard httpResponse.statusCode == 200 else {
-//                log.error(
-//                    "Failed to fetch username for inboxId \(inboxId). HTTP Response: \(httpResponse)"
-//                )
+                log.error(
+                    "Failed to fetch username for inboxId \(inboxId). HTTP Response: \(httpResponse)"
+                )
                 return nil
             }
 
             // Parse the JSON response
             let decoder = JSONDecoder()
             let profile = try decoder.decode(Response.self, from: data)
-            return profile.username
+          return profile.name ?? profile.username
         } catch {
-//            log.error("Failed to fetch username for inboxId \(inboxId)", error: error)
+            log.error("Failed to fetch username for inboxId \(inboxId)", error: error)
             return nil
         }
     }
 }
 
 extension Group {
-    var memberNames: [String?] {
-        get async throws {
-            let members = try await members
-            let memberInboxIds = members.map { $0.inboxId }
-            return await withTaskGroup(of: String?.self) { group in
-                for id in memberInboxIds {
-                    group.addTask {
-                        await ProfileNameResolver.shared.resolveProfileName(for: id)
-                    }
-                }
-
-                var names: [String?] = []
-                for await name in group {
-                    names.append(name)
-                }
-                return names
-            }
+  var memberNames: [String?] {
+    get async throws {
+      let members = try await members
+      let memberInboxIds = members.map { $0.inboxId }
+      return await withTaskGroup(of: String?.self) { group in
+        for id in memberInboxIds {
+          group.addTask {
+            await ProfileNameResolver.shared.resolveProfileName(for: id)
+          }
         }
-    }
 
-    /// if you set `currentInboxId`, that member's profile name will be replaced with "You"
-    func membersString(for currentInboxId: String? = nil,
+        var names: [String?] = []
+        for await name in group {
+          names.append(name)
+        }
+        return names
+      }
+    }
+  }
+
+  /// if you set `currentInboxId`, that member's profile name will be replaced with "You"
+  func membersString(for currentInboxId: String? = nil,
                      excluding: [String] = []) async throws -> String {
-        let excludingSet = Set(excluding)
-        let members = try await members
+    let excludingSet = Set(excluding)
+    let members = try await members
+    let maxMemberNamesToShow: Int = 5
+    let replaceWithString: String = "you"
 
-        let maxMemberNamesToShow: Int = 5
-
-        // Build the list with currentInboxId first
-        var memberInboxIds = members.map { $0.inboxId }
-        if let currentInboxId, let idx = memberInboxIds.firstIndex(of: currentInboxId) {
-            memberInboxIds.remove(at: idx)
-            memberInboxIds.insert(currentInboxId, at: 0)
-        }
-
-        // Remove excluded IDs (except currentInboxId)
-        memberInboxIds = memberInboxIds.filter { !excludingSet.contains($0) }
-
-        // Show a max number of members, but always include currentInboxId if present
-        let limitedMemberInboxIds: [String]
-        if let currentInboxId, memberInboxIds.first == currentInboxId {
-            limitedMemberInboxIds = [currentInboxId] + Array(memberInboxIds.dropFirst()).prefix(maxMemberNamesToShow - 1)
-        } else {
-            limitedMemberInboxIds = Array(memberInboxIds.prefix(maxMemberNamesToShow))
-        }
-        let numberOfOthers = members.count - limitedMemberInboxIds.count - (currentInboxId == nil ? 0 : 1)
-
-        let replaceWithString: String = "you"
-        return await withTaskGroup(of: (String, String?).self) { group in
-            for id in memberInboxIds {
-                group.addTask {
-                    let name = await ProfileNameResolver.shared.resolveProfileName(for: id)
-                    return (id, name)
-                }
-            }
-
-            var namesDict: [String: String] = [:]
-            var unknownCount = numberOfOthers
-            for await (id, name) in group {
-                if let name {
-                    namesDict[id] = name
-                } else {
-                    unknownCount += 1
-                }
-            }
-
-            // empty profile names
-            guard !namesDict.isEmpty else {
-                if currentInboxId == nil {
-                    return "No members"
-                } else {
-                    return "You and \(unknownCount) others"
-                }
-            }
-
-            // Build the names array, replacing with a string if needed
-            var names = memberInboxIds.map { id in
-                if let currentInboxId, id == currentInboxId {
-                    return replaceWithString
-                } else {
-                    return namesDict[id] ?? id
-                }
-            }
-            // Move "You" to the front if present
-            if let youIndex = names.firstIndex(of: replaceWithString) {
-                let you = names.remove(at: youIndex)
-                names.insert(you, at: 0)
-            }
-            if unknownCount > 0 {
-                names.append("\(unknownCount) \(unknownCount == 1 ? "other" : "others")")
-            }
-            return ((names.count == 2) ?
-                    names.joined(separator: " and ") :
-                        names.joined(separator: ", "))
-        }
+    // Build the list with currentInboxId first
+    var memberInboxIds = members.map { $0.inboxId }
+    if let currentInboxId, let idx = memberInboxIds.firstIndex(of: currentInboxId) {
+      memberInboxIds.remove(at: idx)
+      memberInboxIds.insert(currentInboxId, at: 0)
     }
+
+    // Remove excluded IDs (except currentInboxId)
+    memberInboxIds = memberInboxIds.filter { !excludingSet.contains($0) }
+
+    // Determine the limited list to display
+    let limitedMemberInboxIds: [String]
+    if let currentInboxId, memberInboxIds.first == currentInboxId {
+      limitedMemberInboxIds = [currentInboxId] + Array(memberInboxIds.dropFirst()).prefix(maxMemberNamesToShow - 1)
+    } else {
+      limitedMemberInboxIds = Array(memberInboxIds.prefix(maxMemberNamesToShow))
+    }
+
+    // Calculate truly unshown inbox IDs (excluding ones filtered out)
+    let shownIds = Set(limitedMemberInboxIds)
+    let unshownIds = memberInboxIds.filter { !shownIds.contains($0) }
+
+    var unknownCount = unshownIds.count
+
+    return await withTaskGroup(of: (String, String?).self) { group in
+      for id in limitedMemberInboxIds {
+        group.addTask {
+          let name = await ProfileNameResolver.shared.resolveProfileName(for: id)
+          return (id, name)
+        }
+      }
+
+      var namesDict: [String: String] = [:]
+      for await (id, name) in group {
+        if let name {
+          namesDict[id] = name
+        } else {
+          unknownCount += 1
+        }
+      }
+
+      // No resolved names at all
+      if namesDict.isEmpty {
+        if currentInboxId == nil {
+          return "No members"
+        } else {
+          return "You and \(unknownCount) others"
+        }
+      }
+
+      // Build the final names list
+      guard !namesDict.isEmpty else {
+        return currentInboxId == nil ? "No members" : "You and \(unknownCount) others"
+      }
+
+      var names = limitedMemberInboxIds.compactMap { id in
+        if let currentInboxId, id == currentInboxId {
+          return replaceWithString
+        } else {
+          return namesDict[id] // exclude unresolved IDs
+        }
+      }
+
+      // Move "you" to front if needed
+      if let youIndex = names.firstIndex(of: replaceWithString) {
+        names.remove(at: youIndex)
+        names.insert(replaceWithString, at: 0)
+      }
+
+      if unknownCount > 0 {
+        names.append("\(unknownCount) \(unknownCount == 1 ? "other" : "others")")
+      }
+
+      return names.count == 2 ? names.joined(separator: " and ") : names.joined(separator: ", ")
+    }
+  }
+
 }
 
 extension Reaction {
@@ -305,16 +325,20 @@ class PushNotificationContentFactory {
         case .attachment(_):
             mutableNotification.body = "Sent an attachment"
 
-        case .remoteAttachment(_):
-//            guard let url = URL(string: remoteAttachment.url) else { return nil }
-//            print(decodedMessage)
-//            let attachment: UNNotificationAttachment = try .init(identifier: decodedMessage.id,
-//                                                                 url: url,
-//                                                                 options: [
-//                                                                    UNNotificationAttachmentOptionsTypeHintKey: UTType.image
-//                                                                 ])
-//            mutableNotification.attachments = [attachment]
+        case .remoteAttachment(let remoteAttachment):
+          if let encodedContent: EncodedContent = try? await remoteAttachment.content(),
+             let attachment: Attachment = try? encodedContent.decoded(),
+             let localURL = try? attachment.saveToTmpFile() {
+            let attachment: UNNotificationAttachment = try .init(identifier: decodedMessage.id,
+                                                                 url: localURL,
+                                                                 options: [
+                                                                  UNNotificationAttachmentOptionsTypeHintKey: UTType.image
+                                                                 ])
+            mutableNotification.attachments = [attachment]
+          }
             mutableNotification.body = "Sent a photo"
+        case .remoteURL(_):
+          mutableNotification.body = "Sent a photo"
 
         case .unknown:
             return nil
