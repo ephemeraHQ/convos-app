@@ -36,27 +36,27 @@ func getDbEncryptionKey(ethAddress: String) -> [Data] {
 
     let stringsAsDatas = strings.compactMap { $0 }.compactMap { Data(base64Encoded: $0) }
 
-//    // Return nil if no key found
-//    guard let finalDbEncryptionKeyString = dbEncryptionKeyString else {
-//        log.error("Failed to get DB encryption key from keychain, MMKV backup, and SharedDefaults")
-//        return nil
-//    }
-//
-//    // Attempt to decode the Base64 string into Data
-//    guard let dbEncryptionKeyData = Data(base64Encoded: finalDbEncryptionKeyString) else {
-//        log.error("Failed to decode Base64 DB encryption key string")
-//        return nil
-//    }
-//
-//    // Validate key length
-//    guard dbEncryptionKeyData.count == 32 else {
-//        log.error(
-//            "DB encryption key has incorrect length: \(dbEncryptionKeyData.count) bytes. Expected 32. Original string length: \(finalDbEncryptionKeyString.count)"
-//        )
-//        return nil
-//    }
+    //    // Return nil if no key found
+    //    guard let finalDbEncryptionKeyString = dbEncryptionKeyString else {
+    //        log.error("Failed to get DB encryption key from keychain, MMKV backup, and SharedDefaults")
+    //        return nil
+    //    }
+    //
+    //    // Attempt to decode the Base64 string into Data
+    //    guard let dbEncryptionKeyData = Data(base64Encoded: finalDbEncryptionKeyString) else {
+    //        log.error("Failed to decode Base64 DB encryption key string")
+    //        return nil
+    //    }
+    //
+    //    // Validate key length
+    //    guard dbEncryptionKeyData.count == 32 else {
+    //        log.error(
+    //            "DB encryption key has incorrect length: \(dbEncryptionKeyData.count) bytes. Expected 32. Original string length: \(finalDbEncryptionKeyString.count)"
+    //        )
+    //        return nil
+    //    }
 
     log.debug("Successfully retrieved and validated DB encryption key")
-//    return dbEncryptionKeyData
+    //    return dbEncryptionKeyData
     return stringsAsDatas
 }

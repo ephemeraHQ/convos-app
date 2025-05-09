@@ -40,7 +40,9 @@ func getXmtpClient(ethAddress: String) async -> XMTP.Client? {
         }
         return nil
     } catch {
-        fatalError("TODO: Handle error in getXmtpClient. Failed to get client. Error: \(String(describing: error))")
+        fatalError(
+            "TODO: Handle error in getXmtpClient. Failed to get client. Error: \(String(describing: error))"
+        )
     }
 
 }
