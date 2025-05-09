@@ -40,6 +40,7 @@ export function ConversationMessageGroupUpdate({ message }: IConversationMessage
         <ChatGroupMemberJoined
           key={`joined-${member.inboxId}`}
           inboxId={member.inboxId as IXmtpInboxId}
+          invitedByInboxId={content.initiatedByInboxId as IXmtpInboxId}
         />
       ))}
 
@@ -94,12 +95,18 @@ function ChatGroupMemberLeft({ inboxId }: IChatGroupMemberLeftProps) {
 
 type IChatGroupMemberJoinedProps = {
   inboxId: IXmtpInboxId
+  invitedByInboxId: IXmtpInboxId
 }
 
-function ChatGroupMemberJoined({ inboxId }: IChatGroupMemberJoinedProps) {
+function ChatGroupMemberJoined({ inboxId, invitedByInboxId }: IChatGroupMemberJoinedProps) {
   const { themed, theme } = useAppTheme()
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId,
+    caller: "ChatGroupMemberJoined",
+  })
+
+  const { displayName: invitedByDisplayName, avatarUrl: invitedByAvatarUrl } = usePreferredDisplayInfo({
+    inboxId: invitedByInboxId,
     caller: "ChatGroupMemberJoined",
   })
 
@@ -116,7 +123,23 @@ function ChatGroupMemberJoined({ inboxId }: IChatGroupMemberJoinedProps) {
         <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
         <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
       </Pressable>
-      <ChatGroupUpdateText>joined</ChatGroupUpdateText>
+      <ChatGroupUpdateText>was invited</ChatGroupUpdateText>
+
+      {/* Show inviter if their displayName is available */}
+      {invitedByDisplayName && (
+        <Pressable
+          onPress={() => {
+            navigate("Profile", {
+              inboxId: invitedByInboxId,
+            })
+          }}
+        style={themed($pressableContent)}
+      >
+          <ChatGroupUpdateText>by</ChatGroupUpdateText>
+          <Avatar sizeNumber={theme.avatarSize.xs} uri={invitedByAvatarUrl} name={invitedByDisplayName ?? ""} />
+          <ChatGroupUpdateText weight="bold">{invitedByDisplayName ?? ""}</ChatGroupUpdateText>
+        </Pressable>
+      )}
     </HStack>
   )
 }
