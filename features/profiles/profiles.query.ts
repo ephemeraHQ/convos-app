@@ -1,6 +1,6 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
-import { fetchProfile } from "@/features/profiles/profiles.api"
+import { fetchProfile, fetchProfilesBatch } from "@/features/profiles/profiles.api"
 import { Optional } from "@/types/general"
 import { isConvosApi404Error } from "@/utils/convos-api/convos-api-error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
@@ -81,4 +81,54 @@ export const invalidateProfileQuery = (args: IArgsWithCaller) => {
 
 export const getProfileQueryData = (args: IArgs) => {
   return reactQueryClient.getQueryData(getProfileQueryConfig(args).queryKey)
+}
+
+export const getProfilesBatchQueryConfig = (args: {
+  xmtpIds: IXmtpInboxId[]
+  caller?: string
+}) => {
+  const { xmtpIds, caller } = args
+  
+  return queryOptions({
+    meta: {
+      caller,
+    },
+    enabled: xmtpIds.length > 0,
+    queryKey: ["profiles-batch", JSON.stringify(xmtpIds)],
+    staleTime: TimeUtils.hours(1).toMilliseconds(),
+    queryFn: async ({ signal }) => {
+      if (!xmtpIds.length) return { profiles: {} }
+      
+      const result = await fetchProfilesBatch({ 
+        xmtpIds, 
+        signal 
+      })
+      
+      // Populate individual profile cache entries for all profiles received
+      Object.entries(result.profiles).forEach(([id, profile]) => {
+        const queryKey = getProfileQueryConfig({ xmtpId: id as IXmtpInboxId }).queryKey
+        reactQueryClient.setQueryData(queryKey, profile)
+      })
+      
+      return result
+    },
+  })
+}
+
+export const useProfilesBatchQuery = (args: { 
+  xmtpIds: IXmtpInboxId[]
+  caller: string 
+}) => {
+  return useQuery(getProfilesBatchQueryConfig(args))
+}
+
+export const ensureProfilesBatchData = async (args: {
+  xmtpIds: IXmtpInboxId[]
+  caller: string
+}) => {
+  const { xmtpIds, caller } = args
+  
+  if (!xmtpIds.length) return { profiles: {} }
+  
+  return reactQueryClient.ensureQueryData(getProfilesBatchQueryConfig({ xmtpIds, caller }))
 }

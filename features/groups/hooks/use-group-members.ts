@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { useMemo } from "react"
 
 export function useGroupMembers(args: {
   xmtpConversationId: IXmtpConversationId
@@ -18,8 +19,13 @@ export function useGroupMembers(args: {
     select: (group) => group?.members,
   })
 
+  const membersArray = useMemo(() => 
+    Object.values(members?.byId || {}).filter(Boolean),
+  [members])
+
   return {
     members,
+    membersArray,
     isLoading: isLoadingMembers,
   }
 }

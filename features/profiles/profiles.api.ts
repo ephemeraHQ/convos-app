@@ -26,6 +26,40 @@ export const fetchProfile = async (args: { xmtpId: IXmtpInboxId; signal?: AbortS
   }
 }
 
+export const fetchProfilesBatch = async (args: { 
+  xmtpIds: IXmtpInboxId[]
+  signal?: AbortSignal 
+}) => {
+  const { xmtpIds, signal } = args
+  
+  if (!xmtpIds.length) {
+    return { profiles: {} }
+  }
+
+  try {
+    // Use POST instead of GET with query parameters
+    const { data } = await convosApi.post<{
+      profiles: Record<IXmtpInboxId, IConvosProfile>
+    }>(`/api/v1/profiles/batch`, {
+      xmtpIds: xmtpIds
+    }, {
+      signal,
+    })
+    
+    // Validate each profile
+    Object.values(data.profiles).forEach(profile => {
+      const result = ConvosProfileSchema.safeParse(profile)
+      if (!result.success) {
+        captureError(new ValidationError({ error: result.error }))
+      }
+    })
+
+    return data
+  } catch (error) {
+    throw new ConvosApiError({ error })
+  }
+}
+
 export type ISaveProfileUpdates = Partial<
   Pick<z.infer<typeof ConvosProfileSchema>, "name" | "username" | "description" | "avatar">
 >

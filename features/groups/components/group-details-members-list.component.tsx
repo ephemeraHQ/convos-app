@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from "react"
+import { ActivityIndicator } from "react-native"
 import { VStack } from "@/design-system/VStack"
 import { Pressable } from "@/design-system/Pressable"
 import { ListItemEndRightChevron } from "@/design-system/list-item"
@@ -12,6 +13,8 @@ import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { MemberListItem } from "./group-details-members-list-item.component"
 import { GroupDetailsMembersListHeader } from "./group-details-members-list-header.component"
+import { useProfilesBatchQuery } from "@/features/profiles/profiles.query"
+import { Center } from "@/design-system/Center"
 
 export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(props: {
   xmtpConversationId: IXmtpConversationId
@@ -21,15 +24,47 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
   const { theme } = useAppTheme()
   const currentSenderInboxId = useSafeCurrentSender().inboxId
 
-  const { members } = useGroupMembers({
+  // Get group members data
+  const { membersArray, isLoading: isLoadingMembers } = useGroupMembers({
     caller: "GroupDetailsScreen",
     clientInboxId: currentSenderInboxId,
     xmtpConversationId,
   })
 
+  // Extract member IDs for the preview (first 6 members)
+  const previewMemberIds = useMemo(() => {
+    // First do a basic priority sort without names
+    const prioritySorted = sortGroupMembers(membersArray)
+    // Take only the first 6 members for display
+    const visibleMembers = prioritySorted.slice(0, 6)
+    // Return their IDs for batch fetching
+    return visibleMembers.map(member => member.inboxId)
+  }, [membersArray])
+
+  // Fetch profiles in batch using the new endpoint
+  const { 
+    data: batchProfilesData, 
+    isLoading: isLoadingProfiles 
+  } = useProfilesBatchQuery({
+    xmtpIds: previewMemberIds,
+    caller: "GroupDetailsScreen",
+  })
+
+  // Create a profiles map from the batch response
+  const profilesMap = useMemo(() => {
+    if (!batchProfilesData?.profiles) return {}
+    return batchProfilesData.profiles
+  }, [batchProfilesData])
+
+  // Final sort with profiles data
   const sortedMembers = useMemo(() => {
-    return sortGroupMembers(Object.values(members?.byId || {}).filter(Boolean))
-  }, [members])
+    return sortGroupMembers(membersArray, profilesMap)
+  }, [membersArray, profilesMap])
+
+  // Take only the visible members for the preview
+  const visibleMembers = useMemo(() => {
+    return sortedMembers.slice(0, 6)
+  }, [sortedMembers])
 
   const handleAddMembersPress = useCallback(() => {
     router.push("AddGroupMembers", { xmtpConversationId })
@@ -39,9 +74,8 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
     router.push("GroupMembersList", { xmtpConversationId })
   }, [xmtpConversationId, router])
 
-  // For demo purposes, we'll show a limited number of members
-  const visibleMembers = sortedMembers.slice(0, 6)
-  const hasMoreMembers = sortedMembers.length > visibleMembers.length
+  const hasMoreMembers = membersArray.length > visibleMembers.length
+  const isLoading = isLoadingMembers || isLoadingProfiles
 
   return (
     <VStack
@@ -53,23 +87,37 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
       {/* Members Header */}
       <GroupDetailsMembersListHeader
         xmtpConversationId={xmtpConversationId}
-        memberCount={sortedMembers.length}
+        memberCount={membersArray.length}
         onAddMember={handleAddMembersPress}
       />
 
       {/* Members List */}
       <VStack>
-        {visibleMembers.map((member) => {
-          return <MemberListItem key={member.inboxId} memberInboxId={member.inboxId} />
-        })}
+        {isLoading ? (
+          <Center style={{ padding: theme.spacing.md }}>
+            <ActivityIndicator size="small" color={theme.colors.text.primary} />
+          </Center>
+        ) : (
+          <VStack>
+            {visibleMembers.map((member) => {
+              return (
+                <MemberListItem 
+                  key={member.inboxId} 
+                  memberInboxId={member.inboxId} 
+                  cachedProfile={profilesMap[member.inboxId]}
+                />
+              )
+            })}
 
-        {hasMoreMembers && (
-          <Pressable onPress={handleSeeAllPress} hitSlop={theme.spacing.sm}>
-            <GroupDetailsListItem
-              title={`See all ${sortedMembers.length}`}
-              end={<ListItemEndRightChevron />}
-            />
-          </Pressable>
+            {hasMoreMembers && (
+              <Pressable onPress={handleSeeAllPress} hitSlop={theme.spacing.sm}>
+                <GroupDetailsListItem
+                  title={`See all ${membersArray.length}`}
+                  end={<ListItemEndRightChevron />}
+                />
+              </Pressable>
+            )}
+          </VStack>
         )}
       </VStack>
 
