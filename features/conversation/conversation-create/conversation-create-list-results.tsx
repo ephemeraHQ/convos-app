@@ -10,7 +10,7 @@ import {
 import { useSearchExistingDmsQuery } from "@/features/conversation/conversation-create/queries/search-existing-dms.query"
 import { useSearchExistingGroupsByGroupMembersQuery } from "@/features/conversation/conversation-create/queries/search-existing-groups-by-group-members.query"
 import { useSearchExistingGroupsByGroupNameQuery } from "@/features/conversation/conversation-create/queries/search-existing-groups-by-group-name.query"
-import { useDmQuery } from "@/features/dm/dm.query"
+import { useDmQuery, getDmQueryData } from "@/features/dm/dm.query"
 import { useSearchConvosUsersQuery } from "@/features/search-users/queries/search-convos-users.query"
 import {
   useBaseNameResolution,
@@ -23,11 +23,11 @@ import { useAnimatedKeyboard } from "@/hooks/use-animated-keyboard"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { IEthereumAddress, isEthereumAddress } from "@/utils/evm/address"
-import { SearchUsersResultsList } from "../../search-users/search-users-results-list"
-import { SearchUsersResultsListItemEthAddress } from "../../search-users/search-users-results-list-item-eth-address"
-import { SearchUsersResultsListItemGroup } from "../../search-users/search-users-results-list-item-group"
-import { SearchUsersResultsListItemUser } from "../../search-users/search-users-results-list-item-user"
-import { SearchUsersResultsListItemUserDm } from "../../search-users/search-users-results-list-item-user-dm"
+import { SearchUsersResultsList } from "@/features/search-users/search-users-results-list"
+import { SearchUsersResultsListItemEthAddress } from "@/features/search-users/search-users-results-list-item-eth-address"
+import { SearchUsersResultsListItemGroup } from "@/features/search-users/search-users-results-list-item-group"
+import { SearchUsersResultsListItemUser } from "@/features/search-users/search-users-results-list-item-user"
+import { SearchUsersResultsListItemUserDm } from "@/features/search-users/search-users-results-list-item-user-dm"
 
 // Because we want a mix of DMs, groups, and profiles
 const MAX_INITIAL_RESULTS = 3
@@ -37,7 +37,6 @@ const MAX_RESULTS_WHEN_SMALL_SEARCH_QUERY = 5
 type ISearchResultItemDm = {
   type: "dm"
   xmtpConversationId: IXmtpConversationId
-  inboxId: IXmtpInboxId
 }
 
 type ISearchResultItemGroup = {
@@ -244,6 +243,17 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
   const { data: baseEthAddressResolution } = useBaseNameResolution(searchTextValue)
   const { data: unstoppableDomainEthAddressResolution } =
     useUnstoppableDomainNameResolution(searchTextValue)
+  
+  const getDmKey = useCallback((xmtpConversationId: IXmtpConversationId) => {
+    const dmData = getDmQueryData({
+      clientInboxId: currentUserInboxId,
+      xmtpConversationId,
+    })
+    
+    return dmData?.peerInboxId 
+      ? `user-${dmData.peerInboxId}` 
+      : `dm-${xmtpConversationId}`
+  }, [currentUserInboxId])
 
   const listData = useMemo(() => {
     const items: SearchResultItem[] = []
@@ -256,7 +266,6 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
         items.push({
           type: "dm" as const,
           xmtpConversationId,
-          inboxId: "" as IXmtpInboxId, // TODO: Get peer inboxId from DM
         })
       })
     }
@@ -321,11 +330,13 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
       let key: string
 
       if (searchResultIsDm(item)) {
-        key = `dm-${item.xmtpConversationId}`
+        // For DMs, try to get the peer inbox ID to use in the key
+        // This helps eliminate duplicates in case we have both a DM and a profile for the same user
+        key = getDmKey(item.xmtpConversationId)
       } else if (searchResultIsGroup(item)) {
         key = `group-${item.xmtpConversationId}`
       } else if (searchResultIsProfile(item)) {
-        key = `profile-${item.inboxId}`
+        key = `user-${item.inboxId}`
       } else if (searchResultIsExternalIdentity(item)) {
         key = `external-identity-${item.address}`
       } else {
@@ -366,6 +377,7 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
     ensEthAddressResolution,
     baseEthAddressResolution,
     unstoppableDomainEthAddressResolution,
+    getDmKey,
   ])
 
   const isStillLoadingSearchResults =
@@ -395,13 +407,14 @@ export const ConversationCreateListResults = memo(function ConversationCreateLis
 
   const keyExtractor = (item: SearchResultItem, index: number) => {
     if (searchResultIsDm(item)) {
-      return `dm-${item.xmtpConversationId}`
+      // For DMs, try to get the peer inbox ID to use in the key
+      return getDmKey(item.xmtpConversationId)
     }
     if (searchResultIsGroup(item)) {
       return `group-${item.xmtpConversationId}`
     }
     if (searchResultIsProfile(item)) {
-      return `profile-${item.inboxId}`
+      return `user-${item.inboxId}`
     }
     if (searchResultIsExternalIdentity(item)) {
       return `external-identity-${item.address}`
