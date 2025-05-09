@@ -152,7 +152,7 @@ export default () => {
       [
         "expo-notification-service-extension-plugin",
         {
-          mode: "development",
+          mode: expoEnv === "production" ? "production" : "development",
           iosNSEFilePath: "./plugins/notification-service-extension/plugin/swift"
         }
       ],
