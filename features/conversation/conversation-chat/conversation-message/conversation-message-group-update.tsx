@@ -152,7 +152,9 @@ function ChatGroupMetadataUpdate({
       const newValue = parseInt(metadataEntry.newValue, 10)
       const newTime = getFormattedDisappearingDuration(newValue)
 
-      if (metadataEntry.oldValue === "0") {
+      if (newValue === 0) {
+        updateMessage = `disabled disappearing messages`
+      } else if (metadataEntry.oldValue === "0") {
         updateMessage = `set messages to disappear in ${newTime}`
       } else {
         const oldValue = parseInt(metadataEntry.oldValue, 10)

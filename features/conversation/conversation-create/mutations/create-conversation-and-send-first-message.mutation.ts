@@ -46,14 +46,18 @@ export async function createConversationAndSendFirstMessage(
           await createXmtpGroup({
             clientInboxId: currentSender.inboxId,
             inboxIds,
-            disappearingMessageSettings: defaultConversationDisappearingMessageSettings,
+            ...(defaultConversationDisappearingMessageSettings.retentionDurationInNs > 0 && {
+              disappearingMessageSettings: defaultConversationDisappearingMessageSettings,
+            }),
           }),
         )
       : await convertXmtpConversationToConvosConversation(
           await createXmtpDm({
             senderClientInboxId: currentSender.inboxId,
             peerInboxId: inboxIds[0],
-            disappearingMessageSettings: defaultConversationDisappearingMessageSettings,
+            ...(defaultConversationDisappearingMessageSettings.retentionDurationInNs > 0 && {
+              disappearingMessageSettings: defaultConversationDisappearingMessageSettings,
+            }),
           }),
         )
 
