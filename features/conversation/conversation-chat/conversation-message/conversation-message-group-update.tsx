@@ -40,7 +40,7 @@ export function ConversationMessageGroupUpdate({ message }: IConversationMessage
         <ChatGroupMemberJoined
           key={`joined-${member.inboxId}`}
           inboxId={member.inboxId as IXmtpInboxId}
-          invitedByInboxId={content.initiatedByInboxId as IXmtpInboxId}
+          initiatedByInboxId={content.initiatedByInboxId as IXmtpInboxId}
         />
       ))}
 
@@ -95,18 +95,18 @@ function ChatGroupMemberLeft({ inboxId }: IChatGroupMemberLeftProps) {
 
 type IChatGroupMemberJoinedProps = {
   inboxId: IXmtpInboxId
-  invitedByInboxId: IXmtpInboxId
+  initiatedByInboxId: IXmtpInboxId
 }
 
-function ChatGroupMemberJoined({ inboxId, invitedByInboxId }: IChatGroupMemberJoinedProps) {
+function ChatGroupMemberJoined({ inboxId, initiatedByInboxId }: IChatGroupMemberJoinedProps) {
   const { themed, theme } = useAppTheme()
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId,
     caller: "ChatGroupMemberJoined",
   })
 
-  const { displayName: invitedByDisplayName, avatarUrl: invitedByAvatarUrl } = usePreferredDisplayInfo({
-    inboxId: invitedByInboxId,
+  const { displayName: initiatorDisplayName, avatarUrl: initiatorAvatarUrl } = usePreferredDisplayInfo({
+    inboxId: initiatedByInboxId,
     caller: "ChatGroupMemberJoined",
   })
 
@@ -126,18 +126,18 @@ function ChatGroupMemberJoined({ inboxId, invitedByInboxId }: IChatGroupMemberJo
       <ChatGroupUpdateText>was invited</ChatGroupUpdateText>
 
       {/* Show inviter if their displayName is available */}
-      {invitedByDisplayName && (
+      {initiatorDisplayName && (
         <Pressable
           onPress={() => {
             navigate("Profile", {
-              inboxId: invitedByInboxId,
+              inboxId: initiatedByInboxId,
             })
           }}
         style={themed($pressableContent)}
       >
           <ChatGroupUpdateText>by</ChatGroupUpdateText>
-          <Avatar sizeNumber={theme.avatarSize.xs} uri={invitedByAvatarUrl} name={invitedByDisplayName ?? ""} />
-          <ChatGroupUpdateText weight="bold">{invitedByDisplayName ?? ""}</ChatGroupUpdateText>
+          <Avatar sizeNumber={theme.avatarSize.xs} uri={initiatorAvatarUrl} name={initiatorDisplayName ?? ""} />
+          <ChatGroupUpdateText weight="bold">{initiatorDisplayName ?? ""}</ChatGroupUpdateText>
         </Pressable>
       )}
     </HStack>
