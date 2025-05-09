@@ -18,6 +18,8 @@ export const NSE_SWIFT_SOURCE_FILES = [
   "SharedDefaults.swift",
   "XmtpClient.swift",
   "XmtpDbEncryptionKey.swift",
+  "PushNotificationContentFactory.swift",
+  "XMTPContentDecoder.swift"
 ]
 export const NSE_INFO_PLIST_FILE_NAME = `${NSE_TARGET_NAME}-Info.plist`
 export const NSE_EXT_FILES = [`${NSE_TARGET_NAME}.entitlements`, NSE_INFO_PLIST_FILE_NAME]
