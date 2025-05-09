@@ -1,5 +1,6 @@
 import { ExpoConfig } from "expo/config"
 import { version } from "./package.json"
+import "expo-notification-service-extension-plugin"
 
 type Environment = "development" | "preview" | "production"
 
@@ -147,107 +148,15 @@ export default () => {
     version: version,
     assetBundlePatterns: ["**/*"],
     runtimeVersion: version,
-    updates: {
-      url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
-    },
-    extra: {
-      webDomain: config.webDomain,
-      expoEnv,
-      eas: {
-        projectId: "f9089dfa-8871-4aff-93ea-da08af0370d2",
-      },
-    },
-    ios: {
-      bundleIdentifier: config.ios.bundleIdentifier,
-      supportsTablet: true,
-      associatedDomains: config.ios.associatedDomains,
-      googleServicesFile: config.ios.googleServicesFile,
-      icon: config.ios.icon,
-      config: {
-        usesNonExemptEncryption: false,
-      },
-      entitlements: {
-        "keychain-access-groups": [
-          `$(AppIdentifierPrefix)group.${config.ios.bundleIdentifier}`,
-          `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}`,
-        ],
-        "com.apple.developer.devicecheck.appattest-environment": "production",
-        "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // For key sharing between app and NSE
-        "aps-environment": "production", // For now until we really have the correct setup to test notification in local
-      },
-      infoPlist: {
-        LSApplicationQueriesSchemes: [
-          "cbwallet",
-          "rainbow",
-          "metamask",
-          "trust",
-          "uniswap",
-          "zerion",
-          "exodus",
-          "oneinch",
-          "phantom",
-          "app.phantom",
-        ],
-        NSAppTransportSecurity: {
-          // For local development
-          NSAllowsLocalNetworking: true,
-        },
-        // MMKV seems to use "AppGroup" value in info.plist since we are not on new architecture and can't upgrade to v3
-        // Related to https://github.com/mrousavy/react-native-mmkv/pull/703
-        AppGroup: `group.${config.ios.bundleIdentifier}`,
-        AppGroupName: `group.${config.ios.bundleIdentifier}`,
-      },
-    },
-    android: {
-      package: config.android.package,
-      googleServicesFile: config.android.googleServicesFile,
-      intentFilters: [
-        {
-          action: "VIEW",
-          category: ["DEFAULT", "BROWSABLE"],
-          data: [{ scheme: config.scheme }, { scheme: config.android.package }],
-        },
-        {
-          autoVerify: true,
-          action: "VIEW",
-          category: ["DEFAULT", "BROWSABLE"],
-          data: [
-            {
-              scheme: "https",
-              host: config.webDomain,
-              pathPrefix: "/coinbase",
-            },
-            {
-              scheme: "https",
-              host: config.webDomain,
-              pathPrefix: "/",
-            },
-            {
-              scheme: "https",
-              host: config.webDomain,
-              pathPrefix: "/dm",
-            },
-            {
-              scheme: "https",
-              host: config.webDomain,
-              pathPrefix: "/group-invite",
-            },
-            {
-              scheme: "https",
-              host: config.webDomain,
-              pathPrefix: "/group",
-            },
-          ],
-        },
-      ],
-      adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#FFFFFF",
-      },
-    },
     plugins: [
+      [
+        "expo-notification-service-extension-plugin",
+        {
+          mode: "development",
+          iosNSEFilePath: "./plugins/notification-service-extension/plugin/swift"
+        }
+      ],
       ["expo-notifications"],
-      "./plugins/notification-service-extension/app.plugin.js",
       ["expo-secure-store"],
       [
         "expo-local-authentication",
@@ -259,11 +168,6 @@ export default () => {
         "expo-build-properties",
         {
           ios: {
-            // To fix error "The Swift pod `FirebaseCoreInternal` depends upon `GoogleUtilities`,
-            // which does not define modules. To opt into those targets generating module maps
-            // (which is necessary to import them from Swift when building as static libraries),
-            // you may set `use_modular_headers!` globally in your Podfile,
-            // or specify `:modular_headers => true` for particular dependencies"
             useFrameworks: "static",
             deploymentTarget: "16.0",
           },
@@ -273,10 +177,7 @@ export default () => {
             buildToolsVersion: "34.0.0",
             minSdkVersion: 26,
             manifestQueries: {
-              // Required for Coinbase Wallet integration
               package: ["org.toshi"],
-              // Define supported wallet deep links that our app can open
-              // This allows Android to show our app as an option when users click wallet links
               intent: [
                 {
                   action: "VIEW",
@@ -377,5 +278,103 @@ export default () => {
       ["@react-native-firebase/app-check"],
       "./scripts/android/build/android-deps-expo-plugin.js",
     ],
+    updates: {
+      url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+    },
+    extra: {
+      webDomain: config.webDomain,
+      expoEnv,
+      eas: {
+        projectId: "f9089dfa-8871-4aff-93ea-da08af0370d2",
+      },
+    },
+    ios: {
+      bundleIdentifier: config.ios.bundleIdentifier,
+      supportsTablet: true,
+      associatedDomains: config.ios.associatedDomains,
+      googleServicesFile: config.ios.googleServicesFile,
+      icon: config.ios.icon,
+      config: {
+        usesNonExemptEncryption: false,
+      },
+      entitlements: {
+        "keychain-access-groups": [
+          `$(AppIdentifierPrefix)group.${config.ios.bundleIdentifier}`,
+          `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}`,
+        ],
+        "com.apple.developer.devicecheck.appattest-environment": "production",
+        "com.apple.security.application-groups": [`group.${config.ios.bundleIdentifier}`], // For key sharing between app and NSE
+        "aps-environment": "production", // For now until we really have the correct setup to test notification in local
+      },
+      infoPlist: {
+        LSApplicationQueriesSchemes: [
+          "cbwallet",
+          "rainbow",
+          "metamask",
+          "trust",
+          "uniswap",
+          "zerion",
+          "exodus",
+          "oneinch",
+          "phantom",
+          "app.phantom",
+        ],
+        NSAppTransportSecurity: {
+          // For local development
+          NSAllowsLocalNetworking: true,
+        },
+        // MMKV seems to use "AppGroup" value in info.plist since we are not on new architecture and can't upgrade to v3
+        // Related to https://github.com/mrousavy/react-native-mmkv/pull/703
+        AppGroup: `group.${config.ios.bundleIdentifier}`,
+        AppGroupName: `group.${config.ios.bundleIdentifier}`,
+      },
+    },
+    android: {
+      package: config.android.package,
+      googleServicesFile: config.android.googleServicesFile,
+      intentFilters: [
+        {
+          action: "VIEW",
+          category: ["DEFAULT", "BROWSABLE"],
+          data: [{ scheme: config.scheme }, { scheme: config.android.package }],
+        },
+        {
+          autoVerify: true,
+          action: "VIEW",
+          category: ["DEFAULT", "BROWSABLE"],
+          data: [
+            {
+              scheme: "https",
+              host: config.webDomain,
+              pathPrefix: "/coinbase",
+            },
+            {
+              scheme: "https",
+              host: config.webDomain,
+              pathPrefix: "/",
+            },
+            {
+              scheme: "https",
+              host: config.webDomain,
+              pathPrefix: "/dm",
+            },
+            {
+              scheme: "https",
+              host: config.webDomain,
+              pathPrefix: "/group-invite",
+            },
+            {
+              scheme: "https",
+              host: config.webDomain,
+              pathPrefix: "/group",
+            },
+          ],
+        },
+      ],
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#FFFFFF",
+      },
+    },
   } as ICustomExpoConfig
 }
