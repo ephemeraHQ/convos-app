@@ -7,45 +7,6 @@ final class NotificationService: UNNotificationServiceExtension {
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttempt: UNMutableNotificationContent?
 
-    // Add function to fetch username
-    private func fetchUsername(forInboxId inboxId: String) async -> String? {
-        do {
-            // Get the API URL from the environment
-            // ProcessInfo.processInfo.environment["CONVOS_API_URL"] ?? "https://api.convos-dev.convos-api.xyz"
-            let url = URL(
-                string:
-                    "https://api.convos-dev.convos-api.xyz/api/v1/profiles/public/xmtpId/\(inboxId)"
-            )!
-
-            let (data, response) = try await URLSession.shared.data(from: url)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                log.error("Failed to get HTTP response for inboxId \(inboxId)")
-                return nil
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                log.error(
-                    "Failed to fetch username for inboxId \(inboxId). HTTP Response: \(httpResponse)"
-                )
-                return nil
-            }
-
-            // Parse the JSON response
-            let decoder = JSONDecoder()
-            let profile = try decoder.decode(ProfileResponse.self, from: data)
-            return profile.username
-        } catch {
-            log.error("Failed to fetch username for inboxId \(inboxId)", error: error)
-            return nil
-        }
-    }
-
-    // Add response model
-    private struct ProfileResponse: Codable {
-        let username: String
-    }
-
     override func didReceive(
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void

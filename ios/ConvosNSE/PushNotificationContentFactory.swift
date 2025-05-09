@@ -162,7 +162,6 @@ extension Group {
       return names.count == 2 ? names.joined(separator: " and ") : names.joined(separator: ", ")
     }
   }
-
 }
 
 extension Reaction {
