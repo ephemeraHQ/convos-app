@@ -113,13 +113,23 @@ final class NotificationService: UNNotificationServiceExtension {
         Task {
             do {
                 // Note: Building the client might be resource-intensive for an NSE. Monitor performance.
-                let client = await getXmtpClient(ethAddress: ethAddress)
+              guard let client = await getXmtpClient(ethAddress: ethAddress) else {
+                log.error("Failed building XMTP Client")
+                contentHandler?(currentBestAttempt)
+                return
+              }
+
+              Client.register(codec: ReplyCodec())
+              Client.register(codec: ReactionCodec())
+              Client.register(codec: ReactionV2Codec())
+              Client.register(codec: AttachmentCodec())
+              Client.register(codec: RemoteAttachmentCodec())
 
                 // --- 4. Decrypt Message ---
                 log.debug("Attempting to find conversation by topic: ", topic)
 
                 guard
-                    let conversation = try await client?.conversations.findConversationByTopic(
+                    let conversation = try await client.conversations.findConversationByTopic(
                         topic: topic)
                 else {
                     log.error("Conversation not found for topic: ", topic)
@@ -146,73 +156,28 @@ final class NotificationService: UNNotificationServiceExtension {
                     return
                 }
 
-                // --- 5. Update Notification Content ---
-                var plaintext = "[Encrypted Content]"  // Default
-
-                do {
-                    let currentEncodedContent = try decodedMessage.encodedContent
-                    if currentEncodedContent.type == ContentTypeText {
-                        let textContent: String? = try decodedMessage.content()
-                        if let textContent {
-                            plaintext = textContent
-                            log.debug("Successfully decrypted text message: ", plaintext)
-                        } else {
-                            log.warn(
-                                "Failed to decode text message content as String. Trying fallback...."
-                            )
-                            let fallbackText: String? = try decodedMessage.fallback
-                            if let fallbackText {
-                                plaintext = fallbackText
-                                log.warn("Used fallback content for text message: ", plaintext)
-                            } else {
-                                log.warn("Failed to get fallback content for text message as well")
-                                plaintext = "[Decryption/Format Error]"
-                            }
-                        }
-                    } else {
-                        let contentType =
-                            "\(currentEncodedContent.type.authorityID)/\(currentEncodedContent.type.typeID):\(currentEncodedContent.type.versionMajor).\(currentEncodedContent.type.versionMinor)"
-                        log.warn("Received non-text message type: ", contentType)
-                        let fallbackText: String? = try decodedMessage.fallback
-                        if let fallbackText {
-                            plaintext = fallbackText
-                            log.debug("Used fallback content for non-text message: ", plaintext)
-                        } else {
-                            plaintext = "[Unsupported Content Type]"
-                            log.warn(
-                                "No fallback content available for non-text message. Using: ",
-                                plaintext)
-                        }
-                    }
-                } catch {
-                    log.error("Error accessing encodedContent or decoding message: ", error: error)
-                    plaintext = "[Error Reading Content]"
-                }
-
-                // Set both title and body to the decrypted plaintext for now
-                log.debug(">>> Decrypted Plaintext:", "'\(plaintext)'")  // Log with quotes to see if empty
-                // Fetch username from sender id
-                let senderId: String = decodedMessage.senderInboxId
-                async let usernameTask = fetchUsername(forInboxId: senderId)
-                if let username = await usernameTask {
-                    currentBestAttempt.title = username
-                }
-                currentBestAttempt.body = plaintext
-
-                prettyPrint(dictionary: currentBestAttempt.userInfo)
-                log.debug("Current notification content: ", currentBestAttempt.description)
-
-                log.debug(
-                    "Delivering decrypted notification with title:",
-                    "'\(currentBestAttempt.title)'",
-                    "and body:", "'\(currentBestAttempt.body)'")
-                log.debug(
-                    "Final notification content: ",
-                    String(describing: currentBestAttempt.debugDescription))
-                log.debug(
-                    "Final notification content.userInfo: ",
-                    getPrettyPrintString(dictionary: currentBestAttempt.userInfo))
+              let notificationFactory = PushNotificationContentFactory(client: client)
+              guard let notification = try await notificationFactory.notification(from: decodedMessage, in: conversation) else {
+                log.error("Failed getting notification from decoded message")
                 contentHandler?(currentBestAttempt)
+                return
+              }
+
+              prettyPrint(dictionary: notification.userInfo)
+              log.debug("Current notification content: ", notification.description)
+
+              log.debug(
+                "Delivering decrypted notification with title:",
+                "'\(notification.title)'",
+                "and body:", "'\(notification.body)'")
+              log.debug(
+                "Final notification content: ",
+                String(describing: notification.debugDescription))
+              log.debug(
+                "Final notification content.userInfo: ",
+                getPrettyPrintString(dictionary: notification.userInfo))
+
+              contentHandler?(notification)
             } catch {
                 log.error("Error during XMTP client build or message processing: ", error: error)
                 contentHandler?(currentBestAttempt)
