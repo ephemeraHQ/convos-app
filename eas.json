@@ -8,7 +8,8 @@
       "autoIncrement": true,
       "node": "20.18.0",
       "resourceClass": "large",
-      "credentialsSource": "remote"
+      "credentialsSource": "remote",
+      "prebuildCommand": "yarn plugins:build:notification-service-extension"
     },
     "development": {
       "extends": "_shared",
