@@ -104,7 +104,7 @@ jobs:
 
       - name: Build and submit to store
         run: |
-          eas build --platform ios --profile preview --non-interactive --auto-submit
+          eas build --platform ios --profile preview --non-interactive --auto-submit --clear-cache
 
       # - name: Resolve Sentry Issues
       #   run: |
