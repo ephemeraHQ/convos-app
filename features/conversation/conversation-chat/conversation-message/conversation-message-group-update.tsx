@@ -6,7 +6,7 @@ import { ViewStyle } from "react-native"
 import { Avatar } from "@/components/avatar"
 import { Center } from "@/design-system/Center"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
-import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import {
@@ -14,6 +14,9 @@ import {
   IGroupUpdatedMetadataEntry,
 } from "./conversation-message.types"
 import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
+import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 
 type IConversationMessageGroupUpdateProps = {
   message: IConversationMessageGroupUpdated
@@ -31,6 +34,7 @@ export const ConversationMessageGroupUpdate = memo(function ConversationMessageG
           key={`joined-${member.inboxId}`}
           inboxId={member.inboxId as IXmtpInboxId}
           initiatedByInboxId={content.initiatedByInboxId as IXmtpInboxId}
+          xmtpConversationId={message.xmtpConversationId}
         />
       ))}
 
@@ -89,10 +93,17 @@ const ChatGroupMemberLeft = memo(function ChatGroupMemberLeft({ inboxId }: IChat
 type IChatGroupMemberJoinedProps = {
   inboxId: IXmtpInboxId
   initiatedByInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
 }
 
-const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({ inboxId, initiatedByInboxId }: IChatGroupMemberJoinedProps) {
+const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({ 
+  inboxId, 
+  initiatedByInboxId,
+  xmtpConversationId 
+}: IChatGroupMemberJoinedProps) {
   const { themed, theme } = useAppTheme()
+
+  const currentSender = useSafeCurrentSender()
   
   const memberDisplayInfoParams = useMemo(() => ({
     inboxId,
@@ -116,6 +127,15 @@ const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({ inboxId, ini
     navigate("Profile", { inboxId: initiatedByInboxId })
   }, [initiatedByInboxId])
 
+  // Get the current conversation to check if it's a DM or a group
+  const { data: conversation } = useConversationQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "ChatGroupMemberJoined",
+  })
+
+  const isDm = conversation ? isConversationDm(conversation) : false
+
   return (
     <HStack style={themed($memberContainer)}>
       <Pressable
@@ -125,10 +145,10 @@ const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({ inboxId, ini
         <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
         <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
       </Pressable>
-      <ChatGroupUpdateText>was invited</ChatGroupUpdateText>
+      <ChatGroupUpdateText>{isDm ? "joined" : "was invited"}</ChatGroupUpdateText>
 
-      {/* Show inviter if their displayName is available */}
-      {initiatorDisplayName && (
+      {/* Show inviter if their displayName is available and it's not a DM */}
+      {!isDm && initiatorDisplayName && (
         <Pressable
           onPress={handleInitiatorPress}
           style={themed($pressableContent)}
