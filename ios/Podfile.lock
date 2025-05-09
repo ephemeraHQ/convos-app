@@ -404,7 +404,7 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
-  - LibXMTP (4.2.0-dev.4ba3b55)
+  - LibXMTP (4.2.0-rc2)
   - MessagePacker (0.4.7)
   - MMKV (2.2.1):
     - MMKVCore (~> 2.2.1)
@@ -2395,18 +2395,18 @@ PODS:
   - SQLCipher/standard (4.5.7):
     - SQLCipher/common
   - SwiftProtobuf (1.28.2)
-  - XMTP (4.2.0-dev.b10e719):
+  - XMTP (4.2.0-rc2):
     - Connect-Swift (= 1.0.0)
     - CryptoSwift (= 1.8.3)
     - CSecp256k1 (~> 0.2)
-    - LibXMTP (= 4.2.0-dev.4ba3b55)
+    - LibXMTP (= 4.2.0-rc2)
     - SQLCipher (= 4.5.7)
-  - XMTPReactNative (4.2.0-dev.73f1217):
+  - XMTPReactNative (4.2.0-rc2):
     - CSecp256k1 (~> 0.2)
     - ExpoModulesCore
     - MessagePacker
     - SQLCipher (= 4.5.7)
-    - XMTP (= 4.2.0-dev.b10e719)
+    - XMTP (= 4.2.0-rc2)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2550,7 +2550,7 @@ DEPENDENCIES:
   - RNScreens (from `../node_modules/react-native-screens`)
   - "RNSentry (from `../node_modules/@sentry/react-native`)"
   - RNSVG (from `../node_modules/react-native-svg`)
-  - XMTP (= 4.2.0-dev.b10e719)
+  - XMTP (= 4.2.0-rc2)
   - "XMTPReactNative (from `../node_modules/@xmtp/react-native-sdk/ios`)"
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2937,7 +2937,7 @@ SPEC CHECKSUMS:
   libavif: 84bbb62fb232c3018d6f1bab79beea87e35de7b7
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  LibXMTP: 80e594671ce3f19f58fa4068403f98d5629d5111
+  LibXMTP: ae2a80d24e6b3af6dce8d21841d124105c3004b2
   MessagePacker: ab2fe250e86ea7aedd1a9ee47a37083edd41fd02
   MMKV: 383ccfa10ae23ff2a9c0f6130b7136b37b55ac10
   MMKVCore: a255341a3746955f50da2ad9121b18cb2b346e61
@@ -3041,10 +3041,10 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   SQLCipher: 5e6bfb47323635c8b657b1b27d25c5f1baf63bf5
   SwiftProtobuf: 4dbaffec76a39a8dc5da23b40af1a5dc01a4c02d
-  XMTP: 71a89fc9b80df8edabc63fe2c63dbb7359fd0442
-  XMTPReactNative: 747b5876fcde3cb228a99e5fbee718907eef9282
+  XMTP: 72985c2d05f93a263e407468c7306cd8e4288e3f
+  XMTPReactNative: f3b7d4c8d4cb97c6e52e0b50a219384b2985114b
   Yoga: 1259c7a8cbaccf7b4c3ddf8ee36ca11be9dee407
 
-PODFILE CHECKSUM: b808cd27791192a24a3e7e7f3304391040a57dde
+PODFILE CHECKSUM: b301aae2c2d8e963c11d42e16289d39e3bbbc3d7
 
 COCOAPODS: 1.16.2
