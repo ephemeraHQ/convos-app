@@ -80,6 +80,7 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
                     messageId={messageId}
                     previousMessageId={previousMessageId}
                     nextMessageId={nextMessageId}
+                    xmtpConversationId={xmtpConversationId}
                   />
                 )
               })}
@@ -95,10 +96,12 @@ const MessageWrapper = memo(function MessageWrapper({
   messageId,
   previousMessageId,
   nextMessageId,
+  xmtpConversationId,
 }: {
   messageId: IXmtpMessageId
   previousMessageId: IXmtpMessageId | undefined
   nextMessageId: IXmtpMessageId | undefined
+  xmtpConversationId: IXmtpConversationId
 }) {
   const currentSender = useSafeCurrentSender()
 
@@ -108,18 +111,21 @@ const MessageWrapper = memo(function MessageWrapper({
 
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId: messageId,
+    xmtpConversationId: xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "Conversation Preview",
   })
 
   const { data: previousMessage } = useConversationMessageQuery({
     xmtpMessageId: previousMessageId,
+    xmtpConversationId: xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "Conversation Preview",
   })
 
   const { data: nextMessage } = useConversationMessageQuery({
     xmtpMessageId: nextMessageId,
+    xmtpConversationId: xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "Conversation Preview",
   })

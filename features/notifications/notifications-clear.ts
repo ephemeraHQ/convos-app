@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications"
+import { useNotificationsStore } from "@/features/notifications/notifications.store"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -20,18 +21,20 @@ export async function clearNotificationsForConversation(args: {
     // Get all current notifications
     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
 
-    notificationsLogger.debug(
-      `Found ${presentedNotifications.length} notifications present in tray`,
-      JSON.stringify(presentedNotifications),
-    )
+    const validNotifications = presentedNotifications.filter((notification) => {
+      return (
+        notification.request.identifier !==
+        useNotificationsStore.getState().lastTappedNotificationId
+      )
+    })
 
-    if (presentedNotifications.length === 0) {
+    if (validNotifications.length === 0) {
       notificationsLogger.debug("No notifications to clear")
       return
     }
 
     // Find notifications related to this conversation
-    const notificationsToRemove = presentedNotifications.filter((notification) => {
+    const notificationsToRemove = validNotifications.filter((notification) => {
       try {
         // Handle Convos modified notifications
         if (isConvosModifiedNotification(notification)) {

@@ -132,6 +132,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
         setConversationMessageQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpMessageId: optimisticMessage.xmtpId,
+          xmtpConversationId: variables.xmtpConversationId,
           message: optimisticMessage,
         })
 
@@ -154,6 +155,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
               const messageInCache = getConversationMessageQueryData({
                 clientInboxId: currentSender.inboxId,
                 xmtpMessageId: optimisticMessage.xmtpId,
+                xmtpConversationId: variables.xmtpConversationId,
               })
 
               if (!messageInCache) {
@@ -168,12 +170,14 @@ export const getSendMessageMutationOptions = (): MutationOptions<
               await refetchConversationMessageQuery({
                 clientInboxId: currentSender.inboxId,
                 xmtpMessageId: optimisticMessage.xmtpId,
+                xmtpConversationId: variables.xmtpConversationId,
               })
             } catch (error) {
               captureError(new ReactQueryError({ error }))
               invalidateConversationMessageQuery({
                 clientInboxId: currentSender.inboxId,
                 xmtpMessageId: optimisticMessage.xmtpId,
+                xmtpConversationId: variables.xmtpConversationId,
               }).catch(captureError)
             }
           }

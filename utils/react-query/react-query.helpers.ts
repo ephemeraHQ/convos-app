@@ -174,9 +174,6 @@ export function createQueryObserverWithPreviousData<
     // Avoid calling the callback again if the data is the same as the initial trigger
     // This prevents double-firing when the subscription starts *after* the initial check
     if (result.data !== undefined && result.data === previousData && !result.isStale) {
-      queryLogger.debug(
-        "createQueryObserverWithPreviousData: Skipping subscription trigger for initial fresh data.",
-      )
       return
     }
 

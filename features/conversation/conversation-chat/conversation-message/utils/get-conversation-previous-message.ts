@@ -38,6 +38,7 @@ export function getConversationPreviousMessage(args: {
   return getConversationMessageQueryData({
     clientInboxId: currentSender.inboxId,
     xmtpMessageId: previousMessageId,
+    xmtpConversationId,
   })
 }
 

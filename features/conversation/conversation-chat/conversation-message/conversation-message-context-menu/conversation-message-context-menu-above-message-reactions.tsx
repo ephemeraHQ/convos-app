@@ -8,6 +8,7 @@ import { StaggeredAnimation } from "@/design-system/staggered-animation"
 import { TouchableOpacity } from "@/design-system/TouchableOpacity"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useMessageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
 import { getReactionContent } from "@/features/xmtp/xmtp-codecs/xmtp-codecs-reaction"
 import { IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
@@ -33,9 +34,11 @@ export const MessageContextMenuAboveMessageReactions = memo(
   ) {
     const { messageId, onChooseMoreEmojis, onSelectReaction, originX, originY, reactors } = props
     const currentUserInboxId = useSafeCurrentSender().inboxId
+    const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
     const { data: messageFromMe } = useMessageIsFromCurrentSenderInboxId({
       xmtpMessageId: messageId,
+      xmtpConversationId,
     })
 
     const currentUserEmojiSelectedMap = useMemo(() => {

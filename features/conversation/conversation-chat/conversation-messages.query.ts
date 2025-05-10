@@ -10,7 +10,7 @@ import { isReactionMessage } from "@/features/conversation/conversation-chat/con
 import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
-import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { queryLogger } from "@/utils/logger/logger"
@@ -87,8 +87,9 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("Conversation not found")
   }
 
-  await syncAllXmtpConversations({
+  await syncOneXmtpConversation({
     clientInboxId,
+    conversationId: conversation.xmtpId,
     caller: "conversationMessagesInfiniteQueryFn",
   })
 
@@ -120,6 +121,7 @@ const conversationMessagesInfiniteQueryFn = async (
     setConversationMessageQueryData({
       clientInboxId,
       xmtpMessageId: message.xmtpId,
+      xmtpConversationId,
       message,
     })
   }
@@ -275,6 +277,7 @@ export const addMessageToConversationMessagesInfiniteQueryData = (args: {
   const newMessageData = getConversationMessageQueryData({
     clientInboxId,
     xmtpMessageId: messageId,
+    xmtpConversationId,
   })
 
   let updatedMessageIds = [...firstPage.messageIds]
@@ -287,6 +290,7 @@ export const addMessageToConversationMessagesInfiniteQueryData = (args: {
       const existingMessageData = getConversationMessageQueryData({
         clientInboxId,
         xmtpMessageId: existingMessageId,
+        xmtpConversationId,
       })
 
       // If we can't get existing message data, skip comparison for this item

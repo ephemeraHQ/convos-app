@@ -3,7 +3,7 @@ import { Query, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
-import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -28,8 +28,9 @@ async function getConversation(args: IGetConversationArgs) {
     throw new Error("Inbox ID is required")
   }
 
-  await syncAllXmtpConversations({
+  await syncOneXmtpConversation({
     clientInboxId,
+    conversationId: xmtpConversationId,
     caller: "getConversation",
   })
 

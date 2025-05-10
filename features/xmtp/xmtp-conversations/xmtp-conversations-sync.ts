@@ -16,9 +16,6 @@ const syncAllConversationsPromisesCache = new Map<IXmtpInboxId, Promise<void>>()
 // Track the last successful sync time for each inbox
 const lastSyncAllTimestamps = new Map<IXmtpInboxId, number>()
 
-// Minimum time between syncAll operations in milliseconds
-const MIN_SYNC_ALL_INTERVAL = 10000
-
 export async function syncOneXmtpConversation(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
@@ -68,16 +65,6 @@ export async function syncAllXmtpConversations(args: {
   caller: string
 }) {
   const { clientInboxId, consentStates = ["allowed", "unknown", "denied"], caller } = args
-
-  // Check if the last successful sync was less than MIN_SYNC_ALL_INTERVAL ago
-  const lastSyncTime = lastSyncAllTimestamps.get(clientInboxId) || 0
-  const now = Date.now()
-  const timeSinceLastSync = now - lastSyncTime
-
-  // Skip this sync as it's too soon after the last one
-  if (timeSinceLastSync < MIN_SYNC_ALL_INTERVAL) {
-    return Promise.resolve()
-  }
 
   // Check if there's already a sync in progress for this inbox
   const existingSyncPromise = syncAllConversationsPromisesCache.get(clientInboxId)

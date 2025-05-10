@@ -16,6 +16,7 @@ import {
 } from "react-native-reanimated"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useAppTheme } from "@/theme/use-app-theme"
 import {
   useConversationMessageContextSelector,
@@ -25,11 +26,12 @@ import {
 export const ConversationMessageTimestamp = memo(function ConversationMessageTimestamp() {
   const shouldShowDateChange = useConversationMessageContextSelector((s) => s.showDateChange)
   const xmtpMessageId = useConversationMessageContextSelector((s) => s.currentMessageId)
-
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const currentSender = useSafeCurrentSender()
 
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId: xmtpMessageId,
+    xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "ConversationMessageTimestamp",
   })

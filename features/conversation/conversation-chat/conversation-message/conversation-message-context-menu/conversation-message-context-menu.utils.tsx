@@ -19,13 +19,15 @@ export function useMessageContextMenuItems(args: {
   messageId: IXmtpMessageId
   xmtpConversationId: IXmtpConversationId
 }) {
-  const { messageId } = args
+  const { messageId, xmtpConversationId } = args
 
   const currentSender = useSafeCurrentSender()
   const composerStore = useConversationComposerStore()
   const messageContextMenuStore = useConversationMessageContextMenuStore()
+
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId: messageId,
+    xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "Conversation Message Context Menu",
   })
@@ -37,8 +39,8 @@ export function useMessageContextMenuItems(args: {
         additionalMessage: "Couldn't find message",
       }),
       {
-        message: "Couldn't find message"
-      }
+        message: "Couldn't find message",
+      },
     )
     return []
   }

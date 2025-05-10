@@ -12,17 +12,18 @@ import { getHasNextMessageInSeries } from "@/features/conversation/utils/has-nex
 import { hasPreviousMessageInSeries } from "@/features/conversation/utils/has-previous-message-in-serie"
 import { messageIsFromCurrentSenderInboxId } from "@/features/conversation/utils/message-is-from-current-user"
 import { messageShouldShowDateChange } from "@/features/conversation/utils/message-should-show-date-change"
+import { Nullable } from "@/types/general"
 
 type IConversationMessageContextStoreProps = {
   currentMessage: IConversationMessage
-  previousMessage: IConversationMessage | undefined
-  nextMessage: IConversationMessage | undefined
+  previousMessage: Nullable<IConversationMessage>
+  nextMessage: Nullable<IConversationMessage>
 }
 
 type IConversationContextStoreState = IConversationMessageContextStoreProps & {
   currentMessageId: IXmtpMessageId
-  previousMessageId: IXmtpMessageId | undefined
-  nextMessageId: IXmtpMessageId | undefined
+  previousMessageId: Nullable<IXmtpMessageId>
+  nextMessageId: Nullable<IXmtpMessageId>
   isShowingTime: boolean
   hasPreviousMessageInSeries: boolean
   hasNextMessageInSeries: boolean

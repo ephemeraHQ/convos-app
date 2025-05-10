@@ -69,6 +69,7 @@ const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversa
         try {
           const currentSender = getSafeCurrentSender()
           const message = await ensureConversationMessageQueryData({
+            xmtpConversationId,
             xmtpMessageId: replyingToMessageId,
             clientInboxId: currentSender.inboxId,
             caller: "ConversationComposerReplyPreview",
