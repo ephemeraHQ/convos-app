@@ -5,11 +5,19 @@ enum KeychainConstants {
   static func appGroupIdentifier(for environment: XMTP.XMTPEnvironment,
                                  withTeamId: Bool = false) -> String {
     let appGroupIdentifier: String
-    switch environment {
-    case .dev, .local:
-      appGroupIdentifier = "group.com.convos.preview"
-    case .production:
-      appGroupIdentifier = "group.com.convos.prod"
+    if let appGroupIdentifierFromPlist = Bundle.getInfoPlistValue(
+      for: "AppGroupIdentifier"
+    ) {
+      appGroupIdentifier = appGroupIdentifierFromPlist
+    } else {
+      log.debug("Failed getting app group ID from plist, using backup")
+      
+      switch environment {
+      case .dev, .local:
+        appGroupIdentifier = "group.com.convos.preview"
+      case .production:
+        appGroupIdentifier = "group.com.convos.prod"
+      }
     }
     let teamIdPrefix: String = "FY4NZR34Z3."
     return withTeamId ? teamIdPrefix + appGroupIdentifier : appGroupIdentifier
@@ -28,7 +36,7 @@ extension Bundle {
 
   static func mainAppBundleId(for environment: XMTP.XMTPEnvironment) -> String {
     guard let bundleId = Bundle.getInfoPlistValue(for: "MainAppBundleIdentifier") else {
-      log.debug("Failed getting main app bundle ID")
+      log.debug("Failed getting main app bundle ID from plist, using backup")
 
       switch environment {
       case .dev, .local:
