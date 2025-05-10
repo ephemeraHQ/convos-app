@@ -108,9 +108,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 }
 
               let notificationFactory = PushNotificationContentFactory(client: client)
-              guard let notification = try await notificationFactory.notification(from: request.content,
-                                                                                  with: decodedMessage,
-                                                                                  in: conversation) else {
+              guard let notification = try await notificationFactory.notification(from: decodedMessage, in: conversation) else {
                 log.error("Failed getting notification from decoded message")
                 contentHandler?(currentBestAttempt)
                 return

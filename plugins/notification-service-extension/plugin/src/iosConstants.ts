@@ -11,13 +11,10 @@ export const IOS_TEAM_ID = "FY4NZR34Z3"
 export const NSE_TARGET_NAME = "ConvosNSE"
 export const NSE_SWIFT_SOURCE_FILES = [
   "NotificationService.swift",
-  "Utils.swift",
   "Keychain.swift",
   "Logger.swift",
   "MMKV.swift",
-  "SharedDefaults.swift",
   "XmtpClient.swift",
-  "XmtpDbEncryptionKey.swift",
   "PushNotificationContentFactory.swift",
   "XMTPContentDecoder.swift",
   "Group+MemberNames.swift"
