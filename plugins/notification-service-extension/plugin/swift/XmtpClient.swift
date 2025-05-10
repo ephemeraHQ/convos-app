@@ -59,6 +59,11 @@ extension XMTP.Client {
   static func client(for ethAddress: String) async throws -> XMTP.Client {
     let xmtpEnv = getXmtpEnv()
     let groupId = KeychainConstants.appGroupIdentifier(for: xmtpEnv)
+    let groupUrl = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: groupId)
+    guard let groupUrl else {
+      throw ClientInitializationError.appGroupContainerNotFound
+    }
 
     /// For when we can use our Keychain Access group, waiting on upgrade to Expo SDK 53
 //    guard let encryptionKeyString = KeychainWrapper.getValue(
@@ -69,7 +74,8 @@ extension XMTP.Client {
 //      throw ClientInitializationError.noEncryptionKey
 //    }
 
-    guard let mmkvHelper = MMKVHelper(environment: xmtpEnv) else {
+    guard let mmkvHelper = MMKVHelper(environment: xmtpEnv,
+                                      appGroupDirectoryURL: groupUrl) else {
       throw ClientInitializationError.failedInitializingMMKV
     }
     guard let encryptionKeyString = mmkvHelper.getDatabaseKey(for: ethAddress),
@@ -77,11 +83,6 @@ extension XMTP.Client {
       throw ClientInitializationError.noEncryptionKey
     }
 
-    let groupUrl = FileManager.default.containerURL(
-      forSecurityApplicationGroupIdentifier: groupId)
-    guard let groupUrl else {
-      throw ClientInitializationError.appGroupContainerNotFound
-    }
     let groupDir = groupUrl.path
 
     let options = ClientOptions(

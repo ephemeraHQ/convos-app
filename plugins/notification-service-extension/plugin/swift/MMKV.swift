@@ -8,15 +8,10 @@ class MMKVHelper {
 
   private let databaseKeyPrefix = "BACKUP_XMTP_KEY_"
 
-  init?(environment: XMTP.XMTPEnvironment) {
+  init?(environment: XMTP.XMTPEnvironment,
+        appGroupDirectoryURL: URL) {
     let bundleId = Bundle.mainAppBundleId(for: environment)
-    let groupId = KeychainConstants.appGroupIdentifier(for: environment,
-                                                       withTeamId: false)
-    guard let groupDir = FileManager.default.containerURL(
-      forSecurityApplicationGroupIdentifier: groupId)?.path else {
-      log.error("Failed to get application group directory")
-      return nil
-    }
+    let groupDir = appGroupDirectoryURL.path
 
     MMKV.initialize(rootDir: nil, groupDir: groupDir, logLevel: MMKVLogLevel.warning)
 
