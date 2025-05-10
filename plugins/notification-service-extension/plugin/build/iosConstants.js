@@ -10,13 +10,10 @@ exports.IOS_TEAM_ID = "FY4NZR34Z3";
 exports.NSE_TARGET_NAME = "ConvosNSE";
 exports.NSE_SWIFT_SOURCE_FILES = [
     "NotificationService.swift",
-    "Utils.swift",
     "Keychain.swift",
     "Logger.swift",
     "MMKV.swift",
-    "SharedDefaults.swift",
     "XmtpClient.swift",
-    "XmtpDbEncryptionKey.swift",
     "PushNotificationContentFactory.swift",
     "XMTPContentDecoder.swift",
     "Group+MemberNames.swift"
