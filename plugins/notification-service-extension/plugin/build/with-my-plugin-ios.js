@@ -192,7 +192,7 @@ const withXcodeProjectSettings = (config, props) => {
         projObjects["PBXTargetDependency"] = projObjects["PBXTargetDependency"] || {};
         projObjects["PBXContainerItemProxy"] = projObjects["PBXTargetDependency"] || {};
         // Add the NSE target
-        const nseTarget = xcodeProject.addTarget(iosConstants_1.NSE_TARGET_NAME, "app_extension", iosConstants_1.NSE_TARGET_NAME,
+        const nseTarget = xcodeProject.addTarget(iosConstants_1.NSE_TARGET_NAME, "app_extension", iosConstants_1.NSE_TARGET_NAME, 
         // Use the correct NSE bundle identifier pattern if it differs from main app + NSE_TARGET_NAME
         // Example assumes: com.example.app.ConvosNSE
         `${config.ios?.bundleIdentifier}.${iosConstants_1.NSE_TARGET_NAME}`);
