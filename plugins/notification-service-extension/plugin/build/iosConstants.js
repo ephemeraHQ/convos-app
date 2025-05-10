@@ -17,6 +17,9 @@ exports.NSE_SWIFT_SOURCE_FILES = [
     "SharedDefaults.swift",
     "XmtpClient.swift",
     "XmtpDbEncryptionKey.swift",
+    "PushNotificationContentFactory.swift",
+    "XMTPContentDecoder.swift",
+    "Group+MemberNames.swift"
 ];
 exports.NSE_INFO_PLIST_FILE_NAME = `${exports.NSE_TARGET_NAME}-Info.plist`;
 exports.NSE_EXT_FILES = [`${exports.NSE_TARGET_NAME}.entitlements`, exports.NSE_INFO_PLIST_FILE_NAME];
