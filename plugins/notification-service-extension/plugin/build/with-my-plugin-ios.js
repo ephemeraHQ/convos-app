@@ -236,7 +236,7 @@ const withPodfile = (config) => {
             const nseTargetBlock = `
 
 target '${iosConstants_1.NSE_TARGET_NAME}' do
-  # Use the version required by the installed @xmtp/react-native-sdk
+  # Use the iOS XMTP version required by the installed @xmtp/react-native-sdk
   pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
   pod 'MMKV', '2.2.1', :modular_headers => true
 
