@@ -9,6 +9,7 @@ type EnvironmentConfig = {
   webDomain: string
   icon: string
   ios: {
+    appleTeamId: string
     bundleIdentifier: string
     associatedDomains: string[]
     googleServicesFile: string
@@ -44,6 +45,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
   development: {
     scheme: "convos-dev",
     ios: {
+      appleTeamId: "FY4NZR34Z3",
       bundleIdentifier: "com.convos.dev",
       // For now use preview domain for dev
       associatedDomains: [
@@ -75,6 +77,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
   preview: {
     scheme: "convos-preview",
     ios: {
+      appleTeamId: "FY4NZR34Z3",
       bundleIdentifier: "com.convos.preview",
       associatedDomains: [
         "applinks:preview.convos.org",
@@ -104,6 +107,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
   production: {
     scheme: "convos",
     ios: {
+      appleTeamId: "FY4NZR34Z3",
       bundleIdentifier: "com.convos.prod",
       associatedDomains: [
         "applinks:convos.org",
@@ -158,6 +162,7 @@ export default () => {
       },
     },
     ios: {
+      appleTeamId: config.ios.appleTeamId,
       bundleIdentifier: config.ios.bundleIdentifier,
       supportsTablet: true,
       associatedDomains: config.ios.associatedDomains,
@@ -266,6 +271,9 @@ export default () => {
             // or specify `:modular_headers => true` for particular dependencies"
             useFrameworks: "static",
             deploymentTarget: "16.0",
+            useModularHeaders: true,
+            automaticProvisioning: true,
+            developmentTeam: config.ios.appleTeamId,
           },
           android: {
             compileSdkVersion: 35,
