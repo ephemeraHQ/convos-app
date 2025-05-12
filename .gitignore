@@ -29,6 +29,7 @@ expo-env.d.ts
 .eas/
 
 # iOS
+ios/
 *.jks
 *.p8
 *.p12
