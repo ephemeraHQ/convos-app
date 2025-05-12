@@ -88,9 +88,10 @@ class PushNotificationContentFactory {
         return try await client.conversations.findMessage(messageId: reference)
     }
 
-    func notification(from decodedMessage: DecodedMessage,
-                      in conversation: Conversation) async throws -> UNNotificationContent? {
-        let mutableNotification = UNMutableNotificationContent()
+  func notification(from originalNotification: UNNotificationContent,
+                    with decodedMessage: DecodedMessage,
+                    in conversation: Conversation) async throws -> UNNotificationContent? {
+        let mutableNotification = originalNotification.mutableCopy() as? UNMutableNotificationContent ?? UNMutableNotificationContent()
         let decoder = XMTPContentDecoder()
         let content = try decoder.decode(message: decodedMessage)
 
