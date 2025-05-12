@@ -323,7 +323,6 @@ export const fr = {
     "Vos discussions de groupe seront chiffrées et sauvegardées sur votre appareil jusqu'à ce que vous supprimiez Convos. Vos messages privés seront sauvegardés par le réseau XMTP.",
   your_profile_page: "Votre page de profil",
   copy_wallet_address: "Copier l'adresse du portefeuille",
-  attachment_message_error_download: "Impossible de télécharger la pièce jointe",
 
   // Context Menu
   reply: "Répondre",
