@@ -175,13 +175,14 @@ const MessageReplyReference = memo(function MessageReplyReference(props: {
   })
 
   const tapGesture = Gesture.Tap()
-    .onBegin(() => {
+    .onEnd(() => {
       Haptics.softImpactAsync()
       conversationStore.setState({
         highlightedXmtpMessageId: referenceMessageId,
         scrollToXmtpMessageId: referenceMessageId,
       })
     })
+    .maxDistance(10)
     .runOnJS(true)
 
   return (
