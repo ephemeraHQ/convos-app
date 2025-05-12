@@ -30,6 +30,7 @@ export const ConversationMessageRemoteAttachment = memo(
       data: attachment,
       isLoading: attachmentLoading,
       error: attachmentError,
+      refetch: refetchAttachment,
     } = useRemoteAttachmentQuery({
       xmtpMessageId: message.xmtpId,
       url,
@@ -37,14 +38,17 @@ export const ConversationMessageRemoteAttachment = memo(
     })
 
     const handleTap = useCallback(() => {
-      if (attachment?.mediaURL) {
-        useGlobalMediaViewerStore.getState().actions.openGlobalMediaViewer({
-          uri: attachment?.mediaURL,
-          sender: displayName,
-          timestamp: message.sentMs,
-        })
+      if (attachmentError || !attachment?.mediaURL) {
+        refetchAttachment()
+        return
       }
-    }, [attachment?.mediaURL, displayName, message.sentMs])
+
+      useGlobalMediaViewerStore.getState().actions.openGlobalMediaViewer({
+        uri: attachment.mediaURL,
+        sender: displayName,
+        timestamp: message.sentMs,
+      })
+    }, [attachment?.mediaURL, attachmentError, displayName, message.sentMs, refetchAttachment])
 
     return (
       <VStack

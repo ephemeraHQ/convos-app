@@ -303,7 +303,6 @@ export const en = {
     "Your group chats will be encrypted and saved on your device until you delete Converse. Your DMs will be backed up by the XMTP network.",
   your_profile_page: "Your profile page",
   copy_wallet_address: "Copy wallet address",
-  attachment_message_error_download: "Couldn't download attachment",
 
   // Context Menu
   reply: "Reply",

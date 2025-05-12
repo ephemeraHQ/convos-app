@@ -14,6 +14,8 @@ import {
   ConversationMessageAttachmentContainer,
   IConversationMessageAttachmentContainerProps,
 } from "./conversation-message-attachment-container"
+import { VStack } from "@/design-system/VStack"
+import { Icon } from "@/design-system/Icon/Icon"
 
 type IConversationAttachmentRemoteImageProps = {
   imageUrl: Nullable<string>
@@ -28,8 +30,15 @@ type IConversationAttachmentRemoteImageProps = {
 export const ConversationAttachmentRemoteImage = memo(function ConversationAttachmentRemoteImage(
   props: IConversationAttachmentRemoteImageProps,
 ) {
-  const { imageUrl, isLoading, error, fitAspectRatio, containerProps, imageProps, imageSize } =
-    props
+  const { 
+    imageUrl, 
+    isLoading, 
+    error, 
+    fitAspectRatio, 
+    containerProps, 
+    imageProps, 
+    imageSize
+  } = props
 
   const { borderRadius } = useConversationAttachmentStyles()
 
@@ -44,7 +53,10 @@ export const ConversationAttachmentRemoteImage = memo(function ConversationAttac
   if (error || !imageUrl) {
     return (
       <ConversationMessageAttachmentContainer {...containerProps}>
-        <Text>{translate("attachment_message_error_download")}</Text>
+        <VStack style={{ alignItems: "center", justifyContent: "center", height: "100%" }}>
+          <Text>Couldn't load attachment</Text>
+          <Text>Tap to retry</Text>
+        </VStack>
       </ConversationMessageAttachmentContainer>
     )
   }
@@ -95,7 +107,7 @@ export const ConversationAttachmentRemoteImageSmart = memo(
     const {
       data: attachment,
       error: attachmentError,
-      isLoading: attachmentLoading,
+      isLoading: attachmentLoading
     } = useRemoteAttachmentQuery({
       xmtpMessageId,
       url,
