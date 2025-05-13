@@ -1,7 +1,13 @@
 name: Production Deployment
 
 on:
-  workflow_dispatch: # Trigger manually
+  workflow_dispatch:
+    inputs:
+      force_native_build:
+        description: "Force native build"
+        type: boolean
+        default: true
+        required: true
 
 # Ensure only one workflow runs at a time
 concurrency:
