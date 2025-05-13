@@ -7,7 +7,6 @@ import {
   sendMessageMutation,
 } from "@/features/conversation/hooks/use-send-message.mutation"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { logJson } from "@/utils/logger/logger"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 import {
   IComposerAttachment,
@@ -108,8 +107,6 @@ export function useCreateConversationAndSend() {
         composerUploadedAttachments,
       })
 
-      logJson("messageContents", messageContents)
-
       // Reset composer state before sending to prevent duplicate sends
       composerStore.getState().reset()
 
@@ -181,8 +178,6 @@ export function useSendToExistingConversation() {
       replyingToMessageId,
       composerUploadedAttachments,
     })
-
-    logJson("messageContents", messageContents)
 
     // Reset composer state before sending to prevent duplicate sends
     composerStore.getState().reset()
