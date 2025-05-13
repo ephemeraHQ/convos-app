@@ -1,7 +1,13 @@
 name: Production Deployment
 
 on:
-  workflow_dispatch: # Trigger manually
+  workflow_dispatch:
+    inputs:
+      force_native_build:
+        description: "Force native build"
+        type: boolean
+        default: true
+        required: true
 
 # Ensure only one workflow runs at a time
 concurrency:
@@ -63,6 +69,24 @@ jobs:
           eas-cache: true
           patch-watchers: true
 
+      - name: Prepare iOS build folder
+        run: |
+          # Run the notification service extension plugin first
+          yarn plugins:build:notification-service-extension
+          
+          # Generate the iOS folder with the Notification Service Extension
+          EXPO_ENV=production yarn expo prebuild --platform ios --clean
+          
+          # Verify that the iOS folder was created correctly
+          ls -la ios/
+          
+          # Check if the NSE target exists in the project
+          find ios -name "*.xcodeproj" -type d | xargs ls -la
+          find ios -name "project.pbxproj" -type f -exec grep -l "ConvosNSE" {} \; || echo "NSE target not found in any project file"
+          
+          # Make sure the iOS project has code signing properly configured
+          find ios -name "project.pbxproj" -type f -exec grep -l "CODE_SIGN_IDENTITY\|DEVELOPMENT_TEAM" {} \; || echo "Code signing not found in project"
+
       - name: Build iOS production
         run: |
-          eas build --platform ios --profile production --non-interactive --auto-submit
+          eas build --platform ios --profile production --non-interactive --auto-submit --clear-cache

@@ -19,6 +19,7 @@ npm-debug.*
 dist/
 builds/
 build-*.apk
+build/
 
 # Expo
 .expo/
@@ -28,7 +29,7 @@ expo-env.d.ts
 .eas/
 
 # iOS
-/ios/
+ios/
 *.jks
 *.p8
 *.p12
@@ -49,3 +50,6 @@ expo-env.d.ts
 
 # Google Services
 # google-services/
+
+# Plugins
+!plugins/notification-service-extension/plugin/build

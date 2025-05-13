@@ -7,7 +7,8 @@
     "_shared": {
       "autoIncrement": true,
       "node": "20.18.0",
-      "resourceClass": "large"
+      "resourceClass": "large",
+      "credentialsSource": "remote"
     },
     "development": {
       "extends": "_shared",
@@ -19,7 +20,8 @@
     "preview": {
       "extends": "_shared",
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "distribution": "store"
     },
     "production": {
       "extends": "_shared",

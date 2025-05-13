@@ -1,7 +1,6 @@
-import { conversationMessagesWithMetrics, processMessage } from "@xmtp/react-native-sdk"
+import { conversationMessages, processMessage } from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import {
-  ISupportedXmtpCodecs,
   isXmtpGroupUpdatedContentType,
   isXmtpMultiRemoteAttachmentContentType,
   isXmtpReactionContentType,
@@ -42,8 +41,8 @@ export async function getXmtpConversationMessages(args: {
       inboxId: clientInboxId,
     })
 
-    const messagesWithMetrics = await wrapXmtpCallWithDuration("conversationMessages", () =>
-      conversationMessagesWithMetrics<ISupportedXmtpCodecs>(
+    const messages = await wrapXmtpCallWithDuration("conversationMessages", () =>
+      conversationMessages(
         client.installationId,
         conversationId,
         limit,
@@ -53,7 +52,7 @@ export async function getXmtpConversationMessages(args: {
       ),
     )
 
-    return messagesWithMetrics.messages.filter(isSupportedXmtpMessage)
+    return messages.filter(isSupportedXmtpMessage)
   } catch (error) {
     throw new XMTPError({
       error,
