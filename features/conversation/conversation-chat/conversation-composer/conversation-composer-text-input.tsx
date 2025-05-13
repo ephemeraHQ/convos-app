@@ -34,11 +34,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
     onSubmitEditing()
   }, [onSubmitEditing])
 
-  // Focus the input when appropriate
-  const focusInput = useCallback(() => {
-    inputRef.current?.focus()
-  }, [])
-
   return (
     <TextInput
       style={themed($textInput)}
@@ -46,7 +41,6 @@ export const ConversationComposerTextInput = memo(function ConversationComposerT
       ref={inputRef}
       onSubmitEditing={handleSubmitEditing}
       onChangeText={handleChangeText}
-      onFocus={focusInput}
       multiline
       value={inputValue}
       placeholder="Message"
