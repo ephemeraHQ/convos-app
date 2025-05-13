@@ -152,7 +152,7 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
   ])
 }
 
-const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
+const withXcodeProjectSettings: ConfigPlugin = (config) => {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults
 
@@ -271,13 +271,47 @@ end
   ])
 }
 
+const withEasManagedCredentials: ConfigPlugin = (config) => {
+  config.extra = {
+    ...config.extra,
+    eas: {
+      ...config.extra?.eas,
+      build: {
+        ...config.extra?.eas?.build,
+        experimental: {
+          ...config.extra?.eas?.build?.experimental,
+          ios: {
+            ...config.extra?.eas?.build?.experimental?.ios,
+            appExtensions: [
+              ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ?? []),
+              {
+                // keep in sync with native changes in NSE
+                targetName: NSE_TARGET_NAME,
+                bundleIdentifier: `${config?.ios?.bundleIdentifier}.${NSE_TARGET_NAME}`,
+                entitlements: {
+                  "com.apple.security.application-groups": [
+                    `group.${config?.ios?.bundleIdentifier}.nse`,
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+  }
+  return config
+}
+
 export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
   // 1. Copy files AND modify copied entitlements/Info.plist
   config = withNseFilesAndPlistMods(config)
   // 2. Set up the Xcode project target, linking files and setting build settings
-  config = withXcodeProjectSettings(config, props)
+  config = withXcodeProjectSettings(config)
   // 3. Modify the Podfile
   config = withPodfile(config)
+  // 4. Add EAS managed credentials
+  config = withEasManagedCredentials(config)
 
   // Optional: These might modify main app settings/entitlements if needed
   // config = withAppEnvironment(config, props);
