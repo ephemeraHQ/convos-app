@@ -125,7 +125,7 @@ jobs:
           # Use the --no-wait flag to avoid waiting for the build to complete
           # Use the --non-interactive flag to run in CI mode
           # Use the --auto-submit flag to submit to App Store
-          eas build --platform ios --profile preview --non-interactive --auto-submit --clear-cache --no-wait
+          eas build --platform ios --profile preview --non-interactive --auto-submit --clear-cache
 
       # - name: Resolve Sentry Issues
       #   run: |
