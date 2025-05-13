@@ -197,10 +197,13 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
         const newValue = parseInt(metadataEntry.newValue, 10)
         const newTime = getFormattedDisappearingDuration(newValue)
 
-        if (oldValue < 0 && newValue >= 0) {
-          return null // Silent when transitioning from cleared chat
-        } else if (newValue < 0) {
+        if (newValue === 1) {
+          // transition to cleared chat
           return "cleared the chat"
+          return null
+        } else if (oldValue === 1 && newValue > 0) {
+          // transition from cleared chat
+          return `set messages to disappear in ${newTime}`
         } else if (newValue === 0) {
           return "turned off disappearing messages"
         } else if (oldValue === 0) {
