@@ -20,7 +20,8 @@
     "preview": {
       "extends": "_shared",
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "distribution": "store"
     },
     "production": {
       "extends": "_shared",
