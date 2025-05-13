@@ -200,7 +200,6 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
         if (newValue === 1) {
           // transition to cleared chat
           return "cleared the chat"
-          return null
         } else if (oldValue === 1 && newValue > 0) {
           // transition from cleared chat
           return `set messages to disappear in ${newTime}`
