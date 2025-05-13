@@ -80,7 +80,7 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
             Log.log(`Adding Keychain Group '${keychainGroup}' to NSE entitlements.`)
             keychainGroups.push(keychainGroup)
             // Add default group too, might be needed sometimes
-            const defaultKeychainGroup = `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}.${targetName}`
+            const defaultKeychainGroup = `$(AppIdentifierPrefix)${config.ios?.bundleIdentifier}.${targetName}`
             if (!keychainGroups.includes(defaultKeychainGroup)) {
               keychainGroups.push(defaultKeychainGroup)
             }
@@ -133,9 +133,9 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
 
           // Set Main App Bundle Identifier
           Log.log(
-            `Setting MainAppBundleIdentifier in ${infoPlistFilename} to: ${config.ios.bundleIdentifier}`,
+            `Setting MainAppBundleIdentifier in ${infoPlistFilename} to: ${config.ios?.bundleIdentifier}`,
           )
-          infoPlistContents.MainAppBundleIdentifier = config.ios.bundleIdentifier
+          infoPlistContents.MainAppBundleIdentifier = config.ios?.bundleIdentifier
 
           fs.writeFileSync(infoPlistPath, plist.build(infoPlistContents))
           Log.log(`Successfully updated ${infoPlistFilename}`)

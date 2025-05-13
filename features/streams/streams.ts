@@ -25,8 +25,8 @@ export async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   const currentStatus = useStreamStatusStore.getState().streamStatus
 
   for (const inboxId of inboxIdsToStream) {
+    // Streams are already started
     if (currentStatus[inboxId]) {
-      streamLogger.debug(`Streams for ${inboxId} are already marked as started.`)
       continue
     }
 
@@ -56,9 +56,15 @@ export async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
 
 export async function stopStreaming(inboxIds: IXmtpInboxId[]) {
   const { setStreamStopped } = useStreamStatusStore.getState().actions // Get action from store
+  const currentStatus = useStreamStatusStore.getState().streamStatus
 
   await Promise.all(
     inboxIds.map(async (inboxId) => {
+      // Streams are already stopped
+      if (!currentStatus[inboxId]) {
+        return
+      }
+
       streamLogger.debug(`Stopping streams for ${inboxId}...`)
 
       const results = await customPromiseAllSettled([

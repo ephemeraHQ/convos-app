@@ -1,5 +1,5 @@
 import { Client as XmtpClient } from "@xmtp/react-native-sdk"
-// import { LogLevel, LogRotation } from "@xmtp/react-native-sdk/build/lib/types"
+import { LogLevel, LogRotation } from "@xmtp/react-native-sdk/build/lib/types"
 import * as RNFS from "react-native-fs"
 
 // import { v4 as uuidv4 } from "uuid"
@@ -28,33 +28,32 @@ export function getXmtpLogs() {
   return XmtpClient.exportNativeLogs() as Promise<string>
 }
 
-// const LIBXMTP_LOG_LEVEL = LogLevel.DEBUG
-// const LOG_ROTATION_POLICY = LogRotation.HOURLY
-// const MAX_LOG_FILES = 6
+const LIBXMTP_LOG_LEVEL = LogLevel.DEBUG
+const LOG_ROTATION_POLICY = LogRotation.HOURLY
+const MAX_LOG_FILES = 6
 
 export function startXmtpFileLogging() {
-  // XmtpClient.activatePersistentLibXMTPLogWriter(
-  //   LIBXMTP_LOG_LEVEL,
-  //   LOG_ROTATION_POLICY,
-  //   MAX_LOG_FILES,
-  // )
+  XmtpClient.activatePersistentLibXMTPLogWriter(
+    LIBXMTP_LOG_LEVEL,
+    LOG_ROTATION_POLICY,
+    MAX_LOG_FILES,
+  )
 }
 
 export function stopXmtpFileLogging() {
-  // XmtpClient.deactivatePersistentLibXMTPLogWriter()
+  XmtpClient.deactivatePersistentLibXMTPLogWriter()
 }
 
-export function getXmtpFilePaths() {
-  // : string[]
-  // return XmtpClient.getXMTPLogFilePaths() as string[]
+export function getXmtpFilePaths(): string[] {
+  return XmtpClient.getXMTPLogFilePaths() as string[]
 }
 
 export function clearXmtpLogFiles() {
-  // XmtpClient.clearXMTPLogs()
+  XmtpClient.clearXMTPLogs()
 }
 
 export function isXmtpFileLoggingActive() {
-  // return XmtpClient.isLogWriterActive()
+  return XmtpClient.isLogWriterActive()
 }
 
 // const LOGGING_INTERVAL_MS = 5000

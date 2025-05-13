@@ -22,7 +22,7 @@ import { translate } from "@/i18n"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
-import { GenericError, UserCancelledError } from "@/utils/error"
+import { ensureOurError, GenericError, UserCancelledError } from "@/utils/error"
 import { getFirstDefined } from "@/utils/general"
 import { useCurrentSender } from "../authentication/multi-inbox.store"
 
@@ -120,7 +120,11 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
                     label: translate("Log out"),
                     isWarning: true,
                     onPress: () => {
-                      logout({ caller: "ProfileMe" })
+                      logout({ caller: "ProfileMe" }).catch((error) => {
+                        captureErrorWithToast(ensureOurError(error), {
+                          message: "Error logging out, please restart the app.",
+                        })
+                      })
                     },
                   },
                 ]}

@@ -43,7 +43,7 @@ export function useHydrateAuth() {
           additionalMessage: "Error while hydrating auth so signing out...",
         }),
       )
-      logout({ caller: "useHydrateAuth xmtp client error" })
+      logout({ caller: "useHydrateAuth xmtp client error" }).catch(captureError)
       return
     })
 
@@ -54,7 +54,7 @@ export function useHydrateAuth() {
       .then((isValid) => {
         if (!isValid) {
           authLogger.debug("Invalid XMTP installation while hydrating auth so signing out...")
-          logout({ caller: "useHydrateAuth xmtp installation error" })
+          logout({ caller: "useHydrateAuth xmtp installation error" }).catch(captureError)
         } else {
           authLogger.debug("Valid XMTP installation")
         }

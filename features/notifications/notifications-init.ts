@@ -7,7 +7,7 @@ import {
   messageContentIsRemoteAttachment,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
-import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
@@ -179,14 +179,14 @@ async function maybeDisplayLocalNewMessageNotification(args: {
   // Add to local cache
   setConversationMessageQueryData({
     clientInboxId,
-    xmtpMessageId: xmtpDecryptedMessage.id,
+    xmtpMessageId: convoMessage.xmtpId,
     xmtpConversationId,
     message: convoMessage,
   })
-  addMessageToConversationMessagesInfiniteQueryData({
+  addMessagesToConversationMessagesInfiniteQueryData({
     clientInboxId,
     xmtpConversationId,
-    messageId: xmtpDecryptedMessage.id,
+    messageIds: [convoMessage.xmtpId],
   })
 
   // Don't show notifications when app is in foreground

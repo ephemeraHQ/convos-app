@@ -16,6 +16,13 @@ export function ensureError(error: unknown): Error {
   return new Error("Unknown error occurred")
 }
 
+export function ensureOurError(error: unknown): BaseError {
+  if (error instanceof BaseError) {
+    return error
+  }
+  return new GenericError({ error })
+}
+
 export type BaseErrorArgs = {
   error: unknown
   additionalMessage?: string // This could be an "extra" property but since we're using it a lot we prefer to have it as a separate property

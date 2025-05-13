@@ -9,7 +9,7 @@ import {
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import {
-  addMessageToConversationMessagesInfiniteQueryData,
+  addMessagesToConversationMessagesInfiniteQueryData,
   invalidateConversationMessagesInfiniteMessagesQuery,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
@@ -136,10 +136,10 @@ export const getSendMessageMutationOptions = (): MutationOptions<
           message: optimisticMessage,
         })
 
-        addMessageToConversationMessagesInfiniteQueryData({
+        addMessagesToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: variables.xmtpConversationId,
-          messageId: optimisticMessage.xmtpId,
+          messageIds: [optimisticMessage.xmtpId],
         })
       }
 

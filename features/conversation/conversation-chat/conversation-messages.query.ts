@@ -243,101 +243,116 @@ export function useConversationMessagesInfiniteQueryAllMessageIds(args: IArgsWit
  * Add a message to the infinite query cache, maintaining chronological order in the first page.
  * This will update all pages that match the query key.
  */
-export const addMessageToConversationMessagesInfiniteQueryData = (args: {
+export const addMessagesToConversationMessagesInfiniteQueryData = (args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
-  messageId: IXmtpMessageId
+  messageIds: IXmtpMessageId[]
 }) => {
-  const { clientInboxId, xmtpConversationId, messageId } = args
+  const { clientInboxId, xmtpConversationId, messageIds: newMessageIds } = args
 
-  // Get or initialize pages array
   const currentData = getConversationMessagesInfiniteQueryData({
     clientInboxId,
     xmtpConversationId,
   })
 
-  const pages = currentData?.pages || []
-  const firstPage = pages[0] || {
-    messageIds: [],
-    nextCursorNs: null,
-    prevCursorNs: null,
-  }
+  const originalPagesArray = currentData?.pages || []
+  const originalFirstPageObject = originalPagesArray[0] // This might be undefined
 
-  // Check if the message already exists in any page
-  const messageAlreadyExists = pages.some((page) => page.messageIds.includes(messageId))
+  // Start with a copy of the original first page's message IDs, or an empty array.
+  // This `workingListOfFirstPageMessageIds` will be mutated during the loop.
+  let workingListOfFirstPageMessageIds: IXmtpMessageId[] = originalFirstPageObject
+    ? [...originalFirstPageObject.messageIds]
+    : []
 
-  if (messageAlreadyExists) {
+  for (const newMessageId of newMessageIds) {
+    // Check if the message already existed in ANY of the original pages
+    const existsInOriginalCache = originalPagesArray.some((page) =>
+      page.messageIds.includes(newMessageId),
+    )
+
+    if (existsInOriginalCache) {
+      queryLogger.debug(
+        `Message ${newMessageId} already exists in original cache for conversation ${xmtpConversationId}, skipping.`,
+      )
+      continue
+    }
+
+    // Check if the message was already added in a *previous iteration of this current batch*
+    // This handles duplicate IDs within the `newMessageIds` array itself.
+    // We only check against `workingListOfFirstPageMessageIds` IF `originalFirstPageObject` didn't already contain it.
+    // (The `existsInOriginalCache` check above is more comprehensive for initial state)
+    if (
+      !originalFirstPageObject?.messageIds.includes(newMessageId) &&
+      workingListOfFirstPageMessageIds.includes(newMessageId)
+    ) {
+      queryLogger.debug(
+        `Message ${newMessageId} was already added in this current batch for conversation ${xmtpConversationId}, skipping duplicate within batch.`,
+      )
+      continue
+    }
+
+    const newMessageData = getConversationMessageQueryData({
+      clientInboxId,
+      xmtpMessageId: newMessageId,
+      xmtpConversationId,
+    })
+
+    let inserted = false
+    if (newMessageData) {
+      for (let i = 0; i < workingListOfFirstPageMessageIds.length; i++) {
+        const existingMessageIdInWorkingList = workingListOfFirstPageMessageIds[i]
+        const existingMessageData = getConversationMessageQueryData({
+          clientInboxId,
+          xmtpMessageId: existingMessageIdInWorkingList,
+          xmtpConversationId,
+        })
+
+        if (!existingMessageData) {
+          queryLogger.warn(
+            `Could not find data for existing message ${existingMessageIdInWorkingList} in conversation ${xmtpConversationId} cache during ordered insertion. Skipping comparison.`,
+          )
+          continue
+        }
+
+        if (newMessageData.sentMs >= existingMessageData.sentMs) {
+          workingListOfFirstPageMessageIds.splice(i, 0, newMessageId)
+          inserted = true
+          break
+        }
+      }
+      if (!inserted) {
+        workingListOfFirstPageMessageIds.push(newMessageId)
+      }
+    } else {
+      queryLogger.warn(
+        `Could not find data for new message ${newMessageId} in conversation ${xmtpConversationId} cache. Adding to beginning of list as fallback.`,
+      )
+      workingListOfFirstPageMessageIds.unshift(newMessageId)
+    }
     queryLogger.debug(
-      `Message ${messageId} already exists in conversation ${xmtpConversationId} cache, skipping add`,
+      `Processed message ${newMessageId} for batch update in conversation ${xmtpConversationId}.`,
     )
-    return
   }
 
-  // Get the new message's data to find its sentMs
-  const newMessageData = getConversationMessageQueryData({
-    clientInboxId,
-    xmtpMessageId: messageId,
-    xmtpConversationId,
-  })
-
-  let updatedMessageIds = [...firstPage.messageIds]
-  let inserted = false
-
-  if (newMessageData) {
-    // Iterate through existing message IDs in the first page to find the correct insertion point
-    for (let i = 0; i < updatedMessageIds.length; i++) {
-      const existingMessageId = updatedMessageIds[i]
-      const existingMessageData = getConversationMessageQueryData({
-        clientInboxId,
-        xmtpMessageId: existingMessageId,
-        xmtpConversationId,
-      })
-
-      // If we can't get existing message data, skip comparison for this item
-      if (!existingMessageData) {
-        queryLogger.warn(
-          `Could not find data for existing message ${existingMessageId} in conversation ${xmtpConversationId} cache during ordered insertion. Skipping comparison.`,
-        )
-        continue
-      }
-
-      // Insert before the first message that is older (smaller sentMs)
-      if (newMessageData.sentMs >= existingMessageData.sentMs) {
-        updatedMessageIds.splice(i, 0, messageId)
-        inserted = true
-        break
-      }
-    }
-    // If not inserted, it's the oldest message in this page, append it
-    if (!inserted) {
-      updatedMessageIds.push(messageId)
-    }
-  } else {
-    // Fallback: If new message data isn't available, add to the beginning
-    queryLogger.warn(
-      `Could not find data for new message ${messageId} in conversation ${xmtpConversationId} cache. Adding to beginning of list as fallback.`,
-    )
-    updatedMessageIds.unshift(messageId)
-    inserted = true // Mark as inserted to avoid appending later
+  // Create the new first page object immutably
+  const newFirstPage: IMessageIdsPage = {
+    messageIds: workingListOfFirstPageMessageIds, // The fully updated list of IDs
+    nextCursorNs: originalFirstPageObject?.nextCursorNs || null,
+    prevCursorNs: originalFirstPageObject?.prevCursorNs || null,
   }
 
-  const updatedFirstPage = {
-    ...firstPage,
-    messageIds: updatedMessageIds,
-  }
+  // Construct the final array of pages
+  const finalPagesArray: IMessageIdsPage[] =
+    originalPagesArray.length > 0
+      ? [newFirstPage, ...originalPagesArray.slice(1)] // Replace the old first page, keep the rest
+      : [newFirstPage] // If there were no original pages, this is the only page
 
-  const updatedPages = pages.length ? [updatedFirstPage, ...pages.slice(1)] : [updatedFirstPage]
-
-  queryLogger.debug(
-    `Message ${messageId} added to conversation messages ${xmtpConversationId} infinite query cache`,
-  )
-
-  // Set the updated data back to the cache
   setConversationMessagesInfiniteQueryData({
     clientInboxId,
     xmtpConversationId,
     data: {
-      pages: updatedPages,
+      pages: finalPagesArray,
+      // Using the pageParams logic from your working single-message version
       pageParams: currentData?.pageParams || [null],
     },
   })

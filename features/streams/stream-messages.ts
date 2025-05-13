@@ -4,7 +4,7 @@ import {
   isGroupUpdatedMessage,
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { addMessageToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { invalidateDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
@@ -17,7 +17,6 @@ import { streamAllMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages-s
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { StreamError } from "@/utils/error"
-import { streamLogger } from "@/utils/logger/logger"
 import {
   IConversationMessage,
   IConversationMessageGroupUpdated,
@@ -82,10 +81,10 @@ async function handleNewMessage(args: {
       return
     }
 
-    addMessageToConversationMessagesInfiniteQueryData({
+    addMessagesToConversationMessagesInfiniteQueryData({
       clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
-      messageId: message.xmtpId,
+      messageIds: [message.xmtpId],
     })
   } catch (error) {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))
