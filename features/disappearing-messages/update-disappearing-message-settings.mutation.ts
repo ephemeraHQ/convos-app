@@ -9,15 +9,15 @@ export const useUpdateDisappearingMessageSettings = () => {
       clientInboxId: IXmtpInboxId
       conversationId: IXmtpConversationId
       retentionDurationInNs: number
-      setTimestampToClearChat?: boolean
+      clearChat?: boolean
     }) => {
-      const { clientInboxId, conversationId, retentionDurationInNs, setTimestampToClearChat } = args
+      const { clientInboxId, conversationId, retentionDurationInNs, clearChat } = args
 
       return updateXmtpDisappearingMessageSettings({
         clientInboxId,
         conversationId,
         retentionDurationInNs,
-        setTimestampToClearChat,
+        clearChat,
       })
     },
     onSettled: (data, error, variables) => {
