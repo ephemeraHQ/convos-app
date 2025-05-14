@@ -116,23 +116,24 @@ export const DisappearingMessagesHeaderAction = ({
                       conversationId: xmtpConversationId,
                       retentionDurationInNs: 1,
                       setTimestampToClearChat: true,
-                    }).then(async () => {
-                      // Step 2: Restore previous settings if they existed, otherwise turn disappearing messages off
-                      // This ensures we keep user's preferences for new messages after clearing chat history
-                      if (previousRetentionDurationInNs && previousRetentionDurationInNs > 0) {
-                        await updateSettingsMutateAsync({
-                          clientInboxId: currentSender.inboxId,
-                          conversationId: xmtpConversationId,
-                          retentionDurationInNs: previousRetentionDurationInNs,
-                        });
-                      } else {
-                        await clearSettingsMutateAsync({
-                          clientInboxId: currentSender.inboxId,
-                          conversationId: xmtpConversationId,
-                        });
-                      }
-                      Alert.alert("Clearing Chat...", "Chat history is being cleared for everyone in the conversation")
-                    })
+                    });
+
+                    // Step 2: Restore previous settings if they existed, otherwise turn disappearing messages off
+                    // This ensures we keep user's preferences for new messages after clearing chat history
+                    if (previousRetentionDurationInNs && previousRetentionDurationInNs > 0) {
+                      await updateSettingsMutateAsync({
+                        clientInboxId: currentSender.inboxId,
+                        conversationId: xmtpConversationId,
+                        retentionDurationInNs: previousRetentionDurationInNs,
+                      });
+                    } else {
+                      await clearSettingsMutateAsync({
+                        clientInboxId: currentSender.inboxId,
+                        conversationId: xmtpConversationId,
+                      });
+                    }
+                    
+                    Alert.alert("Clearing Chat...", "Chat history is being cleared for everyone in the conversation")
                   } catch (error) {
                     captureErrorWithToast(
                       new GenericError({
