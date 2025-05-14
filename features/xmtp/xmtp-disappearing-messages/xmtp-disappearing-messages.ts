@@ -69,9 +69,9 @@ export async function updateXmtpDisappearingMessageSettings(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
   retentionDurationInNs: number
-  setTimestampToClearChat?: boolean
+  clearChat?: boolean
 }) {
-  const { clientInboxId, conversationId, retentionDurationInNs, setTimestampToClearChat } = args
+  const { clientInboxId, conversationId, retentionDurationInNs, clearChat } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -79,7 +79,7 @@ export async function updateXmtpDisappearingMessageSettings(args: {
     })
 
     await wrapXmtpCallWithDuration("updateDisappearingMessageSettings", async () => {
-      const timestamp = setTimestampToClearChat 
+      const timestamp = clearChat 
         ? 1 // Use 1 as timestamp (earliest possible timestamp) to clear all messages
         : getTodayNs()
       

@@ -115,7 +115,7 @@ export const DisappearingMessagesHeaderAction = ({
                       clientInboxId: currentSender.inboxId,
                       conversationId: xmtpConversationId,
                       retentionDurationInNs: 1,
-                      setTimestampToClearChat: true,
+                      clearChat: true,
                     });
 
                     // Step 2: Restore previous settings if they existed, otherwise turn disappearing messages off
