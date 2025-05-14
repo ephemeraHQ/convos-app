@@ -23,6 +23,7 @@ export type IExpoNewMessageNotification = INotificationWithData<{
   messageType: "v3-conversation"
   encryptedMessage: string
   timestamp: number
+  ethAddress: string // Receiver of the notification eth address
 }>
 
 export type INotificationFromTray = INotificationWithData<{
@@ -30,6 +31,7 @@ export type INotificationFromTray = INotificationWithData<{
   messageType: string
   encryptedMessage: string
   timestamp: number
+  ethAddress: string // Receiver of the notification eth address
 }>
 
 // Type for notifications that have been processed by the Convo app

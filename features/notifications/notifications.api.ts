@@ -11,30 +11,16 @@ const RegisterInstallationResponseSchema = z.object({
 })
 
 // Schema for registration request
-const DeliveryMechanismTypeSchema = z.enum([
-  "apnsDeviceToken",
-  "firebaseDeviceToken",
-  "customToken",
-])
-
-const DeliveryMechanismSchema = z.object({
-  deliveryMechanismType: z.object({
-    case: DeliveryMechanismTypeSchema,
-    value: z.string(),
-  }),
-})
-
-const RegistrationSchema = z.object({
-  installationId: z.string(),
-  deliveryMechanism: DeliveryMechanismSchema,
+const registrationSchema = z.object({
+  deviceId: z.string(),
+  identityId: z.string(),
+  xmtpInstallationId: z.string(),
+  expoToken: z.string(),
+  pushToken: z.string(),
 })
 
 // Type definitions
-export type IDeliveryMechanismType = z.infer<typeof DeliveryMechanismTypeSchema>
-
-export type IDeliveryMechanism = z.infer<typeof DeliveryMechanismSchema>
-
-export type IRegistrationRequest = z.infer<typeof RegistrationSchema>
+export type IRegistrationRequest = z.infer<typeof registrationSchema>
 
 export type IRegisterInstallationResponse = z.infer<typeof RegisterInstallationResponseSchema>
 

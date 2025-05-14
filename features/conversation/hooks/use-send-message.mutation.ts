@@ -9,7 +9,7 @@ import {
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import {
-  addMessageToConversationMessagesInfiniteQueryData,
+  addMessagesToConversationMessagesInfiniteQueryData,
   invalidateConversationMessagesInfiniteMessagesQuery,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
@@ -132,13 +132,14 @@ export const getSendMessageMutationOptions = (): MutationOptions<
         setConversationMessageQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpMessageId: optimisticMessage.xmtpId,
+          xmtpConversationId: variables.xmtpConversationId,
           message: optimisticMessage,
         })
 
-        addMessageToConversationMessagesInfiniteQueryData({
+        addMessagesToConversationMessagesInfiniteQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: variables.xmtpConversationId,
-          messageId: optimisticMessage.xmtpId,
+          messageIds: [optimisticMessage.xmtpId],
         })
       }
 
@@ -154,6 +155,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
               const messageInCache = getConversationMessageQueryData({
                 clientInboxId: currentSender.inboxId,
                 xmtpMessageId: optimisticMessage.xmtpId,
+                xmtpConversationId: variables.xmtpConversationId,
               })
 
               if (!messageInCache) {
@@ -168,12 +170,14 @@ export const getSendMessageMutationOptions = (): MutationOptions<
               await refetchConversationMessageQuery({
                 clientInboxId: currentSender.inboxId,
                 xmtpMessageId: optimisticMessage.xmtpId,
+                xmtpConversationId: variables.xmtpConversationId,
               })
             } catch (error) {
               captureError(new ReactQueryError({ error }))
               invalidateConversationMessageQuery({
                 clientInboxId: currentSender.inboxId,
                 xmtpMessageId: optimisticMessage.xmtpId,
+                xmtpConversationId: variables.xmtpConversationId,
               }).catch(captureError)
             }
           }

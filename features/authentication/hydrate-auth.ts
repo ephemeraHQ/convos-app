@@ -7,12 +7,10 @@ import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
-import { AuthenticationError } from "@/utils/error"
+import { AuthenticationError, BaseError, ExternalCancellationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
 
 export function useHydrateAuth() {
-  authLogger.debug("Hydrating auth...")
-
   const { logout } = useLogout()
 
   const hydrateAuth = useCallback(() => {
@@ -34,13 +32,18 @@ export function useHydrateAuth() {
         return
       }
 
+      if (error instanceof BaseError && error.hasErrorType(ExternalCancellationError)) {
+        authLogger.debug("External cancellation error while hydrating auth so just returning...")
+        return
+      }
+
       captureError(
         new AuthenticationError({
           error,
           additionalMessage: "Error while hydrating auth so signing out...",
         }),
       )
-      logout({ caller: "useHydrateAuth xmtp client error" })
+      logout({ caller: "useHydrateAuth xmtp client error" }).catch(captureError)
       return
     })
 
@@ -51,7 +54,7 @@ export function useHydrateAuth() {
       .then((isValid) => {
         if (!isValid) {
           authLogger.debug("Invalid XMTP installation while hydrating auth so signing out...")
-          logout({ caller: "useHydrateAuth xmtp installation error" })
+          logout({ caller: "useHydrateAuth xmtp installation error" }).catch(captureError)
         } else {
           authLogger.debug("Valid XMTP installation")
         }

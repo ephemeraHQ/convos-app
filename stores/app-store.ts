@@ -6,12 +6,14 @@ type AppStoreType = {
   reactQueryIsHydrated: boolean
   multiInboxIsHydrated: boolean
   isInternetReachable: boolean
+  isLoggingOut: boolean
 
   // Actions
   actions: {
     setReactQueryIsHydrated: (isHydrated: boolean) => void
     setMultiInboxIsHydrated: (isHydrated: boolean) => void
     setIsInternetReachable: (reachable: boolean) => void
+    setIsLoggingOut: (isLoggingOut: boolean) => void
   }
 }
 
@@ -21,6 +23,7 @@ export const useAppStore = create<AppStoreType>()(
     reactQueryIsHydrated: false,
     multiInboxIsHydrated: false,
     isInternetReachable: false,
+    isLoggingOut: false,
 
     // Actions
     actions: {
@@ -29,6 +32,8 @@ export const useAppStore = create<AppStoreType>()(
       setMultiInboxIsHydrated: (isHydrated) => set(() => ({ multiInboxIsHydrated: isHydrated })),
 
       setIsInternetReachable: (reachable) => set(() => ({ isInternetReachable: reachable })),
+
+      setIsLoggingOut: (isLoggingOut) => set(() => ({ isLoggingOut })),
     },
   })),
 )

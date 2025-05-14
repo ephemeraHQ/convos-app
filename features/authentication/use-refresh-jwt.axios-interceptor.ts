@@ -22,11 +22,7 @@ export const useRefreshJwtAxiosInterceptor = () => {
     // Create a function that handles JWT refresh failures by logging out the user
     const handleRefreshFailure = async () => {
       apiLogger.debug("Logging out due to JWT refresh failure")
-      try {
-        await logout({ caller: "useRefreshJwtAxiosInterceptor" })
-      } catch (error) {
-        captureError(new AuthenticationError({ error, additionalMessage: "Error logging out" }))
-      }
+      logout({ caller: "useRefreshJwtAxiosInterceptor" }).catch(captureError)
     }
 
     // Add the response interceptor

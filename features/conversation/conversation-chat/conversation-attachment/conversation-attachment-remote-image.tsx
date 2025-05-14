@@ -8,6 +8,7 @@ import { useRemoteAttachmentQuery } from "@/features/conversation/conversation-c
 import { useConversationAttachmentStyles } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.styles"
 import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { IConversationMessageRemoteAttachmentContent } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
+import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { Nullable } from "@/types/general"
 import {
@@ -94,9 +95,11 @@ export const ConversationAttachmentRemoteImageSmart = memo(
     const { xmtpMessageId, ...rest } = props
 
     const currentSender = useSafeCurrentSender()
+    const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
     const { data: conversationMessage } = useConversationMessageQuery({
       xmtpMessageId,
+      xmtpConversationId,
       clientInboxId: currentSender.inboxId,
       caller: "ConversationAttachmentRemoteImageSmart",
     })
