@@ -85,8 +85,13 @@ export async function stopStreaming(inboxIds: IXmtpInboxId[]) {
         }
       })
 
-      setStreamStopped({ inboxId }) // Mark as stopped after attempting all stops
-      streamLogger.debug(`Stopped all streams for ${inboxId}`)
+      const someSucceeded = results.some((r) => r.status === "fulfilled")
+      if (someSucceeded) {
+        setStreamStopped({ inboxId })
+        streamLogger.debug(`Stopped all streams for ${inboxId}`)
+      } else {
+        streamLogger.debug(`Failed to stop all streams for ${inboxId}`)
+      }
     }),
   )
 }

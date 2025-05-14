@@ -24,8 +24,13 @@ export const useXmtpActivityStore = create<State & { actions: Actions }>()((set,
   actions: {
     addOperation: (operation) =>
       set((state) => {
-        state.operations[operation.id] = operation
-        return state
+        return {
+          ...state,
+          operations: {
+            ...state.operations,
+            [operation.id]: operation,
+          },
+        }
       }),
     removeOperation: (id) =>
       set((state) => {
