@@ -1,6 +1,12 @@
 import { getTodayNs } from "@/utils/date"
 import { TimeUtils } from "@/utils/time.utils"
 
+// Special timestamp value (earliest possible) used to clear all messages in chat history
+export const CLEAR_CHAT_TIMESTAMP = 1
+
+// Minimum retention duration in nanoseconds used when clearing a chat
+export const MIN_RETENTION_DURATION_NS = 1
+
 // Define the duration configurations
 export const DisappearingMessageDuration = {
   ONE_SECOND: { value: TimeUtils.seconds(1).toNanoseconds(), text: "1 second" },

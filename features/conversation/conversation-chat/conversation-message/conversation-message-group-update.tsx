@@ -13,7 +13,10 @@ import {
   IConversationMessageGroupUpdated,
   IGroupUpdatedMetadataEntry,
 } from "./conversation-message.types"
-import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
+import {
+  MIN_RETENTION_DURATION_NS,
+  getFormattedDisappearingDuration
+} from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
@@ -197,10 +200,10 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
         const newValue = parseInt(metadataEntry.newValue, 10)
         const newTime = getFormattedDisappearingDuration(newValue)
 
-        if (newValue === 1) {
+        if (newValue === MIN_RETENTION_DURATION_NS) {
           // transition to cleared chat
           return "cleared the chat"
-        } else if (oldValue === 1 && newValue > 0) {
+        } else if (oldValue === MIN_RETENTION_DURATION_NS && newValue > 0) {
           // transition from cleared chat
           return `set messages to disappear in ${newTime}`
         } else if (newValue === 0) {
