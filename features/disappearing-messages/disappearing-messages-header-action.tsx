@@ -107,21 +107,23 @@ export const DisappearingMessagesHeaderAction = ({
                 onPress: async () => {
                   try {
                     // Save current settings if they exist
-                    const previousSettings = settings?.retentionDurationInNs;
+                    const previousRetentionDurationInNs = settings?.retentionDurationInNs;
 
-                    // First clear all existing messages
+                    // Step 1: Clear all existing messages by setting minimal retention duration (1ns)
+                    // and a special flag that uses earliest possible timestamp in XMTP protocol
                     await updateSettingsMutateAsync({
                       clientInboxId: currentSender.inboxId,
                       conversationId: xmtpConversationId,
                       retentionDurationInNs: 1,
                       setTimestampToClearChat: true,
                     }).then(async () => {
-                      // Restore previous settings if they were positive, otherwise turn off
-                      if (previousSettings && previousSettings > 0) {
+                      // Step 2: Restore previous settings if they existed, otherwise turn disappearing messages off
+                      // This ensures we keep user's preferences for new messages after clearing chat history
+                      if (previousRetentionDurationInNs && previousRetentionDurationInNs > 0) {
                         await updateSettingsMutateAsync({
                           clientInboxId: currentSender.inboxId,
                           conversationId: xmtpConversationId,
-                          retentionDurationInNs: previousSettings,
+                          retentionDurationInNs: previousRetentionDurationInNs,
                         });
                       } else {
                         await clearSettingsMutateAsync({
