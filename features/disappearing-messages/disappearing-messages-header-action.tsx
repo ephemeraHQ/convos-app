@@ -8,6 +8,7 @@ import { useDisappearingMessageSettings } from "@/features/disappearing-messages
 import {
   DisappearingMessageDuration,
   IDisappearingMessageDuration,
+  MIN_RETENTION_DURATION_NS,
 } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useUpdateDisappearingMessageSettings } from "@/features/disappearing-messages/update-disappearing-message-settings.mutation"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -114,7 +115,7 @@ export const DisappearingMessagesHeaderAction = ({
                     await updateSettingsMutateAsync({
                       clientInboxId: currentSender.inboxId,
                       conversationId: xmtpConversationId,
-                      retentionDurationInNs: 1,
+                      retentionDurationInNs: MIN_RETENTION_DURATION_NS,
                       clearChat: true,
                     });
 
