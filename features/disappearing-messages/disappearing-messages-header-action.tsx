@@ -11,6 +11,7 @@ import {
   MIN_RETENTION_DURATION_NS,
 } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useUpdateDisappearingMessageSettings } from "@/features/disappearing-messages/update-disappearing-message-settings.mutation"
+import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
@@ -134,7 +135,14 @@ export const DisappearingMessagesHeaderAction = ({
                       });
                     }
                     
-                    Alert.alert("Clearing Chat...", "Chat history is being cleared for everyone in the conversation")
+                    // Refresh the conversation messages to immediately show cleared state
+                    await refetchConversationMessagesInfiniteQuery({
+                      clientInboxId: currentSender.inboxId,
+                      xmtpConversationId,
+                      caller: "ClearChatAction",
+                    });
+                    
+                    Alert.alert("Chat Cleared", "Chat history has been cleared for everyone in the conversation")
                   } catch (error) {
                     captureErrorWithToast(
                       new GenericError({
