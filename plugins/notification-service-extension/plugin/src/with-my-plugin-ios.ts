@@ -152,7 +152,7 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
   ])
 }
 
-const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
+const withXcodeProjectSettings: ConfigPlugin = (config) => {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults
 
@@ -256,11 +256,7 @@ target '${NSE_TARGET_NAME}' do
   # Same value that we use in the react-native app
   pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
   # Same value that we use in the react-native app
-<<<<<<< Updated upstream
-  pod 'MMKV', '2.12.2', :modular_headers => true
-=======
   pod 'MMKV', '~> 2.2.1', :modular_headers => true
->>>>>>> Stashed changes
 
   # NSEs often use static frameworks. Adjust if your setup differs.
   use_frameworks! :linkage => :static
