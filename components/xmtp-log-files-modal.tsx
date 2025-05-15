@@ -28,6 +28,9 @@ const initialState: IXmtpLogFilesModalState = {
   visible: false,
 }
 
+export const useXmtpLogFilesModalActions = () => 
+  useXmtpLogFilesModalStore((state) => state.actions)
+
 const useXmtpLogFilesModalStore = create<IXmtpLogFilesModalStore>((set, get) => ({
   ...initialState,
   actions: {

@@ -35,12 +35,18 @@ import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-pers
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
 import { showActionSheet } from "./action-sheet"
+import { useXmtpLogFilesModalActions } from "./xmtp-log-files-modal"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
+  const { setVisible } = useXmtpLogFilesModalActions()
+
 
   const showDebugMenu = useShowDebugMenu({
-    setLogFilesModalVisible: () => {},
+    setLogFilesModalVisible: (visible: boolean) => {
+      console.log("setLogFilesModalVisible", visible)
+      setVisible(visible)
+    },
   })
 
   const longPressGesture = Gesture.LongPress()
