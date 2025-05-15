@@ -5,6 +5,7 @@ import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import {
   isConvosModifiedNotification,
   isNotificationExpoNewMessageNotification,
@@ -15,7 +16,7 @@ import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
-import { useAppStore } from "@/stores/app-store"
+import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -23,8 +24,8 @@ import { measureTimeAsync } from "@/utils/perf/perf-timer"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 
 export function useNotificationListeners() {
-  const foregroundNotificationListener = useRef<Notifications.Subscription>()
-  const notificationTapListener = useRef<Notifications.Subscription>()
+  const foregroundNotificationListenerRef = useRef<Notifications.Subscription>()
+  const notificationTapListenerRef = useRef<Notifications.Subscription>()
   // const systemDropListener = useRef<Notifications.Subscription>()
 
   // Check if app was launched by tapping a notification while killed
@@ -41,7 +42,7 @@ export function useNotificationListeners() {
       }
     })
 
-    foregroundNotificationListener.current = Notifications.addNotificationReceivedListener(
+    foregroundNotificationListenerRef.current = Notifications.addNotificationReceivedListener(
       (notification) => {
         // Doing nothing here because we already handle in notifications-init.ts
         // notificationsLogger.debug(`Handling foreground notification:`, notification)
@@ -49,7 +50,7 @@ export function useNotificationListeners() {
     )
 
     // Listen for notification taps while app is running
-    notificationTapListener.current = Notifications.addNotificationResponseReceivedListener(
+    notificationTapListenerRef.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         notificationsLogger.debug(`Handling notification tap:`, response)
         handleNotification(response).catch(captureError)
@@ -67,12 +68,12 @@ export function useNotificationListeners() {
 
     // Cleanup subscriptions on unmount
     return () => {
-      if (foregroundNotificationListener.current) {
-        Notifications.removeNotificationSubscription(foregroundNotificationListener.current)
+      if (foregroundNotificationListenerRef.current) {
+        Notifications.removeNotificationSubscription(foregroundNotificationListenerRef.current)
       }
 
-      if (notificationTapListener.current) {
-        Notifications.removeNotificationSubscription(notificationTapListener.current)
+      if (notificationTapListenerRef.current) {
+        Notifications.removeNotificationSubscription(notificationTapListenerRef.current)
       }
 
       // if (systemDropListener.current) {
@@ -86,6 +87,7 @@ async function handleNotification(response: Notifications.NotificationResponse) 
   try {
     const tappedNotification = response.notification
 
+    console.log("tappedNotification.request.identifier:", tappedNotification.request.identifier)
     useNotificationsStore
       .getState()
       .actions.setLastHandledNotificationId(tappedNotification.request.identifier)
@@ -125,6 +127,14 @@ async function handleNotification(response: Notifications.NotificationResponse) 
         tappedNotificationConversationId: tappedXmtpConversationId,
         clientInboxId: getSafeCurrentSender().inboxId,
       }).catch(captureError)
+
+      // To make sure we don't navigate to a conversation that doesn't exist.
+      // Happens because our notifications unsubscribing logic is not perfect.
+      await ensureConversationQueryData({
+        clientInboxId: getSafeCurrentSender().inboxId,
+        xmtpConversationId: tappedXmtpConversationId,
+        caller: "useNotificationListeners",
+      })
 
       return navigate("Conversation", {
         xmtpConversationId: tappedXmtpConversationId,

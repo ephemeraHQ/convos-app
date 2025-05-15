@@ -9,14 +9,13 @@ import { XmtpLogFilesModal } from "@/components/xmtp-log-files-modal"
 import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-current-version-enough"
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
-import { useStartListeningToAuthenticationStore } from "@/features/authentication/use-start-listening-to-auth-store"
-import { useStartListeningForAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { startListeningToAuthenticationStore } from "@/features/authentication/use-start-listening-to-auth-store"
 import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-if-no-exist"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useStartListeningForNotificationsPermissionsQuery } from "@/features/notifications/notifications-permissions.query"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
 import { AppNavigator } from "@/navigation/app-navigator"
-import { useStartListeningToAppState } from "@/stores/use-app-state-store"
+import { startListeningToAppStateStore } from "@/stores/app-state-store/app-state-store.service"
 import { $globalStyles } from "@/theme/styles"
 import { useCachedResources } from "@/utils/cache-resources"
 import { setupConvosApi } from "@/utils/convos-api/convos-api-init"
@@ -30,6 +29,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { ThirdwebProvider } from "thirdweb/react"
 import { useMonitorNetworkConnectivity } from "./dependencies/NetworkMonitor/use-monitor-network-connectivity"
+import { useStartListeningForAllowedConsentConversations } from "./features/conversation/conversation-list/use-start-listening-for-allowed-consent-conversations"
 import { useStartListeningToCurrentUserQuery } from "./features/current-user/use-start-listening-to-current-user-query"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
@@ -40,6 +40,8 @@ preventSplashScreenAutoHide()
 sentryInit()
 configureForegroundNotificationBehavior()
 setupConvosApi()
+startListeningToAppStateStore()
+startListeningToAuthenticationStore()
 
 export const App = Sentry.wrap(function App() {
   useMonitorNetworkConnectivity()
@@ -82,10 +84,9 @@ const Handlers = memo(function Handlers() {
   useCreateUserIfNoExist()
   useNotificationListeners()
   useReactQueryInit()
-  useStartListeningToAuthenticationStore()
-  useStartListeningToAppState()
+  // useStartListeningToAppStateStore()
   useStartListeningForNotificationsPermissionsQuery()
-  useStartListeningForAllowedConsentConversationsQuery()
+  useStartListeningForAllowedConsentConversations()
   useStartListeningToCurrentUserQuery()
 
   return null

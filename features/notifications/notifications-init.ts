@@ -17,7 +17,7 @@ import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/us
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { decryptXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
-import { useAppStateStore } from "@/stores/use-app-state-store"
+import { useAppStateStore } from "@/stores/app-state-store/use-app-state.store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"

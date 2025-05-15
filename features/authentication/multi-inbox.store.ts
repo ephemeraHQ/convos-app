@@ -1,7 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { create } from "zustand"
 import { persist, subscribeWithSelector } from "zustand/middleware"
-import { useAppStore } from "@/stores/app-store"
+import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"

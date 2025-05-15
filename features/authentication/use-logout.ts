@@ -6,7 +6,7 @@ import { unsubscribeFromAllConversationsNotifications } from "@/features/notific
 import { unregisterPushNotifications } from "@/features/notifications/notifications-register"
 import { stopStreaming } from "@/features/streams/streams"
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
-import { useAppStore } from "@/stores/app-store"
+import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { customPromiseAllSettled } from "@/utils/promise-all-settled"

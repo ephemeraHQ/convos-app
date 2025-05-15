@@ -29,7 +29,14 @@ export const useNotificationsStore = create<INotificationsStore>()(
     }),
     {
       name: "notifications-storage",
+      version: 2,
       storage: getZustandStorage({ id: "notifications" }),
+      partialize(state) {
+        const { actions, ...rest } = state
+        return {
+          ...rest,
+        }
+      },
     },
   ),
 )

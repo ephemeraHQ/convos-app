@@ -7,7 +7,7 @@ export function useStartListeningToCurrentUserQuery() {
   const { data: currentUser } = useCurrentUserQuery()
 
   useEffectWhenCondition(() => {
-    if (currentUser) {
+    if (!currentUser) {
       return
     }
 
