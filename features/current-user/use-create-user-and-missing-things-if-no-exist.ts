@@ -179,9 +179,11 @@ async function makeSureIdentitiesAreLinkedToDevice(args: {
     })
   }
 
-  for (const identity of existingIdentities) {
-    await linkIdentityToDevice({ identityId: identity.id, deviceId })
-  }
+  await Promise.all(
+    existingIdentities.map((identity) =>
+      linkIdentityToDevice({ identityId: identity.id, deviceId }),
+    ),
+  )
 
   authLogger.debug(`Identities linked to device ${deviceId} for user ${userId}`)
 }

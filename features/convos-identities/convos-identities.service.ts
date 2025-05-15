@@ -1,9 +1,14 @@
 import {
   ensureCurrentUserQueryData,
+  getCurrentUserQueryData,
   useCurrentUserQuery,
 } from "@/features/current-user/current-user.query"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { ensureUserIdentitiesQueryData, useUserIdentitiesQuery } from "./convos-identities.query"
+import {
+  ensureUserIdentitiesQueryData,
+  getUserIdentitiesQueryData,
+  useUserIdentitiesQuery,
+} from "./convos-identities.query"
 
 export async function ensureDeviceIdentityForInboxId(inboxId: IXmtpInboxId) {
   const currentUser = await ensureCurrentUserQueryData({
@@ -21,6 +26,18 @@ export async function ensureDeviceIdentityForInboxId(inboxId: IXmtpInboxId) {
   }
 
   return deviceIdentity
+}
+
+export function getDeviceIdentityForInboxId(inboxId: IXmtpInboxId) {
+  const currentUser = getCurrentUserQueryData()
+
+  if (!currentUser) {
+    throw new Error("No current user found in getDeviceIdentityForInboxId")
+  }
+
+  return getUserIdentitiesQueryData({ userId: currentUser.id })?.find(
+    (identity) => identity.xmtpId === inboxId,
+  )
 }
 
 export function useDeviceIdentityForInboxId(inboxId: IXmtpInboxId) {

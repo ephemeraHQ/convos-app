@@ -4,7 +4,7 @@ import { ILowercaseEthereumAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
 import {
   xmtpDbEncryptionKeyMmkvStorage,
-  xmtpDbEncryptionKeySecureStorageStorage,
+  xmtpDbEncryptionKeySecureStorage,
   xmtpDbEncryptionKeySharedDefaultBackupStorage,
 } from "@/utils/storage/storages"
 
@@ -52,7 +52,7 @@ async function _getFromSecureStorage(
   const storageKey = _getSecureStorageKey(ethAddress)
 
   try {
-    return await xmtpDbEncryptionKeySecureStorageStorage.getItem(storageKey)
+    return await xmtpDbEncryptionKeySecureStorage.getItem(storageKey)
   } catch (error) {
     throw new XMTPError({
       error,
@@ -66,7 +66,7 @@ export async function deleteDbKey(args: { ethAddress: ILowercaseEthereumAddress 
   const storageKey = _getSecureStorageKey(ethAddress)
 
   try {
-    await xmtpDbEncryptionKeySecureStorageStorage.deleteItem(storageKey)
+    await xmtpDbEncryptionKeySecureStorage.deleteItem(storageKey)
     xmtpLogger.debug(`Deleted DB encryption key for ${ethAddress}`)
   } catch (error) {
     throw new XMTPError({
@@ -118,7 +118,7 @@ export async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; ke
   const storageKey = _getSecureStorageKey(ethAddress)
 
   try {
-    await xmtpDbEncryptionKeySecureStorageStorage.setItem(storageKey, key)
+    await xmtpDbEncryptionKeySecureStorage.setItem(storageKey, key)
     xmtpLogger.debug(`Saved DB encryption key for ${ethAddress} at ${storageKey}`)
     _saveToBackup(ethAddress, key)
     _saveToSecondBackup(ethAddress, key)
@@ -160,10 +160,7 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
     if (existingKey) {
       xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in backup storage`)
 
-      await xmtpDbEncryptionKeySecureStorageStorage.setItem(
-        _getSecureStorageKey(ethAddress),
-        existingKey,
-      )
+      await xmtpDbEncryptionKeySecureStorage.setItem(_getSecureStorageKey(ethAddress), existingKey)
       _saveToSecondBackup(ethAddress, existingKey)
       return _formatKey(existingKey)
     }
@@ -172,10 +169,7 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
     if (existingKey) {
       xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in second backup`)
 
-      await xmtpDbEncryptionKeySecureStorageStorage.setItem(
-        _getSecureStorageKey(ethAddress),
-        existingKey,
-      )
+      await xmtpDbEncryptionKeySecureStorage.setItem(_getSecureStorageKey(ethAddress), existingKey)
       _saveToBackup(ethAddress, existingKey)
       return _formatKey(existingKey)
     }

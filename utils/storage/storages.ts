@@ -19,7 +19,7 @@ export const reactQueryPersistingStorage = createMmkvStorage({
 export const favoritedEmojisStorage = createMmkvStorage({ id: "favorited-emojis" })
 export const persistStateStorage = createMmkvStorage({ id: "persist-state" })
 
-export const xmtpDbEncryptionKeySecureStorageStorage = secureStorage
+export const xmtpDbEncryptionKeySecureStorage = secureStorage
 export const xmtpDbEncryptionKeyMmkvStorage = createMmkvStorage({ id: config.app.bundleId })
 export const xmtpDbEncryptionKeySharedDefaultBackupStorage = sharedDefaults
 

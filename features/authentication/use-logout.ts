@@ -28,7 +28,7 @@ export const useLogout = () => {
       try {
         const senders = getAllSenders()
 
-        const [unsubscribeNotificationsResults, streamingResult, unregisterNotificationResults] =
+        const [unsubscribeNotificationsResults, streamingResult, unlinkIdentitiesResults] =
           await customPromiseAllSettled([
             // Unsubscribe from conversations notifications
             Promise.all(
@@ -83,10 +83,10 @@ export const useLogout = () => {
           )
         }
 
-        if (unregisterNotificationResults.status === "rejected") {
+        if (unlinkIdentitiesResults.status === "rejected") {
           captureError(
             new GenericError({
-              error: unregisterNotificationResults.reason,
+              error: unlinkIdentitiesResults.reason,
               additionalMessage: "Error unregistering push notifications",
             }),
           )

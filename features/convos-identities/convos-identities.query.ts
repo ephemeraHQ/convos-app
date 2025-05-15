@@ -31,3 +31,8 @@ export function useUserIdentitiesQuery(args: { userId: IConvosUserID | undefined
     ...getUserIdentitiesQueryOptions(args),
   })
 }
+
+export function getUserIdentitiesQueryData(args: { userId: IConvosUserID }) {
+  const { userId } = args
+  return reactQueryClient.getQueryData(getUserIdentitiesQueryOptions({ userId }).queryKey)
+}

@@ -91,7 +91,9 @@ export async function syncOneXmtpConversation(args: {
   const promise = batcher.fetch({ conversationId, caller })
   activeSyncOnePromises.set(promiseKey, promise)
 
-  return promise
+  return promise.finally(() => {
+    activeSyncOnePromises.delete(promiseKey)
+  })
 }
 
 export async function syncAllXmtpConversations(args: {
