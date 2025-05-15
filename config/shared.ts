@@ -29,11 +29,11 @@ function maybeReplaceLocalhost(uri: string) {
 
 const appConfigExtra = Constants.expoConfig?.extra as IExpoAppConfigExtra
 
-console.log("Constants.expoConfig?.ios?.buildNumber:", Constants.expoConfig?.ios)
-const bundleId =
-  Platform.OS === "android"
-    ? (Constants.expoConfig?.android?.package as string)
-    : (Constants.expoConfig?.ios?.bundleIdentifier as string)
+const bundleId = Platform.select({
+  ios: Constants.expoConfig?.ios?.bundleIdentifier,
+  android: Constants.expoConfig?.android?.package,
+  default: "",
+}) as string
 
 // Base configuration shared across all environments
 export const shared = {
