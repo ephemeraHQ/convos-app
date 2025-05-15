@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { getZustandStorage } from "@/utils/zustand/zustand"
+import { notificationsStorage } from "@/utils/storage/storages"
 
 type INotificationsState = {
   lastHandledNotificationId: string | null
@@ -30,7 +30,7 @@ export const useNotificationsStore = create<INotificationsStore>()(
     {
       name: "notifications-storage",
       version: 2,
-      storage: getZustandStorage({ id: "notifications" }),
+      storage: notificationsStorage,
       partialize(state) {
         const { actions, ...rest } = state
         return {

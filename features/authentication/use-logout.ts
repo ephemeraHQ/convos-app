@@ -2,8 +2,11 @@ import { useTurnkey } from "@turnkey/sdk-react-native"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getAllSenders, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { unlinkIdentityFromDeviceMutation } from "@/features/convos-identities/convos-identities-remove.mutation"
+import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
+import { getCurrentUserQueryData } from "@/features/current-user/current-user.query"
+import { ensureUserDeviceQueryData } from "@/features/devices/user-device.query"
 import { unsubscribeFromAllConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
-import { unregisterPushNotifications } from "@/features/notifications/notifications-register"
 import { stopStreaming } from "@/features/streams/streams"
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { useAppStore } from "@/stores/app.store"
@@ -27,6 +30,7 @@ export const useLogout = () => {
 
         const [unsubscribeNotificationsResults, streamingResult, unregisterNotificationResults] =
           await customPromiseAllSettled([
+            // Unsubscribe from conversations notifications
             Promise.all(
               senders.map((sender) =>
                 unsubscribeFromAllConversationsNotifications({
@@ -34,14 +38,31 @@ export const useLogout = () => {
                 }),
               ),
             ),
+            // Stop streaming
             stopStreaming(senders.map((sender) => sender.inboxId)),
-            Promise.all(
-              senders.map((sender) =>
-                unregisterPushNotifications({
-                  clientInboxId: sender.inboxId,
-                }),
-              ),
-            ),
+            // Unlink identities from device
+            new Promise<void>(async (resolve, reject) => {
+              const currentUser = getCurrentUserQueryData()
+              if (!currentUser) {
+                // Ignore the flow if we don't have a current user
+                return resolve()
+              }
+              const currentDevice = await ensureUserDeviceQueryData({
+                userId: currentUser.id,
+              })
+              const currentUserIdentities = await ensureUserIdentitiesQueryData({
+                userId: currentUser.id,
+              })
+              await Promise.all(
+                currentUserIdentities.map((identity) =>
+                  unlinkIdentityFromDeviceMutation({
+                    identityId: identity.id,
+                    deviceId: currentDevice.id,
+                  }),
+                ),
+              )
+              resolve()
+            }),
           ])
 
         if (unsubscribeNotificationsResults.status === "rejected") {

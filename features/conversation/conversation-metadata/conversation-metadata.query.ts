@@ -2,6 +2,8 @@ import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.type
 import { queryOptions } from "@tanstack/react-query"
 import { getConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
+import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
+import { ensureCurrentUserQueryData } from "@/features/current-user/current-user.query"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { TimeUtils } from "@/utils/time.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -13,8 +15,27 @@ type IArgs = {
   clientInboxId: IXmtpInboxId
 }
 
-function getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }: IArgs) {
-  return getConversationMetadata({ xmtpConversationId, clientInboxId })
+async function getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }: IArgs) {
+  const currentUser = await ensureCurrentUserQueryData({
+    caller: "getConversationMetadataQueryFn",
+  })
+
+  if (!currentUser) {
+    throw new Error("No current user found in getConversationMetadataQueryFn")
+  }
+
+  const deviceIdentities = await ensureUserIdentitiesQueryData({
+    userId: currentUser.id,
+  })
+  const deviceIdentityId = deviceIdentities.find(
+    (identity) => identity.xmtpId === clientInboxId,
+  )?.id
+
+  if (!deviceIdentityId) {
+    throw new Error("No matching device identity found for the given inbox ID")
+  }
+
+  return getConversationMetadata({ xmtpConversationId, deviceIdentityId })
 }
 
 export function getConversationMetadataQueryOptions({

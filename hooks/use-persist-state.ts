@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { storage } from "@/utils/storage/storage"
+import { persistStateStorage } from "@/utils/storage/storages"
 
 export const usePersistState = (key: string) => {
   // Initialize state directly from storage
   const [state, setState] = useState<string | undefined>(() => {
     try {
-      return storage.getString(key) || undefined
+      return persistStateStorage.getString(key) || undefined
     } catch (error) {
       captureError(new GenericError({ error }))
       return undefined
@@ -24,7 +24,7 @@ export const usePersistState = (key: string) => {
 
   const setValue = (newValue: string) => {
     try {
-      storage.set(key, newValue)
+      persistStateStorage.set(key, newValue)
       setState(newValue)
     } catch (error) {
       captureError(new GenericError({ error }))
@@ -33,7 +33,7 @@ export const usePersistState = (key: string) => {
 
   const removeValue = () => {
     try {
-      storage.delete(key)
+      persistStateStorage.delete(key)
       setState(undefined)
     } catch (error) {
       captureError(new GenericError({ error }))

@@ -37,15 +37,19 @@ function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
           const callers = itemsToSync.map((item) => item.caller).join(", ") || "unknown"
           await wrapXmtpCallWithDuration(
             `syncAllConversations (${callers}) for ${uniqueConversationIds.size} convos via batch`,
-            () => syncAllConversations(client.installationId, ["allowed", "unknown", "denied"]),
+            () =>
+              syncAllConversations(
+                client.installationId,
+                // TODO: Handle consent states correctly per conversation
+                ["allowed", "unknown", "denied"],
+              ),
           )
         } else {
           // Perform individual syncs
           await Promise.all(
-            itemsToSync.map((item) =>
-              wrapXmtpCallWithDuration(
-                `syncConversation ${item.conversationId} (${item.caller} via batch)`,
-                () => syncConversation(client.installationId, item.conversationId),
+            Array.from(uniqueConversationIds).map((cid) =>
+              wrapXmtpCallWithDuration(`syncConversation ${cid} (via batch)`, () =>
+                syncConversation(client.installationId, cid),
               ),
             ),
           )
@@ -78,18 +82,15 @@ export async function syncOneXmtpConversation(args: {
 }) {
   const { clientInboxId, conversationId, caller } = args
   const promiseKey = `${clientInboxId}-${conversationId}` as const
-
   const existingActivePromise = activeSyncOnePromises.get(promiseKey)
   if (existingActivePromise) {
     return existingActivePromise
   }
 
   const batcher = getConversationSyncBatcher(clientInboxId)
-  const promise = batcher.fetch({ conversationId, caller }).finally(() => {
-    activeSyncOnePromises.delete(promiseKey)
-  })
-
+  const promise = batcher.fetch({ conversationId, caller })
   activeSyncOnePromises.set(promiseKey, promise)
+
   return promise
 }
 

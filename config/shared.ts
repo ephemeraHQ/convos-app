@@ -1,3 +1,4 @@
+import Application from "expo-application"
 import Constants from "expo-constants"
 import { Platform } from "react-native"
 import { IExpoAppConfigExtra } from "@/app.config"
@@ -28,6 +29,7 @@ function maybeReplaceLocalhost(uri: string) {
 
 const appConfigExtra = Constants.expoConfig?.extra as IExpoAppConfigExtra
 
+console.log("Constants.expoConfig?.ios?.buildNumber:", Constants.expoConfig?.ios)
 const bundleId =
   Platform.OS === "android"
     ? (Constants.expoConfig?.android?.package as string)
@@ -45,6 +47,7 @@ export const shared = {
     scheme: Constants.expoConfig?.scheme as string,
     name: Constants.expoConfig?.name as string,
     version: Constants.expoConfig?.version as string,
+    buildNumber: Number(Application.nativeBuildVersion || 0),
     storeUrl: "",
     bundleId,
     universalLinks: [appConfigExtra.webDomain].flatMap((domain) => [

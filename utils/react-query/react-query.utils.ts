@@ -1,7 +1,7 @@
 import { QueryKey } from "@tanstack/react-query"
 import { queryLogger } from "@/utils/logger/logger"
-import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { reactQueryPersistingStorage } from "../storage/storages"
 
 // Helper to have a consistent way to format query keys
 export function getReactQueryKey(args: {
@@ -17,6 +17,6 @@ export function clearReacyQueryQueriesAndCache() {
   reactQueryClient.getQueryCache().clear()
   reactQueryClient.clear()
   reactQueryClient.removeQueries()
-  reactQueryPersitingStorage.clearAll()
+  reactQueryPersistingStorage.clearAll()
   queryLogger.debug("Cleared react query queries and cache")
 }

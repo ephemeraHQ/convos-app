@@ -7,18 +7,23 @@ import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { getAllSenders, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   createIdentity,
-  fetchUserIdentities,
+  linkIdentityToDevice,
 } from "@/features/convos-identities/convos-identities.api"
+import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
 import {
   createUserMutation,
   ICreateUserMutationArgs,
 } from "@/features/current-user/create-user.mutation"
 import { IConvosUserID } from "@/features/current-user/current-user.types"
 import { getStoredDeviceId, storeDeviceId } from "@/features/devices/device.storage"
-import { createDevice, fetchDevice, IDeviceCreateInput } from "@/features/devices/devices.api"
-import { IDevice } from "@/features/devices/devices.types"
-import { getDeviceModelId, getDeviceOs } from "@/features/devices/devices.utils"
-import { setUserDeviceQueryData } from "@/features/devices/user-device.query"
+import { createDevice, fetchUserDevices, IDeviceCreateInput } from "@/features/devices/devices.api"
+import { IDeviceId } from "@/features/devices/devices.types"
+import { getDeviceName, getDeviceOs } from "@/features/devices/devices.utils"
+import {
+  ensureUserDeviceQueryData,
+  setUserDeviceQueryData,
+} from "@/features/devices/user-device.query"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
@@ -29,25 +34,59 @@ import {
   getExpoPushNotificationsToken,
 } from "../notifications/notifications-token"
 import { fetchCurrentUser } from "./current-user.api"
-import { invalidateCurrentUserQuery } from "./current-user.query"
 
 /**
  * Handles the device registration and identity creation/linking flow
  */
-async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUserID }) {
+async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
   const { userId } = args
 
   // 1. Check for existing deviceId in SecureStore
   let deviceId = await getStoredDeviceId({ userId })
-  let device: IDevice | null = null
 
   if (deviceId) {
-    // Try to fetch the device to validate it still exists
-    try {
-      device = await fetchDevice({ userId, deviceId })
-      authLogger.debug("Found existing device", { deviceId })
-    } catch (error) {
-      captureError(new AuthenticationError({ error, additionalMessage: "Stored device not found" }))
+    // Now check if the device exists in the backend
+    let backendFoundDeviceId: IDeviceId | null = null
+
+    // First try with our stored deviceId
+    const { data: device, error: deviceError } = await tryCatch(
+      ensureUserDeviceQueryData({ userId }),
+    )
+
+    if (device) {
+      backendFoundDeviceId = device.id
+      authLogger.debug(`Found existing device ${deviceId}`)
+    } else {
+      captureError(
+        new AuthenticationError({
+          error: deviceError,
+          additionalMessage: "Failed to fetch user device from SecureStore",
+        }),
+      )
+
+      // Try instead to get all the devices and see if we can find a match
+      const { data: devices, error: devicesError } = await tryCatch(fetchUserDevices({ userId }))
+
+      if (devices) {
+        const currentDevice = devices.find(
+          // TODO: Okay for now, but might want to add more comparison criterias
+          (device) => device.name === getDeviceName() && device.os === getDeviceOs(),
+        )
+
+        if (currentDevice) {
+          backendFoundDeviceId = currentDevice.id
+          authLogger.debug(`Found existing device ${deviceId} in list of devices for user`)
+        }
+      } else {
+        throw new AuthenticationError({
+          error: devicesError,
+          additionalMessage: "Failed to fetch user devices",
+        })
+      }
+    }
+
+    if (!backendFoundDeviceId) {
+      authLogger.debug("Can't find device in backend from deviceId in SecureStore")
       deviceId = null
     }
   }
@@ -61,14 +100,14 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUser
 
     const deviceInput: IDeviceCreateInput = {
       os: getDeviceOs(),
-      name: getDeviceModelId(),
+      name: getDeviceName(),
       expoToken,
       pushToken,
     }
 
     try {
       authLogger.debug("Creating new device...")
-      device = await createDevice({
+      const device = await createDevice({
         userId,
         device: deviceInput,
       })
@@ -81,17 +120,25 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUser
     }
   }
 
+  return deviceId
+}
+
+async function makeSureUserIdentitiesExist(args: { userId: IConvosUserID; deviceId: IDeviceId }) {
+  const { userId, deviceId } = args
+
   // 3. Fetch existing identities for this user
   const { data: existingIdentities, error: fetchUserIdentitiesError } = await tryCatch(
-    fetchUserIdentities({ userId }),
+    ensureUserIdentitiesQueryData({ userId }),
   )
 
   if (fetchUserIdentitiesError) {
     throw new AuthenticationError({
       error: fetchUserIdentitiesError,
-      additionalMessage: "Failed to fetch user identities",
+      additionalMessage: "Failed to fetch user existing identities",
     })
   }
+
+  authLogger.debug(`Found ${existingIdentities.length} existing identities for user ${userId}`)
 
   const senders = getAllSenders()
 
@@ -111,53 +158,79 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUser
     })
     authLogger.debug(`Created new identity for sender ${sender.inboxId} for device`)
   }
+}
 
-  // 5. Refresh current user data to include new device/identity
-  await invalidateCurrentUserQuery()
+async function makeSureIdentitiesAreLinkedToDevice(args: {
+  userId: IConvosUserID
+  deviceId: IDeviceId
+}) {
+  const { userId, deviceId } = args
+
+  authLogger.debug(`Linking identities to device ${deviceId} for user ${userId}...`)
+
+  const { data: existingIdentities, error: fetchUserIdentitiesError } = await tryCatch(
+    ensureUserIdentitiesQueryData({ userId }),
+  )
+
+  if (fetchUserIdentitiesError) {
+    throw new AuthenticationError({
+      error: fetchUserIdentitiesError,
+      additionalMessage: "Failed to fetch user existing identities",
+    })
+  }
+
+  for (const identity of existingIdentities) {
+    await linkIdentityToDevice({ identityId: identity.id, deviceId })
+  }
+
+  authLogger.debug(`Identities linked to device ${deviceId} for user ${userId}`)
 }
 
 async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEthereumAddress }) {
   const { turnkeyUserId, ethAddress } = args
 
+  // First check if user exists
   const { data: currentUser, error: fetchCurrentUserError } = await tryCatch(fetchCurrentUser())
 
-  // User exists, ensure device setup
-  if (currentUser) {
-    authLogger.debug("User exists, ensuring device and identities are created")
-    return makeSureDeviceAndIdentitiesAreCreated({
-      userId: currentUser.id,
-    })
-  }
+  let userId: IConvosUserID
 
-  // User doesn't exist, create new user
-  if (
-    (fetchCurrentUserError &&
-      fetchCurrentUserError instanceof AxiosError &&
-      fetchCurrentUserError?.response?.status === 404) ||
-    !currentUser
-  ) {
+  const needToCreateUserBecauseOf404 =
+    fetchCurrentUserError &&
+    fetchCurrentUserError instanceof AxiosError &&
+    fetchCurrentUserError?.response?.status === 404
+
+  // Create user if doesn't exist
+  if (needToCreateUserBecauseOf404) {
     authLogger.debug("User doesn't exist in the backend, creating new user...")
 
     const currentSender = getSafeCurrentSender()
+    const xmtpClient = await getXmtpClientByInboxId({
+      inboxId: currentSender.inboxId,
+    })
     const createdUser = await createUserMutation({
       inboxId: currentSender.inboxId,
       turnkeyUserId: turnkeyUserId,
       smartContractWalletAddress: ethAddress,
       profile: getRandomProfile(),
+      xmtpInstallationId: xmtpClient.installationId,
     })
 
-    authLogger.debug("User/Profile created in backend")
-
-    await makeSureDeviceAndIdentitiesAreCreated({
-      userId: createdUser.id,
+    authLogger.debug("New user created!")
+    userId = createdUser.id
+  } else if (!currentUser) {
+    throw new AuthenticationError({
+      error: fetchCurrentUserError,
+      additionalMessage: "Failed to fetch current user but also it's not a 404 error",
     })
-    return
+  } else {
+    userId = currentUser.id
   }
 
-  throw new AuthenticationError({
-    error: fetchCurrentUserError,
-    additionalMessage: "Failed to fetch current user",
-  })
+  const deviceId = await makeSureUserDeviceExists({ userId })
+
+  await makeSureUserIdentitiesExist({ userId, deviceId })
+
+  await makeSureIdentitiesAreLinkedToDevice({ userId, deviceId })
 }
 
 /**
@@ -166,33 +239,18 @@ async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEth
  */
 export function useCreateUserIfNoExist() {
   const { user } = useTurnkey()
+  const authStatus = useAuthenticationStore((state) => state.status)
 
   useEffect(() => {
-    const unsubscribe = useAuthenticationStore.subscribe(
-      (state) => state.status,
-      (status) => {
-        if (status !== "signedIn") {
-          return
-        }
-
-        if (!user) {
-          return
-        }
-
-        startFlow({
-          turnkeyUserId: user.id as ITurnkeyUserId,
-          ethAddress: user.wallets[0].accounts[0].address as IEthereumAddress,
-        }).catch(captureError)
-      },
-      {
-        fireImmediately: true,
-      },
-    )
-
-    return () => {
-      unsubscribe()
+    if (authStatus !== "signedIn" || !user) {
+      return
     }
-  }, [user])
+
+    startFlow({
+      turnkeyUserId: user.id as ITurnkeyUserId,
+      ethAddress: user.wallets[0].accounts[0].address as IEthereumAddress,
+    }).catch(captureError)
+  }, [authStatus, user])
 }
 
 const firstNames = [

@@ -11150,7 +11150,7 @@ __metadata:
     react-native-keychain: "npm:^9.2.3"
     react-native-localize: "npm:^3.0.2"
     react-native-logs: "npm:^5.1.0"
-    react-native-mmkv: "npm:^2.12.2"
+    react-native-mmkv: "npm:2.12.2"
     react-native-passkey: "npm:^3.1.0"
     react-native-qrcode-styled: "npm:^0.3.3"
     react-native-qrcode-svg: "npm:^6.2.0"
@@ -20027,7 +20027,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-mmkv@npm:^2.11.0, react-native-mmkv@npm:^2.12.2":
+"react-native-mmkv@npm:2.12.2, react-native-mmkv@npm:^2.11.0":
   version: 2.12.2
   resolution: "react-native-mmkv@npm:2.12.2"
   peerDependencies:

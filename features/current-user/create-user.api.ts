@@ -1,10 +1,10 @@
 import { z } from "zod"
 import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
-import { IConvosUserID, identitySchema } from "@/features/current-user/current-user.types"
+import { createUserIdentitySchema, IConvosUserID } from "@/features/current-user/current-user.types"
 import { deviceSchema } from "@/features/devices/devices.types"
-import { getDeviceModelId, getDeviceOs } from "@/features/devices/devices.utils"
+import { getDeviceName, getDeviceOs } from "@/features/devices/devices.utils"
 import { ConvosProfileSchema, IConvosProfile } from "@/features/profiles/profiles.types"
-import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { IXmtpInboxId, IXmtpInstallationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
@@ -17,9 +17,10 @@ const createUserApiRequestBodySchema = z
       os: true,
       name: true,
     }),
-    identity: identitySchema.pick({
+    identity: createUserIdentitySchema.pick({
       turnkeyAddress: true,
       xmtpId: true,
+      xmtpInstallationId: true,
     }),
     profile: ConvosProfileSchema.pick({
       name: true,
@@ -40,7 +41,7 @@ const createUserApiResponseSchema = z.object({
     os: true,
     name: true,
   }),
-  identity: identitySchema.pick({
+  identity: createUserIdentitySchema.pick({
     id: true,
     turnkeyAddress: true,
     xmtpId: true,
@@ -61,21 +62,23 @@ export type ICreateUserArgs = {
   turnkeyUserId: ITurnkeyUserId
   smartContractWalletAddress: IEthereumAddress
   profile: Pick<IConvosProfile, "name" | "username" | "avatar" | "description">
+  xmtpInstallationId: IXmtpInstallationId
 }
 
 export async function createUser(args: ICreateUserArgs) {
-  const { turnkeyUserId, smartContractWalletAddress, inboxId, profile } = args
+  const { turnkeyUserId, smartContractWalletAddress, inboxId, profile, xmtpInstallationId } = args
 
   try {
     const requestPayload = {
       turnkeyUserId,
       device: {
         os: getDeviceOs(),
-        name: getDeviceModelId(),
+        name: getDeviceName(),
       },
       identity: {
         turnkeyAddress: smartContractWalletAddress,
         xmtpId: inboxId,
+        xmtpInstallationId,
       },
       profile,
     } satisfies ICreateUserApiRequestBody
