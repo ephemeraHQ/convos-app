@@ -1,7 +1,6 @@
-import { storage } from "../storage/storage"
+import { favoritedEmojisStorage } from "../storage/storages"
 
 const FAVORITED_EMOJIS_STORAGE_KEY = "favorited-emojis"
-
 const DEFAULT_EMOJIS = ["❤️", "👍", "👎", "😂", "🤔", "😲"]
 type IFavoritedEmojis = {
   emojis: string[]
@@ -12,7 +11,7 @@ class FavoritedEmojis {
   private state: IFavoritedEmojis
 
   constructor() {
-    const savedEmojis = storage.getString(FAVORITED_EMOJIS_STORAGE_KEY)
+    const savedEmojis = favoritedEmojisStorage.getString(FAVORITED_EMOJIS_STORAGE_KEY)
     const emojis = savedEmojis ? (JSON.parse(savedEmojis) as string[]) : DEFAULT_EMOJIS
 
     this.state = {
@@ -33,7 +32,7 @@ class FavoritedEmojis {
       this.state.emojis.pop()
       this.state.emojisSet = new Set(this.state.emojis)
 
-      storage.set(FAVORITED_EMOJIS_STORAGE_KEY, JSON.stringify(this.state.emojis))
+      favoritedEmojisStorage.set(FAVORITED_EMOJIS_STORAGE_KEY, JSON.stringify(this.state.emojis))
     }
   }
 
@@ -44,7 +43,7 @@ class FavoritedEmojis {
       this.state.emojis[index] = emoji
       this.state.emojisSet = new Set(this.state.emojis)
 
-      storage.set(FAVORITED_EMOJIS_STORAGE_KEY, JSON.stringify(this.state.emojis))
+      favoritedEmojisStorage.set(FAVORITED_EMOJIS_STORAGE_KEY, JSON.stringify(this.state.emojis))
     }
   }
 

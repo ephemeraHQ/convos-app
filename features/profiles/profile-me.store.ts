@@ -1,7 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { createStore, useStore } from "zustand"
 import { persist, subscribeWithSelector } from "zustand/middleware"
-import { getZustandStorage } from "@/utils/zustand/zustand"
+import { createProfileStorage } from "@/utils/storage/storages"
 
 type IProfileMeStoreState = {
   editMode: boolean
@@ -38,8 +38,6 @@ const DEFAULT_STATE: IProfileMeStoreState = {
 function getProfileMeStorageKey(inboxId: IXmtpInboxId) {
   return `profile-me-${inboxId}`
 }
-
-const createProfileStorage = getZustandStorage({ id: "profile-me" })
 
 function createProfileMeStore(inboxId: IXmtpInboxId) {
   const storageKey = getProfileMeStorageKey(inboxId)

@@ -8,6 +8,7 @@ import {
   getConversationMetadataQueryData,
   updateConversationMetadataQueryData,
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
 import { useDmQuery } from "@/features/dm/dm.query"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -36,8 +37,14 @@ export const useDeleteDm = ({
   const { mutateAsync: denyDmConsentAsync } = useDenyDmMutation()
 
   const { mutateAsync: deleteDmAsync } = useMutation({
-    mutationFn: () =>
-      deleteConversationMetadata({ clientInboxId: currentSender.inboxId, xmtpConversationId }),
+    mutationFn: async () => {
+      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
+
+      return deleteConversationMetadata({
+        deviceIdentityId: deviceIdentity.id,
+        xmtpConversationId,
+      })
+    },
     onMutate: () => {
       const previousDeleted = getConversationMetadataQueryData({
         clientInboxId: currentSender.inboxId,

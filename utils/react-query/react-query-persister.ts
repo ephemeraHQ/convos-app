@@ -6,14 +6,13 @@ import { captureError } from "@/utils/capture-error"
 import { ReactQueryPersistError } from "@/utils/error"
 import { persistLogger } from "@/utils/logger/logger"
 import { startTimer, stopTimer } from "@/utils/perf/perf-timer"
-import { createStorage, IStorage } from "@/utils/storage/storage"
+import { IMmkvStorage } from "@/utils/storage/mmkv"
+import { reactQueryPersistingStorage } from "@/utils/storage/storages"
 
-const REACT_QUERY_PERSISTER_STORAGE_ID = "convos-react-query-persister"
-export const reactQueryPersitingStorage = createStorage({ id: REACT_QUERY_PERSISTER_STORAGE_ID })
-export const reactQueryPersister = createReactQueryPersister(reactQueryPersitingStorage)
+export const reactQueryPersister = createReactQueryPersister(reactQueryPersistingStorage)
 const REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY = "react-query-client"
 
-function createReactQueryPersister(storage: IStorage): ReactQueryPersister {
+function createReactQueryPersister(storage: IMmkvStorage): ReactQueryPersister {
   return {
     persistClient: async (client: ReactQueryPersistedClient) => {
       try {
@@ -109,7 +108,7 @@ function createReactQueryPersister(storage: IStorage): ReactQueryPersister {
 function debugPersistedQueries() {
   if (__DEV__) {
     try {
-      const clientString = reactQueryPersitingStorage.getString(
+      const clientString = reactQueryPersistingStorage.getString(
         REACT_QUERY_PERSITER_STORAGE_CLIENT_KEY,
       )
 

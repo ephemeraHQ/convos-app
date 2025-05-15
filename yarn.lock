@@ -9056,22 +9056,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@xstate/react@npm:^5.0.0":
-  version: 5.0.3
-  resolution: "@xstate/react@npm:5.0.3"
-  dependencies:
-    use-isomorphic-layout-effect: "npm:^1.1.2"
-    use-sync-external-store: "npm:^1.2.0"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-    xstate: ^5.19.2
-  peerDependenciesMeta:
-    xstate:
-      optional: true
-  checksum: 10c0/0da333711213c91581bb0b82d7ee9113346aede2d0dc41f0e9bbb0bae6069cab14c9c96c7843a5828e057fd3886406fb4f83d12f3264653b85e98b9160fb355d
-  languageName: node
-  linkType: hard
-
 "@yarnpkg/lockfile@npm:^1.1.0":
   version: 1.1.0
   resolution: "@yarnpkg/lockfile@npm:1.1.0"
@@ -11061,7 +11045,6 @@ __metadata:
     "@welldone-software/why-did-you-render": "npm:^8.0.3"
     "@xmtp/content-type-primitives": "npm:^2.0.0"
     "@xmtp/react-native-sdk": "npm:4.2.0-dev.73f1217"
-    "@xstate/react": "npm:^5.0.0"
     "@yornaath/batshit": "npm:^0.10.1"
     alchemy-sdk: "npm:^3.4.4"
     amazon-cognito-identity-js: "npm:6.3.12"
@@ -11150,7 +11133,7 @@ __metadata:
     react-native-keychain: "npm:^9.2.3"
     react-native-localize: "npm:^3.0.2"
     react-native-logs: "npm:^5.1.0"
-    react-native-mmkv: "npm:^2.12.2"
+    react-native-mmkv: "npm:2.12.2"
     react-native-passkey: "npm:^3.1.0"
     react-native-qrcode-styled: "npm:^0.3.3"
     react-native-qrcode-svg: "npm:^6.2.0"
@@ -20027,7 +20010,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-mmkv@npm:^2.11.0, react-native-mmkv@npm:^2.12.2":
+"react-native-mmkv@npm:2.12.2, react-native-mmkv@npm:^2.11.0":
   version: 2.12.2
   resolution: "react-native-mmkv@npm:2.12.2"
   peerDependencies:
@@ -23515,18 +23498,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"use-isomorphic-layout-effect@npm:^1.1.2":
-  version: 1.2.0
-  resolution: "use-isomorphic-layout-effect@npm:1.2.0"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  peerDependenciesMeta:
-    "@types/react":
-      optional: true
-  checksum: 10c0/2e4bdee68d65893b37e716ebdcc111550775189c80e662eda87d6f5b54dc431d3383a18914ea01a893ee5478902a878012713eaebcacbb6611ab88c463accb83
-  languageName: node
-  linkType: hard
-
 "use-latest-callback@npm:^0.2.1":
   version: 0.2.3
   resolution: "use-latest-callback@npm:0.2.3"
@@ -23561,7 +23532,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"use-sync-external-store@npm:^1.2.0, use-sync-external-store@npm:^1.2.2":
+"use-sync-external-store@npm:^1.2.2":
   version: 1.5.0
   resolution: "use-sync-external-store@npm:1.5.0"
   peerDependencies:

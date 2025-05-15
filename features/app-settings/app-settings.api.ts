@@ -5,8 +5,14 @@ import { convosPublicApi } from "@/utils/convos-api/convos-api-instance"
 
 export const AppConfigSchema = z.object({
   minimumAppVersion: z.object({
-    ios: z.string(),
-    android: z.string(),
+    ios: z.object({
+      version: z.string(),
+      buildNumber: z.string(),
+    }),
+    android: z.object({
+      version: z.string(),
+      buildNumber: z.string(),
+    }),
   }),
 })
 

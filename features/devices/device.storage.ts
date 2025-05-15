@@ -1,6 +1,6 @@
 import { IDeviceId } from "@/features/devices/devices.types"
 import { StorageError } from "@/utils/error"
-import { secureStorage } from "@/utils/storage/secure-storage"
+import { deviceIdStorage } from "@/utils/storage/storages"
 import { IConvosUserID } from "../current-user/current-user.types"
 
 const DEVICE_ID_KEY = "convos-device-id"
@@ -13,7 +13,7 @@ export async function getStoredDeviceId(args: { userId: IConvosUserID }) {
   const { userId } = args
 
   try {
-    return (await secureStorage.getItem(getDeviceIdKey(userId))) as IDeviceId | null
+    return (await deviceIdStorage.getItem(getDeviceIdKey(userId))) as IDeviceId | null
   } catch (error) {
     throw new StorageError({
       error,
@@ -26,7 +26,7 @@ export async function storeDeviceId(args: { userId: IConvosUserID; deviceId: IDe
   const { userId, deviceId } = args
 
   try {
-    await secureStorage.setItem(getDeviceIdKey(userId), deviceId)
+    await deviceIdStorage.setItem(getDeviceIdKey(userId), deviceId)
   } catch (error) {
     throw new StorageError({
       error,
@@ -39,7 +39,7 @@ export async function removeStoredDeviceId(args: { userId: IConvosUserID }) {
   const { userId } = args
 
   try {
-    await secureStorage.deleteItem(getDeviceIdKey(userId))
+    await deviceIdStorage.deleteItem(getDeviceIdKey(userId))
   } catch (error) {
     throw new StorageError({
       error,

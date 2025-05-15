@@ -5,6 +5,7 @@ import {
   getConversationMetadataQueryData,
   updateConversationMetadataQueryData,
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 
 export function useMarkConversationAsUnreadMutation(args: {
@@ -20,8 +21,10 @@ export function useMarkConversationAsUnreadMutation(args: {
       caller,
     },
     mutationFn: async () => {
-      await markConversationMetadataAsUnread({
-        clientInboxId: currentSender.inboxId,
+      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
+
+      return markConversationMetadataAsUnread({
+        deviceIdentityId: deviceIdentity.id,
         xmtpConversationId,
       })
     },

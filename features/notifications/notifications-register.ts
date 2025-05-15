@@ -1,4 +1,5 @@
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
 import { ensureCurrentUserQueryData } from "@/features/current-user/current-user.query"
 import { ensureUserDeviceQueryData } from "@/features/devices/user-device.query"
 import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
@@ -6,12 +7,8 @@ import {
   getDevicePushNotificationsToken,
   getExpoPushNotificationsToken,
 } from "@/features/notifications/notifications-token"
-import {
-  registerNotificationInstallation,
-  unregisterNotificationInstallation,
-} from "@/features/notifications/notifications.api"
+import { registerNotificationInstallation } from "@/features/notifications/notifications.api"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
-import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { NotificationError, UserCancelledError } from "@/utils/error"
 
 export async function registerPushNotifications() {
@@ -49,14 +46,19 @@ export async function registerPushNotifications() {
     const client = await getXmtpClientByInboxId({
       inboxId: currentSender.inboxId,
     })
+    const identities = await ensureUserIdentitiesQueryData({ userId: currentUser.id })
 
-    await registerNotificationInstallation({
-      deviceId: currentDevice.id,
-      identityId: currentUser.identities[0].id, // TODO: Add support for multiple identities
-      xmtpInstallationId: client.installationId,
-      expoToken,
-      pushToken: deviceToken,
-    })
+    await Promise.all(
+      identities.map((identity) =>
+        registerNotificationInstallation({
+          deviceId: currentDevice.id,
+          identityId: identity.id,
+          xmtpInstallationId: client.installationId,
+          expoToken,
+          pushToken: deviceToken,
+        }),
+      ),
+    )
   } catch (error) {
     // Catch any error from the steps above and wrap it
     throw new NotificationError({
@@ -64,16 +66,4 @@ export async function registerPushNotifications() {
       additionalMessage: "Failed to register push notifications",
     })
   }
-}
-
-export async function unregisterPushNotifications(args: { clientInboxId: IXmtpInboxId }) {
-  const { clientInboxId } = args
-
-  const client = await getXmtpClientByInboxId({
-    inboxId: clientInboxId,
-  })
-
-  await unregisterNotificationInstallation({
-    installationId: client.installationId,
-  })
 }

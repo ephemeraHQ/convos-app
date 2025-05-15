@@ -31,9 +31,9 @@ import { GenericError } from "@/utils/error"
 import { getEnv } from "@/utils/getEnv"
 import { Haptics } from "@/utils/haptics"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
-import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
+import { reactQueryPersistingStorage } from "@/utils/storage/storages"
 import { showActionSheet } from "./action-sheet"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
@@ -455,7 +455,7 @@ function useShowDebugMenu({
           reactQueryClient.getQueryCache().clear()
           reactQueryClient.clear()
           reactQueryClient.removeQueries()
-          reactQueryPersitingStorage.clearAll()
+          reactQueryPersistingStorage.clearAll()
 
           showSnackbar({
             message: "React Query cache completely cleared",

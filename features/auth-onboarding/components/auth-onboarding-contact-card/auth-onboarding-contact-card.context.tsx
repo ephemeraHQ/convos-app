@@ -8,6 +8,7 @@ import { useHydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useCreateUserMutation } from "@/features/current-user/create-user.mutation"
 import { ConvosProfileSchema } from "@/features/profiles/profiles.types"
+import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
@@ -80,10 +81,15 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
         }
       }
 
+      const xmtpClient = await getXmtpClientByInboxId({
+        inboxId: currentSender.inboxId,
+      })
+
       await createUserAsync({
         inboxId: currentSender.inboxId,
         turnkeyUserId: user?.id as ITurnkeyUserId,
         smartContractWalletAddress: currentSender.ethereumAddress,
+        xmtpInstallationId: xmtpClient.installationId,
         profile: {
           name: store.name,
           username: store.username,

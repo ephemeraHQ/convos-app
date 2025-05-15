@@ -7,9 +7,8 @@ import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { ValidationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 
-type IDeviceIdentityId = string & { readonly __brand: unique symbol }
+export type IDeviceIdentityId = string & { readonly __brand: unique symbol }
 
-// Schema definitions
 export const DeviceIdentitySchema = z.object({
   id: z.custom<IDeviceIdentityId>(),
   xmtpId: z.string().optional(),
@@ -20,20 +19,6 @@ export const DeviceIdentitySchema = z.object({
 })
 
 export type IDeviceIdentity = z.infer<typeof DeviceIdentitySchema>
-
-// API functions
-export const fetchDeviceIdentities = async (args: { deviceId: IDeviceId }) => {
-  const { deviceId } = args
-
-  const { data } = await convosApi.get<IDeviceIdentity[]>(`/api/v1/identities/device/${deviceId}`)
-
-  const result = z.array(DeviceIdentitySchema).safeParse(data)
-  if (!result.success) {
-    captureError(new ValidationError({ error: result.error }))
-  }
-
-  return data
-}
 
 export const fetchUserIdentities = async (args: { userId: IConvosUserID }) => {
   const { userId } = args

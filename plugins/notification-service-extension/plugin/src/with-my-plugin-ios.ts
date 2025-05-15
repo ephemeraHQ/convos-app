@@ -253,8 +253,10 @@ const withPodfile: ConfigPlugin = (config) => {
 
 target '${NSE_TARGET_NAME}' do
   # Use the iOS XMTP version required by the installed @xmtp/react-native-sdk
+  # Same value that we use in the react-native app
   pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
-  pod 'MMKV', '2.2.1', :modular_headers => true
+  # Same value that we use in the react-native app
+  pod 'MMKV', '2.12.2', :modular_headers => true
 
   # NSEs often use static frameworks. Adjust if your setup differs.
   use_frameworks! :linkage => :static
