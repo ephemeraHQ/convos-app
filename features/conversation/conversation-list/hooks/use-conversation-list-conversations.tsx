@@ -12,7 +12,7 @@ import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { ObjectTyped } from "@/utils/object-typed"
-import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
+import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 
 export const useConversationListConversations = () => {
   const currentSender = useSafeCurrentSender()

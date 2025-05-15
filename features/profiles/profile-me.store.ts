@@ -1,7 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { createStore, useStore } from "zustand"
-import { createJSONStorage, persist, subscribeWithSelector } from "zustand/middleware"
-import { zustandMMKVStorage } from "@/utils/zustand/zustand"
+import { persist, subscribeWithSelector } from "zustand/middleware"
+import { getZustandStorage } from "@/utils/zustand/zustand"
 
 type IProfileMeStoreState = {
   editMode: boolean
@@ -39,6 +39,8 @@ function getProfileMeStorageKey(inboxId: IXmtpInboxId) {
   return `profile-me-${inboxId}`
 }
 
+const createProfileStorage = getZustandStorage({ id: "profile-me" })
+
 function createProfileMeStore(inboxId: IXmtpInboxId) {
   const storageKey = getProfileMeStorageKey(inboxId)
 
@@ -57,12 +59,12 @@ function createProfileMeStore(inboxId: IXmtpInboxId) {
             reset: () => {
               set(DEFAULT_STATE)
               // Clear persisted data
-              zustandMMKVStorage.removeItem(storageKey)
+              createProfileStorage.removeItem(storageKey)
             },
           },
         }),
         {
-          storage: createJSONStorage(() => zustandMMKVStorage),
+          storage: createProfileStorage,
           name: storageKey,
           partialize: (state) => ({
             editMode: state.editMode,

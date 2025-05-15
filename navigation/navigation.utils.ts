@@ -61,7 +61,7 @@ export async function navigate<T extends keyof NavigationParamList>(
 /**
  * Resets navigation to home screen and then navigates to the specified screen
  * Use this for deep links to ensure we navigate from a consistent starting point
- * 
+ *
  * Example:
  *   When a user taps a message notification or a conversation link from outside the app,
  *   we want to reset their navigation stack rather than adding the conversation screen
@@ -75,8 +75,10 @@ export async function navigateFromHome<S extends keyof NavigationParamList>(
   try {
     await ensureNavigationReady()
 
-    logger.debug(`[Navigation] Navigating from home to ${screen} ${params ? JSON.stringify(params) : ""}`)
-    
+    logger.debug(
+      `[Navigation] Navigating from home to ${screen} ${params ? JSON.stringify(params) : ""}`,
+    )
+
     // If we're navigating to the home screen, just do a simple reset
     if (screen === "Chats") {
       navigationRef.resetRoot({
@@ -85,14 +87,11 @@ export async function navigateFromHome<S extends keyof NavigationParamList>(
       })
       return
     }
-    
+
     // For other screens, reset to home and then add our target screen
     navigationRef.resetRoot({
       index: 1, // Set index to 1 to focus on the new screen
-      routes: [
-        { name: "Chats" },
-        { name: screen, params },
-      ],
+      routes: [{ name: "Chats" }, { name: screen, params }],
     })
   } catch (error) {
     captureError(

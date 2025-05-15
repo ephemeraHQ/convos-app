@@ -29,7 +29,8 @@ import { navigationRef } from "@/navigation/navigation.utils"
 import { ShareProfileScreen } from "@/screens/ShareProfile"
 import { WebviewPreview } from "@/screens/WebviewPreview"
 import { useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
-import { captureError } from "@/utils/capture-error"
+import { captureError, captureErrorWithToast } from "@/utils/capture-error"
+import { ensureOurError } from "@/utils/error"
 import { navigationIntegration } from "@/utils/sentry/sentry-init"
 import { hideSplashScreen } from "@/utils/splash/splash"
 
@@ -101,7 +102,11 @@ export const AppNavigator = memo(function AppNavigator() {
   const { hydrateAuth } = useHydrateAuth()
 
   useEffectOnce(() => {
-    hydrateAuth()
+    hydrateAuth().catch((err) =>
+      captureErrorWithToast(ensureOurError(err), {
+        message: "Failed to hydrate auth please restart app",
+      }),
+    )
   })
 
   return (

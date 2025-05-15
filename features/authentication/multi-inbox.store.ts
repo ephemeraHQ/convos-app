@@ -1,12 +1,12 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { create } from "zustand"
-import { createJSONStorage, persist, subscribeWithSelector } from "zustand/middleware"
+import { persist, subscribeWithSelector } from "zustand/middleware"
 import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { logger } from "@/utils/logger/logger"
-import { zustandMMKVStorage } from "@/utils/zustand/zustand"
+import { getZustandStorage } from "@/utils/zustand/zustand"
 
 export type CurrentSender = {
   ethereumAddress: IEthereumAddress
@@ -39,9 +39,11 @@ const initialState: IMultiInboxStoreState = {
   senders: [],
 }
 
-// Changing this will break existing users as the store won't be able to hydrate
-// So users will be logged out on new app load
-const STORE_NAME = "multi-inbox-store-v1"
+const STORE_NAME = "multi-inbox-store-v1" // This is the key used for storing in both old and new persist configurations
+const CURRENT_STORE_VERSION = 1 // Increment this if you make future schema changes that need migration
+
+const multiInboxStorage = getZustandStorage({ id: STORE_NAME })
+const oldStorage = getZustandStorage({ id: "mmkv.default" })
 
 // Helper to check if two senders are the same
 function isSameSender(a: CurrentSender, b: CurrentSender): boolean {
@@ -56,7 +58,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
         actions: {
           reset: () => {
             set(initialState)
-            zustandMMKVStorage.removeItem(STORE_NAME)
+            multiInboxStorage?.removeItem(STORE_NAME)
           },
 
           setCurrentSender: (sender) => {
@@ -146,12 +148,103 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
         },
       }),
       {
-        name: STORE_NAME,
-        storage: createJSONStorage(() => zustandMMKVStorage),
+        name: STORE_NAME, // This name is used as the key within the storage
+        storage: multiInboxStorage,
+        version: CURRENT_STORE_VERSION,
         partialize: (state) => {
-          // Remove the actions from partialized state
           const { actions, ...rest } = state
           return rest
+        },
+        migrate: async (persistedStateFromNewStorage, oldVersionInNewStorage) => {
+          logger.debug(
+            `MultiInboxStore: Migrate check. Version in new storage ('${STORE_NAME}'): ${oldVersionInNewStorage}. Current code version: ${CURRENT_STORE_VERSION}.`,
+          )
+          const newStorageState = persistedStateFromNewStorage as IMultiInboxStoreState | null
+
+          // Priority 1: If new storage is populated (e.g., has a currentSender), use it.
+          // This means the user has interacted with the app using the new storage,
+          // or it's already up-to-date.
+          if (newStorageState?.currentSender) {
+            logger.debug(
+              `MultiInboxStore: New storage ('${STORE_NAME}') is already populated (currentSender exists, version ${oldVersionInNewStorage}). Prioritizing this state. No migration from old 'mmkv.default' needed.`,
+            )
+            // If oldVersionInNewStorage < CURRENT_STORE_VERSION, Zustand will update the version
+            // when it saves this state back.
+            return newStorageState
+          }
+
+          // Priority 2: If new storage is empty/unpopulated, AND its version is up-to-date
+          // (this case is less likely if currentSender check above passed, but good for completeness if "populated" definition changes)
+          // then there's nothing to migrate from old storage because new storage is "correctly empty" and current.
+          if (oldVersionInNewStorage >= CURRENT_STORE_VERSION) {
+            logger.debug(
+              `MultiInboxStore: New storage ('${STORE_NAME}') is not populated but its version (${oldVersionInNewStorage}) is current. No migration from old 'mmkv.default' needed.`,
+            )
+            return newStorageState // Which would be null or an empty state shell
+          }
+
+          // Priority 3: New storage is empty/unpopulated AND its version is outdated.
+          // Now, try to load from the old 'mmkv.default' storage.
+          logger.debug(
+            `MultiInboxStore: New storage ('${STORE_NAME}') is not populated (or version ${oldVersionInNewStorage} is outdated). Attempting to load from old 'mmkv.default' storage.`,
+          )
+          try {
+            const rawOldStateString = await oldStorage.getItem(STORE_NAME)
+
+            if (rawOldStateString && typeof rawOldStateString === "string") {
+              logger.debug(
+                `MultiInboxStore: Found data in old 'mmkv.default' storage (key '${STORE_NAME}'). Attempting to migrate.`,
+              )
+              const parsedOldJson = JSON.parse(rawOldStateString) as {
+                state: IMultiInboxStoreState
+                version?: number // Old persisted state also had a version
+              }
+              const oldActualState = parsedOldJson.state
+
+              if (oldActualState && typeof oldActualState === "object") {
+                logger.debug(
+                  "MultiInboxStore: Successfully parsed state from old 'mmkv.default' storage. This state will be used:",
+                  oldActualState,
+                )
+
+                try {
+                  await oldStorage.removeItem(STORE_NAME)
+                  logger.debug(
+                    `MultiInboxStore: Successfully removed data from old 'mmkv.default' storage (key '${STORE_NAME}').`,
+                  )
+                } catch (removeError) {
+                  captureError(
+                    new GenericError({
+                      error: removeError,
+                      additionalMessage: `MultiInboxStore: Failed to remove item '${STORE_NAME}' from old 'mmkv.default' storage after successful read. Migrated data will still be used by the new store.`,
+                    }),
+                  )
+                }
+                return oldActualState // This state will be written to the new storage with CURRENT_STORE_VERSION
+              }
+              logger.warn(
+                "MultiInboxStore: Old 'mmkv.default' storage data was not in the expected format (missing 'state' property or not an object). Will proceed without it.",
+              )
+            } else {
+              logger.debug(
+                `MultiInboxStore: No data found in old 'mmkv.default' storage (key '${STORE_NAME}'). User might be new, or migration already occurred and old data was cleaned.`,
+              )
+            }
+          } catch (error) {
+            captureError(
+              new GenericError({
+                error,
+                additionalMessage: `MultiInboxStore: Error during fetch/parse from old 'mmkv.default' storage (key '${STORE_NAME}') in migration.`,
+              }),
+            )
+          }
+
+          // Fallback: If no data from old storage, and new storage was also unpopulated/outdated,
+          // use whatever was in the new storage (which would be null/empty based on earlier checks) or initial state.
+          logger.debug(
+            `MultiInboxStore: Fallback: Using data from new storage (if any, version ${oldVersionInNewStorage}, likely empty at this point) or initial state.`,
+          )
+          return (newStorageState || initialState) as IMultiInboxStoreState
         },
         onRehydrateStorage: () => (state, error) => {
           if (error) {

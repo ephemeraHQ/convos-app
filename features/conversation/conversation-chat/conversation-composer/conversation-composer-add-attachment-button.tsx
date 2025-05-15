@@ -9,7 +9,6 @@ import {
 import * as ImagePicker from "expo-image-picker"
 import { memo, useCallback, useMemo } from "react"
 import { ViewStyle } from "react-native"
-import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { Center } from "@/design-system/Center"
 import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
 import {
@@ -25,7 +24,6 @@ import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { prefetchImageUrl } from "@/utils/image"
 import { logger } from "@/utils/logger/logger"
-import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
 
 export const ConversationComposerAddAttachmentButton = memo(
   function ConversationComposerAddAttachmentButton() {
@@ -33,10 +31,10 @@ export const ConversationComposerAddAttachmentButton = memo(
 
     const conversationComposerStore = useConversationComposerStore()
     const isEnabled = useConversationComposerIsEnabled()
-    
+
     // Check if there are any attachments
     const hasAttachments = useConversationComposerStoreContext(
-      (state) => state.composerAttachments.length > 0
+      (state) => state.composerAttachments.length > 0,
     )
 
     const handleAsset = useCallback(
@@ -135,13 +133,12 @@ export const ConversationComposerAddAttachmentButton = memo(
 
         logger.debug("[pickMedia] Processing asset")
         await handleAsset(asset)
-        
       } catch (error) {
         captureErrorWithToast(
           new GenericError({ error, additionalMessage: "Failed to pick media" }),
           {
-            message: "Failed to select media"
-          }
+            message: "Failed to select media",
+          },
         )
       }
     }, [handleAsset])
@@ -162,8 +159,8 @@ export const ConversationComposerAddAttachmentButton = memo(
             additionalMessage: "Failed to process attachment from camera",
           }),
           {
-            message: "Failed to process camera photo"
-          }
+            message: "Failed to process camera photo",
+          },
         )
       }
     }, [handleAsset])

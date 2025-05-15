@@ -1,11 +1,13 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
+import { getZustandStorage } from "@/utils/zustand/zustand"
 
 type INotificationsState = {
-  lastTappedNotificationId: string | null
+  lastHandledNotificationId: string | null
 }
 
 type INotificationsActions = {
-  setLastTappedNotificationId: (notificationId: string) => void
+  setLastHandledNotificationId: (notificationId: string) => void
 }
 
 type INotificationsStore = INotificationsState & {
@@ -13,13 +15,21 @@ type INotificationsStore = INotificationsState & {
 }
 
 const initialState: INotificationsState = {
-  lastTappedNotificationId: null,
+  lastHandledNotificationId: null,
 }
 
-export const useNotificationsStore = create<INotificationsStore>((set, get) => ({
-  ...initialState,
-  actions: {
-    setLastTappedNotificationId: (notificationId: string) =>
-      set({ lastTappedNotificationId: notificationId }),
-  },
-}))
+export const useNotificationsStore = create<INotificationsStore>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
+      actions: {
+        setLastHandledNotificationId: (notificationId: string) =>
+          set({ lastHandledNotificationId: notificationId }),
+      },
+    }),
+    {
+      name: "notifications-storage",
+      storage: getZustandStorage({ id: "notifications" }),
+    },
+  ),
+)

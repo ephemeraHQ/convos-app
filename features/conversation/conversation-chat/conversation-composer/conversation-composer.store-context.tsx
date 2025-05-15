@@ -5,7 +5,7 @@ import { IConversationMessageRemoteAttachmentContent } from "@/features/conversa
 import { useCurrentXmtpConversationId } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { usePrevious } from "@/hooks/use-previous-value"
-import { zustandMMKVStorage } from "@/utils/zustand/zustand"
+import { getZustandStorage } from "@/utils/zustand/zustand"
 
 export type IComposerAttachmentStatus = "picked" | "uploading" | "error" | "uploaded"
 
@@ -172,7 +172,7 @@ const createConversationComposerStore = (
             })),
         }),
         {
-          storage: createJSONStorage(() => zustandMMKVStorage),
+          storage: getZustandStorage({ id: initProps.storeName }),
           name: initProps.storeName,
           partialize: (state) => ({
             inputValue: state.inputValue,

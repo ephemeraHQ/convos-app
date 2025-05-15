@@ -52,7 +52,7 @@ export async function registerPushNotifications() {
 
     await registerNotificationInstallation({
       deviceId: currentDevice.id,
-      identityId: currentUser.id,
+      identityId: currentUser.identities[0].id, // TODO: Add support for multiple identities
       xmtpInstallationId: client.installationId,
       expoToken,
       pushToken: deviceToken,

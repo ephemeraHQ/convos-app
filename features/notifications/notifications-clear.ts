@@ -24,7 +24,7 @@ export async function clearNotificationsForConversation(args: {
     const validNotifications = presentedNotifications.filter((notification) => {
       return (
         notification.request.identifier !==
-        useNotificationsStore.getState().lastTappedNotificationId
+        useNotificationsStore.getState().lastHandledNotificationId
       )
     })
 

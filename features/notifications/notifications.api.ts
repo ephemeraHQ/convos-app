@@ -1,5 +1,7 @@
 import { z } from "zod"
-import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
+import { IDeviceId } from "@/features/devices/devices.types"
+import { IIdentityId } from "@/features/identities/identities.types"
+import { IXmtpConversationTopic, IXmtpInstallationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { ValidationError } from "@/utils/error"
@@ -12,9 +14,9 @@ const RegisterInstallationResponseSchema = z.object({
 
 // Schema for registration request
 const registrationSchema = z.object({
-  deviceId: z.string(),
-  identityId: z.string(),
-  xmtpInstallationId: z.string(),
+  deviceId: z.custom<IDeviceId>(),
+  identityId: z.custom<IIdentityId>(),
+  xmtpInstallationId: z.custom<IXmtpInstallationId>(),
   expoToken: z.string(),
   pushToken: z.string(),
 })
@@ -110,7 +112,9 @@ export const unsubscribeFromNotificationTopics = async (args: IUnsubscribeReques
 /**
  * Unregisters a device installation
  */
-export const unregisterNotificationInstallation = async (args: { installationId: string }) => {
+export const unregisterNotificationInstallation = async (args: {
+  installationId: IXmtpInstallationId
+}) => {
   const { installationId } = args
 
   try {

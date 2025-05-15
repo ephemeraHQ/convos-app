@@ -9,7 +9,7 @@ import { stopStreamingAllMessage } from "@/features/xmtp/xmtp-messages/xmtp-mess
 import { captureError } from "@/utils/capture-error"
 import { StreamError } from "@/utils/error"
 import { streamLogger } from "@/utils/logger/logger"
-import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
+import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { startConversationStreaming } from "./stream-conversations"
 import { startMessageStreaming } from "./stream-messages"
 import { useStreamStatusStore } from "./stream.store" // Import the store
@@ -25,13 +25,13 @@ export async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
   const currentStatus = useStreamStatusStore.getState().streamStatus
 
   for (const inboxId of inboxIdsToStream) {
-    // Streams are already started
     if (currentStatus[inboxId]) {
+      streamLogger.debug(`Streams already started for ${inboxId}`)
       continue
     }
 
     streamLogger.debug(`Starting all streams for ${inboxId}...`)
-    setStreamStarted({ inboxId })
+
     const results = await customPromiseAllSettled([
       startConversationStreaming({ clientInboxId: inboxId }),
       startMessageStreaming({ clientInboxId: inboxId }),
@@ -50,7 +50,14 @@ export async function startStreaming(inboxIdsToStream: IXmtpInboxId[]) {
       }
     })
 
-    streamLogger.debug(`Started all streams for ${inboxId}`)
+    const someSucceeded = results.some((r) => r.status === "fulfilled")
+
+    if (someSucceeded) {
+      setStreamStarted({ inboxId })
+      streamLogger.debug(`Started all streams for ${inboxId}`)
+    } else {
+      streamLogger.debug(`Failed to start all streams for ${inboxId}`)
+    }
   }
 }
 
@@ -60,8 +67,8 @@ export async function stopStreaming(inboxIds: IXmtpInboxId[]) {
 
   await Promise.all(
     inboxIds.map(async (inboxId) => {
-      // Streams are already stopped
       if (!currentStatus[inboxId]) {
+        streamLogger.debug(`Streams already stopped for ${inboxId}`)
         return
       }
 

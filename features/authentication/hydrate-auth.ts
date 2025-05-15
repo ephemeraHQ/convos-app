@@ -9,12 +9,20 @@ import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError, BaseError, ExternalCancellationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
+import { waitUntilPromise } from "@/utils/wait-until-promise"
 
 export function useHydrateAuth() {
   const { logout } = useLogout()
 
-  const hydrateAuth = useCallback(() => {
+  const hydrateAuth = useCallback(async () => {
     authLogger.debug("Hydrating auth...")
+
+    await waitUntilPromise({
+      checkFn: () => {
+        const multiInboxIsHydrated = useAppStore.getState().multiInboxIsHydrated
+        return multiInboxIsHydrated
+      },
+    })
 
     const currentSender = getCurrentSender()
 

@@ -9,7 +9,7 @@ import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { useAppStore } from "@/stores/app-store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
+import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { authLogger } from "../../utils/logger/logger"
 

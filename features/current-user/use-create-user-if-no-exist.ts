@@ -7,7 +7,7 @@ import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { getAllSenders, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   createIdentity,
-  fetchDeviceIdentities,
+  fetchUserIdentities,
 } from "@/features/convos-identities/convos-identities.api"
 import {
   createUserMutation,
@@ -81,22 +81,22 @@ async function makeSureDeviceAndIdentitiesAreCreated(args: { userId: IConvosUser
     }
   }
 
-  // 3. Fetch existing identities for this device
-  const { data: identities, error: fetchDeviceIdentitiesError } = await tryCatch(
-    fetchDeviceIdentities({ deviceId }),
+  // 3. Fetch existing identities for this user
+  const { data: existingIdentities, error: fetchUserIdentitiesError } = await tryCatch(
+    fetchUserIdentities({ userId }),
   )
 
-  if (fetchDeviceIdentitiesError) {
+  if (fetchUserIdentitiesError) {
     throw new AuthenticationError({
-      error: fetchDeviceIdentitiesError,
-      additionalMessage: "Failed to fetch device identities",
+      error: fetchUserIdentitiesError,
+      additionalMessage: "Failed to fetch user identities",
     })
   }
 
   const senders = getAllSenders()
 
   const missingIdentities = senders.filter(
-    (sender) => !identities.some((identity) => identity.xmtpId === sender.inboxId),
+    (sender) => !existingIdentities.some((identity) => identity.xmtpId === sender.inboxId),
   )
 
   for (const sender of missingIdentities) {

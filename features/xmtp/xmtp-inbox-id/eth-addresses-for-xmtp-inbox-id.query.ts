@@ -32,13 +32,12 @@ export function getEthAddressesForXmtpInboxIdQueryOptions(args: IArgs & { caller
       caller,
     },
     enabled,
-    queryFn:
-      enabled
-        ? () => {
-            const batcher = getBatcher(clientInboxId)
-            return batcher.fetch(inboxId)
-          }
-        : skipToken,
+    queryFn: enabled
+      ? () => {
+          const batcher = getBatcher(clientInboxId)
+          return batcher.fetch(inboxId)
+        }
+      : skipToken,
   })
 }
 

@@ -39,7 +39,6 @@ export async function getSharedAppGroupDirectory() {
       throw new Error("Failed to get App Group path via RNFS")
     }
 
-    xmtpLogger.debug(`Shared App Group Directory found: ${groupPath}`)
     return groupPath
   } catch (error) {
     throw new XMTPError({ error, additionalMessage: "Failed to get App Group path via RNFS" })

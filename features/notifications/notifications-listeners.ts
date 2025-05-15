@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications"
-import { useCallback, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
@@ -27,79 +27,17 @@ export function useNotificationListeners() {
   const notificationTapListener = useRef<Notifications.Subscription>()
   // const systemDropListener = useRef<Notifications.Subscription>()
 
-  const handleNotificationTap = useCallback(
-    async (response: Notifications.NotificationResponse) => {
-      try {
-        const tappedNotification = response.notification
-
-        useNotificationsStore
-          .getState()
-          .actions.setLastTappedNotificationId(tappedNotification.request.identifier)
-
-        // Sometimes we tap on a notification while the app is killed and this is triggered
-        // before we finished hydrating auth so we push to a screen that isn't in the navigator yet
-        await waitUntilPromise({
-          checkFn: () => {
-            return useAuthenticationStore.getState().status === "signedIn"
-          },
-        })
-
-        // Because we had sometimes where we added a message to the cache but then it was overwritten
-        // by the query client so we need to wait until the query client is hydrated
-        await waitUntilPromise({
-          checkFn: () => {
-            return useAppStore.getState().reactQueryIsHydrated
-          },
-        })
-
-        if (isConvosModifiedNotification(tappedNotification)) {
-          notificationsLogger.debug(
-            `Convos modified notification tapped: ${JSON.stringify(tappedNotification)}`,
-          )
-          return navigate("Conversation", {
-            xmtpConversationId: tappedNotification.request.content.data.message.xmtpConversationId,
-          })
-        }
-
-        if (isNotificationExpoNewMessageNotification(tappedNotification)) {
-          notificationsLogger.debug(
-            `Expo notification tapped: ${JSON.stringify(tappedNotification)}`,
-          )
-
-          const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
-          const tappedXmtpConversationId =
-            getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
-
-          addPresentedNotificationsToCache({
-            tappedNotificationConversationId: tappedXmtpConversationId,
-            clientInboxId: getSafeCurrentSender().inboxId,
-          }).catch(captureError)
-
-          return navigate("Conversation", {
-            xmtpConversationId: tappedXmtpConversationId,
-          })
-        }
-
-        throw new Error(`Unknown notification type: ${JSON.stringify(tappedNotification)}`)
-      } catch (error) {
-        captureError(
-          new NotificationError({
-            error,
-            additionalMessage: "Error handling notification tap",
-          }),
-        )
-      }
-    },
-    [],
-  )
-
   // Check if app was launched by tapping a notification while killed
 
   useEffect(() => {
     // Check if app was launched by tapping a notification while killed
     Notifications.getLastNotificationResponseAsync().then((response) => {
       if (response) {
-        handleNotificationTap(response).catch(captureError)
+        const lastHandledNotificationId = useNotificationsStore.getState().lastHandledNotificationId
+        if (lastHandledNotificationId !== response.notification.request.identifier) {
+          notificationsLogger.debug(`Handling last notification response:`, response)
+          handleNotification(response).catch(captureError)
+        }
       }
     })
 
@@ -111,8 +49,12 @@ export function useNotificationListeners() {
     )
 
     // Listen for notification taps while app is running
-    notificationTapListener.current =
-      Notifications.addNotificationResponseReceivedListener(handleNotificationTap)
+    notificationTapListener.current = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        notificationsLogger.debug(`Handling notification tap:`, response)
+        handleNotification(response).catch(captureError)
+      },
+    )
 
     // // Listen for when system drops notifications
     // Causing an error on iOS
@@ -137,7 +79,67 @@ export function useNotificationListeners() {
       //   Notifications.removeNotificationSubscription(systemDropListener.current)
       // }
     }
-  }, [handleNotificationTap])
+  }, [])
+}
+
+async function handleNotification(response: Notifications.NotificationResponse) {
+  try {
+    const tappedNotification = response.notification
+
+    useNotificationsStore
+      .getState()
+      .actions.setLastHandledNotificationId(tappedNotification.request.identifier)
+
+    // Sometimes we tap on a notification while the app is killed and this is triggered
+    // before we finished hydrating auth so we push to a screen that isn't in the navigator yet
+    await waitUntilPromise({
+      checkFn: () => {
+        return useAuthenticationStore.getState().status === "signedIn"
+      },
+    })
+
+    // Because we had sometimes where we added a message to the cache but then it was overwritten
+    // by the query client so we need to wait until the query client is hydrated
+    await waitUntilPromise({
+      checkFn: () => {
+        return useAppStore.getState().reactQueryIsHydrated
+      },
+    })
+
+    if (isConvosModifiedNotification(tappedNotification)) {
+      notificationsLogger.debug(
+        `Handling Convos modified notification: ${JSON.stringify(tappedNotification)}`,
+      )
+      return navigate("Conversation", {
+        xmtpConversationId: tappedNotification.request.content.data.message.xmtpConversationId,
+      })
+    }
+
+    if (isNotificationExpoNewMessageNotification(tappedNotification)) {
+      notificationsLogger.debug(`Handling Expo notification: ${JSON.stringify(tappedNotification)}`)
+
+      const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
+      const tappedXmtpConversationId = getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
+
+      addPresentedNotificationsToCache({
+        tappedNotificationConversationId: tappedXmtpConversationId,
+        clientInboxId: getSafeCurrentSender().inboxId,
+      }).catch(captureError)
+
+      return navigate("Conversation", {
+        xmtpConversationId: tappedXmtpConversationId,
+      })
+    }
+
+    throw new Error(`Unknown notification type: ${JSON.stringify(tappedNotification)}`)
+  } catch (error) {
+    captureError(
+      new NotificationError({
+        error,
+        additionalMessage: "Error handling notification tap",
+      }),
+    )
+  }
 }
 
 async function addPresentedNotificationsToCache(args: {
