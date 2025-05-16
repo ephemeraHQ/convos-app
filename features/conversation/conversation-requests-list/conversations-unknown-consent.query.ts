@@ -109,7 +109,6 @@ export function getUnknownConsentConversationsQueryOptions(args: {
     meta: {
       caller,
     },
-    refetchOnWindowFocus: "always", // Because we don't want to miss any new requests
     queryKey: ["unknown-consent-conversations", inboxId],
     queryFn: enabled
       ? async () =>
@@ -117,5 +116,13 @@ export function getUnknownConsentConversationsQueryOptions(args: {
             inboxId,
           })
       : skipToken,
+  })
+}
+
+export function invalidateUnknownConsentConversationsQuery(args: { inboxId: IXmtpInboxId }) {
+  const { inboxId } = args
+
+  return reactQueryClient.invalidateQueries({
+    queryKey: ["unknown-consent-conversations", inboxId],
   })
 }

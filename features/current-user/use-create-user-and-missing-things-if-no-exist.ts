@@ -148,7 +148,10 @@ async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
   return deviceId
 }
 
-async function makeSureUserIdentitiesExist(args: { userId: IConvosUserID; deviceId: IDeviceId }) {
+async function makeSureIdentitiesExistAndAreValid(args: {
+  userId: IConvosUserID
+  deviceId: IDeviceId
+}) {
   const { userId, deviceId } = args
 
   // 3. Fetch existing identities for this user
@@ -290,7 +293,7 @@ async function createUserAndMissingThingsIfNoExist(args: {
 
   const deviceId = await makeSureUserDeviceExists({ userId })
 
-  await makeSureUserIdentitiesExist({ userId, deviceId })
+  await makeSureIdentitiesExistAndAreValid({ userId, deviceId })
 
   await makeSureIdentitiesAreLinkedToDevice({ userId, deviceId })
 }

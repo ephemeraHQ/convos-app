@@ -100,7 +100,10 @@ export const reactQueryClient = new QueryClient({
       // Prevent infinite refetch loops by manually controlling when queries should refetch when components mount
       refetchOnMount: false,
 
-      refetchOnWindowFocus: true,
+      // Disable automatic refetching on window focus since we want to control this per-query based on data staleness needs
+      refetchOnWindowFocus: false,
+
+      // For now we don't handle disconnect/reconnect ourselves so we let react-query handle it
       refetchOnReconnect: true,
 
       // Put this to "false" if we see sloweness with react-query but otherwise

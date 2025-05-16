@@ -26,6 +26,7 @@ import { isConversationGroup } from "@/features/conversation/utils/is-conversati
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useEffectOnce } from "@/hooks/use-effect-once"
 import { NavigationParamList } from "@/navigation/navigation.types"
+import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
@@ -50,8 +51,10 @@ export const ConversationListScreen = memo(function ConversationListScreen(
 
   const insets = useSafeAreaInsets()
   const currentSender = useSafeCurrentSender()
+  const router = useRouter()
 
-  // ONLY when we mount, we want to refetch messages for recent conversations
+  // We want to refetch messages for recent conversations when we mount
+  // And preload their screens to it's faster to open them
   useEffectOnce(() => {
     conversationsIds
       // Max 5 because otherwise we have performance issues
@@ -69,39 +72,26 @@ export const ConversationListScreen = memo(function ConversationListScreen(
             xmtpConversationId: conversationId,
           })
         ) {
-          logger.debug(`Refetching messages on mount for conversation ${conversationId}...`)
+          logger.debug(
+            `Refetching messages for conversation ${conversationId} because it has recent activities...`,
+          )
           refetchConversationMessagesInfiniteQuery({
             clientInboxId: currentSender.inboxId,
             xmtpConversationId: conversationId,
             caller: "ConversationListScreen on mount refetch",
-          }).catch(captureError)
+          })
+            .then(() => {
+              logger.debug(`Preloading screen for conversation ${conversationId}...`)
+              router.preload("Conversation", {
+                xmtpConversationId: conversationId,
+              })
+            })
+            .catch(captureError)
         }
       })
   })
 
   useConversationListScreenHeader()
-
-  // Temporary comment until we solve performance issues
-  // Let's preload the active conversations
-  // useEffectWhenCondition(
-  //   () => {
-  //     for (const conversationId of conversationsIds
-  //       .filter((xmtpConversationId) =>
-  //         conversationHasRecentActivities({
-  //           clientInboxId: currentSender.inboxId,
-  //           xmtpConversationId,
-  //         }),
-  //       )
-  //       // For now we don't want more than 5 conversations to be preloaded
-  //       .slice(0, 5)) {
-  //       // Preload the conversation screen
-  //       // router.preload("Conversation", {
-  //       //   xmtpConversationId: conversationId,
-  //       // })
-  //     }
-  //   },
-  //   Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
-  // )
 
   const handleRefresh = useCallback(async () => {
     try {

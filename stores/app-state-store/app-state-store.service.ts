@@ -1,10 +1,16 @@
 import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppStateStatus } from "react-native"
-import { getAllSenders } from "@/features/authentication/multi-inbox.store"
+import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  getAllowedConsentConversationsQueryData,
+  invalidateAllowedConsentConversationsQuery,
+} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
-import { useAppStateStore } from "@/stores/app-state-store/use-app-state.store"
+import { useAppStateStore } from "@/stores/app-state-store/app-state.store"
 import { captureError } from "@/utils/capture-error"
 import { logger } from "@/utils/logger/logger"
 
@@ -79,36 +85,64 @@ export const waitUntilAppActive = async () => {
   })
 }
 
-let subscribedToAppStateStore = false
+let unsubscribedFromAppStateStore: (() => void) | undefined
 
 export function startListeningToAppStateStore() {
-  if (subscribedToAppStateStore) {
-    return
+  if (unsubscribedFromAppStateStore) {
+    unsubscribedFromAppStateStore()
   }
 
-  useAppStateStore.subscribe(
+  unsubscribedFromAppStateStore = useAppStateStore.subscribe(
     (state) => state.currentState,
     (currentState, previousState) => {
       logger.debug(`App state changed from '${previousState}' to '${currentState}'`)
 
-      const isNowActive = currentState === "active" && previousState && previousState !== "active"
-      const isNowInactive =
-        (currentState === "inactive" || currentState === "background") &&
-        previousState &&
-        previousState === "active"
-      const isNowBackground = currentState === "background"
+      const isOpenFromClosed =
+        currentState === "active" && (!previousState || previousState === "active")
+      const isOpenFromBackground = currentState === "active" && previousState === "background"
+      const isGoingToBackground = currentState === "background" && previousState === "inactive"
 
-      if (isNowActive) {
-        reactQueryFocusManager.setFocused(isNowActive)
-      }
+      const senders = getAllSenders()
+      const currentSender = getCurrentSender()
 
-      if (isNowActive) {
-        startStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
+      if (isOpenFromClosed || isOpenFromBackground) {
+        // Tell react query we're now on "window focused" state
+        reactQueryFocusManager.setFocused(true)
+
+        // Start streaming
+        startStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
+
+        // Refresh notifications permissions in case they disabled them in their settings or something
         fetchOrRefetchNotificationsPermissions().catch(captureError)
+
+        if (currentSender) {
+          // Invalidate known consent conversations
+          invalidateAllowedConsentConversationsQuery({
+            clientInboxId: currentSender.inboxId,
+          }).catch(captureError)
+
+          // Invalidate unknown consent conversations
+          invalidateUnknownConsentConversationsQuery({
+            inboxId: currentSender.inboxId,
+          }).catch(captureError)
+
+          // Invalidate all current sender's allowed consent conversations
+          const allowedConsentConversationIds = getAllowedConsentConversationsQueryData({
+            clientInboxId: currentSender.inboxId,
+          })
+          if (allowedConsentConversationIds) {
+            allowedConsentConversationIds.forEach((conversationId) => {
+              invalidateConversationQuery({
+                clientInboxId: currentSender.inboxId,
+                xmtpConversationId: conversationId,
+              })
+            })
+          }
+        }
       }
 
-      if (isNowInactive || isNowBackground) {
-        stopStreaming(getAllSenders().map((sender) => sender.inboxId)).catch(captureError)
+      if (isGoingToBackground) {
+        stopStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
 
         // Try this logic later
         // useXmtpActivityStore.getState().actions.cancelAllActiveOperations(
@@ -118,9 +152,10 @@ export function startListeningToAppStateStore() {
         // )
       }
     },
+    {
+      fireImmediately: true,
+    },
   )
-
-  subscribedToAppStateStore = true
 }
 
 export function subscribeToAppStateStore(args: {

@@ -71,8 +71,6 @@ const Content = memo(function Content() {
       xmtpConversationId: xmtpConversationId,
       caller: "Conversation screen",
     }),
-    refetchOnMount: "always",
-    refetchOnWindowFocus: "always",
   })
 
   useConversationScreenHeader()

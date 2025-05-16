@@ -1,4 +1,5 @@
 import { convertConsentStateToXmtpConsentState } from "@/features/consent/consent.utils"
+import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { IConversation } from "@/features/conversation/conversation.types"
 import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
@@ -16,6 +17,7 @@ export async function convertXmtpConversationToConvosConversation(
       xmtpConversation.members(),
       xmtpConversation.creatorInboxId() as unknown as IXmtpInboxId,
       xmtpConversation.consentState(),
+      xmtpConversation.lastMessage,
     ])
 
     const addedByInboxId = xmtpConversation.addedByInboxId as unknown as IXmtpInboxId
@@ -35,6 +37,9 @@ export async function convertXmtpConversationToConvosConversation(
       creatorInboxId: creatorInboxId,
       addedByInboxId,
       createdAt: xmtpConversation.createdAt,
+      lastMessage: xmtpConversation.lastMessage
+        ? convertXmtpMessageToConvosMessage(xmtpConversation.lastMessage)
+        : undefined,
     } satisfies IGroup
   }
 
@@ -51,5 +56,8 @@ export async function convertXmtpConversationToConvosConversation(
     createdAt: xmtpConversation.createdAt,
     xmtpTopic: xmtpConversation.topic,
     consentState: convertConsentStateToXmtpConsentState(consentState),
+    lastMessage: xmtpConversation.lastMessage
+      ? convertXmtpMessageToConvosMessage(xmtpConversation.lastMessage)
+      : undefined,
   } satisfies IDm
 }

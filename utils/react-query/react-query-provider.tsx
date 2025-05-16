@@ -61,7 +61,7 @@ function PersistQueryClientProvider(props: { children: React.ReactNode }) {
         },
       }}
       onSuccess={() => {
-        persistLogger.debug("React Query client hydrated")
+        persistLogger.debug("React Query persist client hydrated")
         useAppStore.getState().actions.setReactQueryIsHydrated(true)
       }}
     >

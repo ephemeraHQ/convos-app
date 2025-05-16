@@ -1,12 +1,11 @@
 import { useNavigation } from "@react-navigation/native"
 import { useQueries } from "@tanstack/react-query"
-import React, { memo, useCallback, useEffect, useMemo } from "react"
+import React, { memo, useCallback, useMemo } from "react"
 import { Center } from "@/design-system/Center"
 import { AnimatedHStack, HStack } from "@/design-system/HStack"
 import { Icon } from "@/design-system/Icon/Icon"
 import { IVStackProps } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   ConversationListItem,
   ConversationListItemSubtitle,
@@ -14,26 +13,17 @@ import {
 } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { useConversationRequestsListItem } from "@/features/conversation/conversation-requests-list/use-conversation-requests-list-items"
-import { useConversationLastMessageIds } from "@/features/conversation/hooks/use-conversations-last-message-ids"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { ObjectTyped } from "@/utils/object-typed"
 
 export const ConversationListAwaitingRequests = memo(function ConversationListAwaitingRequests() {
   const { theme } = useAppTheme()
   const navigation = useNavigation()
   const currentSender = useSafeCurrentSender()
 
-  const {
-    likelyNotSpamConversationIds,
-    isLoading: isLoadingUknownConversations,
-    refetch: refetchUnknownConversations,
-  } = useConversationRequestsListItem()
-
-  useEffect(() => {
-    refetchUnknownConversations()
-  }, [refetchUnknownConversations])
+  const { likelyNotSpamConversationIds, isLoading: isLoadingUknownConversations } =
+    useConversationRequestsListItem()
 
   // Fetch metadata queries
   const conversationsMetadataQueryResult = useQueries({
@@ -57,23 +47,6 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     })),
   })
 
-  const { lastMessageIdByConversationId } = useConversationLastMessageIds({
-    conversationIds: likelyNotSpamConversationIds,
-  })
-
-  const lastMessageQueries = useQueries({
-    queries: ObjectTyped.entries(lastMessageIdByConversationId).map(
-      ([conversationId, messageId]) => ({
-        ...getConversationMessageQueryOptions({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: messageId,
-          xmtpConversationId: conversationId,
-          caller: "ConversationListAwaitingRequests",
-        }),
-      }),
-    ),
-  })
-
   // Combine the results
   const { numberOfRequestsLikelyNotSpam, hasUnreadMessages } = useMemo(() => {
     const numberOfRequestsLikelyNotSpam = likelyNotSpamConversationIds.length
@@ -90,9 +63,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
         return false
       }
 
-      const lastMessage = lastMessageQueries.find(
-        (query) => query.data?.xmtpConversationId === conversationId,
-      )?.data
+      const lastMessage = conversationQuery.data.lastMessage
 
       return conversationIsUnreadForInboxId({
         lastMessageSentAt: lastMessage?.sentNs ?? null,
@@ -116,8 +87,6 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
     conversationQueries,
     currentSender,
-    // eslint-disable-next-line @tanstack/query/no-unstable-deps
-    lastMessageQueries,
   ])
 
   const title = useMemo(() => {
