@@ -43,22 +43,24 @@ export async function registerPushNotifications() {
     ])
 
     const currentSender = getSafeCurrentSender()
-    const client = await getXmtpClientByInboxId({
-      inboxId: currentSender.inboxId,
-    })
     const identities = await ensureUserIdentitiesQueryData({ userId: currentUser.id })
 
-    await Promise.all(
-      identities.map((identity) =>
-        registerNotificationInstallation({
-          deviceId: currentDevice.id,
-          identityId: identity.id,
-          xmtpInstallationId: client.installationId,
-          expoToken,
-          pushToken: deviceToken,
+    await registerNotificationInstallation({
+      deviceId: currentDevice.id,
+      expoToken,
+      pushToken: deviceToken,
+      installations: await Promise.all(
+        identities.map(async (identity) => {
+          const client = await getXmtpClientByInboxId({
+            inboxId: currentSender.inboxId,
+          })
+          return {
+            identityId: identity.id,
+            xmtpInstallationId: client.installationId,
+          }
         }),
       ),
-    )
+    })
   } catch (error) {
     // Catch any error from the steps above and wrap it
     throw new NotificationError({

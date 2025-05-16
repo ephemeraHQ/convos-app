@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { IDeviceId } from "@/features/devices/devices.types"
 import { IXmtpConversationTopic, IXmtpInstallationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
@@ -8,11 +7,17 @@ import { IDeviceIdentityId } from "../convos-identities/convos-identities.api"
 
 // Schema for registration request
 const registrationRequestBodySchema = z.object({
-  deviceId: z.custom<IDeviceId>(),
-  identityId: z.custom<IDeviceIdentityId>(),
-  xmtpInstallationId: z.custom<IXmtpInstallationId>(),
-  expoToken: z.string(),
+  deviceId: z.string(),
   pushToken: z.string(),
+  expoToken: z.string(),
+  installations: z
+    .array(
+      z.object({
+        identityId: z.custom<IDeviceIdentityId>(),
+        xmtpInstallationId: z.custom<IXmtpInstallationId>(),
+      }),
+    )
+    .default([]),
 })
 
 type IRegistrationRequestBody = z.infer<typeof registrationRequestBodySchema>
