@@ -1,7 +1,7 @@
 // IconButton.styles.ts
 import { ViewStyle } from "react-native"
 import { IIconProps } from "@/design-system/Icon/Icon.types"
-import { Theme } from "../../theme/use-app-theme"
+import { ITheme } from "../../theme/use-app-theme"
 import { IIconButtonAction, IIconButtonSize, IIconButtonVariant } from "./IconButton.props"
 
 type IconButtonStyleProps = {
@@ -14,7 +14,7 @@ type IconButtonStyleProps = {
 
 export const getIconButtonViewStyle =
   ({ variant, size, action, pressed = false, disabled = false }: IconButtonStyleProps) =>
-  (theme: Theme): ViewStyle => {
+  (theme: ITheme): ViewStyle => {
     const { spacing, colors, borderRadius } = theme
 
     const style: ViewStyle = {
@@ -98,7 +98,7 @@ export const getIconButtonViewStyle =
 
 export const getIconProps =
   ({ variant, size, action, pressed = false, disabled = false }: IconButtonStyleProps) =>
-  (theme: Theme): Partial<IIconProps> => {
+  (theme: ITheme): Partial<IIconProps> => {
     const { colors, spacing } = theme
 
     const props: Partial<IIconProps> = {}

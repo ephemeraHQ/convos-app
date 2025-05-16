@@ -1,6 +1,6 @@
 import { typography } from "@theme/typography"
 import { TextStyle } from "react-native"
-import { Theme, ThemedStyle } from "@/theme/use-app-theme"
+import { ITheme, ThemedStyle } from "@/theme/use-app-theme"
 import { IInvertedTextColors, ITextColors, IWeights } from "./Text.props"
 
 export const textSizeStyles = {
@@ -39,10 +39,10 @@ export const textBaseStyle: ThemedStyle<TextStyle> = (theme) => ({
   color: theme.colors.text.primary,
 })
 
-export const textColorStyle = (theme: Theme, color: ITextColors) => ({
+export const textColorStyle = (theme: ITheme, color: ITextColors) => ({
   color: theme.colors.text[color],
 })
 
-export const invertedTextColorStyle = (theme: Theme, color: IInvertedTextColors) => ({
+export const invertedTextColorStyle = (theme: ITheme, color: IInvertedTextColors) => ({
   color: theme.colors.text.inverted[color],
 })

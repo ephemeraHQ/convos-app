@@ -28,9 +28,10 @@ import { NavigationParamList } from "@/navigation/navigation.types"
 import { navigationRef } from "@/navigation/navigation.utils"
 import { ShareProfileScreen } from "@/screens/ShareProfile"
 import { WebviewPreview } from "@/screens/WebviewPreview"
-import { useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
+import { ITheme, IThemed, useAppTheme, useThemeProvider } from "@/theme/use-app-theme"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { ensureOurError } from "@/utils/error"
+import { logger } from "@/utils/logger/logger"
 import { navigationIntegration } from "@/utils/sentry/sentry-init"
 import { hideSplashScreen } from "@/utils/splash/splash"
 
@@ -111,7 +112,12 @@ export const AppNavigator = memo(function AppNavigator() {
 
   const handleOnReady = useCallback(() => {
     navigationIntegration.registerNavigationContainer(navigationRef)
-    hideSplashScreen().catch(captureError)
+    logger.debug(`Navigator ready, now hiding splash screen...`)
+    hideSplashScreen()
+      .then(() => {
+        logger.debug(`Splash screen hidden`)
+      })
+      .catch(captureError)
   }, [])
 
   return (
@@ -137,8 +143,8 @@ const AppStacks = memo(function AppStacks() {
   const authStatus = useAuthenticationStore((state) => state.status)
 
   const isUndetermined = authStatus === "undetermined"
-  // const isOnboarding = authStatus === "onboarding"
   const isSignedOut = authStatus === "signedOut"
+  const isSignedIn = authStatus === "signedIn"
 
   return (
     <AppNativeStack.Navigator
@@ -149,105 +155,102 @@ const AppStacks = memo(function AppStacks() {
       // https://github.com/react-navigation/react-navigation/issues/11113#issuecomment-2102035739
       initialRouteName={isUndetermined ? "Idle" : isSignedOut ? "Auth" : "Chats"}
     >
-      {isUndetermined ? (
-        // Show idle screen during restoration
-        <AppNativeStack.Screen
-          name="Idle"
-          component={IdleScreen}
-          // Fade animation for auth state changes
-          options={{ animation: "fade" }}
-        />
-      ) : isSignedOut ? (
-        <AppNativeStack.Group>
-          <AppNativeStack.Screen
-            name="Auth"
-            component={AuthOnboardingScreen}
-            // Fade animation when transitioning to signed out state
-            options={{ animation: "fade" }}
-          />
-          <AppNativeStack.Screen
-            name="OnboardingCreateContactCardImportName"
-            component={AuthOnboardingContactCardImportInfoScreen}
-            options={{
-              presentation: "formSheet",
-              sheetAllowedDetents: [0.5],
-              // sheetCornerRadius: theme.borderRadius.sm, // Not sure why but adding this breaks the animation between different height transitions
-              contentStyle: {
-                backgroundColor: theme.colors.background.raised,
-              },
-            }}
-          />
-        </AppNativeStack.Group>
-      ) : (
-        //  : isOnboarding ? (
-        //   <AppNativeStack.Group>
-        //     <AppNativeStack.Screen
-        //       name="OnboardingCreateContactCard"
-        //       component={OnboardingContactCardScreen}
-        //       // Fade animation when transitioning to onboarding state
-        //       options={{ animation: "fade" }}
-        //     />
-
-        //     {/* <NativeStack.Screen
-        //       name="OnboardingNotifications"
-        //       component={OnboardingNotificationsScreen}
-        //     /> */}
-        //   </AppNativeStack.Group>
-        // )
-        // Main app screens
-        <AppNativeStack.Group>
-          <AppNativeStack.Screen
-            name="Chats"
-            component={ConversationListScreen}
-            // Fade animation when transitioning to authenticated state
-            options={{ animation: "fade" }}
-          />
-          <AppNativeStack.Screen name="Blocked" component={BlockedConversationsScreen} />
-          <AppNativeStack.Screen name="ChatsRequests" component={ConversationRequestsListScreen} />
-          <AppNativeStack.Screen
-            name="ChatsRequestsUncleared"
-            component={ConversationUnclearedRequestsScreen}
-          />
-          <AppNativeStack.Screen name="Conversation" component={ConversationScreen} />
-          <AppNativeStack.Screen
-            options={{ presentation: "modal" }}
-            name="ShareProfile"
-            component={ShareProfileScreen}
-          />
-          <AppNativeStack.Screen
-            options={{ presentation: "modal" }}
-            name="WebviewPreview"
-            component={WebviewPreview}
-          />
-          <AppNativeStack.Screen name="Profile" component={ProfileScreen} />
-          <AppNativeStack.Screen name="GroupDetails" component={GroupDetailsScreen} />
-          <AppNativeStack.Screen name="AddGroupMembers" component={AddGroupMembersScreen} />
-          <AppNativeStack.Screen
-            options={{
-              title: translate("edit_group"),
-            }}
-            name="EditGroup"
-            component={EditGroupScreen}
-          />
-          <AppNativeStack.Screen name="GroupMembersList" component={GroupMembersListScreen} />
-          <AppNativeStack.Screen
-            name="ProfileImportInfo"
-            component={ProfileImportInfoScreen}
-            options={{
-              presentation: "formSheet",
-              sheetAllowedDetents: [0.5],
-              // sheetCornerRadius: theme.borderRadius.sm, // Not sure why but adding this breaks the animation between different height transitions
-              contentStyle: {
-                backgroundColor: theme.colors.background.raised,
-              },
-            }}
-          />
-          <AppNativeStack.Screen name="AppSettings" component={AppSettingsScreen} />
-        </AppNativeStack.Group>
-      )}
+      {isUndetermined && renderUndeterminedScreens()}
+      {isSignedOut && renderSignedOutScreens(theme)}
+      {isSignedIn && renderSignedInScreens(theme)}
     </AppNativeStack.Navigator>
   )
 })
+
+function renderUndeterminedScreens() {
+  return (
+    <AppNativeStack.Screen
+      name="Idle"
+      component={IdleScreen}
+      // Fade animation for auth state changes
+      options={{ animation: "fade" }}
+    />
+  )
+}
+
+function renderSignedOutScreens(theme: ITheme) {
+  return (
+    <AppNativeStack.Group>
+      <AppNativeStack.Screen
+        name="Auth"
+        component={AuthOnboardingScreen}
+        // Fade animation when transitioning to signed out state
+        options={{ animation: "fade" }}
+      />
+      <AppNativeStack.Screen
+        name="OnboardingCreateContactCardImportName"
+        component={AuthOnboardingContactCardImportInfoScreen}
+        options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [0.5],
+          // sheetCornerRadius: theme.borderRadius.sm, // Not sure why but adding this breaks the animation between different height transitions
+          contentStyle: {
+            backgroundColor: theme.colors.background.raised,
+          },
+        }}
+      />
+    </AppNativeStack.Group>
+  )
+}
+
+function renderSignedInScreens(theme: ITheme) {
+  return (
+    <AppNativeStack.Group>
+      <AppNativeStack.Screen
+        name="Chats"
+        component={ConversationListScreen}
+        // Fade animation when transitioning to authenticated state
+        options={{ animation: "fade" }}
+      />
+      <AppNativeStack.Screen name="Blocked" component={BlockedConversationsScreen} />
+      <AppNativeStack.Screen name="ChatsRequests" component={ConversationRequestsListScreen} />
+      <AppNativeStack.Screen
+        name="ChatsRequestsUncleared"
+        component={ConversationUnclearedRequestsScreen}
+      />
+      <AppNativeStack.Screen name="Conversation" component={ConversationScreen} />
+      <AppNativeStack.Screen
+        options={{ presentation: "modal" }}
+        name="ShareProfile"
+        component={ShareProfileScreen}
+      />
+      <AppNativeStack.Screen
+        options={{ presentation: "modal" }}
+        name="WebviewPreview"
+        component={WebviewPreview}
+      />
+      <AppNativeStack.Screen name="Profile" component={ProfileScreen} />
+      <AppNativeStack.Screen name="GroupDetails" component={GroupDetailsScreen} />
+      <AppNativeStack.Screen name="AddGroupMembers" component={AddGroupMembersScreen} />
+      <AppNativeStack.Screen
+        options={{
+          title: translate("edit_group"),
+        }}
+        name="EditGroup"
+        component={EditGroupScreen}
+      />
+      <AppNativeStack.Screen name="GroupMembersList" component={GroupMembersListScreen} />
+      <AppNativeStack.Screen
+        name="ProfileImportInfo"
+        component={ProfileImportInfoScreen}
+        options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [0.5],
+          // sheetCornerRadius: theme.borderRadius.sm, // Not sure why but adding this breaks the animation between different height transitions
+          contentStyle: {
+            backgroundColor: theme.colors.background.raised,
+          },
+        }}
+      />
+      <AppNativeStack.Screen name="AppSettings" component={AppSettingsScreen} />
+    </AppNativeStack.Group>
+  )
+}
 
 // TODO: Maybe show animated splash screen or something
 function IdleScreen() {

@@ -8,7 +8,7 @@ import {
   getConversationMetadataQueryData,
   updateConversationMetadataQueryData,
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
-import { getDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
+import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { formatDateForApi } from "@/utils/convos-api/convos-api.utils"
 
@@ -24,13 +24,6 @@ export function getMarkConversationAsReadMutationOptions(args: {
   const { xmtpConversationId, caller } = args
 
   const currentSender = getSafeCurrentSender()
-  const deviceIdentity = getDeviceIdentityForInboxId(currentSender.inboxId)
-
-  if (!deviceIdentity) {
-    throw new Error(
-      `No device identity found for inbox id: ${currentSender.inboxId} in getMarkConversationAsReadMutationOptions (${caller})`,
-    )
-  }
 
   return {
     meta: {
@@ -39,6 +32,8 @@ export function getMarkConversationAsReadMutationOptions(args: {
     mutationKey: ["markConversationAsRead", xmtpConversationId],
     mutationFn: async () => {
       const readUntil = formatDateForApi(new Date())
+
+      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
 
       await markConversationMetadataAsRead({
         deviceIdentityId: deviceIdentity.id,
