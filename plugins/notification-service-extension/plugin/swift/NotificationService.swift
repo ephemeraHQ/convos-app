@@ -74,17 +74,7 @@ final class NotificationService: UNNotificationServiceExtension {
         Task {
             do {
                 // Note: Building the client might be resource-intensive for an NSE. Monitor performance.
-              guard let client = await getXmtpClient(ethAddress: ethAddress) else {
-                log.error("Failed building XMTP Client")
-                contentHandler?(currentBestAttempt)
-                return
-              }
-
-              Client.register(codec: ReplyCodec())
-              Client.register(codec: ReactionCodec())
-              Client.register(codec: ReactionV2Codec())
-              Client.register(codec: AttachmentCodec())
-              Client.register(codec: RemoteAttachmentCodec())
+              let client = try await Client.client(for: ethAddress)
 
                 // --- 4. Decrypt Message ---
                 log.debug("Attempting to find conversation by topic: ", topic)
