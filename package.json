@@ -9,7 +9,6 @@
     "android:device": "expo run:android --device",
     "android:utils:apk": "./scripts/android/send-apk.sh",
     "android:utils:reverse": "adb reverse tcp:8081 tcp:8081 && adb reverse tcp:9875 tcp:9875",
-    "eas-build-pre-install": "yarn plugins:build:notification-service-extension",
     "env:pull:dev": "npx eas-cli env:pull --environment=development --path=.env --non-interactive",
     "env:pull:preview": "npx eas-cli env:pull --environment=preview --path=.env --non-interactive",
     "env:pull:prod": "npx eas-cli env:pull --environment=production --path=.env --non-interactive",
