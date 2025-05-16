@@ -32,7 +32,7 @@ import {
   isAttachmentsMessage,
   isGroupUpdatedMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { getConversationMessagesInfiniteQueryOptions } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { DEFAULT_PAGE_SIZE, getConversationMessagesInfiniteQueryOptions } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
@@ -293,7 +293,14 @@ export const ConversationMessages = memo(function ConversationMessages() {
       scrollEventThrottle={100} // We don't need to be that accurate
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
-      ListFooterComponent={isGroup ? <ConversationInfoBanner /> : null}
+      ListFooterComponent={
+        // Want to ignore hasNextPage if we have less than DEFAULT_PAGE_SIZE messages
+        // because for some reason sometimes hasNextPage was true even tho we didn't have more.
+        // It's just since we haven't triggering fetching more once.
+        (messageIds.length < DEFAULT_PAGE_SIZE || !hasNextPage) && isGroup ? (
+          <ConversationInfoBanner />
+        ) : null
+      }
       getItemType={getItemType}
       estimatedListSize={{
         height: theme.layout.screen.height,
