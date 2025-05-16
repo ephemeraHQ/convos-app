@@ -8,6 +8,7 @@ import { Alert, Platform } from "react-native"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { runOnJS } from "react-native-reanimated"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
+import { useXmtpLogFilesModalStore } from "@/components/xmtp-log-files-modal"
 import { config } from "@/config"
 import { useLogout } from "@/features/authentication/use-logout"
 import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
@@ -39,9 +40,7 @@ import { showActionSheet } from "./action-sheet"
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
 
-  const showDebugMenu = useShowDebugMenu({
-    setLogFilesModalVisible: () => {},
-  })
+  const showDebugMenu = useShowDebugMenu()
 
   const longPressGesture = Gesture.LongPress()
     .onStart(() => {
@@ -53,11 +52,7 @@ export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: Re
   return <GestureDetector gesture={longPressGesture}>{children}</GestureDetector>
 })
 
-function useShowDebugMenu({
-  setLogFilesModalVisible,
-}: {
-  setLogFilesModalVisible: (visible: boolean) => void
-}) {
+function useShowDebugMenu() {
   const { logout } = useLogout()
   const { currentlyRunning } = Updates.useUpdates()
 
@@ -89,7 +84,7 @@ function useShowDebugMenu({
         })
       },
       "View Libxmtp File Logs": async () => {
-        setLogFilesModalVisible(true)
+        useXmtpLogFilesModalStore.getState().actions.setVisible(true)
       },
       "Clear Libxmtp File Logs": async () => {
         Alert.alert(
@@ -169,7 +164,7 @@ function useShowDebugMenu({
         }
       },
     })
-  }, [setLogFilesModalVisible])
+  }, [])
 
   const showNotificationsMenu = useCallback(() => {
     const notificationsMethods = {
