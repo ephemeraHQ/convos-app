@@ -27,13 +27,33 @@ import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureError } from "@/utils/capture-error"
 import { AuthenticationError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
-import { authLogger } from "@/utils/logger/logger"
+import { logger } from "@/utils/logger/logger"
 import { tryCatch } from "@/utils/try-catch"
 import {
   getDevicePushNotificationsToken,
   getExpoPushNotificationsToken,
 } from "../notifications/notifications-token"
 import { fetchCurrentUser } from "./current-user.api"
+
+/**
+ * Ensures user profile exists in backend after Turnkey signup, creating it if missing
+ * This handles edge cases like app closure during onboarding
+ */
+export function useCreateUserAndMissingThingsIfNoExist() {
+  const { user } = useTurnkey()
+  const authStatus = useAuthenticationStore((state) => state.status)
+
+  useEffect(() => {
+    if (authStatus !== "signedIn" || !user) {
+      return
+    }
+
+    createUserAndMissingThingsIfNoExist({
+      turnkeyUserId: user.id as ITurnkeyUserId,
+      ethAddress: user.wallets[0].accounts[0].address as IEthereumAddress,
+    }).catch(captureError)
+  }, [authStatus, user])
+}
 
 /**
  * Handles the device registration and identity creation/linking flow
@@ -55,7 +75,7 @@ async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
 
     if (device) {
       backendFoundDeviceId = device.id
-      authLogger.debug(`Found existing device ${deviceId}`)
+      logger.debug(`Found existing device ${deviceId}`)
     } else {
       captureError(
         new AuthenticationError({
@@ -75,7 +95,7 @@ async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
 
         if (currentDevice) {
           backendFoundDeviceId = currentDevice.id
-          authLogger.debug(`Found existing device ${deviceId} in list of devices for user`)
+          logger.debug(`Found existing device ${deviceId} in list of devices for user`)
         }
       } else {
         throw new AuthenticationError({
@@ -86,7 +106,7 @@ async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
     }
 
     if (!backendFoundDeviceId) {
-      authLogger.debug("Can't find device in backend from deviceId in SecureStore")
+      logger.debug("Can't find device in backend from deviceId in SecureStore")
       deviceId = null
     }
   }
@@ -106,12 +126,12 @@ async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
     }
 
     try {
-      authLogger.debug("Creating new device...")
+      logger.debug("Creating new device...")
       const device = await createDevice({
         userId,
         device: deviceInput,
       })
-      authLogger.debug("Created new device")
+      logger.debug("Created new device")
       setUserDeviceQueryData({ userId, device })
       await storeDeviceId({ userId, deviceId: device.id })
       deviceId = device.id
@@ -138,7 +158,7 @@ async function makeSureUserIdentitiesExist(args: { userId: IConvosUserID; device
     })
   }
 
-  authLogger.debug(`Found ${existingIdentities.length} existing identities for user ${userId}`)
+  logger.debug(`Found ${existingIdentities.length} existing identities for user ${userId}`)
 
   const senders = getAllSenders()
 
@@ -147,7 +167,7 @@ async function makeSureUserIdentitiesExist(args: { userId: IConvosUserID; device
   )
 
   for (const sender of missingIdentities) {
-    authLogger.debug(`Creating missing device identities for ${sender.inboxId}...`)
+    logger.debug(`Creating missing device identities for ${sender.inboxId}...`)
     // 4. If no identities, create one
     await createIdentity({
       deviceId,
@@ -156,7 +176,7 @@ async function makeSureUserIdentitiesExist(args: { userId: IConvosUserID; device
         xmtpId: sender.inboxId,
       },
     })
-    authLogger.debug(`Created new identity for sender ${sender.inboxId} for device`)
+    logger.debug(`Created new identity for sender ${sender.inboxId} for device`)
   }
 }
 
@@ -166,7 +186,7 @@ async function makeSureIdentitiesAreLinkedToDevice(args: {
 }) {
   const { userId, deviceId } = args
 
-  authLogger.debug(`Linking identities to device ${deviceId} for user ${userId}...`)
+  logger.debug(`Linking identities to device ${deviceId} for user ${userId}...`)
 
   const { data: existingIdentities, error: fetchUserIdentitiesError } = await tryCatch(
     ensureUserIdentitiesQueryData({ userId }),
@@ -185,11 +205,16 @@ async function makeSureIdentitiesAreLinkedToDevice(args: {
     ),
   )
 
-  authLogger.debug(`Identities linked to device ${deviceId} for user ${userId}`)
+  logger.debug(`Identities linked to device ${deviceId} for user ${userId}`)
 }
 
-async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEthereumAddress }) {
+async function createUserAndMissingThingsIfNoExist(args: {
+  turnkeyUserId: ITurnkeyUserId
+  ethAddress: IEthereumAddress
+}) {
   const { turnkeyUserId, ethAddress } = args
+
+  logger.debug("Starting to create user and missing things if no exist...")
 
   // First check if user exists
   const { data: currentUser, error: fetchCurrentUserError } = await tryCatch(fetchCurrentUser())
@@ -203,7 +228,7 @@ async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEth
 
   // Create user if doesn't exist
   if (needToCreateUserBecauseOf404) {
-    authLogger.debug("User doesn't exist in the backend, creating new user...")
+    logger.debug("User doesn't exist in the backend, creating new user...")
 
     const currentSender = getSafeCurrentSender()
     const xmtpClient = await getXmtpClientByInboxId({
@@ -217,7 +242,7 @@ async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEth
       xmtpInstallationId: xmtpClient.installationId,
     })
 
-    authLogger.debug("New user created!")
+    logger.debug("New user created!")
     userId = createdUser.id
   } else if (!currentUser) {
     throw new AuthenticationError({
@@ -233,26 +258,6 @@ async function startFlow(args: { turnkeyUserId: ITurnkeyUserId; ethAddress: IEth
   await makeSureUserIdentitiesExist({ userId, deviceId })
 
   await makeSureIdentitiesAreLinkedToDevice({ userId, deviceId })
-}
-
-/**
- * Ensures user profile exists in backend after Turnkey signup, creating it if missing
- * This handles edge cases like app closure during onboarding
- */
-export function useCreateUserIfNoExist() {
-  const { user } = useTurnkey()
-  const authStatus = useAuthenticationStore((state) => state.status)
-
-  useEffect(() => {
-    if (authStatus !== "signedIn" || !user) {
-      return
-    }
-
-    startFlow({
-      turnkeyUserId: user.id as ITurnkeyUserId,
-      ethAddress: user.wallets[0].accounts[0].address as IEthereumAddress,
-    }).catch(captureError)
-  }, [authStatus, user])
 }
 
 const firstNames = [

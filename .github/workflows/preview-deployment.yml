@@ -93,6 +93,11 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      # Need this here because the "Setup EAS" setup will execute npx expo config and will need the "build" folder of the plugin to be there
+      - name: Build iOS notification extension plugin
+        run: |
+          yarn plugins:build:notification-service-extension
+
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:

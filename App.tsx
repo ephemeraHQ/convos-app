@@ -10,7 +10,7 @@ import { useIsCurrentVersionEnough } from "@/features/app-settings/hooks/use-is-
 import { TurnkeyProvider } from "@/features/authentication/turnkey.provider"
 import { useRefreshJwtAxiosInterceptor } from "@/features/authentication/use-refresh-jwt.axios-interceptor"
 import { startListeningToAuthenticationStore } from "@/features/authentication/use-start-listening-to-auth-store"
-import { useCreateUserIfNoExist } from "@/features/current-user/use-create-user-and-missing-things-if-no-exist"
+import { useCreateUserAndMissingThingsIfNoExist } from "@/features/current-user/use-create-user-and-missing-things-if-no-exist"
 import { useNotificationListeners } from "@/features/notifications/notifications-listeners"
 import { useStartListeningForNotificationsPermissionsQuery } from "@/features/notifications/notifications-permissions.query"
 import { useCoinbaseWalletListener } from "@/features/wallets/utils/coinbase-wallet"
@@ -81,7 +81,7 @@ export const App = Sentry.wrap(function App() {
 const Handlers = memo(function Handlers() {
   useIsCurrentVersionEnough()
   useRefreshJwtAxiosInterceptor()
-  useCreateUserIfNoExist()
+  useCreateUserAndMissingThingsIfNoExist()
   useNotificationListeners()
   useReactQueryInit()
   useStartListeningForNotificationsPermissionsQuery()
