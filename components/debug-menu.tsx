@@ -29,7 +29,7 @@ import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { getEnv } from "@/utils/getEnv"
+import { getEnv, isProd } from "@/utils/getEnv"
 import { Haptics } from "@/utils/haptics"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
@@ -41,8 +41,10 @@ import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-us
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
 
-  // Only enable debug menu for debug users. Add a debug user by adding their lowercase Ethereum address to config.debugEthAddresses.
-  const isDebugUser = currentUserIsDebugUser()
+  // Check if debug menu should be available:
+  // - In production: only for debug users
+  // - In development/preview: for all users
+  const isDebugUser = !isProd || currentUserIsDebugUser()
 
   const showDebugMenu = useShowDebugMenu()
 
