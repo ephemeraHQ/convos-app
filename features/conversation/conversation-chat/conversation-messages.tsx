@@ -293,7 +293,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       scrollEventThrottle={100} // We don't need to be that accurate
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ConsentPopup}
-      ListFooterComponent={isGroup ? <ConversationInfoBanner /> : null}
+      ListFooterComponent={isGroup && !hasNextPage ? <ConversationInfoBanner /> : null}
       getItemType={getItemType}
       estimatedListSize={{
         height: theme.layout.screen.height,
