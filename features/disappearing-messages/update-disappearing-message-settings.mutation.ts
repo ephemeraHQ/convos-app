@@ -9,17 +9,18 @@ export const useUpdateDisappearingMessageSettings = () => {
       clientInboxId: IXmtpInboxId
       conversationId: IXmtpConversationId
       retentionDurationInNs: number
+      clearChat?: boolean
     }) => {
-      const { clientInboxId, conversationId, retentionDurationInNs } = args
+      const { clientInboxId, conversationId, retentionDurationInNs, clearChat } = args
 
       return updateXmtpDisappearingMessageSettings({
         clientInboxId,
         conversationId,
         retentionDurationInNs,
+        clearChat,
       })
     },
     onSettled: (data, error, variables) => {
-      console.log("goo")
       invalidateDisappearingMessageSettings({
         clientInboxId: variables.clientInboxId,
         conversationId: variables.conversationId,

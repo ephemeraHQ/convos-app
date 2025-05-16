@@ -4,6 +4,7 @@ import {
   isDisappearingMessagesEnabled,
   updateDisappearingMessageSettings,
 } from "@xmtp/react-native-sdk"
+import { CLEAR_CHAT_TIMESTAMP } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
@@ -69,8 +70,9 @@ export async function updateXmtpDisappearingMessageSettings(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
   retentionDurationInNs: number
+  clearChat?: boolean
 }) {
-  const { clientInboxId, conversationId, retentionDurationInNs } = args
+  const { clientInboxId, conversationId, retentionDurationInNs, clearChat } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -78,10 +80,14 @@ export async function updateXmtpDisappearingMessageSettings(args: {
     })
 
     await wrapXmtpCallWithDuration("updateDisappearingMessageSettings", async () => {
+      const timestamp = clearChat 
+        ? CLEAR_CHAT_TIMESTAMP // Use earliest possible timestamp (1) to clear all messages
+        : getTodayNs()
+      
       return updateDisappearingMessageSettings(
         client.installationId,
         conversationId,
-        getTodayNs(),
+        timestamp,
         retentionDurationInNs,
       )
     })

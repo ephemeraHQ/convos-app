@@ -4,7 +4,10 @@ import {
   isGroupUpdatedMessage,
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import {
+  refetchConversationMessagesInfiniteQuery,
+  addMessageToConversationMessagesInfiniteQueryData
+} from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { invalidateDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
@@ -23,6 +26,7 @@ import {
   IGroupUpdatedMetadataEntryFieldName,
 } from "../conversation/conversation-chat/conversation-message/conversation-message.types"
 import { convertXmtpMessageToConvosMessage } from "../conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
+import { MIN_RETENTION_DURATION_NS } from "@/features/disappearing-messages/disappearing-messages.constants"
 
 export async function startMessageStreaming(args: { clientInboxId: IXmtpInboxId }) {
   const { clientInboxId } = args
@@ -160,6 +164,27 @@ function handleNewGroupUpdatedMessage(args: {
         conversationId: message.xmtpConversationId,
         caller: "handleNewGroupUpdatedMessage",
       }).catch(captureError)
+      
+      // Check if this is a clear chat operation - look for value of 1
+      const clearChatField = disappearingMessageFields.find(
+        field => parseInt(field.newValue, 10) === MIN_RETENTION_DURATION_NS
+      )
+      
+      if (clearChatField) {
+        // This is a clear chat event - refresh the message list
+        streamLogger.debug("Clear chat event detected, refreshing messages")
+        
+        refetchConversationMessagesInfiniteQuery({
+          clientInboxId: inboxId,
+          xmtpConversationId: message.xmtpConversationId,
+          caller: "ClearChatEvent",
+        }).catch(error => 
+          captureError(new StreamError({
+            error,
+            additionalMessage: "Failed to refresh messages after clear chat event",
+          }))
+        )
+      }
     }
 
     const groupUpdateFields = message.content.metadataFieldsChanged.filter(
