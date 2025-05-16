@@ -47,7 +47,7 @@ export const shared = {
     scheme: Constants.expoConfig?.scheme as string,
     name: Constants.expoConfig?.name as string,
     version: Constants.expoConfig?.version as string,
-    buildNumber: Number(Application.nativeBuildVersion || 0),
+    buildNumber: Number(Application?.nativeBuildVersion || 0),
     storeUrl: "",
     bundleId,
     universalLinks: [appConfigExtra.webDomain].flatMap((domain) => [
