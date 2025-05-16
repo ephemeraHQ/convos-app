@@ -1,7 +1,7 @@
 import { LinkingOptions, NavigationContainer } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import * as Linking from "expo-linking"
-import React, { memo, useEffect } from "react"
+import React, { memo, useCallback } from "react"
 import { config } from "@/config"
 import { AppSettingsScreen } from "@/features/app-settings/app-settings.screen"
 import { AuthOnboardingContactCardImportInfoScreen } from "@/features/auth-onboarding/screens/auth-onboarding-contact-card-import-info.screen"
@@ -109,15 +109,18 @@ export const AppNavigator = memo(function AppNavigator() {
     )
   })
 
+  const handleOnReady = useCallback(() => {
+    navigationIntegration.registerNavigationContainer(navigationRef)
+    hideSplashScreen().catch(captureError)
+  }, [])
+
   return (
     <ThemeProvider value={{ themeScheme, setThemeContextOverride }}>
       <NavigationContainer<NavigationParamList>
         theme={navigationTheme}
         linking={linking}
         ref={navigationRef}
-        onReady={() => {
-          navigationIntegration.registerNavigationContainer(navigationRef)
-        }}
+        onReady={handleOnReady}
       >
         <DeepLinkHandler />
         <AppStacks />
@@ -132,12 +135,6 @@ const AppStacks = memo(function AppStacks() {
   const { theme } = useAppTheme()
 
   const authStatus = useAuthenticationStore((state) => state.status)
-
-  useEffect(() => {
-    if (authStatus !== "undetermined") {
-      hideSplashScreen().catch(captureError)
-    }
-  }, [authStatus])
 
   const isUndetermined = authStatus === "undetermined"
   // const isOnboarding = authStatus === "onboarding"

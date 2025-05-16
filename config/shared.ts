@@ -1,4 +1,4 @@
-import Application from "expo-application"
+import * as Application from "expo-application"
 import Constants from "expo-constants"
 import { Platform } from "react-native"
 import { IExpoAppConfigExtra } from "@/app.config"

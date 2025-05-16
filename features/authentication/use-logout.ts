@@ -27,84 +27,97 @@ export const useLogout = () => {
 
       try {
         const senders = getAllSenders()
+        const hasAtLeastOneSender = senders.length > 0
 
-        const [unsubscribeNotificationsResults, streamingResult, unlinkIdentitiesResults] =
-          await customPromiseAllSettled([
-            // Unsubscribe from conversations notifications
-            Promise.all(
-              senders.map((sender) =>
-                unsubscribeFromAllConversationsNotifications({
-                  clientInboxId: sender.inboxId,
-                }),
-              ),
-            ),
-            // Stop streaming
-            stopStreaming(senders.map((sender) => sender.inboxId)),
-            // Unlink identities from device
-            new Promise<void>(async (resolve, reject) => {
-              const currentUser = getCurrentUserQueryData()
-              if (!currentUser) {
-                // Ignore the flow if we don't have a current user
-                return resolve()
-              }
-              const currentDevice = await ensureUserDeviceQueryData({
-                userId: currentUser.id,
-              })
-              const currentUserIdentities = await ensureUserIdentitiesQueryData({
-                userId: currentUser.id,
-              })
-              await Promise.all(
-                currentUserIdentities.map((identity) =>
-                  unlinkIdentityFromDeviceMutation({
-                    identityId: identity.id,
-                    deviceId: currentDevice.id,
+        if (hasAtLeastOneSender) {
+          const [unsubscribeNotificationsResults, streamingResult, unlinkIdentitiesResults] =
+            await customPromiseAllSettled([
+              // Unsubscribe from conversations notifications
+              Promise.all(
+                senders.map((sender) =>
+                  unsubscribeFromAllConversationsNotifications({
+                    clientInboxId: sender.inboxId,
                   }),
                 ),
-              )
-              resolve()
-            }),
-          ])
+              ),
+              // Stop streaming
+              stopStreaming(senders.map((sender) => sender.inboxId)),
+              // Unlink identities from device
+              new Promise<void>(async (resolve, reject) => {
+                try {
+                  const currentUser = getCurrentUserQueryData()
+                  if (!currentUser) {
+                    // Ignore the flow if we don't have a current user
+                    return resolve()
+                  }
+                  const currentDevice = await ensureUserDeviceQueryData({
+                    userId: currentUser.id,
+                  })
+                  const currentUserIdentities = await ensureUserIdentitiesQueryData({
+                    userId: currentUser.id,
+                  })
+                  await Promise.all(
+                    currentUserIdentities.map((identity) =>
+                      unlinkIdentityFromDeviceMutation({
+                        identityId: identity.id,
+                        deviceId: currentDevice.id,
+                      }),
+                    ),
+                  )
+                  resolve()
+                } catch (error) {
+                  reject(error)
+                }
+              }),
+            ])
 
-        if (unsubscribeNotificationsResults.status === "rejected") {
-          captureError(
-            new GenericError({
-              error: unsubscribeNotificationsResults.reason,
-              additionalMessage: "Error unsubscribing from conversations notifications",
-            }),
-          )
-        }
+          if (unsubscribeNotificationsResults.status === "rejected") {
+            captureError(
+              new GenericError({
+                error: unsubscribeNotificationsResults.reason,
+                additionalMessage: "Error unsubscribing from conversations notifications",
+              }),
+            )
+          }
 
-        if (streamingResult.status === "rejected") {
-          captureError(
-            new GenericError({
-              error: streamingResult.reason,
-              additionalMessage: "Error stopping streaming",
-            }),
-          )
-        }
+          if (streamingResult.status === "rejected") {
+            captureError(
+              new GenericError({
+                error: streamingResult.reason,
+                additionalMessage: "Error stopping streaming",
+              }),
+            )
+          }
 
-        if (unlinkIdentitiesResults.status === "rejected") {
-          captureError(
-            new GenericError({
-              error: unlinkIdentitiesResults.reason,
-              additionalMessage: "Error unregistering push notifications",
-            }),
-          )
+          if (unlinkIdentitiesResults.status === "rejected") {
+            captureError(
+              new GenericError({
+                error: unlinkIdentitiesResults.reason,
+                additionalMessage: "Error unregistering push notifications",
+              }),
+            )
+          }
+
+          try {
+            await Promise.all(
+              senders.map((sender) =>
+                logoutXmtpClient({
+                  inboxId: sender.inboxId,
+                }),
+              ),
+            )
+          } catch (error) {
+            captureError(new GenericError({ error, additionalMessage: "Error logging out xmtp" }))
+          }
         }
 
         try {
-          await Promise.all(
-            senders.map((sender) =>
-              logoutXmtpClient({
-                inboxId: sender.inboxId,
-              }),
-            ),
-          )
+          await clearTurnkeySessions()
         } catch (error) {
-          captureError(new GenericError({ error, additionalMessage: "Error logging out xmtp" }))
+          captureError(
+            new GenericError({ error, additionalMessage: "Error clearing turnkey sessions" }),
+          )
         }
-
-        await clearTurnkeySessions()
 
         // Doing this at the end because we want to make sure that we cleared everything before showing auth screen
         useAuthenticationStore.getState().actions.setStatus("signedOut")
