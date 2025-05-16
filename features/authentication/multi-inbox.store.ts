@@ -43,8 +43,14 @@ const initialState: IMultiInboxStoreState = {
   senders: [],
 }
 
-const STORE_NAME = "multi-inbox-store-v1" // NEVER CHANGE THIS
-const CURRENT_STORE_VERSION = 1 // NEVER CHANGE THIS unless you know what you are doing
+// NEVER CHANGE THIS unless you know what you are doing
+// This is the key used in the persistent storage
+const STORE_NAME = "multi-inbox-store-v1"
+const STORE_KEY_NAME = STORE_NAME
+
+// NEVER CHANGE THIS unless you know what you are doing
+// This can be used when we want to clear the cache of the store because we changed the store structure
+const CURRENT_STORE_VERSION = 1
 
 // Helper to check if two senders are the same
 function isSameSender(a: CurrentSender, b: CurrentSender): boolean {
@@ -59,7 +65,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
         actions: {
           reset: () => {
             set(initialState)
-            multiInboxStorage.removeItem(STORE_NAME)
+            multiInboxStorage.removeItem(STORE_KEY_NAME)
           },
 
           setCurrentSender: (sender) => {
@@ -149,11 +155,15 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
         },
       }),
       {
-        name: STORE_NAME, // This name is used as the key within the storage
+        name: STORE_NAME, // DON'T CHANGE THIS unless you know what you are doing
+        version: CURRENT_STORE_VERSION, // DON'T CHANGE THIS unless you know what you are doing
         storage: multiInboxStorage,
-        version: CURRENT_STORE_VERSION,
         partialize: (state) => {
-          const { actions, ...rest } = state
+          const {
+            // We never want the actions in the persisted state
+            actions,
+            ...rest
+          } = state
           return rest
         },
         migrate,
@@ -180,7 +190,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
 // Need this since we changed the way we store the data in the storage so need to take what was in old storage and migrate it to the new storage
 async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewStorage: number) {
   logger.debug(
-    `MultiInboxStore: Migrate check. Version in new storage ('${STORE_NAME}'): ${oldVersionInNewStorage}. Current code version: ${CURRENT_STORE_VERSION}.`,
+    `MultiInboxStore: Migrate check. Version in new storage ('${STORE_KEY_NAME}'): ${oldVersionInNewStorage}. Current code version: ${CURRENT_STORE_VERSION}.`,
   )
   const newStorageState = persistedStateFromNewStorage as IMultiInboxStoreState | null
 
@@ -189,7 +199,7 @@ async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewSto
   // or it's already up-to-date.
   if (newStorageState?.currentSender) {
     logger.debug(
-      `MultiInboxStore: New storage ('${STORE_NAME}') is already populated (currentSender exists, version ${oldVersionInNewStorage}). Prioritizing this state. No migration from old 'mmkv.default' needed.`,
+      `MultiInboxStore: New storage ('${STORE_KEY_NAME}') is already populated (currentSender exists, version ${oldVersionInNewStorage}). Prioritizing this state. No migration from old 'mmkv.default' needed.`,
     )
     // If oldVersionInNewStorage < CURRENT_STORE_VERSION, Zustand will update the version
     // when it saves this state back.
@@ -201,7 +211,7 @@ async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewSto
   // then there's nothing to migrate from old storage because new storage is "correctly empty" and current.
   if (oldVersionInNewStorage >= CURRENT_STORE_VERSION) {
     logger.debug(
-      `MultiInboxStore: New storage ('${STORE_NAME}') is not populated but its version (${oldVersionInNewStorage}) is current. No migration from old 'mmkv.default' needed.`,
+      `MultiInboxStore: New storage ('${STORE_KEY_NAME}') is not populated but its version (${oldVersionInNewStorage}) is current. No migration from old 'mmkv.default' needed.`,
     )
     return newStorageState // Which would be null or an empty state shell
   }
@@ -209,14 +219,14 @@ async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewSto
   // Priority 3: New storage is empty/unpopulated AND its version is outdated.
   // Now, try to load from the old 'mmkv.default' storage.
   logger.debug(
-    `MultiInboxStore: New storage ('${STORE_NAME}') is not populated (or version ${oldVersionInNewStorage} is outdated). Attempting to load from old 'mmkv.default' storage.`,
+    `MultiInboxStore: New storage ('${STORE_KEY_NAME}') is not populated (or version ${oldVersionInNewStorage} is outdated). Attempting to load from old 'mmkv.default' storage.`,
   )
   try {
-    const rawOldStateString = await oldMultiInboxStorage.getItem(STORE_NAME)
+    const rawOldStateString = await oldMultiInboxStorage.getItem(STORE_KEY_NAME)
 
     if (rawOldStateString && typeof rawOldStateString === "string") {
       logger.debug(
-        `MultiInboxStore: Found data in old 'mmkv.default' storage (key '${STORE_NAME}'). Attempting to migrate.`,
+        `MultiInboxStore: Found data in old 'mmkv.default' storage (key '${STORE_KEY_NAME}'). Attempting to migrate.`,
       )
       const parsedOldJson = JSON.parse(rawOldStateString) as {
         state: IMultiInboxStoreState
@@ -231,15 +241,15 @@ async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewSto
         )
 
         try {
-          await oldMultiInboxStorage.removeItem(STORE_NAME)
+          await oldMultiInboxStorage.removeItem(STORE_KEY_NAME)
           logger.debug(
-            `MultiInboxStore: Successfully removed data from old 'mmkv.default' storage (key '${STORE_NAME}').`,
+            `MultiInboxStore: Successfully removed data from old 'mmkv.default' storage (key '${STORE_KEY_NAME}').`,
           )
         } catch (removeError) {
           captureError(
             new GenericError({
               error: removeError,
-              additionalMessage: `MultiInboxStore: Failed to remove item '${STORE_NAME}' from old 'mmkv.default' storage after successful read. Migrated data will still be used by the new store.`,
+              additionalMessage: `MultiInboxStore: Failed to remove item '${STORE_KEY_NAME}' from old 'mmkv.default' storage after successful read. Migrated data will still be used by the new store.`,
             }),
           )
         }
@@ -250,14 +260,14 @@ async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewSto
       )
     } else {
       logger.debug(
-        `MultiInboxStore: No data found in old 'mmkv.default' storage (key '${STORE_NAME}'). User might be new, or migration already occurred and old data was cleaned.`,
+        `MultiInboxStore: No data found in old 'mmkv.default' storage (key '${STORE_KEY_NAME}'). User might be new, or migration already occurred and old data was cleaned.`,
       )
     }
   } catch (error) {
     captureError(
       new GenericError({
         error,
-        additionalMessage: `MultiInboxStore: Error during fetch/parse from old 'mmkv.default' storage (key '${STORE_NAME}') in migration.`,
+        additionalMessage: `MultiInboxStore: Error during fetch/parse from old 'mmkv.default' storage (key '${STORE_KEY_NAME}') in migration.`,
       }),
     )
   }
