@@ -8,21 +8,21 @@ import { IEthereumAddress } from "@/utils/evm/address"
 import { logger } from "@/utils/logger/logger"
 import { multiInboxStorage, oldMultiInboxStorage } from "@/utils/storage/storages"
 
-export type CurrentSender = {
+export type ISender = {
   ethereumAddress: IEthereumAddress
   inboxId: IXmtpInboxId
 }
 
 type IMultiInboxStoreState = {
-  currentSender: CurrentSender | undefined
-  senders: CurrentSender[]
+  currentSender: ISender | undefined
+  senders: ISender[]
 }
 
 type IMultiInboxStoreActions = {
   reset: () => void
   setCurrentSender: (
     sender:
-      | CurrentSender
+      | ISender
       // We let users pass in a partial CurrentSender object and we will find the full object in the store using "senders"
       | { ethereumAddress: IEthereumAddress }
       | { inboxId: IXmtpInboxId }
@@ -53,7 +53,7 @@ const STORE_KEY_NAME = STORE_NAME
 const CURRENT_STORE_VERSION = 1
 
 // Helper to check if two senders are the same
-function isSameSender(a: CurrentSender, b: CurrentSender): boolean {
+function isSameSender(a: ISender, b: ISender): boolean {
   return a.ethereumAddress === b.ethereumAddress && a.inboxId === b.inboxId
 }
 
@@ -77,7 +77,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
 
             // Case 1: Full CurrentSender object
             if ("ethereumAddress" in sender && "inboxId" in sender) {
-              const fullSender = sender as CurrentSender
+              const fullSender = sender as ISender
 
               // Check if this sender already exists in our list
               const existingIndex = senders.findIndex((s) => isSameSender(s, fullSender))
@@ -97,7 +97,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
             }
 
             // Case 2: Find by ethereumAddress or inboxId
-            let foundSender: CurrentSender | undefined
+            let foundSender: ISender | undefined
 
             if ("ethereumAddress" in sender) {
               foundSender = senders.find((s) => s.ethereumAddress === sender.ethereumAddress)
@@ -117,7 +117,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
           removeSender: (senderIdentifier) =>
             set((state) => {
               // Find the sender to remove
-              let senderToRemove: CurrentSender | undefined
+              let senderToRemove: ISender | undefined
 
               if ("ethereumAddress" in senderIdentifier) {
                 senderToRemove = state.senders.find(
@@ -133,13 +133,12 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
 
               // Remove from senders list
               const newSenders = state.senders.filter(
-                (s) => !isSameSender(s, senderToRemove as CurrentSender),
+                (s) => !isSameSender(s, senderToRemove as ISender),
               )
 
               // Update current sender if needed
               const isRemovingCurrentSender =
-                state.currentSender &&
-                isSameSender(state.currentSender, senderToRemove as CurrentSender)
+                state.currentSender && isSameSender(state.currentSender, senderToRemove as ISender)
 
               const newCurrentSender = isRemovingCurrentSender
                 ? newSenders.length > 0
@@ -284,11 +283,11 @@ export function useCurrentSender() {
   return useMultiInboxStore((state) => state.currentSender)
 }
 
-export function getCurrentSender(): CurrentSender | undefined {
+export function getCurrentSender(): ISender | undefined {
   return useMultiInboxStore.getState().currentSender
 }
 
-export function getSafeCurrentSender(): CurrentSender {
+export function getSafeCurrentSender(): ISender {
   const currentSender = getCurrentSender()
   if (!currentSender) {
     throw new Error("No current sender in getSafeCurrentSender")
@@ -296,7 +295,7 @@ export function getSafeCurrentSender(): CurrentSender {
   return currentSender
 }
 
-export function useSafeCurrentSender(): CurrentSender {
+export function useSafeCurrentSender(): ISender {
   const currentSender = useCurrentSender()
   if (!currentSender) {
     throw new Error("No current sender in useSafeCurrentSender")
@@ -304,7 +303,7 @@ export function useSafeCurrentSender(): CurrentSender {
   return currentSender
 }
 
-export function isCurrentSender(sender: Partial<CurrentSender>) {
+export function isCurrentSender(sender: Partial<ISender>) {
   const currentSender = getSafeCurrentSender()
   if (!sender) return false
   return (

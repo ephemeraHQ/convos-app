@@ -1,6 +1,7 @@
 // While eslint-plugin-react-native fix to handle eslint flat config (https://github.com/Intellicode/eslint-plugin-react-native/issues/333#issuecomment-2150582430)
 import { fixupPluginRules } from "@eslint/compat"
 import pluginQuery from "@tanstack/eslint-plugin-query"
+import pluginEsx from "eslint-plugin-es-x"
 import pluginImport from "eslint-plugin-import"
 import pluginReact from "eslint-plugin-react"
 import pluginReactHooks from "eslint-plugin-react-hooks"
@@ -23,6 +24,7 @@ const config = {
     "react-hooks": pluginReactHooks,
     "react-native": fixupPluginRules(pluginReactNative),
     "custom-plugin": customPlugin,
+    "es-x": pluginEsx,
   },
   rules: {
     ...tsESLint.configs["recommended"].rules,
@@ -31,6 +33,8 @@ const config = {
     ...pluginReactHooks.configs["recommended"].rules,
     ...pluginReactNative.configs["all"].rules,
     ...pluginQuery.configs["recommended"].rules,
+
+    "es-x/no-promise-all-settled": "error",
 
     "@tanstack/query/exhaustive-deps": "error",
     "@tanstack/query/no-rest-destructuring": "warn",

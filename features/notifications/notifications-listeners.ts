@@ -21,6 +21,7 @@ import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
 import { measureTimeAsync } from "@/utils/perf/perf-timer"
+import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 
 export function useNotificationListeners() {
@@ -36,7 +37,7 @@ export function useNotificationListeners() {
       if (response) {
         const lastHandledNotificationId = useNotificationsStore.getState().lastHandledNotificationId
         if (lastHandledNotificationId !== response.notification.request.identifier) {
-          notificationsLogger.debug(`Handling last notification response:`, response)
+          notificationsLogger.debug(`Handling last notification:`, response)
           handleNotification(response).catch(captureError)
         }
       }
@@ -87,7 +88,6 @@ async function handleNotification(response: Notifications.NotificationResponse) 
   try {
     const tappedNotification = response.notification
 
-    console.log("tappedNotification.request.identifier:", tappedNotification.request.identifier)
     useNotificationsStore
       .getState()
       .actions.setLastHandledNotificationId(tappedNotification.request.identifier)
@@ -118,7 +118,7 @@ async function handleNotification(response: Notifications.NotificationResponse) 
     }
 
     if (isNotificationExpoNewMessageNotification(tappedNotification)) {
-      notificationsLogger.debug(`Handling Expo notification: ${JSON.stringify(tappedNotification)}`)
+      notificationsLogger.debug(`Handling Expo notification...`)
 
       const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
       const tappedXmtpConversationId = getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
@@ -179,7 +179,7 @@ async function addPresentedNotificationsToCache(args: {
       .sort((a, b) => b.request.content.data.timestamp - a.request.content.data.timestamp)
       .slice(0, 15) // Too many can cause problem on the bridge
 
-    const decryptedMessagesResults = await Promise.allSettled(
+    const decryptedMessagesResults = await customPromiseAllSettled(
       filteredNotifications.map(async (notification) => {
         try {
           const conversationTopic = notification.request.content.data.contentTopic

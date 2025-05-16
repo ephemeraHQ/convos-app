@@ -4,9 +4,14 @@ import { useEffect } from "react"
 import { formatRandomUsername } from "@/features/auth-onboarding/utils/format-random-user-name"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
-import { getAllSenders, getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  getAllSenders,
+  getSafeCurrentSender,
+  ISender,
+} from "@/features/authentication/multi-inbox.store"
 import {
   createIdentity,
+  IDeviceIdentity,
   linkIdentityToDevice,
 } from "@/features/convos-identities/convos-identities.api"
 import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
@@ -162,21 +167,51 @@ async function makeSureUserIdentitiesExist(args: { userId: IConvosUserID; device
 
   const senders = getAllSenders()
 
-  const missingIdentities = senders.filter(
-    (sender) => !existingIdentities.some((identity) => identity.xmtpId === sender.inboxId),
-  )
+  const sendersWithExistingIdentity: {
+    sender: ISender
+    identity: IDeviceIdentity
+  }[] = []
+  const sendersWithMissingIdentity: ISender[] = []
 
-  for (const sender of missingIdentities) {
+  // Categorize each sender based on whether they have an existing identity
+  for (const sender of senders) {
+    const existingIdentity = existingIdentities.find(
+      (identity) => identity.xmtpId === sender.inboxId,
+    )
+
+    if (existingIdentity) {
+      sendersWithExistingIdentity.push({ sender, identity: existingIdentity })
+    } else {
+      sendersWithMissingIdentity.push(sender)
+    }
+  }
+
+  // Create missing identities
+  for (const sender of sendersWithMissingIdentity) {
     logger.debug(`Creating missing device identities for ${sender.inboxId}...`)
-    // 4. If no identities, create one
     await createIdentity({
       deviceId,
       input: {
-        turnkeyAddress: sender.ethereumAddress, // What if it's not a Turnkey address and we connected via EOA?
+        turnkeyAddress: sender.ethereumAddress,
         xmtpId: sender.inboxId,
       },
     })
     logger.debug(`Created new identity for sender ${sender.inboxId} for device`)
+  }
+
+  // Update existing identities if needed
+  for (const { sender, identity } of sendersWithExistingIdentity) {
+    if (sender.ethereumAddress !== identity.turnkeyAddress) {
+      logger.debug(`Updating identity ${identity.id} with correct turnkey address...`)
+      await createIdentity({
+        deviceId,
+        input: {
+          turnkeyAddress: sender.ethereumAddress,
+          xmtpId: sender.inboxId,
+        },
+      })
+      logger.debug(`Updated identity ${identity.id} with correct turnkey address`)
+    }
   }
 }
 
