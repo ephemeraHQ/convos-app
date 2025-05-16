@@ -1,9 +1,11 @@
 import { useQueries } from "@tanstack/react-query"
 import { useCallback, useRef } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { refetchInfiniteConversationMessages } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { useConversationLastMessageIds } from "@/features/conversation/hooks/use-conversation-last-messages"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -22,6 +24,20 @@ export const useConversationListConversations = () => {
   } = useAllowedConsentConversationsQuery({
     clientInboxId: currentSender.inboxId,
     caller: "useConversationListConversations",
+  })
+
+  const { lastMessageIdByConversationId } = useConversationLastMessageIds({
+    conversationIds,
+  })
+
+  const lastMessageQueries = useQueries({
+    queries: conversationIds.map((conversationId) =>
+      getConversationMessageQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+        xmtpMessageId: lastMessageIdByConversationId[conversationId],
+      }),
+    ),
   })
 
   const conversationQueries = useQueries({
@@ -61,7 +77,8 @@ export const useConversationListConversations = () => {
         return acc
       }
 
-      const lastMessage = conversation.lastMessage
+      const lastMessageQuery = lastMessageQueries[index]
+      const lastMessage = lastMessageQuery.data
 
       acc.push({
         conversationId,
@@ -119,10 +136,17 @@ export const useConversationListConversations = () => {
   const hasAnyConversationLoading = conversationQueries.some(
     (query) => query.isLoading && !query.data,
   )
+  const hasAnyLastMessageLoading = lastMessageQueries.some(
+    (query) => query.isLoading && !query.data,
+  )
   const hasAnyMetadataLoading = conversationMetadataQueries.some(
     (query) => query.isLoading && !query.data,
   )
-  const isLoading = isLoadingConversations || hasAnyMetadataLoading || hasAnyConversationLoading
+  const isLoading =
+    isLoadingConversations ||
+    hasAnyMetadataLoading ||
+    hasAnyLastMessageLoading ||
+    hasAnyConversationLoading
 
   return {
     data: sortedValidConversationIds,

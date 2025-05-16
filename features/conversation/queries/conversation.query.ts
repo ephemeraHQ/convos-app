@@ -119,14 +119,14 @@ export function updateConversationQueryData(
   )
 }
 
-export const getConversationQueryData = (args: IGetConversationArgs) => {
-  return reactQueryClient.getQueryData(getConversationQueryOptions(args).queryKey)
-}
-
 export function ensureConversationQueryData(args: IGetConversationArgsWithCaller) {
   return reactQueryClient.ensureQueryData(getConversationQueryOptions(args))
 }
 
 export function invalidateConversationQuery(args: IGetConversationArgs) {
   return reactQueryClient.invalidateQueries(getConversationQueryOptions(args))
+}
+
+export function getConversationQueryData(args: IGetConversationArgs) {
+  return reactQueryClient.getQueryData(getConversationQueryOptions(args).queryKey)
 }

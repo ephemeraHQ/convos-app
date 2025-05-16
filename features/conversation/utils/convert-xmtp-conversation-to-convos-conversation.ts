@@ -17,7 +17,6 @@ export async function convertXmtpConversationToConvosConversation(
       xmtpConversation.members(),
       xmtpConversation.creatorInboxId() as unknown as IXmtpInboxId,
       xmtpConversation.consentState(),
-      xmtpConversation.lastMessage,
     ])
 
     const addedByInboxId = xmtpConversation.addedByInboxId as unknown as IXmtpInboxId

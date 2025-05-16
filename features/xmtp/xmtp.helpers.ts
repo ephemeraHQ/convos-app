@@ -28,7 +28,7 @@ export async function wrapXmtpCallWithDuration<T>(
   // const { addOperation, removeOperation } = useXmtpActivityStore.getState().actions
 
   let totalActiveDurationMs = 0
-  // let segmentStartTime = Date.now()
+  let segmentStartTime = Date.now()
   // let storeUnsubscribe: (() => void) | null = null
 
   // Get initial state for the case where the call is very short
@@ -74,6 +74,8 @@ export async function wrapXmtpCallWithDuration<T>(
     // if (currentAppState === "active") {
     //   totalActiveDurationMs += Date.now() - segmentStartTime
     // }
+
+    totalActiveDurationMs = Date.now() - segmentStartTime
 
     xmtpLogger.debug(
       `Operation [${operationId}] "${xmtpFunctionName}" finished successfully in ${totalActiveDurationMs}ms`,

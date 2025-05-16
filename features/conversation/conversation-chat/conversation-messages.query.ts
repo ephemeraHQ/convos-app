@@ -3,7 +3,6 @@ import {
   InfiniteQueryObserver,
   infiniteQueryOptions,
   Optional,
-  QueriesObserver,
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
@@ -585,8 +584,6 @@ function createConversationMessagesInfiniteQueryObserver(args: IArgs) {
   const queryOptions = getConversationMessagesInfiniteQueryOptions(args)
   return new InfiniteQueryObserver(reactQueryClient, queryOptions)
 }
-
-QueriesObserver
 
 export function getConversationMessagesInfiniteQueryObserver(args: IArgs) {
   // Create a cache key from the query key components
