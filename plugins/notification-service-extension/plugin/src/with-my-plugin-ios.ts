@@ -273,6 +273,37 @@ end
   ])
 }
 
+const withEasManagedCredentials: ConfigPlugin = (config) => {
+  const bundleIdentifier = config?.ios?.bundleIdentifier
+  config.extra = {
+    ...config.extra,
+    eas: {
+      ...config.extra?.eas,
+      build: {
+        ...config.extra?.eas?.build,
+        experimental: {
+          ...config.extra?.eas?.build?.experimental,
+          ios: {
+            ...config.extra?.eas?.build?.experimental?.ios,
+            appExtensions: [
+              ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ?? []),
+              {
+                // keep in sync with native changes in NSE
+                targetName: NSE_TARGET_NAME,
+                bundleIdentifier: `${bundleIdentifier}.${NSE_TARGET_NAME}`,
+                entitlements: {
+                  "com.apple.security.application-groups": [`group.${bundleIdentifier}`],
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+  }
+  return config
+}
+
 export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
   // 1. Copy files AND modify copied entitlements/Info.plist
   config = withNseFilesAndPlistMods(config)
@@ -280,10 +311,8 @@ export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
   config = withXcodeProjectSettings(config, props)
   // 3. Modify the Podfile
   config = withPodfile(config)
-
-  // Optional: These might modify main app settings/entitlements if needed
-  // config = withAppEnvironment(config, props);
-  // config = withEasManagedCredentials(config, props);
+  // 4. Modify the EAS credentials (Needed to make sure the NSE have the right provisioning profile, etc...)
+  config = withEasManagedCredentials(config)
 
   return config
 }
