@@ -3,7 +3,7 @@ import Constants from "expo-constants"
 import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
-import { memo, useCallback, useMemo } from "react"
+import { memo, useCallback, useMemo, Fragment } from "react"
 import { Alert, Platform } from "react-native"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { runOnJS } from "react-native-reanimated"
@@ -36,9 +36,13 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
 import { reactQueryPersistingStorage } from "@/utils/storage/storages"
 import { showActionSheet } from "./action-sheet"
+import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
+
+  // Only enable debug menu for debug users. Add a debug user by adding their lowercase Ethereum address to config.debugEthAddresses.
+  const isDebugUser = currentUserIsDebugUser()
 
   const showDebugMenu = useShowDebugMenu()
 
@@ -48,6 +52,12 @@ export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: Re
       runOnJS(showDebugMenu)()
     })
     .minDuration(1000)
+
+  // For non-debug users, simply render the children directly without the debug gesture
+  // This makes the component act as a pass-through, preserving the normal UI
+  if (!isDebugUser) {
+    return children
+  }
 
   return <GestureDetector gesture={longPressGesture}>{children}</GestureDetector>
 })
