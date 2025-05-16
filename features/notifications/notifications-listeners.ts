@@ -126,6 +126,7 @@ async function handleNotification(response: Notifications.NotificationResponse) 
       addPresentedNotificationsToCache({
         tappedNotificationConversationId: tappedXmtpConversationId,
         clientInboxId: getSafeCurrentSender().inboxId,
+        tappedNotification,
       }).catch(captureError)
 
       // To make sure we don't navigate to a conversation that doesn't exist.
@@ -155,24 +156,27 @@ async function handleNotification(response: Notifications.NotificationResponse) 
 async function addPresentedNotificationsToCache(args: {
   tappedNotificationConversationId: IXmtpConversationId
   clientInboxId: IXmtpInboxId
+  tappedNotification: Notifications.Notification // Otherwise it's not found in the tray because we tapped on it!
 }) {
-  const { tappedNotificationConversationId, clientInboxId } = args
+  const { tappedNotificationConversationId, clientInboxId, tappedNotification } = args
 
   const { result: presentedNotifications, durationMs } = await measureTimeAsync(() =>
     Notifications.getPresentedNotificationsAsync(),
   )
+
   notificationsLogger.debug(
     `Found ${presentedNotifications.length} notifications present in tray to decrypt and put in cache in ${durationMs}ms`,
   )
 
   try {
-    const filteredNotifications = presentedNotifications
+    const filteredNotifications = [tappedNotification, ...presentedNotifications]
+      // Only keep the notifications that are for the same conversation as the tapped notification
       .filter((notification) => {
         if (isNotificationExpoNewMessageNotification(notification)) {
-          return (
-            tappedNotificationConversationId ===
-            getXmtpConversationIdFromXmtpTopic(notification.request.content.data.contentTopic)
+          const conversationId = getXmtpConversationIdFromXmtpTopic(
+            notification.request.content.data.contentTopic,
           )
+          return tappedNotificationConversationId === conversationId
         }
         return false
       })
