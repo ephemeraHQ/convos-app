@@ -5,6 +5,7 @@ import { isTmpConversation } from "@/features/conversation/utils/tmp-conversatio
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
+import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
 
@@ -68,7 +69,12 @@ export function getConversationQueryOptions(
         return !isTmpConversation(conversation.xmtpId)
       },
     },
-    queryKey: ["conversation", clientInboxId, xmtpConversationId],
+    queryKey: getReactQueryKey({
+      baseStr: "conversation",
+      clientInboxId,
+      xmtpConversationId,
+      caller,
+    }),
     queryFn: enabled ? () => getConversation({ clientInboxId, xmtpConversationId }) : skipToken,
     enabled,
   })

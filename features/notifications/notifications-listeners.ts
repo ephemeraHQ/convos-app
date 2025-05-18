@@ -123,11 +123,14 @@ async function handleNotification(response: Notifications.NotificationResponse) 
       const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
       const tappedXmtpConversationId = getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
 
-      addPresentedNotificationsToCache({
+      // Waiting for this might delay the navigation to the conversation.
+      // But it's still better UX and anyway soon we will have notification messages in the local storage
+      // so it will be instant.
+      await addPresentedNotificationsToCache({
         tappedNotificationConversationId: tappedXmtpConversationId,
         clientInboxId: getSafeCurrentSender().inboxId,
         tappedNotification,
-      }).catch(captureError)
+      })
 
       // To make sure we don't navigate to a conversation that doesn't exist.
       // Happens because our notifications unsubscribing logic is not perfect.

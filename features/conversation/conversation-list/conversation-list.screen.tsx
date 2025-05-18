@@ -6,7 +6,6 @@ import { ContextMenuView } from "@/design-system/context-menu/context-menu"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ConversationListItemDm } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-dm"
 import { ConversationListItemGroup } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-group"
 import { ConversationListLoading } from "@/features/conversation/conversation-list/conversation-list-loading"
@@ -17,20 +16,14 @@ import {
   useGroupConversationContextMenuViewProps,
 } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
-import {
-  getConversationQueryData,
-  useConversationQuery,
-} from "@/features/conversation/queries/conversation.query"
-import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
+import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useEffectOnce } from "@/hooks/use-effect-once"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { logger } from "@/utils/logger/logger"
 import { ConversationListAwaitingRequests } from "./conversation-list-awaiting-requests"
 import { ConversationListEmpty } from "./conversation-list-empty"
 import { ConversationListStartNewConvoBanner } from "./conversation-list-start-new-convo-banner"
@@ -49,46 +42,6 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   } = useConversationListConversations()
 
   const insets = useSafeAreaInsets()
-  const currentSender = useSafeCurrentSender()
-
-  // We want to refetch messages for recent conversations when we mount
-  // And preload their screens to it's faster to open them
-  useEffectOnce(() => {
-    conversationsIds
-      // Max 5 because otherwise we have performance issues
-      .slice(0, 5)
-      .forEach((conversationId) => {
-        const conversation = getConversationQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
-        })
-
-        if (
-          conversation &&
-          conversationHasRecentActivities({
-            clientInboxId: currentSender.inboxId,
-            xmtpConversationId: conversationId,
-          })
-        ) {
-          logger.debug(
-            `Refetching messages for conversation ${conversationId} because it has recent activities...`,
-          )
-          refetchConversationMessagesInfiniteQuery({
-            clientInboxId: currentSender.inboxId,
-            xmtpConversationId: conversationId,
-            caller: "ConversationListScreen on mount refetch",
-          })
-            // Slows down too much the app
-            // .then(() => {
-            //   logger.debug(`Preloading screen for conversation ${conversationId}...`)
-            //   router.preload("Conversation", {
-            //     xmtpConversationId: conversationId,
-            //   })
-            // })
-            .catch(captureError)
-        }
-      })
-  })
 
   useConversationListScreenHeader()
 

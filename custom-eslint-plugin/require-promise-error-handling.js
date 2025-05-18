@@ -16,6 +16,7 @@ module.exports = {
     // Get the file extension
     const filename = context.getFilename()
     const isTsxFile = filename.endsWith(".tsx")
+    const isPureTsFile = filename.endsWith(".ts") && !isTsxFile
 
     // Track if we're inside a React component
     let insideComponent = false
@@ -98,7 +99,10 @@ module.exports = {
       },
       // Check await expressions
       AwaitExpression(node) {
-        if (!isTsxFile || !insideComponent) return
+        const shouldCheck = isPureTsFile || (isTsxFile && insideComponent)
+        if (!shouldCheck) {
+          return
+        }
 
         // Skip if we're inside a try block
         if (insideTryBlock > 0) return
@@ -117,7 +121,10 @@ module.exports = {
       },
       // Check Promise.then() calls
       "CallExpression[callee.property.name='then']"(node) {
-        if (!isTsxFile || !insideComponent) return
+        const shouldCheck = isPureTsFile || (isTsxFile && insideComponent)
+        if (!shouldCheck) {
+          return
+        }
 
         // Skip if we're inside a try block
         if (insideTryBlock > 0) return

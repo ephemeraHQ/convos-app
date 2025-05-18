@@ -2,6 +2,7 @@ import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppStateStatus } from "react-native"
 import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { invalidateConversationMessagesInfiniteMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   getAllowedConsentConversationsQueryData,
   invalidateAllowedConsentConversationsQuery,
@@ -139,7 +140,11 @@ export function startListeningToAppStateStore() {
               invalidateConversationQuery({
                 clientInboxId: currentSender.inboxId,
                 xmtpConversationId: conversationId,
-              })
+              }).catch(captureError)
+              invalidateConversationMessagesInfiniteMessagesQuery({
+                clientInboxId: currentSender.inboxId,
+                xmtpConversationId: conversationId,
+              }).catch(captureError)
             })
           }
         }

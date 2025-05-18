@@ -1,4 +1,3 @@
-import { QueryKey } from "@tanstack/react-query"
 import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { reactQueryPersistingStorage } from "../storage/storages"
@@ -7,7 +6,7 @@ import { reactQueryPersistingStorage } from "../storage/storages"
 export function getReactQueryKey(args: {
   baseStr: string
   [key: string]: string | undefined
-}): QueryKey {
+}): string[] {
   const { baseStr, ...rest } = args
   return [baseStr, ...Object.entries(rest).map(([key, value]) => `${key}: ${value}`)]
 }

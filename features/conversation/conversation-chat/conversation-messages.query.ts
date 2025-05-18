@@ -6,8 +6,6 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
-import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
@@ -28,7 +26,7 @@ import {
 import { convertXmtpMessageToConvosMessage } from "./conversation-message/utils/convert-xmtp-message-to-convos-message"
 
 // Default page size for infinite queries
-export const DEFAULT_PAGE_SIZE = 15
+export const DEFAULT_PAGE_SIZE = 10
 
 // New types for the message IDs list approach
 type IMessageIdsPage = {
@@ -206,26 +204,6 @@ export function getConversationMessagesInfiniteQueryOptions(
       Boolean(clientInboxId) &&
       Boolean(xmtpConversationId) &&
       !isTmpConversation(xmtpConversationId),
-    refetchOnWindowFocus: (query) => {
-      const { clientInboxId, xmtpConversationId } = args
-
-      const allowedConversationIds =
-        getAllowedConsentConversationsQueryData({
-          clientInboxId,
-        }) || []
-
-      // We only want to refetch if the conversation has been allowed
-      if (!allowedConversationIds.includes(xmtpConversationId)) {
-        return false
-      }
-
-      const isRecent = conversationHasRecentActivities({
-        clientInboxId,
-        xmtpConversationId,
-      })
-
-      return isRecent ? "always" : true
-    },
   })
 }
 

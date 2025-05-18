@@ -32,7 +32,11 @@ import {
   isAttachmentsMessage,
   isGroupUpdatedMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { DEFAULT_PAGE_SIZE, getConversationMessagesInfiniteQueryOptions } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import {
+  DEFAULT_PAGE_SIZE,
+  getConversationMessagesInfiniteQueryOptions,
+  refetchConversationMessagesInfiniteQuery,
+} from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
@@ -41,6 +45,7 @@ import { isTmpConversation } from "@/features/conversation/utils/tmp-conversatio
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { useEffectOnce } from "@/hooks/use-effect-once"
 import { window } from "@/theme/layout"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
@@ -80,7 +85,6 @@ export const ConversationMessages = memo(function ConversationMessages() {
 
   const {
     data: messageIds = [],
-    refetch: refetchMessages,
     fetchNextPage,
     hasNextPage,
   } = useInfiniteQuery({
@@ -94,8 +98,15 @@ export const ConversationMessages = memo(function ConversationMessages() {
       refetchInterval:
         convertNanosecondsToMilliseconds(disappearingMessageSettings.retentionDurationInNs) * 0.5,
     }),
-    refetchOnWindowFocus: "always", // We want to make sure we have the latest messages
-    refetchOnMount: "always", // We want to make sure we have the latest messages
+  })
+
+  useEffectOnce(() => {
+    logger.debug("Conversation Messages mounted, refetching messages...")
+    refetchConversationMessagesInfiniteQuery({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages refetch on mount",
+    }).catch(captureError)
   })
 
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
@@ -154,8 +165,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
     isRefreshingRef.current = true
 
     logger.debug("Refetching newest messages because we're scrolled past the bottom...")
-
-    refetchMessages()
+    refetchConversationMessagesInfiniteQuery({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages refetch on scroll past bottom",
+    })
       .then(() => {
         logger.debug("Done refetching newest messages because we're scrolled past the bottom")
       })
