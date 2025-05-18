@@ -26,7 +26,6 @@ import { isConversationGroup } from "@/features/conversation/utils/is-conversati
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useEffectOnce } from "@/hooks/use-effect-once"
 import { NavigationParamList } from "@/navigation/navigation.types"
-import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
@@ -51,7 +50,6 @@ export const ConversationListScreen = memo(function ConversationListScreen(
 
   const insets = useSafeAreaInsets()
   const currentSender = useSafeCurrentSender()
-  const router = useRouter()
 
   // We want to refetch messages for recent conversations when we mount
   // And preload their screens to it's faster to open them
@@ -80,12 +78,13 @@ export const ConversationListScreen = memo(function ConversationListScreen(
             xmtpConversationId: conversationId,
             caller: "ConversationListScreen on mount refetch",
           })
-            .then(() => {
-              logger.debug(`Preloading screen for conversation ${conversationId}...`)
-              router.preload("Conversation", {
-                xmtpConversationId: conversationId,
-              })
-            })
+            // Slows down too much the app
+            // .then(() => {
+            //   logger.debug(`Preloading screen for conversation ${conversationId}...`)
+            //   router.preload("Conversation", {
+            //     xmtpConversationId: conversationId,
+            //   })
+            // })
             .catch(captureError)
         }
       })

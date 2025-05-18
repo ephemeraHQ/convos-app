@@ -16,10 +16,12 @@ export async function clearNotificationsForConversation(args: {
   const { xmtpConversationId } = args
 
   try {
-    notificationsLogger.debug("Clearing notifications for conversation:", xmtpConversationId)
-
     // Get all current notifications
     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
+
+    notificationsLogger.debug(
+      `Clearing ${presentedNotifications.length} notifications for conversation ${xmtpConversationId}`,
+    )
 
     const validNotifications = presentedNotifications.filter((notification) => {
       return (
@@ -54,7 +56,7 @@ export async function clearNotificationsForConversation(args: {
           new NotificationError({
             error: new Error("Unknown notification type"),
             additionalMessage: `Unable to identify notification type: ${JSON.stringify(
-              notification.request.content.data,
+              notification,
             )}`,
           }),
         )

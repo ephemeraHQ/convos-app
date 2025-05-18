@@ -9,6 +9,7 @@ import {
 import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
+import { registerPushNotifications } from "@/features/notifications/notifications-register"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
 import { useAppStateStore } from "@/stores/app-state-store/app-state.store"
 import { captureError } from "@/utils/capture-error"
@@ -114,6 +115,9 @@ export function startListeningToAppStateStore() {
 
         // Refresh notifications permissions in case they disabled them in their settings or something
         fetchOrRefetchNotificationsPermissions().catch(captureError)
+
+        // Register push notifications
+        registerPushNotifications().catch(captureError)
 
         if (currentSender) {
           // Invalidate known consent conversations
