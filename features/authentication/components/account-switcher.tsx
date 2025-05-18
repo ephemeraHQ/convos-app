@@ -13,16 +13,12 @@ import {
   useMultiInboxStore,
   useSafeCurrentSender,
 } from "@/features/authentication/multi-inbox.store"
+import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { shortAddress } from "@/utils/strings/shortAddress"
-
-function currentUserIsDebugUser() {
-  const senders = useMultiInboxStore.getState().senders
-  return senders.some((sender) => config.debugEthAddresses.includes(sender.ethereumAddress))
-}
 
 export function AccountSwitcher(props: { noAvatar?: boolean }) {
   const { noAvatar } = props

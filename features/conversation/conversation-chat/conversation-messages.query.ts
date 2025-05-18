@@ -28,7 +28,7 @@ import {
 import { convertXmtpMessageToConvosMessage } from "./conversation-message/utils/convert-xmtp-message-to-convos-message"
 
 // Default page size for infinite queries
-const DEFAULT_PAGE_SIZE = 15
+export const DEFAULT_PAGE_SIZE = 15
 
 // New types for the message IDs list approach
 type IMessageIdsPage = {
