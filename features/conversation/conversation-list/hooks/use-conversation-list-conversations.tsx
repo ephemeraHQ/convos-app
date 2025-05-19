@@ -96,23 +96,15 @@ export const useConversationListConversations = () => {
         }).queryKey,
       }),
       // Refetch all conversation metadata
-      ...allowedConversationIds.map((conversationId) =>
-        refetchQueryIfNotAlreadyFetching(
-          getConversationMetadataQueryOptions({
-            xmtpConversationId: conversationId,
-            clientInboxId: currentSender.inboxId,
-          }),
-        ),
-      ),
-      // Refetch all allowed conversations data
-      ...allowedConversationIds.map((conversationId) =>
-        refetchQueryIfNotAlreadyFetching({
-          queryKey: getConversationQueryOptions({
-            xmtpConversationId: conversationId,
-            clientInboxId: currentSender.inboxId,
-          }).queryKey,
-        }),
-      ),
+      // DON'T because it's not needed and heavy for nothing
+      // ...allowedConversationIds.map((conversationId) =>
+      //   refetchQueryIfNotAlreadyFetching(
+      //     getConversationMetadataQueryOptions({
+      //       xmtpConversationId: conversationId,
+      //       clientInboxId: currentSender.inboxId,
+      //     }),
+      //   ),
+      // ),
     ]
 
     // eslint-disable-next-line custom-plugin/require-promise-error-handling
@@ -131,7 +123,7 @@ export const useConversationListConversations = () => {
     })
 
     isRefetchingRef.current = false
-  }, [allowedConversationIds, currentSender.inboxId])
+  }, [currentSender.inboxId])
 
   const hasAnyConversationLoading = conversationQueries.some(
     (query) => query.isLoading && !query.data,

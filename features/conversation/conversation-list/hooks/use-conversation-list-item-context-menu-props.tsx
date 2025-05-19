@@ -124,8 +124,8 @@ function useConversationContextMenuPinItem(args: {
         captureErrorWithToast(
           new GenericError({ error, additionalMessage: "Error pinning conversation" }),
           {
-            message: "Error pinning conversation"
-          }
+            message: "Error pinning conversation",
+          },
         )
       }
     },
@@ -182,9 +182,12 @@ function useGroupDeleteMenuItem({
     try {
       await deleteGroup()
     } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error deleting group" }), {
-        message: "Error deleting group"
-      })
+      captureErrorWithToast(
+        new GenericError({ error, additionalMessage: "Error deleting group" }),
+        {
+          message: "Error deleting group",
+        },
+      )
     }
   }, [deleteGroup])
 
@@ -204,8 +207,8 @@ function useDmDeleteMenuItem({ xmtpConversationId }: { xmtpConversationId: IXmtp
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error deleting conversation" }),
         {
-          message: "Error deleting conversation"
-        }
+          message: "Error deleting conversation",
+        },
       )
     }
   }, [deleteDm])

@@ -13,6 +13,7 @@ import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xm
 import { captureError } from "@/utils/capture-error"
 import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { refetchQueryIfNotAlreadyFetching } from "@/utils/react-query/react-query.helpers"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import {
   ensureConversationQueryData,
@@ -432,13 +433,13 @@ export function invalidateConversationMessagesInfiniteMessagesQuery(args: IArgs)
 
 export function refetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
   const { clientInboxId, xmtpConversationId, caller } = args
-  return reactQueryClient.refetchQueries(
-    getConversationMessagesInfiniteQueryOptions({
+  return refetchQueryIfNotAlreadyFetching({
+    queryKey: getConversationMessagesInfiniteQueryOptions({
       clientInboxId,
       xmtpConversationId,
       caller,
-    }),
-  )
+    }).queryKey,
+  })
 }
 
 export function getConversationMessagesInfiniteQueryData(args: IArgs) {

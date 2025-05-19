@@ -47,7 +47,7 @@ export const useAppStateHandler = (settings?: IAppStateHandlerSettings) => {
   const { onChange, onForeground, onBackground, onInactive, deps = [] } = settings || {}
 
   useEffect(() => {
-    return useAppStateStore.subscribe(
+    const unsubscribe = useAppStateStore.subscribe(
       (state) => ({ current: state.currentState, previous: state.previousState }),
       (next, prev) => {
         if (next.current === "active" && prev?.current !== "active") {
@@ -61,6 +61,8 @@ export const useAppStateHandler = (settings?: IAppStateHandlerSettings) => {
         onChange?.(next.current)
       },
     )
+
+    return () => unsubscribe()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onChange, onForeground, onBackground, onInactive, ...deps])
 }
@@ -129,17 +131,6 @@ export function startListeningToAppStateStore() {
           invalidateUnknownConsentConversationsQuery({
             inboxId: currentSender.inboxId,
           }).catch(captureError)
-
-          // Invalidate all current sender's allowed consent conversations to make sure they're up-to-date
-          // info like group names, etc...
-          getAllowedConsentConversationsQueryData({
-            clientInboxId: currentSender.inboxId,
-          })?.map((conversationId) =>
-            invalidateConversationQuery({
-              clientInboxId: currentSender.inboxId,
-              xmtpConversationId: conversationId,
-            }).catch(captureError),
-          )
         }
       }
 

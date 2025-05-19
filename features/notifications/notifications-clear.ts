@@ -16,11 +16,13 @@ export async function clearNotificationsForConversation(args: {
   const { xmtpConversationId } = args
 
   try {
+    notificationsLogger.debug(`Clearing notifications for conversation ${xmtpConversationId}...`)
+
     // Get all current notifications
     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
 
     notificationsLogger.debug(
-      `Clearing ${presentedNotifications.length} notifications for conversation ${xmtpConversationId}`,
+      `Found ${presentedNotifications.length} notifications in the notification center`,
     )
 
     const validNotifications = presentedNotifications.filter((notification) => {

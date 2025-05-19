@@ -46,6 +46,7 @@ import { useDisappearingMessageSettings } from "@/features/disappearing-messages
 import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useEffectOnce } from "@/hooks/use-effect-once"
+import { useAppStateHandler } from "@/stores/app-state-store/app-state-store.service"
 import { window } from "@/theme/layout"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
@@ -100,13 +101,32 @@ export const ConversationMessages = memo(function ConversationMessages() {
     }),
   })
 
+  useAppStateHandler({
+    onForeground: () => {
+      logger.debug("Conversation Messages came to foreground, refetching messages...")
+      refetchConversationMessagesInfiniteQuery({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+        caller: "Conversation Messages refetch on foreground",
+      })
+        .then(() => {
+          logger.debug("Done refetching messages because we came to foreground")
+        })
+        .catch(captureError)
+    },
+  })
+
   useEffectOnce(() => {
     logger.debug("Conversation Messages mounted, refetching messages...")
     refetchConversationMessagesInfiniteQuery({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
       caller: "Conversation Messages refetch on mount",
-    }).catch(captureError)
+    })
+      .then(() => {
+        logger.debug("Done refetching messages because we mounted")
+      })
+      .catch(captureError)
   })
 
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
