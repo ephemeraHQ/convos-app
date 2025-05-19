@@ -11093,7 +11093,7 @@ __metadata:
     expo-document-picker: "npm:~13.0.1"
     expo-file-system: "npm:~18.0.4"
     expo-haptics: "npm:~14.0.0"
-    expo-image: "npm:~2.0.2"
+    expo-image: "npm:^2.1.7"
     expo-image-manipulator: "npm:~13.0.5"
     expo-image-picker: "npm:~16.0.3"
     expo-linear-gradient: "npm:~14.0.1"
@@ -13191,9 +13191,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-image@npm:~2.0.2":
-  version: 2.0.7
-  resolution: "expo-image@npm:2.0.7"
+"expo-image@npm:^2.1.7":
+  version: 2.1.7
+  resolution: "expo-image@npm:2.1.7"
   peerDependencies:
     expo: "*"
     react: "*"
@@ -13202,7 +13202,7 @@ __metadata:
   peerDependenciesMeta:
     react-native-web:
       optional: true
-  checksum: 10c0/b817b733e1bbf2bc04a227f7e8b95603a50824f9c9eaa9ea5ebc32e9232514283a81c37e7fc3fd313e4f9f7a362ef40ade3c74d3bbe905e5784647c104411ede
+  checksum: 10c0/19f1025b031b3ec344cdf7939334063c3a0487bd604bf7c8c7620e9fd6ddde9192749a759e4e2ba59e3a75ffcbfa897ced27faa6af7240cdc855c1681c097945
   languageName: node
   linkType: hard
 
