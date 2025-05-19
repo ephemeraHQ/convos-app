@@ -171,10 +171,10 @@ function handleNewGroupUpdatedMessage(args: {
         field => parseInt(field.newValue, 10) === MIN_RETENTION_DURATION_NS
       )
       
+      // TODO: This code is only run when a new group update message is received while the app is running and streaming.
+      // TODO: We should also handle the case where a clear chat event happens while the app is not running (and streaming is stopped/resumed)
       if (clearChatField) {
-        // This is a clear chat event - refresh the message list
-        streamLogger.debug("Clear chat event detected, refreshing messages")
-        
+        streamLogger.debug(`[STREAM] Clear chat event detected, refreshing messages`)
         refetchConversationMessagesInfiniteQuery({
           clientInboxId: inboxId,
           xmtpConversationId: message.xmtpConversationId,
