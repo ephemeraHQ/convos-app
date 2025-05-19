@@ -5,7 +5,10 @@ import { Screen } from "@/components/screen/screen"
 import { ContextMenuView } from "@/design-system/context-menu/context-menu"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack } from "@/design-system/VStack"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  getSafeCurrentSender,
+  useSafeCurrentSender,
+} from "@/features/authentication/multi-inbox.store"
 import { ConversationListItemDm } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-dm"
 import { ConversationListItemGroup } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-group"
 import { ConversationListLoading } from "@/features/conversation/conversation-list/conversation-list-loading"
@@ -16,6 +19,7 @@ import {
   useGroupConversationContextMenuViewProps,
 } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
+import { refetchUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -47,7 +51,13 @@ export const ConversationListScreen = memo(function ConversationListScreen(
 
   const handleRefresh = useCallback(async () => {
     try {
-      await refetchConversations()
+      const currentSender = getSafeCurrentSender()
+      await Promise.all([
+        refetchConversations(),
+        refetchUnknownConsentConversationsQuery({
+          inboxId: currentSender.inboxId,
+        }),
+      ])
     } catch (error) {
       captureError(new GenericError({ error, additionalMessage: "Error refreshing conversations" }))
     }

@@ -1,10 +1,14 @@
-import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
+import type { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@features/xmtp/xmtp.types"
 import { Query, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
+import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { messageWasSentAfter } from "@/features/conversation/conversation-chat/conversation-message/utils/message-was-sent-after"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
+import { captureError } from "@/utils/capture-error"
+import { ReactQueryError } from "@/utils/error"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -134,4 +138,62 @@ export function invalidateConversationQuery(args: IGetConversationArgs) {
 
 export function getConversationQueryData(args: IGetConversationArgs) {
   return reactQueryClient.getQueryData(getConversationQueryOptions(args).queryKey)
+}
+
+export async function maybeUpdateConversationQueryLastMessage(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+  messageIds: IXmtpMessageId[]
+}) {
+  const { clientInboxId, xmtpConversationId, messageIds } = args
+
+  try {
+    const messages = await Promise.all(
+      messageIds.map((messageId) =>
+        ensureConversationMessageQueryData({
+          clientInboxId,
+          xmtpMessageId: messageId,
+          xmtpConversationId,
+          caller: "addMessagesToConversationMessagesInfiniteQueryData",
+        }),
+      ),
+    )
+
+    const conversation = getConversationQueryData({
+      clientInboxId,
+      xmtpConversationId,
+    })
+
+    if (!conversation) {
+      throw new Error(
+        "Conversation not found when wanting to update conversation last message with messages",
+      )
+    }
+
+    // Find the most recent message from the new messages
+    let mostRecentMessage = messages.filter(Boolean).sort((a, b) => a.sentMs - b.sentMs)[0]
+
+    // If we found a message and it's more recent than the conversation's current lastMessage
+    if (
+      mostRecentMessage &&
+      (!conversation.lastMessage ||
+        messageWasSentAfter(mostRecentMessage, conversation.lastMessage))
+    ) {
+      // Update the conversation with the new last message
+      updateConversationQueryData({
+        clientInboxId,
+        xmtpConversationId,
+        conversationUpdate: {
+          lastMessage: mostRecentMessage,
+        },
+      })
+    }
+  } catch (error) {
+    captureError(
+      new ReactQueryError({
+        error,
+        additionalMessage: `Error updating conversation query last message with messages`,
+      }),
+    )
+  }
 }

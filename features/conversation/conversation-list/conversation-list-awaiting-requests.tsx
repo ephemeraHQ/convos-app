@@ -6,7 +6,6 @@ import { AnimatedHStack, HStack } from "@/design-system/HStack"
 import { Icon } from "@/design-system/Icon/Icon"
 import { IVStackProps } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import {
   ConversationListItem,
   ConversationListItemSubtitle,
@@ -14,10 +13,9 @@ import {
 } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { useConversationRequestsListItem } from "@/features/conversation/conversation-requests-list/use-conversation-requests-list-items"
-import { useConversationLastMessageIds } from "@/features/conversation/hooks/use-conversation-last-messages"
+import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { conversationIsUnreadForInboxId } from "@/features/conversation/utils/conversation-is-unread-by-current-account"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { ObjectTyped } from "@/utils/object-typed"
 
 export const ConversationListAwaitingRequests = memo(function ConversationListAwaitingRequests() {
   const { theme } = useAppTheme()
@@ -38,19 +36,12 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     ),
   })
 
-  const { lastMessageIdByConversationId } = useConversationLastMessageIds({
-    conversationIds: likelyNotSpamConversationIds,
-  })
-
-  const lastMessageQueries = useQueries({
-    queries: ObjectTyped.entries(lastMessageIdByConversationId).map(
-      ([conversationId, messageId]) => ({
-        ...getConversationMessageQueryOptions({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: messageId,
-          xmtpConversationId: conversationId,
-          caller: "ConversationListAwaitingRequests",
-        }),
+  const conversationQueries = useQueries({
+    queries: likelyNotSpamConversationIds.map((conversationId) =>
+      getConversationQueryOptions({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+        caller: "ConversationListAwaitingRequests",
       }),
     ),
   })
@@ -65,9 +56,11 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
         return false
       }
 
-      const lastMessage = lastMessageQueries.find(
-        (query) => query.data?.xmtpConversationId === conversationId,
-      )?.data
+      // const lastMessage = lastMessageQueries.find(
+      //   (query) => query.data?.xmtpConversationId === conversationId,
+      // )?.data
+
+      const lastMessage = conversationQueries[index].data?.lastMessage
 
       return conversationIsUnreadForInboxId({
         lastMessageSentAt: lastMessage?.sentNs ?? null,
@@ -91,7 +84,9 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
     currentSender,
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
-    lastMessageQueries,
+    conversationQueries,
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
+    // lastMessageQueries,
   ])
 
   const title = useMemo(() => {

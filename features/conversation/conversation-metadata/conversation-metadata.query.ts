@@ -92,6 +92,13 @@ export function updateConversationMetadataQueryData(
   )
 }
 
+export function refetchConversationMetadataQuery(args: IArgs) {
+  const { xmtpConversationId, clientInboxId } = args
+  return reactQueryClient.invalidateQueries({
+    queryKey: getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }).queryKey,
+  })
+}
+
 // TODO: Add back later when we're back at optimizing queries
 // Was used to batch the requests so we can make 1 request to get all the conversation metadata
 // const batchedGetConversationMetadata = create({

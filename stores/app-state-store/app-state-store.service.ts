@@ -2,7 +2,6 @@ import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppStateStatus } from "react-native"
 import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { invalidateConversationMessagesInfiniteMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import {
   getAllowedConsentConversationsQueryData,
   invalidateAllowedConsentConversationsQuery,
@@ -117,38 +116,30 @@ export function startListeningToAppStateStore() {
         // Refresh notifications permissions in case they disabled them in their settings or something
         fetchOrRefetchNotificationsPermissions().catch(captureError)
 
-        // Register push notifications
+        // Register push notifications to make sure it's always up-to-date
         registerPushNotifications().catch(captureError)
 
         if (currentSender) {
-          // Invalidate known consent conversations
-          // invalidateAllowedConsentConversationsQuery({
-          //   clientInboxId: currentSender.inboxId,
-          // }).catch(captureError)
+          // Invalidate known consent conversations to make sure we refetch them with the lastMessage property
+          invalidateAllowedConsentConversationsQuery({
+            clientInboxId: currentSender.inboxId,
+          }).catch(captureError)
 
-          // Invalidate unknown consent conversations
+          // Invalidate unknown consent conversations to make sure we're not missing any unknown chat requests
           invalidateUnknownConsentConversationsQuery({
             inboxId: currentSender.inboxId,
           }).catch(captureError)
 
-          // Invalidate all current sender's allowed consent conversations
-          const allowedConsentConversationIds = getAllowedConsentConversationsQueryData({
+          // Invalidate all current sender's allowed consent conversations to make sure they're up-to-date
+          // info like group names, etc...
+          getAllowedConsentConversationsQueryData({
             clientInboxId: currentSender.inboxId,
-          })
-          if (allowedConsentConversationIds) {
-            allowedConsentConversationIds.forEach((conversationId) => {
-              // So converastion are up-to-date like group names, etc
-              invalidateConversationQuery({
-                clientInboxId: currentSender.inboxId,
-                xmtpConversationId: conversationId,
-              }).catch(captureError)
-              // So we can refetch the last message
-              invalidateConversationMessagesInfiniteMessagesQuery({
-                clientInboxId: currentSender.inboxId,
-                xmtpConversationId: conversationId,
-              }).catch(captureError)
-            })
-          }
+          })?.map((conversationId) =>
+            invalidateConversationQuery({
+              clientInboxId: currentSender.inboxId,
+              xmtpConversationId: conversationId,
+            }).catch(captureError),
+          )
         }
       }
 

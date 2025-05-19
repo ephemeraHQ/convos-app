@@ -124,6 +124,14 @@ export function ensureQueryDataBetter<T>(args: UseQueryOptions<T>) {
   return reactQueryClient.ensureQueryData(args)
 }
 
+export function refetchQueryIfNotAlreadyFetching<T>(args: UseQueryOptions<T>) {
+  const queryState = reactQueryClient.getQueryState(args.queryKey)
+  if (queryState?.fetchStatus === "fetching") {
+    return Promise.resolve()
+  }
+  return reactQueryClient.refetchQueries(args)
+}
+
 export async function fetchOrRefetchQuery<T>(args: UseQueryOptions<T>) {
   const data = reactQueryClient.getQueryData(args.queryKey)
   if (data) {

@@ -126,3 +126,13 @@ export function invalidateUnknownConsentConversationsQuery(args: { inboxId: IXmt
     queryKey: ["unknown-consent-conversations", inboxId],
   })
 }
+
+export function refetchUnknownConsentConversationsQuery(args: { inboxId: IXmtpInboxId }) {
+  const { inboxId } = args
+  return reactQueryClient.refetchQueries({
+    queryKey: getUnknownConsentConversationsQueryOptions({
+      inboxId,
+      caller: "refetchUnknownConsentConversationsQuery",
+    }).queryKey,
+  })
+}

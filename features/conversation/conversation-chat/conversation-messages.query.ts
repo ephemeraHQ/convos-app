@@ -10,10 +10,14 @@ import { isTmpConversation } from "@/features/conversation/utils/tmp-conversatio
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { captureError } from "@/utils/capture-error"
 import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { ensureConversationQueryData } from "../queries/conversation.query"
+import {
+  ensureConversationQueryData,
+  maybeUpdateConversationQueryLastMessage,
+} from "../queries/conversation.query"
 import { processReactionConversationMessages } from "./conversation-message/conversation-message-reactions.query"
 import {
   getConversationMessageQueryData,
@@ -229,6 +233,14 @@ export const addMessagesToConversationMessagesInfiniteQueryData = (args: {
   messageIds: IXmtpMessageId[]
 }) => {
   const { clientInboxId, xmtpConversationId, messageIds: newMessageIds } = args
+
+  // Putting this here because it's centralized and we don't have to call this function every time
+  // we call "addMessagesToConversationMessagesInfiniteQueryData"
+  maybeUpdateConversationQueryLastMessage({
+    clientInboxId,
+    xmtpConversationId,
+    messageIds: newMessageIds,
+  }).catch(captureError)
 
   const currentData = getConversationMessagesInfiniteQueryData({
     clientInboxId,
@@ -447,100 +459,9 @@ export function getAllConversationMessageInInfiniteQueryData(args: IArgs) {
   return reactQueryClient.getQueryData(queryKey)?.pages.flatMap((page) => page.messageIds)
 }
 
-// export function replaceMessageInConversationMessagesInfiniteQueryData(args: {
-//   tmpXmtpMessageId: IXmtpMessageId
-//   xmtpConversationId: IXmtpConversationId
-//   clientInboxId: IXmtpInboxId
-//   realMessage: IConversationMessage
-// }) {
-//   const { tmpXmtpMessageId, xmtpConversationId, clientInboxId, realMessage } = args
-
-//   const data = getConversationMessagesInfiniteQueryData({
-//     clientInboxId,
-//     xmtpConversationId,
-//   })
-
-//   if (!data || !data.pages.length) {
-//     captureError(
-//       new ReactQueryError({
-//         error: "No data found in replaceMessageInConversationMessagesInfiniteQueryData",
-//       }),
-//     )
-//     return
-//   }
-
-//   // Replace the message in the individual message query cache
-//   replaceMessageQueryData({
-//     clientInboxId,
-//     tmpXmtpMessageId,
-//     realMessage,
-//   })
-
-//   // Process through each page to find and replace the message ID
-//   const updatedPages = data.pages.map((page) => {
-//     // Check if the page contains the temporary message ID
-//     const messageIndex = page.messageIds.indexOf(tmpXmtpMessageId)
-
-//     if (messageIndex === -1) {
-//       return page
-//     }
-
-//     // Create new array of message IDs with the temporary ID replaced by the real one
-//     const newMessageIds = [...page.messageIds]
-//     newMessageIds[messageIndex] = realMessage.xmtpId
-
-//     queryLogger.debug(
-//       `Replacing tmp message ID (${tmpXmtpMessageId}) with real message ID (${realMessage.xmtpId}) at index ${messageIndex}`,
-//     )
-
-//     return {
-//       ...page,
-//       messageIds: newMessageIds,
-//     }
-//   })
-
-//   // Set the updated data back to the cache
-//   return reactQueryClient.setQueryData(
-//     getConversationMessagesInfiniteQueryOptions({ clientInboxId, xmtpConversationId }).queryKey,
-//     {
-//       ...data,
-//       pages: updatedPages,
-//     },
-//   )
-// }
-
 export function prefetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
   return reactQueryClient.prefetchInfiniteQuery(getConversationMessagesInfiniteQueryOptions(args))
 }
-
-// export function updateMessageInConversationMessagesInfiniteQueryData(args: {
-//   xmtpConversationId: IXmtpConversationId
-//   clientInboxId: IXmtpInboxId
-//   xmtpMessageIdToUpdate: IXmtpMessageId
-//   messageUpdate: Partial<IConversationMessage>
-// }) {
-//   const { clientInboxId, xmtpMessageIdToUpdate, messageUpdate } = args
-
-//   // Update the message in its individual query cache
-//   updateMessageQueryData({
-//     clientInboxId,
-//     xmtpMessageId: xmtpMessageIdToUpdate,
-//     messageUpdate,
-//   })
-
-//   // No need to update the message list since it only contains IDs
-//   return true
-// }
-
-// const optimisticMessageToRealMap = new Map<IXmtpMessageId, IXmtpMessageId>()
-
-// function setOptimisticMessageToRealMap(args: {
-//   optimisticMessageId: IXmtpMessageId
-//   realMessageId: IXmtpMessageId
-// }) {
-//   const { optimisticMessageId, realMessageId } = args
-//   optimisticMessageToRealMap.set(optimisticMessageId, realMessageId)
-// }
 
 export function ensureConversationMessagesInfiniteQueryData(args: IArgsWithCaller) {
   return reactQueryClient.ensureInfiniteQueryData(getConversationMessagesInfiniteQueryOptions(args))

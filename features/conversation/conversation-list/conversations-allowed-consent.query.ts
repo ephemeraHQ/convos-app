@@ -122,14 +122,14 @@ async function getAllowedConsentConversationsQueryFn(args: IArgs) {
     caller: "getAllowedConsentConversationsQueryFn",
   })
 
-  const xmtpConversations = await getXmtpConversations({
+  const xmtpAllowedConversations = await getXmtpConversations({
     clientInboxId,
     consentStates: ["allowed"],
     caller: "getAllowedConsentConversationsQueryFn",
   })
 
   const convosConversations = await Promise.all(
-    xmtpConversations.map(convertXmtpConversationToConvosConversation),
+    xmtpAllowedConversations.map(convertXmtpConversationToConvosConversation),
   )
 
   for (const convoConversation of convosConversations) {
