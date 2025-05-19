@@ -54,7 +54,10 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   const { isUnread } = useConversationIsUnread({ xmtpConversationId })
   const { isDeleted } = useConversationIsDeleted({ xmtpConversationId })
 
-  const { data: lastMessage } = useConversationLastMessage({ xmtpConversationId })
+  const { data: lastMessage } = useConversationLastMessage({
+    xmtpConversationId,
+    caller: "ConversationListItemDm",
+  })
   const messageText = useMessageContentStringValue(lastMessage)
 
   const deleteDm = useDeleteDm({ xmtpConversationId })

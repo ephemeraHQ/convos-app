@@ -122,9 +122,9 @@ export function startListeningToAppStateStore() {
 
         if (currentSender) {
           // Invalidate known consent conversations
-          invalidateAllowedConsentConversationsQuery({
-            clientInboxId: currentSender.inboxId,
-          }).catch(captureError)
+          // invalidateAllowedConsentConversationsQuery({
+          //   clientInboxId: currentSender.inboxId,
+          // }).catch(captureError)
 
           // Invalidate unknown consent conversations
           invalidateUnknownConsentConversationsQuery({
@@ -137,10 +137,12 @@ export function startListeningToAppStateStore() {
           })
           if (allowedConsentConversationIds) {
             allowedConsentConversationIds.forEach((conversationId) => {
+              // So converastion are up-to-date like group names, etc
               invalidateConversationQuery({
                 clientInboxId: currentSender.inboxId,
                 xmtpConversationId: conversationId,
               }).catch(captureError)
+              // So we can refetch the last message
               invalidateConversationMessagesInfiniteMessagesQuery({
                 clientInboxId: currentSender.inboxId,
                 xmtpConversationId: conversationId,

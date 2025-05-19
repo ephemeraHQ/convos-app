@@ -35,6 +35,7 @@ export const useToggleReadStatus = ({ xmtpConversationId }: UseToggleReadStatusP
 
   const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId,
+    caller: "useToggleReadStatus",
   })
 
   const toggleReadStatusAsync = useCallback(async () => {

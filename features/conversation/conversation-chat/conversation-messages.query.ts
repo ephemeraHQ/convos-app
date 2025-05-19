@@ -40,6 +40,7 @@ export type IConversationMessagesInfiniteQueryData = InfiniteData<IMessageIdsPag
 type IArgs = {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
+  limit?: number
 }
 
 type IArgsWithCaller = IArgs & {
@@ -59,7 +60,7 @@ type IInfiniteMessagesPageParam = {
 const conversationMessagesInfiniteQueryFn = async (
   args: IArgs & { pageParam: IInfiniteMessagesPageParam },
 ) => {
-  const { clientInboxId, xmtpConversationId, pageParam } = args
+  const { clientInboxId, xmtpConversationId, pageParam, limit } = args
   const { cursorNs, direction } = pageParam || {
     // For some reason I've been seeing some "Cannot read property 'cursorNs' of undefined"
     cursorNs: undefined,
@@ -93,7 +94,7 @@ const conversationMessagesInfiniteQueryFn = async (
   const xmtpMessages = await getXmtpConversationMessages({
     clientInboxId,
     conversationId: conversation.xmtpId,
-    limit: DEFAULT_PAGE_SIZE,
+    limit: limit || DEFAULT_PAGE_SIZE,
     ...(direction === "next" && cursorNs ? { beforeNs: cursorNs } : {}),
     ...(direction === "prev" && cursorNs ? { afterNs: cursorNs } : {}),
     direction,
@@ -167,9 +168,10 @@ const conversationMessagesInfiniteQueryFn = async (
 export function getConversationMessagesInfiniteQueryOptions(
   args: Optional<IArgsWithCaller, "caller">,
 ) {
-  const { clientInboxId, xmtpConversationId, caller } = args
+  const { clientInboxId, xmtpConversationId, caller, limit } = args
 
   return infiniteQueryOptions({
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: getReactQueryKey({
       baseStr: "conversation-messages-infinite",
       clientInboxId,
@@ -182,6 +184,7 @@ export function getConversationMessagesInfiniteQueryOptions(
       return conversationMessagesInfiniteQueryFn({
         clientInboxId,
         xmtpConversationId,
+        limit,
         pageParam: pageParam,
       })
     },

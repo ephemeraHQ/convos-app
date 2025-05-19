@@ -7,10 +7,11 @@ import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 
 type IArgs = {
   xmtpConversationId: IXmtpConversationId
+  caller: string
 }
 
 export function useConversationLastMessage(args: IArgs) {
-  const { xmtpConversationId } = args
+  const { xmtpConversationId, caller } = args
   const currentSender = useSafeCurrentSender()
 
   const queryOptions = useMemo(() => {
@@ -18,13 +19,14 @@ export function useConversationLastMessage(args: IArgs) {
       ...getConversationMessagesInfiniteQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId,
-        caller: "useConversationLastMessage",
+        caller: `${caller}:useConversationLastMessage`,
+        limit: 1,
       }),
       select: (data) => {
         return data.pages[0].messageIds[0]
       },
     })
-  }, [currentSender.inboxId, xmtpConversationId])
+  }, [currentSender.inboxId, xmtpConversationId, caller])
 
   const { data: lastMessageId, isLoading: isLoadingLastMessageId } = useInfiniteQuery(queryOptions)
 
