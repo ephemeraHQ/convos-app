@@ -42,32 +42,35 @@ export function useAllowDmMutation() {
         clientInboxId: currentSenderInboxId,
         xmtpConversationId,
       })
-      if (existingDm) {
-        const updatedDm: IDm = {
-          ...existingDm,
-          consentState: "allowed",
-        }
 
-        setDmQueryData({
-          clientInboxId: currentSenderInboxId,
-          xmtpConversationId,
-          dm: updatedDm,
-        })
-
-        // Add to main conversations list
-        addConversationToAllowedConsentConversationsQuery({
-          clientInboxId: currentSenderInboxId,
-          conversationId: xmtpConversationId,
-        })
-
-        // Remove from requests
-        removeConversationFromUnknownConsentConversationsQuery({
-          clientInboxId: currentSenderInboxId,
-          conversationId: xmtpConversationId,
-        })
-
-        return { previousDmConsent: existingDm.consentState }
+      if (!existingDm) {
+        throw new Error("DM not found in query cache when allowing DM")
       }
+
+      const updatedDm: IDm = {
+        ...existingDm,
+        consentState: "allowed",
+      }
+
+      setDmQueryData({
+        clientInboxId: currentSenderInboxId,
+        xmtpConversationId,
+        dm: updatedDm,
+      })
+
+      // Add to main conversations list
+      addConversationToAllowedConsentConversationsQuery({
+        clientInboxId: currentSenderInboxId,
+        conversationId: xmtpConversationId,
+      })
+
+      // Remove from requests
+      removeConversationFromUnknownConsentConversationsQuery({
+        clientInboxId: currentSenderInboxId,
+        conversationId: xmtpConversationId,
+      })
+
+      return { previousDmConsent: existingDm.consentState }
     },
     onError: (error, { xmtpConversationId }, context) => {
       const { previousDmConsent } = context || {}

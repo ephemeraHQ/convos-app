@@ -73,7 +73,6 @@ export function getConversationQueryOptions(
       baseStr: "conversation",
       clientInboxId,
       xmtpConversationId,
-      caller,
     }),
     queryFn: enabled ? () => getConversation({ clientInboxId, xmtpConversationId }) : skipToken,
     enabled,
