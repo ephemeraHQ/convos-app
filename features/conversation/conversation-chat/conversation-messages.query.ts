@@ -98,7 +98,7 @@ const conversationMessagesInfiniteQueryFn = async (
 
   const xmtpMessages = await getXmtpConversationMessages({
     clientInboxId,
-    conversationId: conversation.xmtpId,
+    xmtpConversationId: conversation.xmtpId,
     limit: limit || DEFAULT_PAGE_SIZE,
     ...(direction === "next" && cursorNs ? { beforeNs: cursorNs } : {}),
     ...(direction === "prev" && cursorNs ? { afterNs: cursorNs } : {}),

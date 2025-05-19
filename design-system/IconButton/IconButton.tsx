@@ -99,9 +99,9 @@ export const IconButton = React.forwardRef(function IconButton(props: IIconButto
       preventDoubleTap={preventDoubleTap}
       {...rest}
     >
-      {({ pressed }) => {
+      {({ pressed, hovered }) => {
         if (iconName) {
-          const { size, weight, color } = iconProps({ pressed })
+          const { size, weight, color } = iconProps({ pressed, hovered })
           return (
             <Icon
               icon={iconName}

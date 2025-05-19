@@ -28,13 +28,13 @@ import {
 
 export async function getXmtpConversationMessages(args: {
   clientInboxId: IXmtpInboxId
-  conversationId: IXmtpConversationId
-  limit?: number
+  xmtpConversationId: IXmtpConversationId
+  limit: number
   afterNs?: number
   beforeNs?: number
   direction?: "next" | "prev"
 }) {
-  const { clientInboxId, conversationId, limit = 30, afterNs, beforeNs, direction = "next" } = args
+  const { clientInboxId, xmtpConversationId, limit, afterNs, beforeNs, direction = "next" } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -44,7 +44,7 @@ export async function getXmtpConversationMessages(args: {
     const messages = await wrapXmtpCallWithDuration("conversationMessages", () =>
       conversationMessages(
         client.installationId,
-        conversationId,
+        xmtpConversationId,
         limit,
         beforeNs,
         afterNs,
@@ -56,7 +56,7 @@ export async function getXmtpConversationMessages(args: {
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: `Error fetching messages for conversationId ${conversationId}`,
+      additionalMessage: `Error fetching messages for xmtpConversationId ${xmtpConversationId}`,
     })
   }
 }
