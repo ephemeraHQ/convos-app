@@ -15,6 +15,7 @@ import { GenericError } from "@/utils/error"
 import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { authLogger } from "../../utils/logger/logger"
+import { Image } from "expo-image"
 
 export const useLogout = () => {
   const { clearAllSessions: clearTurnkeySessions } = useTurnkey()
@@ -138,6 +139,13 @@ export const useLogout = () => {
           additionalMessage: "Error logging out",
         })
       } finally {
+        // Clear expo-image cache after logout for privacy and to avoid stale images
+        try {
+          await Image.clearDiskCache()
+          await Image.clearMemoryCache()
+        } catch (e) {
+          captureError(new GenericError({ error: e, additionalMessage: "Error clearing image cache after logout" }))
+        }
         useAppStore.getState().actions.setIsLoggingOut(false)
       }
     },

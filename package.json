@@ -113,7 +113,7 @@
     "expo-document-picker": "~13.0.1",
     "expo-file-system": "~18.0.4",
     "expo-haptics": "~14.0.0",
-    "expo-image": "~2.0.2",
+    "expo-image": "^2.1.7",
     "expo-image-manipulator": "~13.0.5",
     "expo-image-picker": "~16.0.3",
     "expo-linear-gradient": "~14.0.1",
