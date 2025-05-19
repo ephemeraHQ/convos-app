@@ -6,7 +6,7 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import {
   refetchConversationMessagesInfiniteQuery,
-  addMessageToConversationMessagesInfiniteQueryData
+  addMessagesToConversationMessagesInfiniteQueryData
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { invalidateDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IGroup } from "@/features/groups/group.types"
@@ -27,6 +27,7 @@ import {
 } from "../conversation/conversation-chat/conversation-message/conversation-message.types"
 import { convertXmtpMessageToConvosMessage } from "../conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { MIN_RETENTION_DURATION_NS } from "@/features/disappearing-messages/disappearing-messages.constants"
+import { streamLogger } from "@/utils/logger/logger"
 
 export async function startMessageStreaming(args: { clientInboxId: IXmtpInboxId }) {
   const { clientInboxId } = args
