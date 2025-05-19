@@ -97,7 +97,7 @@
     "buffer": "^6.0.3",
     "date-fns": "^2.29.3",
     "deepmerge": "^4.3.1",
-    "emoji-regex": "^10.3.0",
+    "emoji-regex": "^10.4.0",
     "ethers": "6.13.5",
     "expo": "~52.0.42",
     "expo-apple-authentication": "^7.1.3",
