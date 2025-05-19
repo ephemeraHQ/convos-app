@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react"
 import { Modal } from "react-native"
 import { GestureDetector } from "react-native-gesture-handler"
 import { Easing, runOnJS, useSharedValue, withTiming } from "react-native-reanimated"
-// Import from our separated files
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { AnimatedHStack } from "@/design-system/HStack"
 import { Text } from "@/design-system/Text"
@@ -25,6 +25,7 @@ import { IAnimationState, IMediaViewerProps } from "./conversation-media-viewer.
 export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
   const { visible, onClose, uri, sender, timestamp } = props
   const { theme, themed } = useAppTheme()
+  const insets = useSafeAreaInsets()
 
   const [modalVisible, setModalVisible] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(false)
@@ -228,6 +229,13 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       ? theme.colors.background.surfaceless
       : theme.colors.global.black,
   }
+  
+  // Apply safe area top inset to the control container
+  const infoContainerStyle = themed($infoContainer);
+  const safeInfoContainerStyle = {
+    ...infoContainerStyle,
+    paddingTop: insets.top + theme.spacing.md,
+  };
 
   return (
     <Modal
@@ -259,8 +267,8 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
 
         {/* Controls container - only render when needed */}
         {(controlsVisible || controlsOpacity.value > 0) && (
-          <AnimatedHStack style={[themed($infoContainer), controlsAnimatedStyle]}>
-            <VStack>
+          <AnimatedHStack style={[safeInfoContainerStyle, controlsAnimatedStyle]}>
+            <VStack style={{ flex: 1 }}>
               {sender && <Text preset="body">{sender}</Text>}
               {timestamp && (
                 <Text preset="smaller" color="secondary">
