@@ -20,7 +20,6 @@ export function useConversationLastMessage(args: IArgs) {
         clientInboxId: currentSender.inboxId,
         xmtpConversationId,
         caller: `${caller}:useConversationLastMessage`,
-        limit: 1,
       }),
       select: (data) => {
         return data.pages[0].messageIds[0]
