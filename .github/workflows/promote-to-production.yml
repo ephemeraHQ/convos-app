@@ -1,0 +1,41 @@
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: "The source branch to merge into production. Defaults to 'main'."
+        type: string
+        default: "main"
+        required: true
+
+# Ensure only one promotion workflow runs at a time
+concurrency:
+  group: "promote-to-production"
+  cancel-in-progress: false
+
+permissions:
+  contents: write # Needed to push the merge commit
+
+jobs:
+  merge-to-production:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.source_branch }}
+          token: ${{ secrets.PAT_GITHUB }} # Use a PAT to allow pushing to production
+          fetch-depth: 0 # Needed for merging
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge source branch into production
+        run: |
+          git fetch origin production:production # Ensure local production is up-to-date
+          git checkout production
+          git merge ${{ github.event.inputs.source_branch }} -Xours --no-ff --no-edit -m "Merge branch '${{ github.event.inputs.source_branch }}' into production via workflow_dispatch [skip ci]"
+          git push origin production
