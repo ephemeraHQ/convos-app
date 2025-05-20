@@ -84,10 +84,7 @@ async function handleNotification(notification: Notifications.Notification) {
     }
 
     if (isNotificationExpoNewMessageNotification(notification)) {
-      notificationsLogger.debug(
-        `Displaying expo local new message notification ${JSON.stringify(notification)}`,
-      )
-      await maybeDisplayLocalNewMessageNotification({
+      await handleValidNotification({
         encryptedMessage: notification.request.content.data.encryptedMessage,
         conversationTopic: notification.request.content.data.contentTopic,
       })
@@ -121,11 +118,13 @@ async function handleNotification(notification: Notifications.Notification) {
   }
 }
 
-async function maybeDisplayLocalNewMessageNotification(args: {
+async function handleValidNotification(args: {
   encryptedMessage: string
   conversationTopic: IConversationTopic
 }) {
   const { encryptedMessage, conversationTopic } = args
+
+  notificationsLogger.debug("Handling valid notification...")
 
   const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
 
@@ -133,7 +132,7 @@ async function maybeDisplayLocalNewMessageNotification(args: {
 
   if (!currentSender) {
     throw new NotificationError({
-      error: "No current sender found in background notification task",
+      error: "No current sender found in handleValidNotification",
     })
   }
 
@@ -192,6 +191,7 @@ async function maybeDisplayLocalNewMessageNotification(args: {
   // Don't show notifications when app is in foreground
   const appState = useAppStateStore.getState().currentState
   if (appState === "active") {
+    notificationsLogger.debug("App is in foreground, don't show notification")
     return
   }
 

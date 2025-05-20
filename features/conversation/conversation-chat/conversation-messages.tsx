@@ -1,14 +1,16 @@
 import { FlashList, FlashListProps } from "@shopify/flash-list"
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { InfiniteQueryObserverResult, useInfiniteQuery } from "@tanstack/react-query"
 import React, { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
 import { Platform } from "react-native"
 import Animated, {
+  AnimatedRef,
   FadeInDown,
   runOnJS,
   useAnimatedRef,
   useAnimatedScrollHandler,
 } from "react-native-reanimated"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
+import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationConsentPopupDm } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-dm"
@@ -37,6 +39,7 @@ import {
   getConversationMessagesInfiniteQueryOptions,
   refetchConversationMessagesInfiniteQuery,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
@@ -66,23 +69,13 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const scrollRef = useAnimatedRef<FlashList<IXmtpMessageId>>()
-  const conversationStore = useConversationStore()
-  const isRefreshingRef = useRef(false)
-  const isFetchingMoreMessagesRef = useRef(false)
   const { theme } = useAppTheme()
+
   const { data: disappearingMessageSettings } = useDisappearingMessageSettings({
     clientInboxId: currentSender.inboxId,
     conversationId: xmtpConversationId,
     caller: "Conversation Messages",
   })
-
-  const { data: conversation } = useConversationQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-    caller: "ConversationMessages",
-  })
-
-  const isGroup = conversation ? !isConversationDm(conversation) : false
 
   const {
     data: messageIds = [],
@@ -101,6 +94,113 @@ export const ConversationMessages = memo(function ConversationMessages() {
     }),
   })
 
+  useRefetchOnAppFocus()
+  useRefetchOnMount()
+  useScrollToHighlightedMessage({ messageIds, listRef: scrollRef })
+  useMarkAsReadOnMount({ messageIds })
+  const { scrollHandler } = useHandleSrolling({ fetchNextPage, hasNextPage })
+
+  const latestXmtpMessageIdFromCurrentSender = useMemo(() => {
+    return messageIds.find((xmtpMessageId) => {
+      const message = getConversationMessageQueryData({
+        xmtpMessageId,
+        xmtpConversationId,
+        clientInboxId: currentSender.inboxId,
+      })
+      return message?.senderInboxId === currentSender.inboxId
+    })
+  }, [messageIds, currentSender.inboxId, xmtpConversationId])
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: IXmtpMessageId; index: number }) => {
+      const previousXmtpMessageId = messageIds[index + 1]
+      const nextXmtpMessageId = messageIds[index - 1]
+
+      return (
+        <ConversationMessagesListItem
+          xmtpMessageId={item}
+          isLatestXmtpMessageIdFromCurrentSender={latestXmtpMessageIdFromCurrentSender === item}
+          previousXmtpMessageId={previousXmtpMessageId}
+          nextXmtpMessageId={nextXmtpMessageId}
+          animateEntering={
+            index === 0 &&
+            getConversationMessageQueryData({
+              xmtpMessageId: item,
+              clientInboxId: currentSender.inboxId,
+              xmtpConversationId,
+            })?.status === "sending"
+          }
+        />
+      )
+    },
+    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIds, xmtpConversationId],
+  )
+
+  const getItemType = useCallback(
+    (item: IXmtpMessageId) => {
+      const message = getConversationMessageQueryData({
+        xmtpMessageId: item,
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+      })
+
+      if (!message) return "message"
+      if (message.senderInboxId === currentSender.inboxId) return "outgoing"
+      if (isAttachmentsMessage(message)) return "attachment"
+      if (isGroupUpdatedMessage(message)) return "groupUpdate"
+      return "incoming"
+    },
+    [currentSender.inboxId, xmtpConversationId],
+  )
+
+  logger.debug(`Rendering ${messageIds.length} messages`)
+
+  return (
+    <ReanimatedFlashList
+      ref={scrollRef}
+      data={messageIds}
+      renderItem={renderItem}
+      drawDistance={window.height / 2}
+      estimatedItemSize={100} // Random value for now but big enough so that if we have big messages we don't have to render a lot of them
+      inverted
+      initialScrollIndex={0}
+      keyExtractor={keyExtractor}
+      keyboardDismissMode="interactive"
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
+      onScroll={scrollHandler}
+      scrollEventThrottle={100} // We don't need to be that accurate
+      ListEmptyComponent={ListEmptyComponent}
+      ListHeaderComponent={ConsentPopup}
+      ListFooterComponent={
+        <IsReadyWrapper>
+          <ListFooterComponent numberOfMessages={messageIds.length} hasNextPage={hasNextPage} />
+        </IsReadyWrapper>
+      }
+      getItemType={getItemType}
+      estimatedListSize={{
+        height: theme.layout.screen.height,
+        width: theme.layout.screen.width,
+      }}
+
+      // LEGEND LIST PROPS
+      // initialScrollIndex={messageIdsReversed.length - 1}
+      // style={$globalStyles.flex1}
+      // recycleItems={true}
+      // maintainScrollAtEnd
+      // maintainScrollAtEndThreshold={1}
+      // alignItemsAtEnd
+      // maintainVisibleContentPosition
+      // getEstimatedItemSize={} // Maybe try this to fix overlapping attachments messages
+      // waitForInitialLayout={false}
+    />
+  )
+})
+
+function useRefetchOnAppFocus() {
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+
   useAppStateHandler({
     onForeground: () => {
       logger.debug("Conversation Messages came to foreground, refetching messages...")
@@ -115,6 +215,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
         .catch(captureError)
     },
   })
+}
+
+function useRefetchOnMount() {
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
   useEffectOnce(() => {
     logger.debug("Conversation Messages mounted, refetching messages...")
@@ -128,7 +233,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
       })
       .catch(captureError)
   })
+}
 
+function useMarkAsReadOnMount(props: { messageIds: IXmtpMessageId[] }) {
+  const { messageIds } = props
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({
     xmtpConversationId,
     caller: "Conversation Messages",
@@ -144,6 +253,14 @@ export const ConversationMessages = memo(function ConversationMessages() {
     }
     markAsReadAsync().catch(captureError)
   }, [markAsReadAsync, xmtpConversationId, messageIds.length])
+}
+
+function useScrollToHighlightedMessage(props: {
+  messageIds: IXmtpMessageId[]
+  listRef: AnimatedRef<FlashList<IXmtpMessageId>>
+}) {
+  const { messageIds, listRef } = props
+  const conversationStore = useConversationStore()
 
   // Scroll to message when we select one in the store
   useEffect(() => {
@@ -160,7 +277,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
           return
         }
 
-        scrollRef.current?.scrollToIndex({
+        listRef.current?.scrollToIndex({
           index,
           animated: true,
           viewOffset: 100, // Random value just so that the message is not directly at the bottom
@@ -175,7 +292,18 @@ export const ConversationMessages = memo(function ConversationMessages() {
     return () => {
       unsubscribe()
     }
-  }, [conversationStore, scrollRef, messageIds])
+  }, [conversationStore, listRef, messageIds])
+}
+
+function useHandleSrolling(props: {
+  fetchNextPage: () => Promise<InfiniteQueryObserverResult<IXmtpMessageId[], Error>>
+  hasNextPage: boolean
+}) {
+  const { fetchNextPage, hasNextPage } = props
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+  const isRefreshingRef = useRef(false)
+  const isFetchingMoreMessagesRef = useRef(false)
 
   function handleRefetch() {
     if (isRefreshingRef.current) {
@@ -255,104 +383,41 @@ export const ConversationMessages = memo(function ConversationMessages() {
     [hasNextPage],
   )
 
-  const latestXmtpMessageIdFromCurrentSender = useMemo(() => {
-    return messageIds.find((xmtpMessageId) => {
-      const message = getConversationMessageQueryData({
-        xmtpMessageId,
-        xmtpConversationId,
-        clientInboxId: currentSender.inboxId,
-      })
-      return message?.senderInboxId === currentSender.inboxId
-    })
-  }, [messageIds, currentSender.inboxId, xmtpConversationId])
+  return {
+    scrollHandler,
+  }
+}
 
-  const renderItem = useCallback(
-    ({ item, index }: { item: IXmtpMessageId; index: number }) => {
-      const previousXmtpMessageId = messageIds[index + 1]
-      const nextXmtpMessageId = messageIds[index - 1]
+const ListFooterComponent = memo(function ListFooterComponent(props: {
+  numberOfMessages: number
+  hasNextPage: boolean
+}) {
+  const { numberOfMessages, hasNextPage } = props
 
-      return (
-        <ConversationMessagesListItem
-          xmtpMessageId={item}
-          isLatestXmtpMessageIdFromCurrentSender={latestXmtpMessageIdFromCurrentSender === item}
-          previousXmtpMessageId={previousXmtpMessageId}
-          nextXmtpMessageId={nextXmtpMessageId}
-          animateEntering={
-            index === 0 &&
-            getConversationMessageQueryData({
-              xmtpMessageId: item,
-              clientInboxId: currentSender.inboxId,
-              xmtpConversationId,
-            })?.status === "sending"
-          }
-        />
-      )
-    },
-    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIds, xmtpConversationId],
-  )
+  const { theme } = useAppTheme()
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
-  const getItemType = useCallback(
-    (item: IXmtpMessageId) => {
-      const message = getConversationMessageQueryData({
-        xmtpMessageId: item,
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-      })
+  const { data: conversationType } = useConversationType({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "ConversationMessages ListFooterComponent",
+  })
 
-      if (!message) return "message"
-      if (message.senderInboxId === currentSender.inboxId) return "outgoing"
-      if (isAttachmentsMessage(message)) return "attachment"
-      if (isGroupUpdatedMessage(message)) return "groupUpdate"
-      return "incoming"
-    },
-    [currentSender.inboxId, xmtpConversationId],
-  )
+  const isGroup = conversationType === "group"
 
-  logger.debug(`Rendering ${messageIds.length} messages`)
+  // Want to ignore hasNextPage if we have less than DEFAULT_PAGE_SIZE messages
+  // because for some reason sometimes hasNextPage was true even tho we didn't have more.
+  // It's just since we haven't triggering fetching more once.
+  if ((numberOfMessages < DEFAULT_PAGE_SIZE || !hasNextPage) && isGroup) {
+    return (
+      <AnimatedVStack entering={theme.animation.reanimatedFadeInSpring}>
+        <ConversationInfoBanner />
+      </AnimatedVStack>
+    )
+  }
 
-  return (
-    <ReanimatedFlashList
-      ref={scrollRef}
-      data={messageIds}
-      renderItem={renderItem}
-      drawDistance={window.height / 2}
-      estimatedItemSize={100} // Random value for now but big enough so that if we have big messages we don't have to render a lot of them
-      inverted
-      initialScrollIndex={0}
-      keyExtractor={keyExtractor}
-      keyboardDismissMode="interactive"
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={Platform.OS === "ios"} // Size glitch on Android
-      onScroll={scrollHandler}
-      scrollEventThrottle={100} // We don't need to be that accurate
-      ListEmptyComponent={ListEmptyComponent}
-      ListHeaderComponent={ConsentPopup}
-      ListFooterComponent={
-        // Want to ignore hasNextPage if we have less than DEFAULT_PAGE_SIZE messages
-        // because for some reason sometimes hasNextPage was true even tho we didn't have more.
-        // It's just since we haven't triggering fetching more once.
-        (messageIds.length < DEFAULT_PAGE_SIZE || !hasNextPage) && isGroup ? (
-          <ConversationInfoBanner />
-        ) : null
-      }
-      getItemType={getItemType}
-      estimatedListSize={{
-        height: theme.layout.screen.height,
-        width: theme.layout.screen.width,
-      }}
-
-      // LEGEND LIST PROPS
-      // initialScrollIndex={messageIdsReversed.length - 1}
-      // style={$globalStyles.flex1}
-      // recycleItems={true}
-      // maintainScrollAtEnd
-      // maintainScrollAtEndThreshold={1}
-      // alignItemsAtEnd
-      // maintainVisibleContentPosition
-      // getEstimatedItemSize={} // Maybe try this to fix overlapping attachments messages
-      // waitForInitialLayout={false}
-    />
-  )
+  return null
 })
 
 const ConversationMessagesListItem = memo(

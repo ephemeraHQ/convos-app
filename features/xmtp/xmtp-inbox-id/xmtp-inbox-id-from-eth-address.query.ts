@@ -3,6 +3,7 @@ import { getInboxIdFromEthAddress } from "@/features/xmtp/xmtp-inbox-id/xmtp-inb
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { reactQueryLongCacheQueryOptions } from "@/utils/react-query/react-query.constants"
 
 type IArgs = {
   clientInboxId: IXmtpInboxId | undefined
@@ -29,6 +30,7 @@ export function getXmtpInboxIdFromEthAddressQueryOptions(args: IArgs & { caller?
             })
           }
         : skipToken,
+    ...reactQueryLongCacheQueryOptions,
   })
 }
 

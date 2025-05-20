@@ -105,13 +105,60 @@ const conversationMessagesInfiniteQueryFn = async (
     direction,
   })
 
-  const convosMessages = xmtpMessages.map(convertXmtpMessageToConvosMessage)
+  let convosMessagesFromServer = xmtpMessages.map(convertXmtpMessageToConvosMessage)
+  let combinedMessagesForPage: IConversationMessage[] = [...convosMessagesFromServer]
 
-  // Separate messages and reactions
+  // Merge with optimistic updates if fetching the very first/latest page
+  if (direction === "next" && !cursorNs) {
+    const queryKey = getConversationMessagesInfiniteQueryOptions({
+      clientInboxId,
+      xmtpConversationId,
+    }).queryKey
+    const currentInfiniteData =
+      reactQueryClient.getQueryData<IConversationMessagesInfiniteQueryData>(queryKey)
+
+    if (currentInfiniteData && currentInfiniteData.pages.length > 0) {
+      const cachedFirstPageMessageIds = currentInfiniteData.pages[0].messageIds
+      const serverMessageIdsSet = new Set(convosMessagesFromServer.map((m) => m.xmtpId))
+      const optimisticMessagesToConsider: IConversationMessage[] = []
+
+      for (const cachedMsgId of cachedFirstPageMessageIds) {
+        if (!serverMessageIdsSet.has(cachedMsgId)) {
+          const cachedMsgData = getConversationMessageQueryData({
+            clientInboxId,
+            xmtpMessageId: cachedMsgId,
+            xmtpConversationId,
+          })
+          if (cachedMsgData) {
+            const newestServerMsg = convosMessagesFromServer[0]
+            if (!newestServerMsg || cachedMsgData.sentMs > newestServerMsg.sentMs) {
+              optimisticMessagesToConsider.push(cachedMsgData)
+            }
+          }
+        }
+      }
+
+      if (optimisticMessagesToConsider.length > 0) {
+        const allMessagesForMerge = [...convosMessagesFromServer, ...optimisticMessagesToConsider]
+
+        const uniqueMessagesMap = new Map<IXmtpMessageId, IConversationMessage>()
+        for (const msg of allMessagesForMerge) {
+          if (!uniqueMessagesMap.has(msg.xmtpId)) {
+            uniqueMessagesMap.set(msg.xmtpId, msg)
+          }
+        }
+        combinedMessagesForPage = Array.from(uniqueMessagesMap.values()).sort(
+          (a, b) => b.sentMs - a.sentMs,
+        )
+        combinedMessagesForPage = combinedMessagesForPage.slice(0, limit || DEFAULT_PAGE_SIZE)
+      }
+    }
+  }
+
   const regularMessages: IConversationMessage[] = []
   const reactionMessages: IConversationMessageReaction[] = []
 
-  for (const message of convosMessages) {
+  for (const message of combinedMessagesForPage) {
     if (isReactionMessage(message)) {
       reactionMessages.push(message)
     } else {
@@ -143,21 +190,21 @@ const conversationMessagesInfiniteQueryFn = async (
   let nextCursorNs: number | null = null
   let prevCursorNs: number | null = null
 
-  if (convosMessages.length > 0) {
+  if (convosMessagesFromServer.length > 0) {
     // For "next" direction (older messages), we want to use the oldest message in the batch
-    if (direction === "next" && convosMessages.length > 0) {
+    if (direction === "next" && convosMessagesFromServer.length > 0) {
       // Use the oldest message's timestamp as cursor for next batch of older messages
       nextCursorNs =
-        convosMessages[convosMessages.length - 1].sentNs -
+        convosMessagesFromServer[convosMessagesFromServer.length - 1].sentNs -
         // Otherwise XMTP was returning the same message for both prev and next
         1000
     }
 
     // For "prev" direction (newer messages), we want to use the newest message in the batch
-    if (direction === "prev" && convosMessages.length > 0) {
+    if (direction === "prev" && convosMessagesFromServer.length > 0) {
       // Use the newest message's timestamp as cursor for next batch of newer messages
       prevCursorNs =
-        convosMessages[0].sentNs +
+        convosMessagesFromServer[0].sentNs +
         // Otherwise XMTP was returning the same message for both prev and next
         1000
     }

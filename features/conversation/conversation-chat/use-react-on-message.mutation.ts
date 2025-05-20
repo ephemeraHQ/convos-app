@@ -3,13 +3,16 @@ import { useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
 import { invalidateConversationMessagesInfiniteMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
+import {
+  getConversationQueryData,
+  maybeUpdateConversationQueryLastMessage,
+} from "@/features/conversation/queries/conversation.query"
 import {
   getXmtpConversationTopicFromXmtpId,
   sendXmtpConversationMessageOptimistic,
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { captureErrorWithToast } from "@/utils/capture-error"
+import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { getTodayMs, getTodayNs } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { Haptics } from "@/utils/haptics"
@@ -33,7 +36,7 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
         throw new Error("Conversation not found when reacting on message")
       }
 
-      await sendXmtpConversationMessageOptimistic({
+      return sendXmtpConversationMessageOptimistic({
         conversationId: conversation.xmtpId,
         clientInboxId: currentSender.inboxId,
         content: {
@@ -67,6 +70,14 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
           ],
         })
       }
+    },
+    onSuccess: (xmtpMessageId) => {
+      const currentSender = getSafeCurrentSender()
+      maybeUpdateConversationQueryLastMessage({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+        messageIds: [xmtpMessageId],
+      }).catch(captureError)
     },
     onError: (error) => {
       const currentSender = getSafeCurrentSender()

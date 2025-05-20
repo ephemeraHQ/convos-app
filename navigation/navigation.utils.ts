@@ -5,7 +5,7 @@ import { captureError } from "@/utils/capture-error"
 import { NavigationError } from "@/utils/error"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 import { config } from "../config"
-import { logger } from "../utils/logger/logger"
+import { navigationLogger } from "../utils/logger/logger"
 import { NavigationParamList } from "./navigation.types"
 
 // https://reactnavigation.org/docs/navigating-without-navigation-prop/#usage
@@ -44,7 +44,7 @@ export async function navigate<T extends keyof NavigationParamList>(
 
     await ensureNavigationReady()
 
-    logger.debug(`[Navigation] Navigating to ${screen} ${params ? JSON.stringify(params) : ""}`)
+    navigationLogger.debug(`Navigating to ${screen} ${params ? JSON.stringify(params) : ""}`)
 
     // @ts-ignore
     navigationRef.navigate(screen, params)
@@ -75,8 +75,8 @@ export async function navigateFromHome<S extends keyof NavigationParamList>(
   try {
     await ensureNavigationReady()
 
-    logger.debug(
-      `[Navigation] Navigating from home to ${screen} ${params ? JSON.stringify(params) : ""}`,
+    navigationLogger.debug(
+      `Navigating from home to ${screen} ${params ? JSON.stringify(params) : ""}`,
     )
 
     // If we're navigating to the home screen, just do a simple reset
@@ -139,18 +139,18 @@ const isGroupLink = (url: string) => {
 
 const originalOpenURL = RNLinking.openURL.bind(RNLinking)
 RNLinking.openURL = (url: string) => {
-  logger.debug("[Navigation] Processing URL:", url)
+  navigationLogger.debug("[Navigation] Processing URL:", url)
 
   try {
     if (isDMLink(url)) {
-      logger.debug("[Navigation] Handling DM link")
+      navigationLogger.debug("[Navigation] Handling DM link")
       return originalOpenURL(getSchemedURLFromUniversalURL(url))
     }
     if (isGroupLink(url)) {
-      logger.debug("[Navigation] Handling group link")
+      navigationLogger.debug("[Navigation] Handling group link")
       return originalOpenURL(getSchemedURLFromUniversalURL(url))
     }
-    logger.debug("[Navigation] Handling default link")
+    navigationLogger.debug("[Navigation] Handling default link")
     return originalOpenURL(url)
   } catch (error) {
     captureError(

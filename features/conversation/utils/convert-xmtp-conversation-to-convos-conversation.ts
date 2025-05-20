@@ -15,6 +15,7 @@ import { captureError } from "@/utils/capture-error"
 import { entify } from "@/utils/entify"
 import { GenericError } from "@/utils/error"
 import { logger } from "@/utils/logger/logger"
+import { measureTimeAsync } from "@/utils/perf/perf-timer"
 
 export async function convertXmtpConversationToConvosConversation(
   xmtpConversation: IXmtpConversationWithCodecs,
@@ -77,22 +78,20 @@ export async function convertXmtpConversationToConvosConversation(
   } satisfies IDm
 }
 
-function getXmtpLastMessageFromMessages(args: {
+async function getXmtpLastMessageFromMessages(args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
 }) {
   const { clientInboxId, xmtpConversationId } = args
+  const { result, durationMs } = await measureTimeAsync(async () => {
+    const xmtpMessages = await getXmtpConversationMessages({
+      clientInboxId,
+      xmtpConversationId,
+      limit: 1,
+    })
 
-  logger.debug(
-    `Fetching conversation messages to get last message until we have lastMessage from the SDK...`,
-  )
-
-  return getXmtpConversationMessages({
-    clientInboxId,
-    xmtpConversationId,
-    limit: 1,
-  }).then((xmtpMessages) => {
     const xmtpMessage = xmtpMessages[0]
+
     if (!xmtpMessage) {
       captureError(
         new GenericError({
@@ -101,6 +100,13 @@ function getXmtpLastMessageFromMessages(args: {
       )
       return undefined
     }
+
     return xmtpMessage
   })
+
+  logger.debug(
+    `Fetched last message fallback for conversation ${xmtpConversationId} in ${durationMs}ms`,
+  )
+
+  return result
 }

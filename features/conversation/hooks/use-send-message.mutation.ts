@@ -183,12 +183,13 @@ export const getSendMessageMutationOptions = (): MutationOptions<
           }
         })
         .catch((error) => {
-          invalidateConversationMessagesInfiniteMessagesQuery({
+          captureError(new ReactQueryError({ error }))
+          return invalidateConversationMessagesInfiniteMessagesQuery({
             clientInboxId: currentSender.inboxId,
             xmtpConversationId: variables.xmtpConversationId,
-          }).catch(captureError)
-          captureError(new ReactQueryError({ error }))
+          })
         })
+        .catch(captureError)
     },
     onError: (_, variables, context) => {
       if (!context) {

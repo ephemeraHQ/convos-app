@@ -51,12 +51,7 @@ export function getConversationMessageQueryOptions(
   return queryOptions({
     meta: {
       caller,
-      persist: (query: Query<IConversationMessageQueryData>) => {
-        if (!query.state.data) {
-          return false
-        }
-        return messageIsRecent(query.state.data)
-      },
+      persist: true,
     },
     queryKey: getReactQueryKey({
       baseStr: "conversation-message",

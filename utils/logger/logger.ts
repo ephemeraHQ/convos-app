@@ -120,6 +120,7 @@ export const sentryLogger = baseLogger.extend("SENTRY")
 export const persistLogger = baseLogger.extend("PERSIST")
 export const queryLogger = baseLogger.extend("QUERY")
 export const deepLinkLogger = baseLogger.extend("DEEPLINK")
+export const navigationLogger = baseLogger.extend("NAVIGATION")
 
 // Pretty print JSON for terminal output
 export function logJson(label: string, json: any) {

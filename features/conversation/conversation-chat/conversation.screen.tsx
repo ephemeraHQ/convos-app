@@ -109,7 +109,7 @@ const Content = memo(function Content() {
           <ConversationKeyboardFiller />
         </VStack>
       </VStack>
-      <IsReadyWrapper delay={500}>
+      <IsReadyWrapper delay={1000}>
         <ConversationMessageContextMenu />
         <MessageReactionsDrawer />
       </IsReadyWrapper>

@@ -53,7 +53,7 @@ export function useNotificationListeners() {
     // Listen for notification taps while app is running
     notificationTapListenerRef.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        notificationsLogger.debug(`Handling notification tap:`, response)
+        notificationsLogger.debug(`Handling notification tap...`)
         handleNotification(response).catch(captureError)
       },
     )
@@ -109,16 +109,14 @@ async function handleNotification(response: Notifications.NotificationResponse) 
     })
 
     if (isConvosModifiedNotification(tappedNotification)) {
-      notificationsLogger.debug(
-        `Handling Convos modified notification: ${JSON.stringify(tappedNotification)}`,
-      )
+      notificationsLogger.debug(`Handling Convos modified notification...`)
       return navigate("Conversation", {
         xmtpConversationId: tappedNotification.request.content.data.message.xmtpConversationId,
       })
     }
 
     if (isNotificationExpoNewMessageNotification(tappedNotification)) {
-      notificationsLogger.debug(`Handling Expo notification...`)
+      notificationsLogger.debug(`Handling Expo new message notification...`)
 
       const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
       const tappedXmtpConversationId = getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
