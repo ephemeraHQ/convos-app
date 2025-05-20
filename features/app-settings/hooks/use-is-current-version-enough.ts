@@ -5,23 +5,23 @@ import { config } from "@/config"
 import { getAppSettingsQueryOptions } from "@/features/app-settings/app-settings.query"
 import { openLink } from "@/utils/linking"
 
-type VersionComparisonArgs = {
-  currentVersion: string
-  minimumVersion: string
-}
-
 function parseVersion(version: string): number[] {
   return version.split(".").map(Number)
 }
 
-// Compare version strings like "1.2.3"
-function isVersionGreaterOrEqual(args: VersionComparisonArgs) {
-  const { currentVersion, minimumVersion } = args
+// Compare version strings like "1.2.3" and build numbers like "123"
+function isVersionGreaterOrEqual(args: {
+  currentVersion: string
+  minimumVersion: string
+  currentBuildNumber: number
+  minimumBuildNumber: number
+}) {
+  const { currentVersion, minimumVersion, currentBuildNumber, minimumBuildNumber } = args
 
   const current = parseVersion(currentVersion)
   const minimum = parseVersion(minimumVersion)
 
-  // Compare each version segment
+  // Compare version segments first since version is most important
   for (let i = 0; i < 3; i++) {
     if (current[i] > minimum[i]) {
       return true
@@ -30,22 +30,36 @@ function isVersionGreaterOrEqual(args: VersionComparisonArgs) {
       return false
     }
   }
+
+  // If versions are equal, compare build numbers only for iOS
+  // For Android, build numbers always increase so we only check version numbers
+  if (current[0] === minimum[0] && current[1] === minimum[1] && current[2] === minimum[2]) {
+    if (Platform.OS === "ios") {
+      return currentBuildNumber >= minimumBuildNumber
+    }
+    return true // On Android, if versions match we consider it up to date
+  }
+
   return true
 }
-
 export function useIsCurrentVersionEnough() {
   const queryOpts = useMemo(() => {
     return queryOptions({
       ...getAppSettingsQueryOptions(),
       select: (backendConfig) => {
-        const minimumVersion = Platform.select({
-          android: backendConfig.minimumAppVersion.android,
-          default: backendConfig.minimumAppVersion.ios,
-        })
-
         return isVersionGreaterOrEqual({
           currentVersion: config.app.version,
-          minimumVersion,
+          minimumVersion: Platform.select({
+            ios: backendConfig.minimumAppVersion.ios.version,
+            android: backendConfig.minimumAppVersion.android.version,
+            default: backendConfig.minimumAppVersion.ios.version, // TODO: web
+          }),
+          currentBuildNumber: config.app.buildNumber,
+          minimumBuildNumber: Platform.select({
+            ios: Number(backendConfig.minimumAppVersion.ios.buildNumber),
+            android: Number(backendConfig.minimumAppVersion.android.buildNumber),
+            default: Number(backendConfig.minimumAppVersion.ios.buildNumber), // TODO: web
+          }),
         })
       },
     })

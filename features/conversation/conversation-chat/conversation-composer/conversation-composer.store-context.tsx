@@ -1,11 +1,11 @@
 import { createContext, memo, useContext, useEffect, useRef } from "react"
 import { createStore, useStore } from "zustand"
-import { createJSONStorage, persist, subscribeWithSelector } from "zustand/middleware"
+import { persist, subscribeWithSelector } from "zustand/middleware"
 import { IConversationMessageRemoteAttachmentContent } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { useCurrentXmtpConversationId } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { usePrevious } from "@/hooks/use-previous-value"
-import { zustandMMKVStorage } from "@/utils/zustand/zustand"
+import { getZustandMmkvStorage } from "@/utils/storage/zustand"
 
 export type IComposerAttachmentStatus = "picked" | "uploading" | "error" | "uploaded"
 
@@ -172,7 +172,7 @@ const createConversationComposerStore = (
             })),
         }),
         {
-          storage: createJSONStorage(() => zustandMMKVStorage),
+          storage: getZustandMmkvStorage({ id: initProps.storeName }),
           name: initProps.storeName,
           partialize: (state) => ({
             inputValue: state.inputValue,

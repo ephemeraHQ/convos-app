@@ -7,45 +7,28 @@ import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xm
 import { mergeObjDeep } from "@/utils/objects"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { TimeUtils } from "@/utils/time.utils"
 import { convertXmtpMessageToConvosMessage } from "./utils/convert-xmtp-message-to-convos-message"
 
 type IArgs = {
   clientInboxId: IXmtpInboxId
   xmtpMessageId: IXmtpMessageId | undefined
-  xmtpConversationId?: IXmtpConversationId // Not passing undefined will not sync the conversation
+  xmtpConversationId: IXmtpConversationId // Not passing undefined will not sync the conversation
 }
 
 type IConversationMessageQueryData = Awaited<ReturnType<typeof getConversationMessage>>
 
 async function getConversationMessage(args: IArgs) {
-  const { clientInboxId, xmtpMessageId, xmtpConversationId: xmtpConversationIdArg } = args
+  const { clientInboxId, xmtpMessageId, xmtpConversationId } = args
 
   if (!xmtpMessageId) {
     throw new Error("xmtpMessageId is required")
   }
 
-  let xmtpConversationId = xmtpConversationIdArg
-
-  if (!xmtpConversationId) {
-    // Check if we already have the message in the cache and have the conversation associated
-    const message = getConversationMessageQueryData({
-      clientInboxId,
-      xmtpMessageId,
-    })
-
-    if (message) {
-      xmtpConversationId = message.xmtpConversationId
-    }
-  }
-
-  if (xmtpConversationIdArg) {
-    await syncOneXmtpConversation({
-      clientInboxId,
-      conversationId: xmtpConversationIdArg,
-      caller: "getConversationMessage",
-    })
-  }
+  await syncOneXmtpConversation({
+    clientInboxId,
+    conversationId: xmtpConversationId,
+    caller: "getConversationMessage",
+  })
 
   const xmtpMessage = await getXmtpConversationMessage({
     messageId: xmtpMessageId,
@@ -68,12 +51,7 @@ export function getConversationMessageQueryOptions(
   return queryOptions({
     meta: {
       caller,
-      persist: (query: Query<IConversationMessageQueryData>) => {
-        if (!query.state.data) {
-          return false
-        }
-        return messageIsRecent(query.state.data)
-      },
+      persist: true,
     },
     queryKey: getReactQueryKey({
       baseStr: "conversation-message",
@@ -87,7 +65,6 @@ export function getConversationMessageQueryOptions(
     refetchOnWindowFocus: false, // Because we prefer setting the message query data from when we fetch list of messages
     refetchOnReconnect: false, // Because we prefer setting the message query data from when we fetch list of messages
     staleTime: Infinity, // Because we prefer setting the message query data from when we fetch list of messages
-    gcTime: TimeUtils.days(30).toMilliseconds(),
   })
 }
 

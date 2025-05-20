@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   pinConversationMetadata,
   unpinConversationMetadata,
@@ -9,21 +9,25 @@ import {
   getConversationMetadataQueryData,
   updateConversationMetadataQueryData,
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 
 export function usePinOrUnpinConversation(args: { xmtpConversationId: IXmtpConversationId }) {
   const { xmtpConversationId } = args
 
-  const currentSender = useSafeCurrentSender()
-
   const { mutateAsync: pinConversationAsync } = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      const currentSender = getSafeCurrentSender()
+      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
+
       return pinConversationMetadata({
-        clientInboxId: currentSender.inboxId,
+        deviceIdentityId: deviceIdentity.id,
         xmtpConversationId: xmtpConversationId,
       })
     },
     onMutate: () => {
+      const currentSender = getSafeCurrentSender()
+
       const previousPinned = getConversationMetadataQueryData({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: xmtpConversationId,
@@ -38,6 +42,8 @@ export function usePinOrUnpinConversation(args: { xmtpConversationId: IXmtpConve
       return { previousPinned }
     },
     onError: (__, _, context) => {
+      const currentSender = getSafeCurrentSender()
+
       updateConversationMetadataQueryData({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: xmtpConversationId,
@@ -47,13 +53,18 @@ export function usePinOrUnpinConversation(args: { xmtpConversationId: IXmtpConve
   })
 
   const { mutateAsync: unpinConversationAsync } = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      const currentSender = getSafeCurrentSender()
+      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
+
       return unpinConversationMetadata({
-        clientInboxId: currentSender.inboxId,
+        deviceIdentityId: deviceIdentity.id,
         xmtpConversationId: xmtpConversationId,
       })
     },
     onMutate: () => {
+      const currentSender = getSafeCurrentSender()
+
       const previousPinned = getConversationMetadataQueryData({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: xmtpConversationId,
@@ -67,7 +78,9 @@ export function usePinOrUnpinConversation(args: { xmtpConversationId: IXmtpConve
 
       return { previousPinned }
     },
-    onError: (error, _, context) => {
+    onError: (__, _, context) => {
+      const currentSender = getSafeCurrentSender()
+
       updateConversationMetadataQueryData({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: xmtpConversationId,
@@ -77,6 +90,8 @@ export function usePinOrUnpinConversation(args: { xmtpConversationId: IXmtpConve
   })
 
   const pinOrUnpinConversationAsync = useCallback(async () => {
+    const currentSender = getSafeCurrentSender()
+
     const isPinned = getConversationMetadataQueryData({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId: xmtpConversationId,
@@ -87,7 +102,7 @@ export function usePinOrUnpinConversation(args: { xmtpConversationId: IXmtpConve
     } else {
       return pinConversationAsync()
     }
-  }, [xmtpConversationId, currentSender, pinConversationAsync, unpinConversationAsync])
+  }, [xmtpConversationId, pinConversationAsync, unpinConversationAsync])
 
   return {
     pinOrUnpinConversationAsync,

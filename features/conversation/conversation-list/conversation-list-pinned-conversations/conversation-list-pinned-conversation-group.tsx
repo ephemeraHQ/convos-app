@@ -38,6 +38,7 @@ export const ConversationListPinnedConversationGroup = ({
 
   const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId: groupConversationTopic,
+    caller: "ConversationListPinnedConversationGroup",
   })
 
   const displayMessagePreview = lastMessage && isTextMessage(lastMessage) && isUnread

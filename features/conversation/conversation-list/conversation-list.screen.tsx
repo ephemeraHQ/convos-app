@@ -5,8 +5,10 @@ import { Screen } from "@/components/screen/screen"
 import { ContextMenuView } from "@/design-system/context-menu/context-menu"
 import { HStack } from "@/design-system/HStack"
 import { AnimatedVStack } from "@/design-system/VStack"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import {
+  getSafeCurrentSender,
+  useSafeCurrentSender,
+} from "@/features/authentication/multi-inbox.store"
 import { ConversationListItemDm } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-dm"
 import { ConversationListItemGroup } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-group"
 import { ConversationListLoading } from "@/features/conversation/conversation-list/conversation-list-loading"
@@ -17,20 +19,15 @@ import {
   useGroupConversationContextMenuViewProps,
 } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
-import {
-  getConversationQueryData,
-  useConversationQuery,
-} from "@/features/conversation/queries/conversation.query"
-import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
+import { refetchUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useEffectWhenCondition } from "@/hooks/use-effect-once-when-condition"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { logger } from "@/utils/logger/logger"
 import { ConversationListAwaitingRequests } from "./conversation-list-awaiting-requests"
 import { ConversationListEmpty } from "./conversation-list-empty"
 import { ConversationListStartNewConvoBanner } from "./conversation-list-start-new-convo-banner"
@@ -49,60 +46,18 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   } = useConversationListConversations()
 
   const insets = useSafeAreaInsets()
-  const currentSender = useSafeCurrentSender()
-
-  // ONLY when we mount, we want to refetch messages for recent conversations
-  useEffectWhenCondition(() => {
-    conversationsIds?.forEach((conversationId) => {
-      const conversation = getConversationQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-      })
-
-      if (
-        conversation &&
-        conversationHasRecentActivities({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
-        })
-      ) {
-        logger.debug(`Refetching messages on mount for conversation ${conversationId}...`)
-        refetchConversationMessagesInfiniteQuery({
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
-          caller: "ConversationListScreen on mount refetch",
-        }).catch(captureError)
-      }
-    })
-  }, true)
 
   useConversationListScreenHeader()
 
-  // Temporary comment until we solve performance issues
-  // Let's preload the active conversations
-  // useEffectWhenCondition(
-  //   () => {
-  //     for (const conversationId of conversationsIds
-  //       .filter((xmtpConversationId) =>
-  //         conversationHasRecentActivities({
-  //           clientInboxId: currentSender.inboxId,
-  //           xmtpConversationId,
-  //         }),
-  //       )
-  //       // For now we don't want more than 5 conversations to be preloaded
-  //       .slice(0, 5)) {
-  //       // Preload the conversation screen
-  //       // router.preload("Conversation", {
-  //       //   xmtpConversationId: conversationId,
-  //       // })
-  //     }
-  //   },
-  //   Boolean(conversationsIds && conversationsIds.length > 0 && currentSender),
-  // )
-
   const handleRefresh = useCallback(async () => {
     try {
-      await refetchConversations()
+      const currentSender = getSafeCurrentSender()
+      await Promise.all([
+        refetchConversations(),
+        refetchUnknownConsentConversationsQuery({
+          inboxId: currentSender.inboxId,
+        }),
+      ])
     } catch (error) {
       captureError(new GenericError({ error, additionalMessage: "Error refreshing conversations" }))
     }

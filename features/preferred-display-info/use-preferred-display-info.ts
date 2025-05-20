@@ -67,7 +67,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
   const ethAddressesOptions = getEthAddressesForXmtpInboxIdQueryOptions({
     clientInboxId: currentSender.inboxId,
     inboxId,
-    caller: "usePreferredDisplayInfo",
+    caller,
   })
 
   const { data: ethAddressesForXmtpInboxId } = useQuery({
@@ -218,19 +218,22 @@ export function getPreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
   }
 }
 
-export async function ensurePreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
-  const { inboxId: inboxIdArg, ethAddress: ethAddressArg } = args
+export async function ensurePreferredDisplayInfo(
+  args: PreferredDisplayInfoArgs & { caller: string },
+) {
+  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, caller: callerArg } = args
 
   const currentSender = getSafeCurrentSender()
 
   let inboxId = inboxIdArg
   let ethAddress = ethAddressArg
+  const caller = `${callerArg}:ensurePreferredDisplayInfo`
 
   if (ethAddress && !inboxId) {
     inboxId = await ensureXmtpInboxIdFromEthAddressQueryData({
       clientInboxId: currentSender.inboxId,
       targetEthAddress: ethAddressArg,
-      caller: "ensurePreferredDisplayInfo",
+      caller,
     })
   }
 
@@ -239,20 +242,18 @@ export async function ensurePreferredDisplayInfo(args: PreferredDisplayInfoArgs)
       await ensureEthAddressesForXmtpInboxIdQueryData({
         clientInboxId: currentSender.inboxId,
         inboxId: inboxId,
-        caller: "ensurePreferredDisplayInfo",
+        caller,
       })
     )?.[0]
   }
 
-  const profile =
-    inboxId &&
-    (await ensureProfileQueryData({ xmtpId: inboxId, caller: "ensurePreferredDisplayInfo" }))
+  const profile = inboxId && (await ensureProfileQueryData({ xmtpId: inboxId, caller }))
 
   const socialProfiles =
     ethAddress &&
     (await ensureSocialProfilesForAddressQuery({
       ethAddress,
-      caller: "ensurePreferredDisplayInfo",
+      caller,
     }))
 
   const displayName = getPreferredDisplayName({

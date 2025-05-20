@@ -2509,6 +2509,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@eslint-community/eslint-utils@npm:^4.1.2":
+  version: 4.7.0
+  resolution: "@eslint-community/eslint-utils@npm:4.7.0"
+  dependencies:
+    eslint-visitor-keys: "npm:^3.4.3"
+  peerDependencies:
+    eslint: ^6.0.0 || ^7.0.0 || >=8.0.0
+  checksum: 10c0/c0f4f2bd73b7b7a9de74b716a664873d08ab71ab439e51befe77d61915af41a81ecec93b408778b3a7856185244c34c2c8ee28912072ec14def84ba2dec70adf
+  languageName: node
+  linkType: hard
+
 "@eslint-community/eslint-utils@npm:^4.2.0, @eslint-community/eslint-utils@npm:^4.4.0":
   version: 4.6.1
   resolution: "@eslint-community/eslint-utils@npm:4.6.1"
@@ -2520,7 +2531,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint-community/regexpp@npm:^4.10.0, @eslint-community/regexpp@npm:^4.5.1, @eslint-community/regexpp@npm:^4.6.1":
+"@eslint-community/regexpp@npm:^4.10.0, @eslint-community/regexpp@npm:^4.12.1, @eslint-community/regexpp@npm:^4.5.1, @eslint-community/regexpp@npm:^4.6.1":
   version: 4.12.1
   resolution: "@eslint-community/regexpp@npm:4.12.1"
   checksum: 10c0/a03d98c246bcb9109aec2c08e4d10c8d010256538dcb3f56610191607214523d4fb1b00aa81df830b6dffb74c5fa0be03642513a289c567949d3e550ca11cdf6
@@ -9056,22 +9067,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@xstate/react@npm:^5.0.0":
-  version: 5.0.3
-  resolution: "@xstate/react@npm:5.0.3"
-  dependencies:
-    use-isomorphic-layout-effect: "npm:^1.1.2"
-    use-sync-external-store: "npm:^1.2.0"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-    xstate: ^5.19.2
-  peerDependenciesMeta:
-    xstate:
-      optional: true
-  checksum: 10c0/0da333711213c91581bb0b82d7ee9113346aede2d0dc41f0e9bbb0bae6069cab14c9c96c7843a5828e057fd3886406fb4f83d12f3264653b85e98b9160fb355d
-  languageName: node
-  linkType: hard
-
 "@yarnpkg/lockfile@npm:^1.1.0":
   version: 1.1.0
   resolution: "@yarnpkg/lockfile@npm:1.1.0"
@@ -11061,7 +11056,6 @@ __metadata:
     "@welldone-software/why-did-you-render": "npm:^8.0.3"
     "@xmtp/content-type-primitives": "npm:^2.0.0"
     "@xmtp/react-native-sdk": "npm:4.2.0-dev.73f1217"
-    "@xstate/react": "npm:^5.0.0"
     "@yornaath/batshit": "npm:^0.10.1"
     alchemy-sdk: "npm:^3.4.4"
     amazon-cognito-identity-js: "npm:6.3.12"
@@ -11078,6 +11072,7 @@ __metadata:
     eslint: "npm:8.57.0"
     eslint-config-prettier: "npm:^10.0.1"
     eslint-import-resolver-typescript: "npm:^3.6.3"
+    eslint-plugin-es-x: "npm:^8.6.2"
     eslint-plugin-import: "npm:^2.31.0"
     eslint-plugin-react: "npm:7.33.2"
     eslint-plugin-react-hooks: "npm:^5.0.0"
@@ -11098,7 +11093,7 @@ __metadata:
     expo-document-picker: "npm:~13.0.1"
     expo-file-system: "npm:~18.0.4"
     expo-haptics: "npm:~14.0.0"
-    expo-image: "npm:~2.0.2"
+    expo-image: "npm:^2.1.7"
     expo-image-manipulator: "npm:~13.0.5"
     expo-image-picker: "npm:~16.0.3"
     expo-linear-gradient: "npm:~14.0.1"
@@ -11150,7 +11145,7 @@ __metadata:
     react-native-keychain: "npm:^9.2.3"
     react-native-localize: "npm:^3.0.2"
     react-native-logs: "npm:^5.1.0"
-    react-native-mmkv: "npm:^2.12.2"
+    react-native-mmkv: "npm:2.12.2"
     react-native-passkey: "npm:^3.1.0"
     react-native-qrcode-styled: "npm:^0.3.3"
     react-native-qrcode-svg: "npm:^6.2.0"
@@ -12504,6 +12499,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eslint-compat-utils@npm:^0.6.3":
+  version: 0.6.5
+  resolution: "eslint-compat-utils@npm:0.6.5"
+  dependencies:
+    semver: "npm:^7.5.4"
+  peerDependencies:
+    eslint: ">=6.0.0"
+  checksum: 10c0/f3519e1460ec82c6967c4b0132801924bf5c17328999014f444ec12f075b151e992d1ebf378cb8eb0b2e00b3d04e0eaac80897209121fd115f857598b4588393
+  languageName: node
+  linkType: hard
+
 "eslint-config-prettier@npm:^10.0.1":
   version: 10.1.2
   resolution: "eslint-config-prettier@npm:10.1.2"
@@ -12559,6 +12565,19 @@ __metadata:
     eslint:
       optional: true
   checksum: 10c0/4d8b46dcd525d71276f9be9ffac1d2be61c9d54cc53c992e6333cf957840dee09381842b1acbbb15fc6b255ebab99cd481c5007ab438e5455a14abe1a0468558
+  languageName: node
+  linkType: hard
+
+"eslint-plugin-es-x@npm:^8.6.2":
+  version: 8.6.2
+  resolution: "eslint-plugin-es-x@npm:8.6.2"
+  dependencies:
+    "@eslint-community/eslint-utils": "npm:^4.1.2"
+    "@eslint-community/regexpp": "npm:^4.12.1"
+    eslint-compat-utils: "npm:^0.6.3"
+  peerDependencies:
+    eslint: ">=8"
+  checksum: 10c0/fcf10d522865fc49f59d474b126ccae7d2dee4ffb8524659ac47f2cd8f0d3f844989374db2ebc73cd36691dab8a0cd27253ace29f17de65c4f2e7a663b1bc5ca
   languageName: node
   linkType: hard
 
@@ -13172,9 +13191,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-image@npm:~2.0.2":
-  version: 2.0.7
-  resolution: "expo-image@npm:2.0.7"
+"expo-image@npm:^2.1.7":
+  version: 2.1.7
+  resolution: "expo-image@npm:2.1.7"
   peerDependencies:
     expo: "*"
     react: "*"
@@ -13183,7 +13202,7 @@ __metadata:
   peerDependenciesMeta:
     react-native-web:
       optional: true
-  checksum: 10c0/b817b733e1bbf2bc04a227f7e8b95603a50824f9c9eaa9ea5ebc32e9232514283a81c37e7fc3fd313e4f9f7a362ef40ade3c74d3bbe905e5784647c104411ede
+  checksum: 10c0/19f1025b031b3ec344cdf7939334063c3a0487bd604bf7c8c7620e9fd6ddde9192749a759e4e2ba59e3a75ffcbfa897ced27faa6af7240cdc855c1681c097945
   languageName: node
   linkType: hard
 
@@ -20027,7 +20046,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-native-mmkv@npm:^2.11.0, react-native-mmkv@npm:^2.12.2":
+"react-native-mmkv@npm:2.12.2, react-native-mmkv@npm:^2.11.0":
   version: 2.12.2
   resolution: "react-native-mmkv@npm:2.12.2"
   peerDependencies:
@@ -23515,18 +23534,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"use-isomorphic-layout-effect@npm:^1.1.2":
-  version: 1.2.0
-  resolution: "use-isomorphic-layout-effect@npm:1.2.0"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  peerDependenciesMeta:
-    "@types/react":
-      optional: true
-  checksum: 10c0/2e4bdee68d65893b37e716ebdcc111550775189c80e662eda87d6f5b54dc431d3383a18914ea01a893ee5478902a878012713eaebcacbb6611ab88c463accb83
-  languageName: node
-  linkType: hard
-
 "use-latest-callback@npm:^0.2.1":
   version: 0.2.3
   resolution: "use-latest-callback@npm:0.2.3"
@@ -23561,7 +23568,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"use-sync-external-store@npm:^1.2.0, use-sync-external-store@npm:^1.2.2":
+"use-sync-external-store@npm:^1.2.2":
   version: 1.5.0
   resolution: "use-sync-external-store@npm:1.5.0"
   peerDependencies:

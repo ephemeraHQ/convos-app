@@ -13,6 +13,7 @@ export type IConfig = {
     name: string
     version: string
     storeUrl: string
+    buildNumber: number
     bundleId: string
     scheme: string
     universalLinks: string[]

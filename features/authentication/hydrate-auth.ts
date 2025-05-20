@@ -5,18 +5,24 @@ import { useLogout } from "@/features/authentication/use-logout"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
-import { useAppStore } from "@/stores/app-store"
+import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
-import { AuthenticationError } from "@/utils/error"
+import { AuthenticationError, BaseError, ExternalCancellationError } from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
+import { waitUntilPromise } from "@/utils/wait-until-promise"
 
 export function useHydrateAuth() {
-  authLogger.debug("Hydrating auth...")
-
   const { logout } = useLogout()
 
-  const hydrateAuth = useCallback(() => {
+  const hydrateAuth = useCallback(async () => {
     authLogger.debug("Hydrating auth...")
+
+    await waitUntilPromise({
+      checkFn: () => {
+        const multiInboxIsHydrated = useAppStore.getState().multiInboxIsHydrated
+        return multiInboxIsHydrated
+      },
+    })
 
     const currentSender = getCurrentSender()
 
@@ -34,13 +40,18 @@ export function useHydrateAuth() {
         return
       }
 
+      if (error instanceof BaseError && error.hasErrorType(ExternalCancellationError)) {
+        authLogger.debug("External cancellation error while hydrating auth so just returning...")
+        return
+      }
+
       captureError(
         new AuthenticationError({
           error,
           additionalMessage: "Error while hydrating auth so signing out...",
         }),
       )
-      logout({ caller: "useHydrateAuth xmtp client error" })
+      logout({ caller: "useHydrateAuth xmtp client error" }).catch(captureError)
       return
     })
 
@@ -51,9 +62,9 @@ export function useHydrateAuth() {
       .then((isValid) => {
         if (!isValid) {
           authLogger.debug("Invalid XMTP installation while hydrating auth so signing out...")
-          logout({ caller: "useHydrateAuth xmtp installation error" })
+          logout({ caller: "useHydrateAuth xmtp installation error" }).catch(captureError)
         } else {
-          authLogger.debug("Valid XMTP installation")
+          authLogger.debug("Current sender has valid XMTP installation")
         }
       })
       .catch(captureError)

@@ -1,58 +1,73 @@
 import { z } from "zod"
-import { IXmtpConversationTopic } from "@/features/xmtp/xmtp.types"
+import { IXmtpConversationTopic, IXmtpInstallationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { ValidationError } from "@/utils/error"
-
-// Schemas for response validation
-const RegisterInstallationResponseSchema = z.object({
-  installationId: z.string(),
-  validUntil: z.number(),
-})
+import { IDeviceIdentityId } from "../convos-identities/convos-identities.api"
 
 // Schema for registration request
-const DeliveryMechanismTypeSchema = z.enum([
-  "apnsDeviceToken",
-  "firebaseDeviceToken",
-  "customToken",
-])
-
-const DeliveryMechanismSchema = z.object({
-  deliveryMechanismType: z.object({
-    case: DeliveryMechanismTypeSchema,
-    value: z.string(),
-  }),
+const registrationRequestBodySchema = z.object({
+  deviceId: z.string(),
+  pushToken: z.string(),
+  expoToken: z.string(),
+  installations: z
+    .array(
+      z.object({
+        identityId: z.custom<IDeviceIdentityId>(),
+        xmtpInstallationId: z.custom<IXmtpInstallationId>(),
+      }),
+    )
+    .default([]),
 })
 
-const RegistrationSchema = z.object({
-  installationId: z.string(),
-  deliveryMechanism: DeliveryMechanismSchema,
-})
+type IRegistrationRequestBody = z.infer<typeof registrationRequestBodySchema>
 
-// Type definitions
-export type IDeliveryMechanismType = z.infer<typeof DeliveryMechanismTypeSchema>
+const registerInstallationResponseSchema = z.array(
+  z.discriminatedUnion("status", [
+    z.object({
+      status: z.literal("success"),
+      xmtpInstallationId: z.string(),
+      validUntil: z.number(),
+    }),
+    z.object({
+      status: z.literal("error"),
+    }),
+  ]),
+)
+type IRegisterInstallationResponse = z.infer<typeof registerInstallationResponseSchema>
 
-export type IDeliveryMechanism = z.infer<typeof DeliveryMechanismSchema>
+/**
+ * Registers a device installation for push notifications
+ */
+export const registerNotificationInstallation = async (args: IRegistrationRequestBody) => {
+  try {
+    const { data } = await convosApi.post<IRegisterInstallationResponse>(
+      "/api/v1/notifications/register",
+      args,
+    )
 
-export type IRegistrationRequest = z.infer<typeof RegistrationSchema>
+    const result = registerInstallationResponseSchema.safeParse(data)
+    if (!result.success) {
+      captureError(
+        new ValidationError({
+          error: result.error,
+          additionalMessage: "Failed to register notification installation in notifications.api.ts",
+        }),
+      )
+    }
 
-export type IRegisterInstallationResponse = z.infer<typeof RegisterInstallationResponseSchema>
+    return data
+  } catch (error) {
+    throw error
+  }
+}
 
-// Schema for subscription without metadata
-const SubscribeRequestSchema = z.object({
-  installationId: z.string(),
-  topics: z.array(z.custom<IXmtpConversationTopic>()),
-})
-
-export type ISubscribeRequest = z.infer<typeof SubscribeRequestSchema>
-
-// Schema for HMAC key
 const HmacKeySchema = z.object({
   thirtyDayPeriodsSinceEpoch: z.number(),
   key: z.string(),
 })
+export type IHmacKey = z.infer<typeof HmacKeySchema>
 
-// Schema for subscription with metadata
 const SubscriptionSchema = z.object({
   topic: z.custom<IXmtpConversationTopic>(),
   isSilent: z.boolean().optional().default(false),
@@ -63,39 +78,7 @@ const SubscribeWithMetadataRequestSchema = z.object({
   installationId: z.string(),
   subscriptions: z.array(SubscriptionSchema),
 })
-
-export type IHmacKey = z.infer<typeof HmacKeySchema>
-export type ISubscription = z.infer<typeof SubscriptionSchema>
-export type ISubscribeWithMetadataRequest = z.infer<typeof SubscribeWithMetadataRequestSchema>
-
-// Schema for unsubscribe request
-const UnsubscribeRequestSchema = z.object({
-  installationId: z.string(),
-  topics: z.array(z.custom<IXmtpConversationTopic>()),
-})
-
-export type IUnsubscribeRequest = z.infer<typeof UnsubscribeRequestSchema>
-
-/**
- * Registers a device installation for push notifications
- */
-export const registerNotificationInstallation = async (args: IRegistrationRequest) => {
-  try {
-    const { data } = await convosApi.post<IRegisterInstallationResponse>(
-      "/api/v1/notifications/register",
-      args,
-    )
-
-    const result = RegisterInstallationResponseSchema.safeParse(data)
-    if (!result.success) {
-      captureError(new ValidationError({ error: result.error }))
-    }
-
-    return data
-  } catch (error) {
-    throw error
-  }
-}
+type ISubscribeWithMetadataRequest = z.infer<typeof SubscribeWithMetadataRequestSchema>
 
 /**
  * Subscribes an installation to notification topics with metadata
@@ -109,6 +92,13 @@ export const subscribeToNotificationTopicsWithMetadata = async (
     throw error
   }
 }
+
+// Schema for unsubscribe request
+const UnsubscribeRequestSchema = z.object({
+  installationId: z.string(),
+  topics: z.array(z.custom<IXmtpConversationTopic>()),
+})
+type IUnsubscribeRequest = z.infer<typeof UnsubscribeRequestSchema>
 
 /**
  * Unsubscribes an installation from notification topics
@@ -124,7 +114,9 @@ export const unsubscribeFromNotificationTopics = async (args: IUnsubscribeReques
 /**
  * Unregisters a device installation
  */
-export const unregisterNotificationInstallation = async (args: { installationId: string }) => {
+export const unregisterNotificationInstallation = async (args: {
+  installationId: IXmtpInstallationId
+}) => {
   const { installationId } = args
 
   try {

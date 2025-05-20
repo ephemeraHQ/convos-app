@@ -3,20 +3,22 @@ import {
   InfiniteQueryObserver,
   infiniteQueryOptions,
   Optional,
-  QueriesObserver,
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
-import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
-import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { captureError } from "@/utils/capture-error"
 import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { refetchQueryIfNotAlreadyFetching } from "@/utils/react-query/react-query.helpers"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { ensureConversationQueryData } from "../queries/conversation.query"
+import {
+  ensureConversationQueryData,
+  maybeUpdateConversationQueryLastMessage,
+} from "../queries/conversation.query"
 import { processReactionConversationMessages } from "./conversation-message/conversation-message-reactions.query"
 import {
   getConversationMessageQueryData,
@@ -29,7 +31,7 @@ import {
 import { convertXmtpMessageToConvosMessage } from "./conversation-message/utils/convert-xmtp-message-to-convos-message"
 
 // Default page size for infinite queries
-const DEFAULT_PAGE_SIZE = 15
+export const DEFAULT_PAGE_SIZE = 10
 
 // New types for the message IDs list approach
 type IMessageIdsPage = {
@@ -43,6 +45,7 @@ export type IConversationMessagesInfiniteQueryData = InfiniteData<IMessageIdsPag
 type IArgs = {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
+  limit?: number
 }
 
 type IArgsWithCaller = IArgs & {
@@ -62,7 +65,7 @@ type IInfiniteMessagesPageParam = {
 const conversationMessagesInfiniteQueryFn = async (
   args: IArgs & { pageParam: IInfiniteMessagesPageParam },
 ) => {
-  const { clientInboxId, xmtpConversationId, pageParam } = args
+  const { clientInboxId, xmtpConversationId, pageParam, limit } = args
   const { cursorNs, direction } = pageParam || {
     // For some reason I've been seeing some "Cannot read property 'cursorNs' of undefined"
     cursorNs: undefined,
@@ -87,27 +90,75 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("Conversation not found")
   }
 
-  await syncAllXmtpConversations({
+  await syncOneXmtpConversation({
     clientInboxId,
+    conversationId: conversation.xmtpId,
     caller: "conversationMessagesInfiniteQueryFn",
   })
 
   const xmtpMessages = await getXmtpConversationMessages({
     clientInboxId,
-    conversationId: conversation.xmtpId,
-    limit: DEFAULT_PAGE_SIZE,
+    xmtpConversationId: conversation.xmtpId,
+    limit: limit || DEFAULT_PAGE_SIZE,
     ...(direction === "next" && cursorNs ? { beforeNs: cursorNs } : {}),
     ...(direction === "prev" && cursorNs ? { afterNs: cursorNs } : {}),
     direction,
   })
 
-  const convosMessages = xmtpMessages.map(convertXmtpMessageToConvosMessage)
+  let convosMessagesFromServer = xmtpMessages.map(convertXmtpMessageToConvosMessage)
+  let combinedMessagesForPage: IConversationMessage[] = [...convosMessagesFromServer]
 
-  // Separate messages and reactions
+  // Merge with optimistic updates if fetching the very first/latest page
+  if (direction === "next" && !cursorNs) {
+    const queryKey = getConversationMessagesInfiniteQueryOptions({
+      clientInboxId,
+      xmtpConversationId,
+    }).queryKey
+    const currentInfiniteData =
+      reactQueryClient.getQueryData<IConversationMessagesInfiniteQueryData>(queryKey)
+
+    if (currentInfiniteData && currentInfiniteData.pages.length > 0) {
+      const cachedFirstPageMessageIds = currentInfiniteData.pages[0].messageIds
+      const serverMessageIdsSet = new Set(convosMessagesFromServer.map((m) => m.xmtpId))
+      const optimisticMessagesToConsider: IConversationMessage[] = []
+
+      for (const cachedMsgId of cachedFirstPageMessageIds) {
+        if (!serverMessageIdsSet.has(cachedMsgId)) {
+          const cachedMsgData = getConversationMessageQueryData({
+            clientInboxId,
+            xmtpMessageId: cachedMsgId,
+            xmtpConversationId,
+          })
+          if (cachedMsgData) {
+            const newestServerMsg = convosMessagesFromServer[0]
+            if (!newestServerMsg || cachedMsgData.sentMs > newestServerMsg.sentMs) {
+              optimisticMessagesToConsider.push(cachedMsgData)
+            }
+          }
+        }
+      }
+
+      if (optimisticMessagesToConsider.length > 0) {
+        const allMessagesForMerge = [...convosMessagesFromServer, ...optimisticMessagesToConsider]
+
+        const uniqueMessagesMap = new Map<IXmtpMessageId, IConversationMessage>()
+        for (const msg of allMessagesForMerge) {
+          if (!uniqueMessagesMap.has(msg.xmtpId)) {
+            uniqueMessagesMap.set(msg.xmtpId, msg)
+          }
+        }
+        combinedMessagesForPage = Array.from(uniqueMessagesMap.values()).sort(
+          (a, b) => b.sentMs - a.sentMs,
+        )
+        combinedMessagesForPage = combinedMessagesForPage.slice(0, limit || DEFAULT_PAGE_SIZE)
+      }
+    }
+  }
+
   const regularMessages: IConversationMessage[] = []
   const reactionMessages: IConversationMessageReaction[] = []
 
-  for (const message of convosMessages) {
+  for (const message of combinedMessagesForPage) {
     if (isReactionMessage(message)) {
       reactionMessages.push(message)
     } else {
@@ -120,6 +171,7 @@ const conversationMessagesInfiniteQueryFn = async (
     setConversationMessageQueryData({
       clientInboxId,
       xmtpMessageId: message.xmtpId,
+      xmtpConversationId,
       message,
     })
   }
@@ -138,21 +190,21 @@ const conversationMessagesInfiniteQueryFn = async (
   let nextCursorNs: number | null = null
   let prevCursorNs: number | null = null
 
-  if (convosMessages.length > 0) {
+  if (convosMessagesFromServer.length > 0) {
     // For "next" direction (older messages), we want to use the oldest message in the batch
-    if (direction === "next" && convosMessages.length > 0) {
+    if (direction === "next" && convosMessagesFromServer.length > 0) {
       // Use the oldest message's timestamp as cursor for next batch of older messages
       nextCursorNs =
-        convosMessages[convosMessages.length - 1].sentNs -
+        convosMessagesFromServer[convosMessagesFromServer.length - 1].sentNs -
         // Otherwise XMTP was returning the same message for both prev and next
         1000
     }
 
     // For "prev" direction (newer messages), we want to use the newest message in the batch
-    if (direction === "prev" && convosMessages.length > 0) {
+    if (direction === "prev" && convosMessagesFromServer.length > 0) {
       // Use the newest message's timestamp as cursor for next batch of newer messages
       prevCursorNs =
-        convosMessages[0].sentNs +
+        convosMessagesFromServer[0].sentNs +
         // Otherwise XMTP was returning the same message for both prev and next
         1000
     }
@@ -168,9 +220,10 @@ const conversationMessagesInfiniteQueryFn = async (
 export function getConversationMessagesInfiniteQueryOptions(
   args: Optional<IArgsWithCaller, "caller">,
 ) {
-  const { clientInboxId, xmtpConversationId, caller } = args
+  const { clientInboxId, xmtpConversationId, caller, limit } = args
 
   return infiniteQueryOptions({
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: getReactQueryKey({
       baseStr: "conversation-messages-infinite",
       clientInboxId,
@@ -183,6 +236,7 @@ export function getConversationMessagesInfiniteQueryOptions(
       return conversationMessagesInfiniteQueryFn({
         clientInboxId,
         xmtpConversationId,
+        limit,
         pageParam: pageParam,
       })
     },
@@ -205,26 +259,6 @@ export function getConversationMessagesInfiniteQueryOptions(
       Boolean(clientInboxId) &&
       Boolean(xmtpConversationId) &&
       !isTmpConversation(xmtpConversationId),
-    refetchOnWindowFocus: (query) => {
-      const { clientInboxId, xmtpConversationId } = args
-
-      const allowedConversationIds =
-        getAllowedConsentConversationsQueryData({
-          clientInboxId,
-        }) || []
-
-      // We only want to refetch if the conversation has been allowed
-      if (!allowedConversationIds.includes(xmtpConversationId)) {
-        return false
-      }
-
-      const isRecent = conversationHasRecentActivities({
-        clientInboxId,
-        xmtpConversationId,
-      })
-
-      return isRecent ? "always" : true
-    },
   })
 }
 
@@ -241,99 +275,124 @@ export function useConversationMessagesInfiniteQueryAllMessageIds(args: IArgsWit
  * Add a message to the infinite query cache, maintaining chronological order in the first page.
  * This will update all pages that match the query key.
  */
-export const addMessageToConversationMessagesInfiniteQueryData = (args: {
+export const addMessagesToConversationMessagesInfiniteQueryData = (args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
-  messageId: IXmtpMessageId
+  messageIds: IXmtpMessageId[]
 }) => {
-  const { clientInboxId, xmtpConversationId, messageId } = args
+  const { clientInboxId, xmtpConversationId, messageIds: newMessageIds } = args
 
-  // Get or initialize pages array
+  // Putting this here because it's centralized and we don't have to call this function every time
+  // we call "addMessagesToConversationMessagesInfiniteQueryData"
+  maybeUpdateConversationQueryLastMessage({
+    clientInboxId,
+    xmtpConversationId,
+    messageIds: newMessageIds,
+  }).catch(captureError)
+
   const currentData = getConversationMessagesInfiniteQueryData({
     clientInboxId,
     xmtpConversationId,
   })
 
-  const pages = currentData?.pages || []
-  const firstPage = pages[0] || {
-    messageIds: [],
-    nextCursorNs: null,
-    prevCursorNs: null,
-  }
+  const originalPagesArray = currentData?.pages || []
+  const originalFirstPageObject = originalPagesArray[0] // This might be undefined
 
-  // Check if the message already exists in any page
-  const messageAlreadyExists = pages.some((page) => page.messageIds.includes(messageId))
+  // Start with a copy of the original first page's message IDs, or an empty array.
+  // This `workingListOfFirstPageMessageIds` will be mutated during the loop.
+  let workingListOfFirstPageMessageIds: IXmtpMessageId[] = originalFirstPageObject
+    ? [...originalFirstPageObject.messageIds]
+    : []
 
-  if (messageAlreadyExists) {
+  for (const newMessageId of newMessageIds) {
+    // Check if the message already existed in ANY of the original pages
+    const existsInOriginalCache = originalPagesArray.some((page) =>
+      page.messageIds.includes(newMessageId),
+    )
+
+    if (existsInOriginalCache) {
+      queryLogger.debug(
+        `Message ${newMessageId} already exists in original cache for conversation ${xmtpConversationId}, skipping.`,
+      )
+      continue
+    }
+
+    // Check if the message was already added in a *previous iteration of this current batch*
+    // This handles duplicate IDs within the `newMessageIds` array itself.
+    // We only check against `workingListOfFirstPageMessageIds` IF `originalFirstPageObject` didn't already contain it.
+    // (The `existsInOriginalCache` check above is more comprehensive for initial state)
+    if (
+      !originalFirstPageObject?.messageIds.includes(newMessageId) &&
+      workingListOfFirstPageMessageIds.includes(newMessageId)
+    ) {
+      queryLogger.debug(
+        `Message ${newMessageId} was already added in this current batch for conversation ${xmtpConversationId}, skipping duplicate within batch.`,
+      )
+      continue
+    }
+
+    const newMessageData = getConversationMessageQueryData({
+      clientInboxId,
+      xmtpMessageId: newMessageId,
+      xmtpConversationId,
+    })
+
+    let inserted = false
+    if (newMessageData) {
+      for (let i = 0; i < workingListOfFirstPageMessageIds.length; i++) {
+        const existingMessageIdInWorkingList = workingListOfFirstPageMessageIds[i]
+        const existingMessageData = getConversationMessageQueryData({
+          clientInboxId,
+          xmtpMessageId: existingMessageIdInWorkingList,
+          xmtpConversationId,
+        })
+
+        if (!existingMessageData) {
+          queryLogger.warn(
+            `Could not find data for existing message ${existingMessageIdInWorkingList} in conversation ${xmtpConversationId} cache during ordered insertion. Skipping comparison.`,
+          )
+          continue
+        }
+
+        if (newMessageData.sentMs >= existingMessageData.sentMs) {
+          workingListOfFirstPageMessageIds.splice(i, 0, newMessageId)
+          inserted = true
+          break
+        }
+      }
+      if (!inserted) {
+        workingListOfFirstPageMessageIds.push(newMessageId)
+      }
+    } else {
+      queryLogger.warn(
+        `Could not find data for new message ${newMessageId} in conversation ${xmtpConversationId} cache. Adding to beginning of list as fallback.`,
+      )
+      workingListOfFirstPageMessageIds.unshift(newMessageId)
+    }
     queryLogger.debug(
-      `Message ${messageId} already exists in conversation ${xmtpConversationId} cache, skipping add`,
+      `Processed message ${newMessageId} for batch update in conversation ${xmtpConversationId}.`,
     )
-    return
   }
 
-  // Get the new message's data to find its sentMs
-  const newMessageData = getConversationMessageQueryData({
-    clientInboxId,
-    xmtpMessageId: messageId,
-  })
-
-  let updatedMessageIds = [...firstPage.messageIds]
-  let inserted = false
-
-  if (newMessageData) {
-    // Iterate through existing message IDs in the first page to find the correct insertion point
-    for (let i = 0; i < updatedMessageIds.length; i++) {
-      const existingMessageId = updatedMessageIds[i]
-      const existingMessageData = getConversationMessageQueryData({
-        clientInboxId,
-        xmtpMessageId: existingMessageId,
-      })
-
-      // If we can't get existing message data, skip comparison for this item
-      if (!existingMessageData) {
-        queryLogger.warn(
-          `Could not find data for existing message ${existingMessageId} in conversation ${xmtpConversationId} cache during ordered insertion. Skipping comparison.`,
-        )
-        continue
-      }
-
-      // Insert before the first message that is older (smaller sentMs)
-      if (newMessageData.sentMs >= existingMessageData.sentMs) {
-        updatedMessageIds.splice(i, 0, messageId)
-        inserted = true
-        break
-      }
-    }
-    // If not inserted, it's the oldest message in this page, append it
-    if (!inserted) {
-      updatedMessageIds.push(messageId)
-    }
-  } else {
-    // Fallback: If new message data isn't available, add to the beginning
-    queryLogger.warn(
-      `Could not find data for new message ${messageId} in conversation ${xmtpConversationId} cache. Adding to beginning of list as fallback.`,
-    )
-    updatedMessageIds.unshift(messageId)
-    inserted = true // Mark as inserted to avoid appending later
+  // Create the new first page object immutably
+  const newFirstPage: IMessageIdsPage = {
+    messageIds: workingListOfFirstPageMessageIds, // The fully updated list of IDs
+    nextCursorNs: originalFirstPageObject?.nextCursorNs || null,
+    prevCursorNs: originalFirstPageObject?.prevCursorNs || null,
   }
 
-  const updatedFirstPage = {
-    ...firstPage,
-    messageIds: updatedMessageIds,
-  }
+  // Construct the final array of pages
+  const finalPagesArray: IMessageIdsPage[] =
+    originalPagesArray.length > 0
+      ? [newFirstPage, ...originalPagesArray.slice(1)] // Replace the old first page, keep the rest
+      : [newFirstPage] // If there were no original pages, this is the only page
 
-  const updatedPages = pages.length ? [updatedFirstPage, ...pages.slice(1)] : [updatedFirstPage]
-
-  queryLogger.debug(
-    `Message ${messageId} added to conversation messages ${xmtpConversationId} infinite query cache`,
-  )
-
-  // Set the updated data back to the cache
   setConversationMessagesInfiniteQueryData({
     clientInboxId,
     xmtpConversationId,
     data: {
-      pages: updatedPages,
+      pages: finalPagesArray,
+      // Using the pageParams logic from your working single-message version
       pageParams: currentData?.pageParams || [null],
     },
   })
@@ -421,13 +480,13 @@ export function invalidateConversationMessagesInfiniteMessagesQuery(args: IArgs)
 
 export function refetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
   const { clientInboxId, xmtpConversationId, caller } = args
-  return reactQueryClient.refetchQueries(
-    getConversationMessagesInfiniteQueryOptions({
+  return refetchQueryIfNotAlreadyFetching({
+    queryKey: getConversationMessagesInfiniteQueryOptions({
       clientInboxId,
       xmtpConversationId,
       caller,
-    }),
-  )
+    }).queryKey,
+  })
 }
 
 export function getConversationMessagesInfiniteQueryData(args: IArgs) {
@@ -448,100 +507,9 @@ export function getAllConversationMessageInInfiniteQueryData(args: IArgs) {
   return reactQueryClient.getQueryData(queryKey)?.pages.flatMap((page) => page.messageIds)
 }
 
-// export function replaceMessageInConversationMessagesInfiniteQueryData(args: {
-//   tmpXmtpMessageId: IXmtpMessageId
-//   xmtpConversationId: IXmtpConversationId
-//   clientInboxId: IXmtpInboxId
-//   realMessage: IConversationMessage
-// }) {
-//   const { tmpXmtpMessageId, xmtpConversationId, clientInboxId, realMessage } = args
-
-//   const data = getConversationMessagesInfiniteQueryData({
-//     clientInboxId,
-//     xmtpConversationId,
-//   })
-
-//   if (!data || !data.pages.length) {
-//     captureError(
-//       new ReactQueryError({
-//         error: "No data found in replaceMessageInConversationMessagesInfiniteQueryData",
-//       }),
-//     )
-//     return
-//   }
-
-//   // Replace the message in the individual message query cache
-//   replaceMessageQueryData({
-//     clientInboxId,
-//     tmpXmtpMessageId,
-//     realMessage,
-//   })
-
-//   // Process through each page to find and replace the message ID
-//   const updatedPages = data.pages.map((page) => {
-//     // Check if the page contains the temporary message ID
-//     const messageIndex = page.messageIds.indexOf(tmpXmtpMessageId)
-
-//     if (messageIndex === -1) {
-//       return page
-//     }
-
-//     // Create new array of message IDs with the temporary ID replaced by the real one
-//     const newMessageIds = [...page.messageIds]
-//     newMessageIds[messageIndex] = realMessage.xmtpId
-
-//     queryLogger.debug(
-//       `Replacing tmp message ID (${tmpXmtpMessageId}) with real message ID (${realMessage.xmtpId}) at index ${messageIndex}`,
-//     )
-
-//     return {
-//       ...page,
-//       messageIds: newMessageIds,
-//     }
-//   })
-
-//   // Set the updated data back to the cache
-//   return reactQueryClient.setQueryData(
-//     getConversationMessagesInfiniteQueryOptions({ clientInboxId, xmtpConversationId }).queryKey,
-//     {
-//       ...data,
-//       pages: updatedPages,
-//     },
-//   )
-// }
-
 export function prefetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
   return reactQueryClient.prefetchInfiniteQuery(getConversationMessagesInfiniteQueryOptions(args))
 }
-
-// export function updateMessageInConversationMessagesInfiniteQueryData(args: {
-//   xmtpConversationId: IXmtpConversationId
-//   clientInboxId: IXmtpInboxId
-//   xmtpMessageIdToUpdate: IXmtpMessageId
-//   messageUpdate: Partial<IConversationMessage>
-// }) {
-//   const { clientInboxId, xmtpMessageIdToUpdate, messageUpdate } = args
-
-//   // Update the message in its individual query cache
-//   updateMessageQueryData({
-//     clientInboxId,
-//     xmtpMessageId: xmtpMessageIdToUpdate,
-//     messageUpdate,
-//   })
-
-//   // No need to update the message list since it only contains IDs
-//   return true
-// }
-
-// const optimisticMessageToRealMap = new Map<IXmtpMessageId, IXmtpMessageId>()
-
-// function setOptimisticMessageToRealMap(args: {
-//   optimisticMessageId: IXmtpMessageId
-//   realMessageId: IXmtpMessageId
-// }) {
-//   const { optimisticMessageId, realMessageId } = args
-//   optimisticMessageToRealMap.set(optimisticMessageId, realMessageId)
-// }
 
 export function ensureConversationMessagesInfiniteQueryData(args: IArgsWithCaller) {
   return reactQueryClient.ensureInfiniteQueryData(getConversationMessagesInfiniteQueryOptions(args))
@@ -566,8 +534,6 @@ function createConversationMessagesInfiniteQueryObserver(args: IArgs) {
   const queryOptions = getConversationMessagesInfiniteQueryOptions(args)
   return new InfiniteQueryObserver(reactQueryClient, queryOptions)
 }
-
-QueriesObserver
 
 export function getConversationMessagesInfiniteQueryObserver(args: IArgs) {
   // Create a cache key from the query key components

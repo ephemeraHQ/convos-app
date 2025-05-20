@@ -3,11 +3,12 @@ import Constants from "expo-constants"
 import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
-import { memo, useCallback, useMemo } from "react"
+import { memo, useCallback, useMemo, Fragment } from "react"
 import { Alert, Platform } from "react-native"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { runOnJS } from "react-native-reanimated"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
+import { useXmtpLogFilesModalStore } from "@/components/xmtp-log-files-modal"
 import { config } from "@/config"
 import { useLogout } from "@/features/authentication/use-logout"
 import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
@@ -28,20 +29,24 @@ import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { getEnv } from "@/utils/getEnv"
+import { getEnv, isProd } from "@/utils/getEnv"
 import { Haptics } from "@/utils/haptics"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
-import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { shareContent } from "@/utils/share"
+import { reactQueryPersistingStorage } from "@/utils/storage/storages"
 import { showActionSheet } from "./action-sheet"
+import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
 
-  const showDebugMenu = useShowDebugMenu({
-    setLogFilesModalVisible: () => {},
-  })
+  // Check if debug menu should be available:
+  // - In production: only for debug users
+  // - In development/preview: for all users
+  const isDebugUser = !isProd || currentUserIsDebugUser()
+
+  const showDebugMenu = useShowDebugMenu()
 
   const longPressGesture = Gesture.LongPress()
     .onStart(() => {
@@ -50,14 +55,16 @@ export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: Re
     })
     .minDuration(1000)
 
+  // For non-debug users, simply render the children directly without the debug gesture
+  // This makes the component act as a pass-through, preserving the normal UI
+  if (!isDebugUser) {
+    return children
+  }
+
   return <GestureDetector gesture={longPressGesture}>{children}</GestureDetector>
 })
 
-function useShowDebugMenu({
-  setLogFilesModalVisible,
-}: {
-  setLogFilesModalVisible: (visible: boolean) => void
-}) {
+function useShowDebugMenu() {
   const { logout } = useLogout()
   const { currentlyRunning } = Updates.useUpdates()
 
@@ -89,7 +96,7 @@ function useShowDebugMenu({
         })
       },
       "View Libxmtp File Logs": async () => {
-        setLogFilesModalVisible(true)
+        useXmtpLogFilesModalStore.getState().actions.setVisible(true)
       },
       "Clear Libxmtp File Logs": async () => {
         Alert.alert(
@@ -169,7 +176,7 @@ function useShowDebugMenu({
         }
       },
     })
-  }, [setLogFilesModalVisible])
+  }, [])
 
   const showNotificationsMenu = useCallback(() => {
     const notificationsMethods = {
@@ -455,7 +462,7 @@ function useShowDebugMenu({
           reactQueryClient.getQueryCache().clear()
           reactQueryClient.clear()
           reactQueryClient.removeQueries()
-          reactQueryPersitingStorage.clearAll()
+          reactQueryPersistingStorage.clearAll()
 
           showSnackbar({
             message: "React Query cache completely cleared",

@@ -124,6 +124,14 @@ export function ensureQueryDataBetter<T>(args: UseQueryOptions<T>) {
   return reactQueryClient.ensureQueryData(args)
 }
 
+export function refetchQueryIfNotAlreadyFetching<T>(args: UseQueryOptions<T>) {
+  const queryState = reactQueryClient.getQueryState(args.queryKey)
+  if (queryState?.fetchStatus === "fetching") {
+    return Promise.resolve()
+  }
+  return reactQueryClient.refetchQueries(args)
+}
+
 export async function fetchOrRefetchQuery<T>(args: UseQueryOptions<T>) {
   const data = reactQueryClient.getQueryData(args.queryKey)
   if (data) {
@@ -174,9 +182,6 @@ export function createQueryObserverWithPreviousData<
     // Avoid calling the callback again if the data is the same as the initial trigger
     // This prevents double-firing when the subscription starts *after* the initial check
     if (result.data !== undefined && result.data === previousData && !result.isStale) {
-      queryLogger.debug(
-        "createQueryObserverWithPreviousData: Skipping subscription trigger for initial fresh data.",
-      )
       return
     }
 

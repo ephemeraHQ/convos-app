@@ -56,8 +56,6 @@ export function getCreateUserMutationOptions(): MutationOptions<
       setCurrentUserQueryData({
         user: {
           id: data.id,
-          // deviceId: data.device.id,
-          identities: [data.identity],
         },
       })
       setProfileQueryData({

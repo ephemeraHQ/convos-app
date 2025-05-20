@@ -7,6 +7,7 @@ import {
   getConversationMetadataQueryData,
   updateConversationMetadataQueryData,
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
 import { getGroupQueryData } from "@/features/groups/queries/group.query"
 import { updateXmtpConsentForGroupsForInbox } from "@/features/xmtp/xmtp-consent/xmtp-consent"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -19,11 +20,14 @@ export const useDeleteGroup = (args: { xmtpConversationId: IXmtpConversationId }
   const currentSender = useSafeCurrentSender()
 
   const { mutateAsync: deleteGroupAsync } = useMutation({
-    mutationFn: () =>
-      deleteConversationMetadata({
-        clientInboxId: currentSender.inboxId,
+    mutationFn: async () => {
+      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
+
+      return deleteConversationMetadata({
+        deviceIdentityId: deviceIdentity.id,
         xmtpConversationId,
-      }),
+      })
+    },
     onMutate: () => {
       const previousDeleted = getConversationMetadataQueryData({
         clientInboxId: currentSender.inboxId,
@@ -69,8 +73,8 @@ export const useDeleteGroup = (args: { xmtpConversationId: IXmtpConversationId }
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting group" }),
               {
-                message: "Error deleting group"
-              }
+                message: "Error deleting group",
+              },
             )
           }
         },
@@ -89,8 +93,8 @@ export const useDeleteGroup = (args: { xmtpConversationId: IXmtpConversationId }
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting group" }),
               {
-                message: "Error deleting and blocking group"
-              }
+                message: "Error deleting and blocking group",
+              },
             )
           }
         },

@@ -1,10 +1,11 @@
 import differenceInMinutes from "date-fns/differenceInMinutes"
+import { Nullable } from "@/types/general"
 import { normalizeTimestampToMs } from "@/utils/date"
 import { IConversationMessage } from "../conversation-chat/conversation-message/conversation-message.types"
 
 type MessageShouldShowDateChangePayload = {
-  messageOne: IConversationMessage | undefined
-  messageTwo: IConversationMessage | undefined
+  messageOne: Nullable<IConversationMessage>
+  messageTwo: Nullable<IConversationMessage>
 }
 
 export const messageShouldShowDateChange = ({

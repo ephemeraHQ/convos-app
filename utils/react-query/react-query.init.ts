@@ -1,6 +1,6 @@
 import { onlineManager } from "@tanstack/react-query"
 import { useEffect } from "react"
-import { useAppStore } from "@/stores/app-store"
+import { useAppStore } from "@/stores/app.store"
 
 export function useReactQueryInit() {
   useEffect(() => {

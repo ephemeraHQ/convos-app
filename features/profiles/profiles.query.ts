@@ -1,11 +1,11 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
-import { fetchProfile } from "@/features/profiles/profiles.api"
+import { create, windowScheduler } from "@yornaath/batshit"
+import { fetchProfile, fetchProfiles } from "@/features/profiles/profiles.api"
 import { Optional } from "@/types/general"
 import { isConvosApi404Error } from "@/utils/convos-api/convos-api-error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { TimeUtils } from "@/utils/time.utils"
 
 type IProfileQueryData = Awaited<ReturnType<typeof fetchProfile>>
 
@@ -30,11 +30,10 @@ export const getProfileQueryConfig = (args: Optional<IArgsWithCaller, "caller">)
       baseStr: "profile",
       xmtpId,
     }),
-    staleTime: TimeUtils.hours(1).toMilliseconds(),
     queryFn: enabled
       ? async ({ signal }) => {
           try {
-            return await fetchProfile({ xmtpId, signal })
+            return await batcher.fetch(xmtpId)
           } catch (error) {
             // For now do this because if we chat with a bot for example, we'll never have a Convos profile
             if (isConvosApi404Error(error)) {
@@ -82,3 +81,15 @@ export const invalidateProfileQuery = (args: IArgsWithCaller) => {
 export const getProfileQueryData = (args: IArgs) => {
   return reactQueryClient.getQueryData(getProfileQueryConfig(args).queryKey)
 }
+
+const batcher = create({
+  name: `profiles`,
+  fetcher: async (inboxIds: IXmtpInboxId[]) => {
+    const profiles = await fetchProfiles({ xmtpIds: inboxIds })
+    return profiles ?? {}
+  },
+  scheduler: windowScheduler(100),
+  resolver: (profilesByInboxId, inboxId) => {
+    return profilesByInboxId[inboxId] || null
+  },
+})

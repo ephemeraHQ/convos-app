@@ -8,6 +8,7 @@ import {
   getConversationMetadataQueryData,
   updateConversationMetadataQueryData,
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { formatDateForApi } from "@/utils/convos-api/convos-api.utils"
 
@@ -32,8 +33,10 @@ export function getMarkConversationAsReadMutationOptions(args: {
     mutationFn: async () => {
       const readUntil = formatDateForApi(new Date())
 
+      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
+
       await markConversationMetadataAsRead({
-        clientInboxId: currentSender.inboxId,
+        deviceIdentityId: deviceIdentity.id,
         xmtpConversationId,
         readUntil,
       })

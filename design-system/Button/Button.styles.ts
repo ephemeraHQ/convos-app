@@ -1,5 +1,5 @@
 import { TextStyle, ViewStyle } from "react-native"
-import { flattenThemedStyles, Theme, ThemedStyle } from "../../theme/use-app-theme"
+import { flattenThemedStyles, ITheme, ThemedStyle } from "../../theme/use-app-theme"
 import { textPresets } from "./../Text/Text.presets"
 import { IButtonAction, IButtonSize, IButtonVariant } from "./Button.props"
 
@@ -23,7 +23,7 @@ export const $buttonLeftAccessoryStyle: ThemedStyle<ViewStyle> = ({ spacing }) =
 
 export const getButtonViewStyle =
   ({ variant, size, action, pressed = false, disabled = false }: IButtonStyleProps) =>
-  (theme: Theme): ViewStyle => {
+  (theme: ITheme): ViewStyle => {
     const { spacing, colors, borderRadius } = theme
 
     const style: ViewStyle = {
@@ -90,7 +90,7 @@ export const getButtonViewStyle =
 
 export const getButtonTextStyle =
   ({ size, variant, action, pressed = false, disabled = false }: IButtonStyleProps) =>
-  (theme: Theme): TextStyle => {
+  (theme: ITheme): TextStyle => {
     const { colors } = theme
 
     const style: TextStyle = {

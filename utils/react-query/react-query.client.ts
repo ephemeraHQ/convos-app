@@ -5,6 +5,8 @@ import { ReactQueryError } from "@/utils/error"
 import { queryLogger } from "@/utils/logger/logger"
 import { DEFAULT_GC_TIME, DEFAULT_STALE_TIME } from "./react-query.constants"
 
+const queryStartTimes = new Map<string, number>()
+
 export const reactQueryClient = new QueryClient({
   mutationCache: new MutationCache({
     onSuccess: (data, variables, context, mutation) => {
@@ -55,13 +57,27 @@ export const reactQueryClient = new QueryClient({
     // Used to track which queries execute the queryFn which means will do a network request.
     // Carefull, this is also triggered when the query gets its data from the persister.
     onSuccess: (_, query) => {
+      const startTime = queryStartTimes.get(query.queryHash)
+      let durationMessage = ""
+      if (startTime) {
+        const duration = Date.now() - startTime
+        durationMessage = ` in ${duration}ms`
+        queryStartTimes.delete(query.queryHash)
+      }
       queryLogger.debug(
-        `Success fetching ${JSON.stringify(query.queryKey)}${
+        `Success fetching query: ${JSON.stringify(query.queryKey)}${
           query.meta?.caller ? ` (caller: ${query.meta.caller})` : ""
-        }`,
+        }${durationMessage}`,
       )
     },
     onError: (error: Error, query) => {
+      const startTime = queryStartTimes.get(query.queryHash)
+      let durationMs: number | undefined
+      if (startTime) {
+        durationMs = Date.now() - startTime
+        queryStartTimes.delete(query.queryHash)
+      }
+
       const extra: Record<string, string | number> = {
         queryKey: JSON.stringify(query.queryKey),
         ...(error instanceof AxiosError && {
@@ -74,6 +90,10 @@ export const reactQueryClient = new QueryClient({
 
       if (query.meta?.caller) {
         extra.caller = query.meta.caller as string
+      }
+
+      if (durationMs !== undefined) {
+        extra.durationMs = durationMs
       }
 
       // Wrap the error in ReactQueryError
@@ -100,7 +120,10 @@ export const reactQueryClient = new QueryClient({
       // Prevent infinite refetch loops by manually controlling when queries should refetch when components mount
       refetchOnMount: false,
 
-      refetchOnWindowFocus: true,
+      // Disable automatic refetching on window focus since we want to control this per-query based on data staleness needs
+      refetchOnWindowFocus: false,
+
+      // For now we don't handle disconnect/reconnect ourselves so we let react-query handle it
       refetchOnReconnect: true,
 
       // Put this to "false" if we see sloweness with react-query but otherwise
@@ -110,4 +133,17 @@ export const reactQueryClient = new QueryClient({
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
   },
+})
+
+reactQueryClient.getQueryCache().subscribe((event) => {
+  // We are interested in 'updated' events that were triggered by a 'fetch' action.
+  // This indicates that the query has started its fetching process.
+  if (event.type === "updated" && event.action?.type === "fetch") {
+    queryStartTimes.set(event.query.queryHash, Date.now())
+    queryLogger.debug(
+      `Start fetching query: ${JSON.stringify(event.query.queryKey)}${
+        event.query.meta?.caller ? ` (caller: ${event.query.meta.caller})` : ""
+      }...`,
+    )
+  }
 })

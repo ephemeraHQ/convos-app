@@ -23,6 +23,7 @@ export const useConversationIsUnread = ({ xmtpConversationId }: UseConversationI
 
   const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId,
+    caller: "useConversationIsUnread",
   })
 
   const isUnread = useMemo(() => {

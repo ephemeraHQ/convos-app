@@ -1,15 +1,16 @@
-import { QueryKey } from "@tanstack/react-query"
 import { queryLogger } from "@/utils/logger/logger"
-import { reactQueryPersitingStorage } from "@/utils/react-query/react-query-persister"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { reactQueryPersistingStorage } from "../storage/storages"
 
-// Helper to have a consistent way to format query keys
-export function getReactQueryKey(args: {
-  baseStr: string
-  [key: string]: string | undefined
-}): QueryKey {
+// Doing this because we onced added caller to the query key and we should never do that.
+type DisallowedKey = "caller"
+
+export function getReactQueryKey<T extends Record<string, string | undefined>>(
+  args: { baseStr: string } & { [K in Exclude<keyof T, DisallowedKey>]?: string },
+): string[] {
   const { baseStr, ...rest } = args
-  return [baseStr, ...Object.entries(rest).map(([key, value]) => `${key}: ${value}`)]
+  const filteredEntries = Object.entries(rest).filter(([key]) => key !== "caller")
+  return [baseStr, ...filteredEntries.map(([key, value]) => `${key}: ${value}`)]
 }
 
 export function clearReacyQueryQueriesAndCache() {
@@ -17,6 +18,6 @@ export function clearReacyQueryQueriesAndCache() {
   reactQueryClient.getQueryCache().clear()
   reactQueryClient.clear()
   reactQueryClient.removeQueries()
-  reactQueryPersitingStorage.clearAll()
+  reactQueryPersistingStorage.clearAll()
   queryLogger.debug("Cleared react query queries and cache")
 }

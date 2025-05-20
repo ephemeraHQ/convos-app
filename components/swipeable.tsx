@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react"
+import React, { useCallback, useMemo, useRef } from "react"
 import ReanimatedSwipeable, {
   SwipeableMethods,
 } from "react-native-gesture-handler/ReanimatedSwipeable"
@@ -133,6 +133,13 @@ export function Swipeable({
     }
   })
 
+  const hitSlop = useMemo(() => {
+    return {
+      left: leftHitSlop,
+      right: rightHitSlop,
+    }
+  }, [leftHitSlop, rightHitSlop])
+
   return (
     <ReanimatedSwipeable
       ref={swipeableRef}
@@ -145,10 +152,7 @@ export function Swipeable({
       /**
        * Configuration
        * */
-      hitSlop={{
-        left: leftHitSlop,
-        right: rightHitSlop,
-      }}
+      hitSlop={hitSlop}
       overshootFriction={overshootFriction}
       overshootRight={overshootRight}
       overshootLeft={overshootLeft}

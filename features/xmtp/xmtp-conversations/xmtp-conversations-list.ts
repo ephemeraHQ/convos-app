@@ -99,11 +99,12 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
     clientInboxId,
     consentStates,
     limit = 9999, // All of them by default
+    caller,
   } = args
 
   try {
     const conversations = await wrapXmtpCallWithDuration(
-      `${args.caller}:listConversations`,
+      `listConversations (${caller})`,
       async () => {
         const client = await getXmtpClientByInboxId({
           inboxId: clientInboxId,
@@ -115,9 +116,9 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
             name: true,
             imageUrl: true,
             description: true,
+            lastMessage: true,
             // isActive: true,
-            // consentState: true,
-            // lastMessage: true,
+            // consentState: true, // We already get it when we convert to convos conversations
           },
           limit,
           consentStates,

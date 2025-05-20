@@ -1,5 +1,5 @@
-import type { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { z } from "zod"
+import { IDeviceIdentityId } from "@/features/convos-identities/convos-identities.api"
 import { ensureCurrentUserQueryData } from "@/features/current-user/current-user.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -18,27 +18,13 @@ export type IConversationMetadata = z.infer<typeof ConversationMetadataSchema>
 
 export type IGetConversationMetadataArgs = {
   xmtpConversationId: IXmtpConversationId
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
 }
 
 export async function getConversationMetadata(args: IGetConversationMetadataArgs) {
-  const { xmtpConversationId, clientInboxId } = args
+  const { xmtpConversationId, deviceIdentityId } = args
 
   try {
-    const currentUser = await ensureCurrentUserQueryData({ caller: "getConversationMetadata" })
-
-    if (!currentUser) {
-      throw new Error("No current user found")
-    }
-
-    const deviceIdentityId = currentUser.identities.find(
-      (identity) => identity.xmtpId === clientInboxId,
-    )?.id
-
-    if (!deviceIdentityId) {
-      throw new Error("No matching device identity found for the given inbox ID")
-    }
-
     const { data } = await convosApi.get<IConversationMetadata>(
       `/api/v1/metadata/conversation/${deviceIdentityId}/${xmtpConversationId}`,
     )
@@ -60,44 +46,13 @@ export async function getConversationMetadata(args: IGetConversationMetadataArgs
   }
 }
 
-/**
- * Creates default metadata for a conversation when none exists (404 error case)
- */
-// async function createDefaultConversationMetadata(args: {
-//   xmtpConversationId: IXmtpConversationId
-//   clientInboxId?: IXmtpInboxId
-// }) {
-//   const { xmtpConversationId, clientInboxId } = args
-
-//   // If clientInboxId is provided, use it. Otherwise, try to get the current inbox ID.
-//   let inboxId = clientInboxId
-//   if (!inboxId) {
-//     const currentSender = useMultiInboxStore.getState().currentSender
-//     if (!currentSender) {
-//       throw new Error("No current sender found to create conversation metadata")
-//     }
-//     inboxId = currentSender.inboxId
-//   }
-
-//   // Create metadata with default values
-//   return updateConversationMetadata({
-//     xmtpConversationId,
-//     clientInboxId: inboxId,
-//     updates: {
-//       deleted: false,
-//       pinned: false,
-//       unread: true,
-//     },
-//   })
-// }
-
 export async function markConversationMetadataAsRead(args: {
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
   xmtpConversationId: IXmtpConversationId
   readUntil: string
 }) {
   return updateConversationMetadata({
-    clientInboxId: args.clientInboxId,
+    deviceIdentityId: args.deviceIdentityId,
     xmtpConversationId: args.xmtpConversationId,
     updates: {
       unread: false,
@@ -107,11 +62,11 @@ export async function markConversationMetadataAsRead(args: {
 }
 
 export async function markConversationMetadataAsUnread(args: {
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
   xmtpConversationId: IXmtpConversationId
 }) {
   return updateConversationMetadata({
-    clientInboxId: args.clientInboxId,
+    deviceIdentityId: args.deviceIdentityId,
     xmtpConversationId: args.xmtpConversationId,
     updates: {
       unread: true,
@@ -120,11 +75,11 @@ export async function markConversationMetadataAsUnread(args: {
 }
 
 export async function pinConversationMetadata(args: {
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
   xmtpConversationId: IXmtpConversationId
 }) {
   return updateConversationMetadata({
-    clientInboxId: args.clientInboxId,
+    deviceIdentityId: args.deviceIdentityId,
     xmtpConversationId: args.xmtpConversationId,
     updates: {
       pinned: true,
@@ -133,11 +88,11 @@ export async function pinConversationMetadata(args: {
 }
 
 export async function unpinConversationMetadata(args: {
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
   xmtpConversationId: IXmtpConversationId
 }) {
   return updateConversationMetadata({
-    clientInboxId: args.clientInboxId,
+    deviceIdentityId: args.deviceIdentityId,
     xmtpConversationId: args.xmtpConversationId,
     updates: {
       pinned: false,
@@ -146,11 +101,11 @@ export async function unpinConversationMetadata(args: {
 }
 
 export async function restoreConversationMetadata(args: {
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
   xmtpConversationId: IXmtpConversationId
 }) {
   return updateConversationMetadata({
-    clientInboxId: args.clientInboxId,
+    deviceIdentityId: args.deviceIdentityId,
     xmtpConversationId: args.xmtpConversationId,
     updates: {
       deleted: false,
@@ -159,11 +114,11 @@ export async function restoreConversationMetadata(args: {
 }
 
 export async function deleteConversationMetadata(args: {
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
   xmtpConversationId: IXmtpConversationId
 }) {
   return updateConversationMetadata({
-    clientInboxId: args.clientInboxId,
+    deviceIdentityId: args.deviceIdentityId,
     xmtpConversationId: args.xmtpConversationId,
     updates: {
       deleted: true,
@@ -173,7 +128,7 @@ export async function deleteConversationMetadata(args: {
 
 async function updateConversationMetadata(args: {
   xmtpConversationId: IXmtpConversationId
-  clientInboxId: IXmtpInboxId
+  deviceIdentityId: IDeviceIdentityId
   updates: {
     pinned?: boolean
     unread?: boolean
@@ -181,7 +136,7 @@ async function updateConversationMetadata(args: {
     readUntil?: string
   }
 }) {
-  const { xmtpConversationId, clientInboxId, updates } = args
+  const { xmtpConversationId, deviceIdentityId, updates } = args
 
   const currentUser = await ensureCurrentUserQueryData({ caller: "updateConversationMetadata" })
 
@@ -191,8 +146,7 @@ async function updateConversationMetadata(args: {
 
   const { data } = await convosApi.post<IConversationMetadata>(`/api/v1/metadata/conversation`, {
     conversationId: xmtpConversationId,
-    deviceIdentityId: currentUser.identities.find((identity) => identity.xmtpId === clientInboxId)
-      ?.id,
+    deviceIdentityId,
     ...updates,
   })
 

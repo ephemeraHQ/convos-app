@@ -23,12 +23,15 @@ export async function getXmtpConversation(args: {
   const { clientInboxId, conversationId } = args
 
   try {
-    const conversation = await wrapXmtpCallWithDuration("findConversation", async () => {
-      const client = await getXmtpClientByInboxId({
-        inboxId: clientInboxId,
-      })
-      return client.conversations.findConversation(conversationId)
-    })
+    const conversation = await wrapXmtpCallWithDuration(
+      `findConversation-${conversationId}`,
+      async () => {
+        const client = await getXmtpClientByInboxId({
+          inboxId: clientInboxId,
+        })
+        return client.conversations.findConversation(conversationId)
+      },
+    )
 
     return conversation
   } catch (error) {

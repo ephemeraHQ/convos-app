@@ -1,3 +1,4 @@
+import * as Application from "expo-application"
 import Constants from "expo-constants"
 import { Platform } from "react-native"
 import { IExpoAppConfigExtra } from "@/app.config"
@@ -28,10 +29,11 @@ function maybeReplaceLocalhost(uri: string) {
 
 const appConfigExtra = Constants.expoConfig?.extra as IExpoAppConfigExtra
 
-const bundleId =
-  Platform.OS === "android"
-    ? (Constants.expoConfig?.android?.package as string)
-    : (Constants.expoConfig?.ios?.bundleIdentifier as string)
+const bundleId = Platform.select({
+  ios: Constants.expoConfig?.ios?.bundleIdentifier,
+  android: Constants.expoConfig?.android?.package,
+  default: "",
+}) as string
 
 // Base configuration shared across all environments
 export const shared = {
@@ -45,6 +47,7 @@ export const shared = {
     scheme: Constants.expoConfig?.scheme as string,
     name: Constants.expoConfig?.name as string,
     version: Constants.expoConfig?.version as string,
+    buildNumber: Number(Application?.nativeBuildVersion || 0),
     storeUrl: "",
     bundleId,
     universalLinks: [appConfigExtra.webDomain].flatMap((domain) => [
@@ -82,6 +85,6 @@ export const shared = {
   },
   xmtp: {
     env: (process.env.EXPO_PUBLIC_XMTP_ENV || "local") as IXmtpEnv,
-    maxMsUntilLogError: 5000,
+    maxMsUntilLogError: 10000,
   },
 } as const satisfies Partial<IConfig>

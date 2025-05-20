@@ -18,14 +18,16 @@ import {
   isStaticAttachmentMessage,
   isTextMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { useCurrentXmtpConversationIdSafe } from "@/features/conversation/conversation-chat/conversation.store-context"
 
 export const ConversationMessage = memo(function ConversationMessage(props: {}) {
   const currentSender = useSafeCurrentSender()
-
   const xmtpMessageId = useConversationMessageContextSelector((state) => state.currentMessageId)
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
   const { data: message } = useConversationMessageQuery({
     xmtpMessageId,
+    xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "ConversationMessage",
   })

@@ -19,7 +19,7 @@ import { ITypography, typography } from "./typography"
 export type ThemeContexts = "light" | "dark" | undefined
 
 // The overall Theme object should contain all of the data you need to style your app.
-export type Theme = {
+export type ITheme = {
   colors: IColors
   spacing: ISpacing
   borderRadius: IBorderRadius
@@ -36,7 +36,7 @@ export type Theme = {
 }
 
 // Here we define our themes.
-export const lightTheme: Theme = {
+export const lightTheme: ITheme = {
   colors: colorsLight,
   spacing,
   typography,
@@ -51,7 +51,7 @@ export const lightTheme: Theme = {
   loaderSize,
   isDark: false,
 }
-export const darkTheme: Theme = {
+export const darkTheme: ITheme = {
   colors: colorsDark,
   spacing,
   typography,
@@ -86,7 +86,7 @@ export const darkTheme: Theme = {
  *   return <View style={themed($container)} />
  * }
  */
-export type ThemedStyle<T> = (theme: Theme) => T
+export type ThemedStyle<T> = (theme: ITheme) => T
 export type ThemedStyleArray<T> = (
   | ThemedStyle<T>
   | StyleProp<T>
@@ -106,10 +106,10 @@ export const ThemeContext = createContext<ThemeContextType>({
   },
 })
 
-const themeContextToTheme = (themeContext: ThemeContexts): Theme =>
+const themeContextToTheme = (themeContext: ThemeContexts): ITheme =>
   themeContext === "dark" ? darkTheme : lightTheme
 
-const setImperativeThemeing = (theme: Theme) => {
+const setImperativeThemeing = (theme: ITheme) => {
   SystemUI.setBackgroundColorAsync(theme.colors.background.surfaceless)
 }
 
@@ -140,7 +140,7 @@ type UseAppThemeValue = {
   // A function to set the theme context override (for switching modes)
   setThemeContextOverride: (newTheme: ThemeContexts) => void
   // The current theme object
-  theme: Theme
+  theme: ITheme
   // The current theme context "light" | "dark"
   themeContext: ThemeContexts
   // A function to apply the theme to a style object.
@@ -174,7 +174,7 @@ export const useAppTheme = (): UseAppThemeValue => {
     [overrideTheme, colorScheme],
   )
 
-  const themeVariant: Theme = useMemo(() => themeContextToTheme(themeContext), [themeContext])
+  const themeVariant: ITheme = useMemo(() => themeContextToTheme(themeContext), [themeContext])
 
   const toggleTheme = useCallback(() => {
     const newTheme = themeContext === "dark" ? "light" : "dark"
@@ -209,7 +209,7 @@ export const useAppTheme = (): UseAppThemeValue => {
 
 export function flattenThemedStyles<T>(args: {
   styles: ThemedStyle<T> | StyleProp<T> | ThemedStyleArray<T>
-  theme: Theme
+  theme: ITheme
 }): T {
   const { styles, theme } = args
   const flatStyles = [styles].flat(3)

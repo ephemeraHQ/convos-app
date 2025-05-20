@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications"
+import { useNotificationsStore } from "@/features/notifications/notifications.store"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -15,23 +16,29 @@ export async function clearNotificationsForConversation(args: {
   const { xmtpConversationId } = args
 
   try {
-    notificationsLogger.debug("Clearing notifications for conversation:", xmtpConversationId)
+    notificationsLogger.debug(`Clearing notifications for conversation ${xmtpConversationId}...`)
 
     // Get all current notifications
     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
 
     notificationsLogger.debug(
-      `Found ${presentedNotifications.length} notifications present in tray`,
-      JSON.stringify(presentedNotifications),
+      `Found ${presentedNotifications.length} notifications in the notification center`,
     )
 
-    if (presentedNotifications.length === 0) {
+    const validNotifications = presentedNotifications.filter((notification) => {
+      return (
+        notification.request.identifier !==
+        useNotificationsStore.getState().lastHandledNotificationId
+      )
+    })
+
+    if (validNotifications.length === 0) {
       notificationsLogger.debug("No notifications to clear")
       return
     }
 
     // Find notifications related to this conversation
-    const notificationsToRemove = presentedNotifications.filter((notification) => {
+    const notificationsToRemove = validNotifications.filter((notification) => {
       try {
         // Handle Convos modified notifications
         if (isConvosModifiedNotification(notification)) {
@@ -51,7 +58,7 @@ export async function clearNotificationsForConversation(args: {
           new NotificationError({
             error: new Error("Unknown notification type"),
             additionalMessage: `Unable to identify notification type: ${JSON.stringify(
-              notification.request.content.data,
+              notification,
             )}`,
           }),
         )

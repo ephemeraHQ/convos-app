@@ -1,6 +1,6 @@
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
 import { ensureCurrentUserQueryData } from "@/features/current-user/current-user.query"
-import { updateDevice } from "@/features/devices/devices.api"
 import { ensureUserDeviceQueryData } from "@/features/devices/user-device.query"
 import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
 import {
@@ -42,28 +42,24 @@ export async function registerPushNotifications() {
       getExpoPushNotificationsToken(),
     ])
 
-    await updateDevice({
-      userId: currentUser.id,
-      deviceId: currentDevice.id,
-      updates: {
-        expoToken,
-        pushToken: deviceToken,
-      },
-    })
-
     const currentSender = getSafeCurrentSender()
-    const client = await getXmtpClientByInboxId({
-      inboxId: currentSender.inboxId,
-    })
+    const identities = await ensureUserIdentitiesQueryData({ userId: currentUser.id })
 
     await registerNotificationInstallation({
-      installationId: client.installationId,
-      deliveryMechanism: {
-        deliveryMechanismType: {
-          case: "apnsDeviceToken",
-          value: deviceToken,
-        },
-      },
+      deviceId: currentDevice.id,
+      expoToken,
+      pushToken: deviceToken,
+      installations: await Promise.all(
+        identities.map(async (identity) => {
+          const client = await getXmtpClientByInboxId({
+            inboxId: currentSender.inboxId,
+          })
+          return {
+            identityId: identity.id,
+            xmtpInstallationId: client.installationId,
+          }
+        }),
+      ),
     })
   } catch (error) {
     // Catch any error from the steps above and wrap it

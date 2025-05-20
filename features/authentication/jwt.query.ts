@@ -9,7 +9,6 @@ export function getJwtQueryOptions() {
   const enabled = !!currentSender?.ethereumAddress && !!currentSender.inboxId
 
   return queryOptions({
-    enabled,
     queryKey: ["jwt"],
     queryFn: enabled
       ? async ({ signal }) => {

@@ -2,7 +2,7 @@ import NetInfo from "@react-native-community/netinfo"
 import { useEffect } from "react"
 import { logger } from "@/utils/logger/logger"
 import { config } from "../../config"
-import { useAppStore } from "../../stores/app-store"
+import { useAppStore } from "../../stores/app.store"
 
 NetInfo.configure({
   reachabilityUrl: `${config.app.apiUrl}/healthcheck`, // We assume our BE is always reachable

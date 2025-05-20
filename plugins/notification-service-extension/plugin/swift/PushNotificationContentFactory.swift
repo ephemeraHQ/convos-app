@@ -19,18 +19,28 @@ class ProfileNameResolver {
       let username: String
     }
 
-    static let shared = ProfileNameResolver()
+    let apiBaseURL: String
 
-    private init() {}
+    static var shared: ProfileNameResolver = .init(environment: getXmtpEnv())
+
+    private init(environment: XMTPEnvironment) {
+        switch environment {
+        case .production:
+            apiBaseURL = "https://api.convos-prod.convos-api.xyz"
+        case .local, .dev:
+            apiBaseURL = "https://api.convos-dev.convos-api.xyz"
+        }
+    }
 
     func resolveProfileName(for inboxId: String) async -> String? {
         do {
-            // Get the API URL from the environment
-            // ProcessInfo.processInfo.environment["CONVOS_API_URL"] ?? "https://api.convos-dev.convos-api.xyz"
-            let url = URL(
+            guard let url = URL(
                 string:
-                    "https://api.convos-dev.convos-api.xyz/api/v1/profiles/public/xmtpId/\(inboxId)"
-            )!
+                    "\(apiBaseURL)/api/v1/profiles/public/xmtpId/\(inboxId)"
+            ) else {
+                log.error("Failed to create API URL for inboxId \(inboxId)")
+                return nil
+            }
 
             let (data, response) = try await URLSession.shared.data(from: url)
 
@@ -74,13 +84,11 @@ extension Reaction {
 
 class PushNotificationContentFactory {
     let client: Client
+    let nameResolver: ProfileNameResolver
 
     init(client: Client) {
         self.client = client
-    }
-
-    private var nameResolver: ProfileNameResolver {
-        ProfileNameResolver.shared
+        self.nameResolver = ProfileNameResolver.shared
     }
 
     private func message(from reference: String) async throws -> DecodedMessage? {

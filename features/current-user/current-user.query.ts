@@ -1,4 +1,5 @@
-import { queryOptions } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { IConvosCurrentUser } from "@/features/current-user/current-user.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
@@ -15,6 +16,14 @@ export function getCurrentUserQueryOptions(args: { caller?: string }) {
       baseStr: "current-user",
     }),
     queryFn: () => fetchCurrentUser(),
+  })
+}
+
+export function useCurrentUserQuery() {
+  const authStatus = useAuthenticationStore((s) => s.status)
+  return useQuery({
+    ...getCurrentUserQueryOptions({}),
+    enabled: authStatus === "signedIn",
   })
 }
 

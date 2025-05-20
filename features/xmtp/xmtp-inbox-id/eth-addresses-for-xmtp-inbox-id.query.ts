@@ -5,6 +5,7 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { create, windowScheduler } from "@yornaath/batshit"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { reactQueryLongCacheQueryOptions } from "@/utils/react-query/react-query.constants"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { getEthAddressesFromInboxIds } from "./eth-addresses-from-xmtp-inbox-id"
 
@@ -32,13 +33,13 @@ export function getEthAddressesForXmtpInboxIdQueryOptions(args: IArgs & { caller
       caller,
     },
     enabled,
-    queryFn:
-      enabled
-        ? () => {
-            const batcher = getBatcher(clientInboxId)
-            return batcher.fetch(inboxId)
-          }
-        : skipToken,
+    queryFn: enabled
+      ? () => {
+          const batcher = getBatcher(clientInboxId)
+          return batcher.fetch(inboxId)
+        }
+      : skipToken,
+    ...reactQueryLongCacheQueryOptions,
   })
 }
 

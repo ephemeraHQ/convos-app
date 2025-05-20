@@ -47,6 +47,7 @@ export const ConversationListPinnedConversationDm = ({
 
   const { data: lastMessage } = useConversationLastMessage({
     xmtpConversationId,
+    caller: "ConversationListPinnedConversationDm",
   })
 
   const displayMessagePreview = lastMessage && isTextMessage(lastMessage) && isUnread

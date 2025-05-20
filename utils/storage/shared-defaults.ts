@@ -9,4 +9,9 @@ export const sharedDefaults = {
   getValue: (key: string) => {
     return Settings.get(key)
   },
+  deleteValue: (key: string) => {
+    Settings.set({
+      [key]: undefined,
+    })
+  },
 }

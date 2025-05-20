@@ -7,6 +7,7 @@ import { notificationsLogger } from "@/utils/logger/logger"
 export async function getDevicePushNotificationsToken() {
   try {
     if (!Device.isDevice) {
+      // return "TEST_DEVICE_TOKEN"
       throw new Error("Must use physical")
     }
 
@@ -34,6 +35,7 @@ export async function getDevicePushNotificationsToken() {
 export async function getExpoPushNotificationsToken() {
   try {
     if (!Device.isDevice) {
+      // return "TEST_EXPO_TOKEN"
       throw new Error("Must use physical device for push notifications")
     }
 

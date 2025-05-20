@@ -38,6 +38,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationLastMessage({
     xmtpConversationId,
+    caller: "ConversationListItemGroup",
   })
 
   const { isUnread } = useConversationIsUnread({

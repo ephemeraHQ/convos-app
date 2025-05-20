@@ -80,7 +80,7 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
             Log.log(`Adding Keychain Group '${keychainGroup}' to NSE entitlements.`)
             keychainGroups.push(keychainGroup)
             // Add default group too, might be needed sometimes
-            const defaultKeychainGroup = `$(AppIdentifierPrefix)${config.ios.bundleIdentifier}.${targetName}`
+            const defaultKeychainGroup = `$(AppIdentifierPrefix)${config.ios?.bundleIdentifier}.${targetName}`
             if (!keychainGroups.includes(defaultKeychainGroup)) {
               keychainGroups.push(defaultKeychainGroup)
             }
@@ -133,9 +133,9 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
 
           // Set Main App Bundle Identifier
           Log.log(
-            `Setting MainAppBundleIdentifier in ${infoPlistFilename} to: ${config.ios.bundleIdentifier}`,
+            `Setting MainAppBundleIdentifier in ${infoPlistFilename} to: ${config.ios?.bundleIdentifier}`,
           )
-          infoPlistContents.MainAppBundleIdentifier = config.ios.bundleIdentifier
+          infoPlistContents.MainAppBundleIdentifier = config.ios?.bundleIdentifier
 
           fs.writeFileSync(infoPlistPath, plist.build(infoPlistContents))
           Log.log(`Successfully updated ${infoPlistFilename}`)
@@ -152,7 +152,7 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
   ])
 }
 
-const withXcodeProjectSettings: ConfigPlugin = (config, props) => {
+const withXcodeProjectSettings: ConfigPlugin = (config) => {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults
 
@@ -253,8 +253,10 @@ const withPodfile: ConfigPlugin = (config) => {
 
 target '${NSE_TARGET_NAME}' do
   # Use the iOS XMTP version required by the installed @xmtp/react-native-sdk
+  # Same value that we use in the react-native app
   pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
-  pod 'MMKV', '2.2.1', :modular_headers => true
+  # Same value that we use in the react-native app
+  pod 'MMKV', '~> 2.2.1', :modular_headers => true
 
   # NSEs often use static frameworks. Adjust if your setup differs.
   use_frameworks! :linkage => :static
@@ -271,6 +273,37 @@ end
   ])
 }
 
+const withEasManagedCredentials: ConfigPlugin = (config) => {
+  const bundleIdentifier = config?.ios?.bundleIdentifier
+  config.extra = {
+    ...config.extra,
+    eas: {
+      ...config.extra?.eas,
+      build: {
+        ...config.extra?.eas?.build,
+        experimental: {
+          ...config.extra?.eas?.build?.experimental,
+          ios: {
+            ...config.extra?.eas?.build?.experimental?.ios,
+            appExtensions: [
+              ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ?? []),
+              {
+                // keep in sync with native changes in NSE
+                targetName: NSE_TARGET_NAME,
+                bundleIdentifier: `${bundleIdentifier}.${NSE_TARGET_NAME}`,
+                entitlements: {
+                  "com.apple.security.application-groups": [`group.${bundleIdentifier}`],
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
+  }
+  return config
+}
+
 export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
   // 1. Copy files AND modify copied entitlements/Info.plist
   config = withNseFilesAndPlistMods(config)
@@ -278,10 +311,8 @@ export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
   config = withXcodeProjectSettings(config, props)
   // 3. Modify the Podfile
   config = withPodfile(config)
-
-  // Optional: These might modify main app settings/entitlements if needed
-  // config = withAppEnvironment(config, props);
-  // config = withEasManagedCredentials(config, props);
+  // 4. Modify the EAS credentials (Needed to make sure the NSE have the right provisioning profile, etc...)
+  config = withEasManagedCredentials(config)
 
   return config
 }

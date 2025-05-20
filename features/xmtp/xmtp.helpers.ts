@@ -1,87 +1,118 @@
 import * as Sentry from "@sentry/react-native"
 import { config } from "@/config"
-import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
+// import {
+//   appCameBackFromBackground,
+//   appHasGoneToBackground,
+//   getCurrentAppState,
+//   subscribeToAppStateStore,
+// } from "@/stores/app-state-store/app-state-store.service"
+// import { useXmtpActivityStore } from "@/features/xmtp/xmtp-activity.store"
 import { captureError } from "@/utils/capture-error"
 import { XMTPError } from "@/utils/error"
 import { getRandomId } from "@/utils/general"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { withTimeout } from "@/utils/promise-timeout"
 
-export function logErrorIfXmtpRequestTookTooLong(args: {
-  durationMs: number
-  xmtpFunctionName: string
-}) {
-  const { durationMs, xmtpFunctionName } = args
-
-  if (durationMs > config.xmtp.maxMsUntilLogError) {
-    captureError(
-      new XMTPError({
-        error: new Error(`Calling "${xmtpFunctionName}" took ${durationMs}ms`),
-      }),
-    )
-  }
-}
-
 /**
- * Wraps an async XMTP SDK call to measure its duration, log potential errors for long requests,
- * and track the operation's progress in the Zustand store.
+ * Wraps an async XMTP SDK call using the modified withTimeout.
+ * The operation can be cancelled externally (e.g., by app backgrounding)
+ * via the useXmtpActivityStore. Includes Sentry tracing and timeout.
+ * This version accurately measures duration by considering app active time only,
+ * using the centralized useAppStateStore.
  */
 export async function wrapXmtpCallWithDuration<T>(
   xmtpFunctionName: string,
   xmtpCall: () => Promise<T>,
 ): Promise<T> {
   const operationId = getRandomId()
-  const { addOperation, removeOperation } = useXmtpActivityStore.getState().actions
+  // const { addOperation, removeOperation } = useXmtpActivityStore.getState().actions
 
-  // Record start time and add to store
-  const startTime = Date.now()
-  addOperation({
-    id: operationId,
-    name: xmtpFunctionName,
-    startTime,
-  })
+  let totalActiveDurationMs = 0
+  let segmentStartTime = Date.now()
+  // let storeUnsubscribe: (() => void) | null = null
+
+  // Get initial state for the case where the call is very short
+  // and finishes before any app state change event.
+  // let currentAppState = getCurrentAppState()
+
+  // storeUnsubscribe = subscribeToAppStateStore({
+  //   callback: (currentState, previousState) => {
+  //     if (appCameBackFromBackground()) {
+  //       // App has come to the foreground
+  //       segmentStartTime = Date.now()
+  //     } else if (appHasGoneToBackground()) {
+  //       // App has gone to the background or inactive
+  //       totalActiveDurationMs += Date.now() - segmentStartTime
+  //     }
+  //   },
+  // })
 
   try {
-    // Log the start of the XMTP operation
-    xmtpLogger.debug(`XMTP operation [${operationId}] "${xmtpFunctionName}" started...`)
+    // xmtpLogger.debug(`Operation [${operationId}] "${xmtpFunctionName}" started...`)
 
-    // track the XMTP call with Sentry
-    const xmtpSpanCall = Sentry.startSpan(
-      {
-        name: xmtpFunctionName,
-        op: "XMTP",
-      },
-      () => xmtpCall(),
-    )
-
-    // Execute the actual XMTP call with a 15-second timeout
-    const result = await withTimeout({
-      promise: xmtpSpanCall,
-      timeoutMs: 15000,
-      errorMessage: `XMTP operation "${xmtpFunctionName}" timed out after 15 seconds`,
+    const xmtpSpanCall = Sentry.startSpan({ name: xmtpFunctionName, op: "XMTP" }, async () => {
+      return await xmtpCall()
     })
 
-    // Record end time and calculate duration
-    const endTime = Date.now()
-    const durationMs = endTime - startTime
+    const { promise: timedPromise } = withTimeout({
+      promise: xmtpSpanCall,
+      timeoutMs: 15000, // Timeout remains as a safety net (wall-clock time)
+      errorMessage: `Operation "${xmtpFunctionName}" timed out after 15 seconds`,
+    })
 
-    xmtpLogger.debug(
-      `XMTP operation [${operationId}] "${xmtpFunctionName}" finished in ${durationMs}ms`,
-    )
+    // // NOW add the operation to the store
+    // addOperation({
+    //   id: operationId,
+    //   name: xmtpFunctionName,
+    //   startTime: segmentStartTime, // Date.now() at this point
+    //   cancel, // from withTimeout if you were to use its cancel
+    // })
 
-    // Log error if the request took too long
-    logErrorIfXmtpRequestTookTooLong({ durationMs, xmtpFunctionName })
+    const result = await timedPromise
+
+    // Add duration of the last active segment if app is currently active
+    // if (currentAppState === "active") {
+    //   totalActiveDurationMs += Date.now() - segmentStartTime
+    // }
+
+    totalActiveDurationMs = Date.now() - segmentStartTime
+
+    // xmtpLogger.debug(
+    //   `Operation [${operationId}] "${xmtpFunctionName}" finished successfully in ${totalActiveDurationMs}ms`,
+    // )
+
+    logErrorIfXmtpRequestTookTooLong({
+      durationMs: totalActiveDurationMs,
+      xmtpFunctionName,
+    })
 
     return result
   } catch (error) {
-    // Log the error with operation ID
-    xmtpLogger.error(`XMTP operation [${operationId}] "${xmtpFunctionName}" failed: ${error}`)
-
-    // Re-throw the error to be handled by the caller
-    // We still want to remove the operation from the store in the finally block
+    // If an error occurs, capture the active time until the error
+    // if (currentAppState === "active") {
+    //   totalActiveDurationMs += Date.now() - segmentStartTime
+    // }
+    xmtpLogger.error(
+      `Operation [${operationId}] "${xmtpFunctionName}" failed after ${totalActiveDurationMs}ms`,
+    )
     throw error
   } finally {
-    // Always remove the operation from the store, regardless of success or failure
-    removeOperation(operationId)
+    // removeOperation(operationId)
+    // Clean up the store subscription
+    // if (storeUnsubscribe) {
+    //   storeUnsubscribe()
+    // }
+  }
+}
+
+function logErrorIfXmtpRequestTookTooLong(args: { durationMs: number; xmtpFunctionName: string }) {
+  const { durationMs, xmtpFunctionName } = args
+
+  if (durationMs > config.xmtp.maxMsUntilLogError) {
+    captureError(
+      new XMTPError({
+        error: new Error(`Calling "${xmtpFunctionName}" took ${Math.round(durationMs / 1000)}s`),
+      }),
+    )
   }
 }

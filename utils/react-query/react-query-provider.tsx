@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { PersistQueryClientProvider as ReactQueryPersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { memo, useEffect } from "react"
 import { config } from "@/config"
-import { useAppStore } from "@/stores/app-store"
+import { useAppStore } from "@/stores/app.store"
 import { persistLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { DEFAULT_GC_TIME } from "@/utils/react-query/react-query.constants"
@@ -61,7 +61,7 @@ function PersistQueryClientProvider(props: { children: React.ReactNode }) {
         },
       }}
       onSuccess={() => {
-        persistLogger.debug("React Query client hydrated")
+        persistLogger.debug("React Query persist client hydrated")
         useAppStore.getState().actions.setReactQueryIsHydrated(true)
       }}
     >

@@ -1,49 +1,41 @@
 import { useQueries } from "@tanstack/react-query"
 import { useCallback, useRef } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getConversationMessageQueryOptions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { refetchInfiniteConversationMessages } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { useAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import {
+  getAllowedConsentConversationsQueryOptions,
+  useAllowedConsentConversationsQuery,
+} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
-import { useConversationLastMessageIds } from "@/features/conversation/hooks/use-conversations-last-message-ids"
-import { getConversationQueryData } from "@/features/conversation/queries/conversation.query"
+import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { customPromiseAllSettled } from "@/utils/promise-all-settlted"
+import { customPromiseAllSettled } from "@/utils/promise-all-settled"
+import { refetchQueryIfNotAlreadyFetching } from "@/utils/react-query/react-query.helpers"
 
 export const useConversationListConversations = () => {
   const currentSender = useSafeCurrentSender()
   const isRefetchingRef = useRef(false)
 
-  const {
-    data: conversationIds = [],
-    refetch: refetchConversations,
-    isLoading: isLoadingConversations,
-  } = useAllowedConsentConversationsQuery({
-    clientInboxId: currentSender.inboxId,
-    caller: "useConversationListConversations",
-  })
+  const { data: allowedConversationIds = [], isLoading: isLoadingAllowedConversations } =
+    useAllowedConsentConversationsQuery({
+      clientInboxId: currentSender.inboxId,
+      caller: "useConversationListConversations",
+    })
 
-  const { lastMessageIdByConversationId } = useConversationLastMessageIds({
-    conversationIds,
-  })
-
-  const lastMessageIds = Object.values(lastMessageIdByConversationId)
-
-  const lastMessageQueries = useQueries({
-    queries: lastMessageIds.map((messageId) => ({
-      ...getConversationMessageQueryOptions({
+  const conversationQueries = useQueries({
+    queries: allowedConversationIds.map((conversationId) =>
+      getConversationQueryOptions({
         clientInboxId: currentSender.inboxId,
-        xmtpMessageId: messageId,
+        xmtpConversationId: conversationId,
         caller: "useConversationListConversations",
       }),
-    })),
+    ),
   })
 
   const conversationMetadataQueries = useQueries({
-    queries: conversationIds.map((conversationId) =>
+    queries: allowedConversationIds.map((conversationId) =>
       getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
@@ -52,13 +44,10 @@ export const useConversationListConversations = () => {
     ),
   })
 
-  let validConversationIds = conversationIds.reduce(
+  let validConversationIds = allowedConversationIds.reduce(
     (acc, conversationId, index) => {
       const conversationMetadataQuery = conversationMetadataQueries[index]
-      const conversation = getConversationQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-      })
+      const conversation = conversationQueries[index].data
       const metadata = conversationMetadataQuery.data
 
       // Skip conversations that don't meet criteria
@@ -72,22 +61,11 @@ export const useConversationListConversations = () => {
         return acc
       }
 
-      // Get the last message for valid conversations
-      const messageId = lastMessageIdByConversationId[conversationId]
-      const lastMessageQuery = lastMessageQueries.find((query) => query.data?.xmtpId === messageId)
-      const lastMessage = lastMessageQuery?.data
-      // Use last message timestamp if available, otherwise use conversation created timestamp
-      let timestamp = 0
-      if (lastMessage) {
-        timestamp = lastMessage.sentMs
-      } else if (conversation?.createdAt) {
-        timestamp = conversation.createdAt
-      }
+      const lastMessage = conversation.lastMessage
 
-      // Add to accumulator with timestamp for sorting
       acc.push({
         conversationId,
-        timestamp,
+        timestamp: lastMessage?.sentMs ?? conversation.createdAt,
       })
 
       return acc
@@ -110,14 +88,23 @@ export const useConversationListConversations = () => {
     isRefetchingRef.current = true
 
     const refetchPromises = [
-      refetchConversations(),
-      ...conversationIds.map((conversationId) =>
-        refetchInfiniteConversationMessages({
+      // Refetch all allowed conversations ids
+      refetchQueryIfNotAlreadyFetching({
+        queryKey: getAllowedConsentConversationsQueryOptions({
           clientInboxId: currentSender.inboxId,
-          xmtpConversationId: conversationId,
           caller: "useConversationListConversations",
-        }),
-      ),
+        }).queryKey,
+      }),
+      // Refetch all conversation metadata
+      // DON'T because it's not needed and heavy for nothing
+      // ...allowedConversationIds.map((conversationId) =>
+      //   refetchQueryIfNotAlreadyFetching(
+      //     getConversationMetadataQueryOptions({
+      //       xmtpConversationId: conversationId,
+      //       clientInboxId: currentSender.inboxId,
+      //     }),
+      //   ),
+      // ),
     ]
 
     // eslint-disable-next-line custom-plugin/require-promise-error-handling
@@ -136,21 +123,16 @@ export const useConversationListConversations = () => {
     })
 
     isRefetchingRef.current = false
-  }, [currentSender.inboxId, refetchConversations, conversationIds])
+  }, [currentSender.inboxId])
 
-  const hasAnyLastMessageLoading = lastMessageQueries.some(
+  const hasAnyConversationLoading = conversationQueries.some(
     (query) => query.isLoading && !query.data,
   )
-  // No more lastMessageIdQueries
-  const hasAnyLastMessageIdLoading = false
   const hasAnyMetadataLoading = conversationMetadataQueries.some(
     (query) => query.isLoading && !query.data,
   )
   const isLoading =
-    isLoadingConversations ||
-    hasAnyMetadataLoading ||
-    hasAnyLastMessageLoading ||
-    hasAnyLastMessageIdLoading
+    isLoadingAllowedConversations || hasAnyMetadataLoading || hasAnyConversationLoading
 
   return {
     data: sortedValidConversationIds,
