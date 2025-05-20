@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { FlashList } from "@shopify/flash-list"
-import { memo, useCallback } from "react"
+import React, { memo, useCallback } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
 import { EmptyState } from "@/design-system/empty-state"
