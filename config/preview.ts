@@ -7,7 +7,7 @@ export const previewConfig: IConfig = {
   app: {
     ...shared.app,
     storeUrl: Platform.select({
-      default: "itms-beta://testflight.apple.com/v1/app/6478027666",
+      default: "itms-beta://testflight.apple.com/v1/app/6743806056",
       android: "https://play.google.com/apps/internaltest/4701737988037557150",
     }),
   },

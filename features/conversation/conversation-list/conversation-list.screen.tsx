@@ -32,7 +32,7 @@ import { ConversationListAwaitingRequests } from "./conversation-list-awaiting-r
 import { ConversationListEmpty } from "./conversation-list-empty"
 import { ConversationListStartNewConvoBanner } from "./conversation-list-start-new-convo-banner"
 import { useConversationListScreenHeader } from "./conversation-list.screen-header"
-import { useConversationListConversations } from "./hooks/use-conversation-list-conversations"
+import { useSortedAllowedConversationIds } from "./hooks/use-sorted-allowed-conversation-ids"
 
 type IConversationListProps = NativeStackScreenProps<NavigationParamList, "Chats">
 
@@ -43,7 +43,7 @@ export const ConversationListScreen = memo(function ConversationListScreen(
     data: conversationsIds,
     refetch: refetchConversations,
     isLoading: isLoadingConversations,
-  } = useConversationListConversations()
+  } = useSortedAllowedConversationIds()
 
   const insets = useSafeAreaInsets()
 
@@ -174,7 +174,7 @@ const ConversationListItemGroupWrapper = memo(function ConversationListItemGroup
 const ListHeader = React.memo(function ListHeader() {
   const { theme } = useAppTheme()
 
-  const { data: conversations } = useConversationListConversations()
+  const { data: conversations } = useSortedAllowedConversationIds()
   const { pinnedConversationsIds: pinnedConversations } = usePinnedConversations()
   const hasNoConversations =
     conversations &&

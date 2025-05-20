@@ -33,6 +33,7 @@ import { useStartListeningForAllowedConsentConversations } from "./features/conv
 import { useStartListeningToCurrentUserQuery } from "./features/current-user/use-start-listening-to-current-user-query"
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
+import { FullScreenLoader } from "@/components/full-screen-loader"
 import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
@@ -63,6 +64,7 @@ export const App = Sentry.wrap(function App() {
                   <BottomSheetModalProvider>
                     <AppNavigator />
                     {/* {__DEV__ && <DevToolsBubble />} */}
+                    <FullScreenLoader />
                     <Handlers />
                     <Snackbars />
                     <ActionSheet />

@@ -204,7 +204,7 @@ async function addPresentedNotificationsToCache(args: {
           captureError(
             new NotificationError({
               error,
-              additionalMessage: `Failed to decrypt message from presented notification: ${notification.request.identifier}`,
+              additionalMessage: `Failed to decrypt message from presented notification`,
             }),
           )
           return null

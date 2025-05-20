@@ -57,7 +57,7 @@ function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
       } catch (error) {
         throw new XMTPError({
           error,
-          additionalMessage: `Failed to process sync batch for inbox ${clientInboxId}`,
+          additionalMessage: `Failed to sync conversations batch for inbox ${clientInboxId}`,
         })
       }
     },

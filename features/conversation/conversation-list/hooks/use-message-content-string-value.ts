@@ -157,6 +157,7 @@ export async function ensureMessageContentStringValue(message: IConversationMess
           message.content.membersAdded.map((m) =>
             ensurePreferredDisplayInfo({
               inboxId: m.inboxId,
+              caller: "ensureMessageContentStringValue",
             }),
           ),
         )
@@ -166,6 +167,7 @@ export async function ensureMessageContentStringValue(message: IConversationMess
           message.content.membersRemoved.map((m) =>
             ensurePreferredDisplayInfo({
               inboxId: m.inboxId,
+              caller: "ensureMessageContentStringValue",
             }),
           ),
         )

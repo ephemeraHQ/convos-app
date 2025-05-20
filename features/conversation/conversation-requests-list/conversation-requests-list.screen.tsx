@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from "react"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   BannerContainer,
   BannerContentContainer,
@@ -26,9 +27,14 @@ export const ConversationRequestsListScreen = memo(function () {
   const { likelyNotSpamConversationIds, likelySpamConversationIds } =
     useConversationRequestsListItem()
 
+  const insets = useSafeAreaInsets()
+
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
       <ConversationList
+        contentContainerStyle={{
+          paddingBottom: insets.bottom,
+        }}
         ListHeaderComponent={<ListHeader />}
         ListFooterComponent={
           likelySpamConversationIds.length > 0 ? (

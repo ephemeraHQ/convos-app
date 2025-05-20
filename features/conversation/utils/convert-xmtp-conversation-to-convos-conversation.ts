@@ -1,11 +1,12 @@
 import { convertConsentStateToXmtpConsentState } from "@/features/consent/consent.utils"
+import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
+import { ensureConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IConversation } from "@/features/conversation/conversation.types"
 import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
 import { convertXmtpGroupMemberToConvosMember } from "@/features/groups/utils/convert-xmtp-group-member-to-convos-member"
 import { isXmtpConversationGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
-import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import {
   IXmtpConversationId,
   IXmtpConversationWithCodecs,
@@ -22,22 +23,28 @@ export async function convertXmtpConversationToConvosConversation(
 ): Promise<IConversation> {
   // Group conversation
   if (isXmtpConversationGroup(xmtpConversation)) {
-    const [members, creatorInboxId, consentState, lastMessage] = await Promise.all([
+    const [members, creatorInboxId, consentState, conversationXmtpLastMessage] = await Promise.all([
       xmtpConversation.members(),
       xmtpConversation.creatorInboxId() as unknown as IXmtpInboxId,
       xmtpConversation.consentState(),
-      // TMP until we have lastMessage function available from the SDK
-      xmtpConversation.lastMessage ??
-        getXmtpLastMessageFromMessages({
+      xmtpConversation.lastMessage,
+    ])
+
+    // TMP until we have lastMessage function available from the SDK
+    const lastMessage = conversationXmtpLastMessage
+      ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage)
+      : await getXmtpLastMessageFromMessages({
           clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
           xmtpConversationId: xmtpConversation.id,
-        }),
-    ])
+        })
 
     const addedByInboxId = xmtpConversation.addedByInboxId as unknown as IXmtpInboxId
 
     return {
       type: "group",
+      lastMessage,
+      creatorInboxId,
+      addedByInboxId,
       xmtpId: xmtpConversation.id,
       xmtpTopic: xmtpConversation.topic,
       consentState: convertConsentStateToXmtpConsentState(consentState),
@@ -48,33 +55,33 @@ export async function convertXmtpConversationToConvosConversation(
         members.map(convertXmtpGroupMemberToConvosMember),
         (member) => member.inboxId,
       ),
-      creatorInboxId: creatorInboxId,
-      addedByInboxId,
       createdAt: xmtpConversation.createdAt,
-      lastMessage: lastMessage ? convertXmtpMessageToConvosMessage(lastMessage) : undefined,
     } satisfies IGroup
   }
 
   // DM conversations
-  const [peerInboxId, consentState, lastMessage] = await Promise.all([
+  const [peerInboxId, consentState, conversationXmtpLastMessage] = await Promise.all([
     xmtpConversation.peerInboxId() as unknown as IXmtpInboxId,
     xmtpConversation.consentState(),
-    // TMP until we have lastMessage function available from the SDK
-    xmtpConversation.lastMessage ??
-      getXmtpLastMessageFromMessages({
+    xmtpConversation.lastMessage,
+  ])
+
+  // TMP until we have lastMessage function available from the SDK
+  const lastMessage = conversationXmtpLastMessage
+    ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage)
+    : await getXmtpLastMessageFromMessages({
         clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
         xmtpConversationId: xmtpConversation.id,
-      }),
-  ])
+      })
 
   return {
     type: "dm",
     peerInboxId,
+    lastMessage,
     xmtpId: xmtpConversation.id,
     createdAt: xmtpConversation.createdAt,
     xmtpTopic: xmtpConversation.topic,
     consentState: convertConsentStateToXmtpConsentState(consentState),
-    lastMessage: lastMessage ? convertXmtpMessageToConvosMessage(lastMessage) : undefined,
   } satisfies IDm
 }
 
@@ -83,30 +90,53 @@ async function getXmtpLastMessageFromMessages(args: {
   xmtpConversationId: IXmtpConversationId
 }) {
   const { clientInboxId, xmtpConversationId } = args
-  const { result, durationMs } = await measureTimeAsync(async () => {
-    const xmtpMessages = await getXmtpConversationMessages({
-      clientInboxId,
-      xmtpConversationId,
-      limit: 1,
+
+  try {
+    const { result, durationMs } = await measureTimeAsync(async () => {
+      const conversationMessagesData = await ensureConversationMessagesInfiniteQueryData({
+        clientInboxId,
+        xmtpConversationId,
+        caller: `get-xmtp-last-message-from-messages`,
+      })
+
+      const firstMessageId = conversationMessagesData.pages[0].messageIds[0]
+
+      if (!firstMessageId) {
+        logger.debug(
+          `No last message found for conversation ${xmtpConversationId}, returning undefined`,
+        )
+        return undefined
+      }
+
+      const fullMessage = await ensureConversationMessageQueryData({
+        clientInboxId,
+        xmtpMessageId: firstMessageId,
+        xmtpConversationId,
+        caller: `get-xmtp-last-message-from-messages`,
+      })
+
+      if (!fullMessage) {
+        logger.debug(
+          `No last message found for conversation ${xmtpConversationId}, returning undefined`,
+        )
+        return undefined
+      }
+
+      return fullMessage
     })
 
-    const xmtpMessage = xmtpMessages[0]
+    logger.debug(
+      `Fetched last message fallback for conversation ${xmtpConversationId} in ${durationMs}ms`,
+    )
 
-    if (!xmtpMessage) {
-      captureError(
-        new GenericError({
-          error: "No last message found for conversation",
-        }),
-      )
-      return undefined
-    }
-
-    return xmtpMessage
-  })
-
-  logger.debug(
-    `Fetched last message fallback for conversation ${xmtpConversationId} in ${durationMs}ms`,
-  )
-
-  return result
+    return result
+  } catch (error) {
+    captureError(
+      new GenericError({
+        error,
+        additionalMessage: `Error fetching last message fallback for conversation ${xmtpConversationId}`,
+      }),
+    )
+    return undefined
+  }
 }

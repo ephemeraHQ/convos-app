@@ -31,7 +31,7 @@ import {
 import { convertXmtpMessageToConvosMessage } from "./conversation-message/utils/convert-xmtp-message-to-convos-message"
 
 // Default page size for infinite queries
-export const DEFAULT_PAGE_SIZE = 10
+export const DEFAULT_PAGE_SIZE = 20
 
 // New types for the message IDs list approach
 type IMessageIdsPage = {
@@ -65,12 +65,13 @@ type IInfiniteMessagesPageParam = {
 const conversationMessagesInfiniteQueryFn = async (
   args: IArgs & { pageParam: IInfiniteMessagesPageParam },
 ) => {
-  const { clientInboxId, xmtpConversationId, pageParam, limit } = args
+  const { clientInboxId, xmtpConversationId, pageParam, limit: argLimit } = args
   const { cursorNs, direction } = pageParam || {
-    // For some reason I've been seeing some "Cannot read property 'cursorNs' of undefined"
     cursorNs: undefined,
     direction: "next",
   }
+
+  const resolvedLimit = argLimit || DEFAULT_PAGE_SIZE
 
   if (!clientInboxId) {
     throw new Error("clientInboxId is required")
@@ -90,6 +91,8 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("Conversation not found")
   }
 
+  const timestampBeforeXmtpFetchMs = Date.now()
+
   await syncOneXmtpConversation({
     clientInboxId,
     conversationId: conversation.xmtpId,
@@ -99,23 +102,20 @@ const conversationMessagesInfiniteQueryFn = async (
   const xmtpMessages = await getXmtpConversationMessages({
     clientInboxId,
     xmtpConversationId: conversation.xmtpId,
-    limit: limit || DEFAULT_PAGE_SIZE,
+    limit: resolvedLimit,
     ...(direction === "next" && cursorNs ? { beforeNs: cursorNs } : {}),
     ...(direction === "prev" && cursorNs ? { afterNs: cursorNs } : {}),
     direction,
   })
 
-  let convosMessagesFromServer = xmtpMessages.map(convertXmtpMessageToConvosMessage)
+  const convosMessagesFromServer = xmtpMessages.map(convertXmtpMessageToConvosMessage)
   let combinedMessagesForPage: IConversationMessage[] = [...convosMessagesFromServer]
 
-  // Merge with optimistic updates if fetching the very first/latest page
   if (direction === "next" && !cursorNs) {
-    const queryKey = getConversationMessagesInfiniteQueryOptions({
+    const currentInfiniteData = getConversationMessagesInfiniteQueryData({
       clientInboxId,
       xmtpConversationId,
-    }).queryKey
-    const currentInfiniteData =
-      reactQueryClient.getQueryData<IConversationMessagesInfiniteQueryData>(queryKey)
+    })
 
     if (currentInfiniteData && currentInfiniteData.pages.length > 0) {
       const cachedFirstPageMessageIds = currentInfiniteData.pages[0].messageIds
@@ -130,9 +130,17 @@ const conversationMessagesInfiniteQueryFn = async (
             xmtpConversationId,
           })
           if (cachedMsgData) {
-            const newestServerMsg = convosMessagesFromServer[0]
-            if (!newestServerMsg || cachedMsgData.sentMs > newestServerMsg.sentMs) {
+            // If the cached message's timestamp is at or after we started fetching,
+            // It means it was adding after so we need to count it.
+            if (
+              cachedMsgData.sentMs >= timestampBeforeXmtpFetchMs &&
+              cachedMsgData.status === "sent"
+            ) {
               optimisticMessagesToConsider.push(cachedMsgData)
+            } else if (cachedMsgData.sentMs < timestampBeforeXmtpFetchMs) {
+              queryLogger.debug(
+                `Cached message ${cachedMsgId} (sent: ${cachedMsgData.sentMs}) is older than fetch start time (${timestampBeforeXmtpFetchMs}) and not in server response. Discarding.`,
+              )
             }
           }
         }
@@ -150,7 +158,7 @@ const conversationMessagesInfiniteQueryFn = async (
         combinedMessagesForPage = Array.from(uniqueMessagesMap.values()).sort(
           (a, b) => b.sentMs - a.sentMs,
         )
-        combinedMessagesForPage = combinedMessagesForPage.slice(0, limit || DEFAULT_PAGE_SIZE)
+        combinedMessagesForPage = combinedMessagesForPage.slice(0, resolvedLimit)
       }
     }
   }
@@ -166,7 +174,6 @@ const conversationMessagesInfiniteQueryFn = async (
     }
   }
 
-  // Store regular messages in their individual query caches
   for (const message of regularMessages) {
     setConversationMessageQueryData({
       clientInboxId,
@@ -176,7 +183,6 @@ const conversationMessagesInfiniteQueryFn = async (
     })
   }
 
-  // Process reactions in batch for better performance
   if (reactionMessages.length > 0) {
     processReactionConversationMessages({
       clientInboxId,
@@ -184,36 +190,33 @@ const conversationMessagesInfiniteQueryFn = async (
     })
   }
 
-  // Get message IDs (only from regular messages, not reactions)
-  const messageIds = regularMessages.map((message) => message.xmtpId)
+  let finalNextCursorNs: number | null = null
+  let finalPrevCursorNs: number | null = null
 
-  let nextCursorNs: number | null = null
-  let prevCursorNs: number | null = null
-
-  if (convosMessagesFromServer.length > 0) {
-    // For "next" direction (older messages), we want to use the oldest message in the batch
-    if (direction === "next" && convosMessagesFromServer.length > 0) {
-      // Use the oldest message's timestamp as cursor for next batch of older messages
-      nextCursorNs =
-        convosMessagesFromServer[convosMessagesFromServer.length - 1].sentNs -
-        // Otherwise XMTP was returning the same message for both prev and next
-        1000
-    }
-
-    // For "prev" direction (newer messages), we want to use the newest message in the batch
-    if (direction === "prev" && convosMessagesFromServer.length > 0) {
-      // Use the newest message's timestamp as cursor for next batch of newer messages
-      prevCursorNs =
-        convosMessagesFromServer[0].sentNs +
-        // Otherwise XMTP was returning the same message for both prev and next
-        1000
+  if (combinedMessagesForPage.length > 0) {
+    if (direction === "next") {
+      // If we fetched a full page (or more, pre-slice), there might be older messages.
+      // Cursor is based on the oldest item in the *returned* `combinedMessagesForPage` for this page.
+      if (combinedMessagesForPage.length >= resolvedLimit) {
+        finalNextCursorNs =
+          combinedMessagesForPage[combinedMessagesForPage.length - 1].sentNs - 1000
+      } else {
+        // Less than a full page returned means no more older messages from this point.
+        finalNextCursorNs = null
+      }
+    } else if (direction === "prev") {
+      // Cursor is based on the newest item in the *returned* `combinedMessagesForPage`.
+      // This assumes `combinedMessagesForPage` are sorted newest first if `direction` was "prev".
+      if (combinedMessagesForPage.length > 0) {
+        finalPrevCursorNs = combinedMessagesForPage[0].sentNs + 1000
+      }
     }
   }
 
   return {
-    messageIds,
-    nextCursorNs,
-    prevCursorNs,
+    messageIds: regularMessages.map((message) => message.xmtpId),
+    nextCursorNs: finalNextCursorNs,
+    prevCursorNs: finalPrevCursorNs,
   }
 }
 

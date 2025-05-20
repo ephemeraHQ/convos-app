@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
+import { textSizeStyles } from "@/design-system/Text/Text.styles"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationConsentPopupDm } from "@/features/conversation/conversation-chat/conversation-consent-popup/conversation-consent-popup-dm"
@@ -33,6 +34,8 @@ import {
   isAnActualMessage,
   isAttachmentsMessage,
   isGroupUpdatedMessage,
+  messageContentIsGroupUpdated,
+  messageContentIsText,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import {
   DEFAULT_PAGE_SIZE,
@@ -51,6 +54,7 @@ import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useEffectOnce } from "@/hooks/use-effect-once"
 import { useAppStateHandler } from "@/stores/app-state-store/app-state-store.service"
 import { window } from "@/theme/layout"
+import { spacing } from "@/theme/spacing"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { convertNanosecondsToMilliseconds } from "@/utils/date"
@@ -64,6 +68,16 @@ import {
 const ReanimatedFlashList = Animated.createAnimatedComponent(
   FlashList as React.ComponentType<FlashListProps<IXmtpMessageId>>,
 ) as <T>(props: FlashListProps<T> & { ref?: React.Ref<FlashList<T>> }) => JSX.Element
+
+// Define some estimated heights for different message types.
+// You should adjust these values based on your actual UI.
+const ATTACHMENT_MESSAGE_HEIGHT = 300
+const GROUP_UPDATE_MESSAGE_HEIGHT = textSizeStyles["md"].lineHeight
+const GROUP_UPDATE_VERTICAL_PADDING = spacing.lg
+const TEXT_MESSAGE_HEIGHT = 80
+const DEFAULT_ESTIMATED_ITEM_SIZE = 100
+
+type IMessageType = "attachment" | "groupUpdate" | "message"
 
 export const ConversationMessages = memo(function ConversationMessages() {
   const currentSender = useSafeCurrentSender()
@@ -144,11 +158,60 @@ export const ConversationMessages = memo(function ConversationMessages() {
         xmtpConversationId,
       })
 
-      if (!message) return "message"
-      if (message.senderInboxId === currentSender.inboxId) return "outgoing"
-      if (isAttachmentsMessage(message)) return "attachment"
-      if (isGroupUpdatedMessage(message)) return "groupUpdate"
-      return "incoming"
+      let type: IMessageType
+
+      if (!message) {
+        type = "message"
+      } else if (isAttachmentsMessage(message)) {
+        type = "attachment"
+      } else if (isGroupUpdatedMessage(message)) {
+        type = "groupUpdate"
+      } else {
+        type = "message"
+      }
+
+      return type
+    },
+    [currentSender.inboxId, xmtpConversationId],
+  )
+
+  const overrideItemLayout = useCallback(
+    (layout: { span?: number; size?: number }, item: IXmtpMessageId) => {
+      const message = getConversationMessageQueryData({
+        xmtpMessageId: item,
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+      })
+
+      if (!message) {
+        layout.size = DEFAULT_ESTIMATED_ITEM_SIZE
+        return
+      }
+
+      // group updates
+      if (messageContentIsGroupUpdated(message.content)) {
+        const numberOfUpdates =
+          message.content.membersAdded.length +
+          message.content.membersRemoved.length +
+          (message.content.metadataFieldsChanged ? 1 : 0)
+        layout.size = GROUP_UPDATE_MESSAGE_HEIGHT * numberOfUpdates + GROUP_UPDATE_VERTICAL_PADDING
+        return
+      }
+
+      // attachments
+      if (isAttachmentsMessage(message)) {
+        layout.size = ATTACHMENT_MESSAGE_HEIGHT
+        return
+      }
+
+      if (messageContentIsText(message.content)) {
+        const numberOfChunks = Math.ceil(message.content.text.length / 20)
+        layout.size = TEXT_MESSAGE_HEIGHT * numberOfChunks
+        return
+      }
+
+      // Unknown message type
+      layout.size = DEFAULT_ESTIMATED_ITEM_SIZE
     },
     [currentSender.inboxId, xmtpConversationId],
   )
@@ -161,7 +224,8 @@ export const ConversationMessages = memo(function ConversationMessages() {
       data={messageIds}
       renderItem={renderItem}
       drawDistance={window.height / 2}
-      estimatedItemSize={100} // Random value for now but big enough so that if we have big messages we don't have to render a lot of them
+      estimatedItemSize={DEFAULT_ESTIMATED_ITEM_SIZE}
+      overrideItemLayout={overrideItemLayout}
       inverted
       initialScrollIndex={0}
       keyExtractor={keyExtractor}

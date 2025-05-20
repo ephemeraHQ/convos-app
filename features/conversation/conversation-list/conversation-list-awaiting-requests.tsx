@@ -25,7 +25,6 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
   const { likelyNotSpamConversationIds, isLoading: isLoadingUknownConversations } =
     useConversationRequestsListItem()
 
-  // Fetch metadata queries
   const conversationsMetadataQueryResult = useQueries({
     queries: (likelyNotSpamConversationIds ?? []).map((conversationId) =>
       getConversationMetadataQueryOptions({
