@@ -31,5 +31,5 @@ jobs:
         run: |
           git fetch origin production
           git checkout -B production origin/production
-          git merge ${{ github.ref_name }} -Xours --no-ff --no-edit -m "Merge branch '${{ github.ref_name }}' into production via workflow_dispatch [skip ci]"
+          git merge ${{ github.ref_name }} -Xours --no-ff --no-edit -m "Merge branch '${{ github.ref_name }}' into production via workflow_dispatch"
           git push origin production
