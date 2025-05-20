@@ -5,8 +5,73 @@ import {
 } from "@/features/groups/utils/group-admin.utils"
 import { getPreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 
-export function sortGroupMembers(members: IGroupMember[]) {
-  // Pre-compute all display info first to avoid recalculations during sort
+// Type that includes optional profile information
+export type IGroupMemberWithProfile = IGroupMember & {
+  profile?: {
+    name?: string
+    avatar?: string
+  } | null
+}
+
+export function sortGroupMembers(members: IGroupMember[] | IGroupMemberWithProfile[]) {
+  // First sort by admin status
+  const sortedByAdmin = [...members].sort((a, b) => {
+    // Create priority based on admin status
+    const getPriority = (member: IGroupMember): number => {
+      if (getGroupMemberIsSuperAdmin({ member })) return 2
+      if (getGroupMemberIsAdmin({ member })) return 1
+      return 0
+    }
+
+    const priorityA = getPriority(a)
+    const priorityB = getPriority(b)
+
+    // Sort by priority (higher first)
+    return priorityB - priorityA
+  })
+
+  // Check if we have profile information in the members
+  const hasProfiles = sortedByAdmin.some(m => 'profile' in m && m.profile)
+
+  if (hasProfiles) {
+    // If members have profiles, use those directly
+    return enhanceSortWithProfiles(sortedByAdmin as IGroupMemberWithProfile[])
+  } else {
+    // Otherwise, get profile info and then sort
+    const withProfiles = getProfilesAndEnhanceSort(sortedByAdmin)
+    return withProfiles
+  }
+}
+
+// Sort with profile information that's already included in the members
+function enhanceSortWithProfiles(members: IGroupMemberWithProfile[]) {
+  return members.sort((a, b) => {
+    // First preserve admin sort order
+    if (a.permission === "super_admin" && b.permission !== "super_admin") return -1
+    if (a.permission !== "super_admin" && b.permission === "super_admin") return 1
+    if (a.permission === "admin" && b.permission !== "admin") return -1
+    if (a.permission !== "admin" && b.permission === "admin") return 1
+    
+    // Then check for names
+    const hasNameA = !!(a.profile?.name && !a.profile.name.startsWith("0x"))
+    const hasNameB = !!(b.profile?.name && !b.profile.name.startsWith("0x"))
+    
+    if (hasNameA && !hasNameB) return -1
+    if (!hasNameA && hasNameB) return 1
+    
+    // If both have names, sort alphabetically
+    if (hasNameA && hasNameB) {
+      return a.profile!.name!.localeCompare(b.profile!.name!)
+    }
+    
+    // Otherwise keep original order
+    return 0
+  })
+}
+
+// Get profile information and then enhance the sort
+function getProfilesAndEnhanceSort(members: IGroupMember[]) {
+  // Pre-compute all display info
   const memberDisplayInfo = new Map<string, { displayName?: string }>()
   
   for (const member of members) {
@@ -17,28 +82,32 @@ export function sortGroupMembers(members: IGroupMember[]) {
   }
   
   return members.sort((a, b) => {
-    const getMemberPriority = (member: IGroupMember): number => {
-      const displayInfo = memberDisplayInfo.get(member.inboxId)
-      const hasDisplayName = !!(displayInfo?.displayName && displayInfo.displayName !== member.inboxId && !displayInfo.displayName.startsWith("0x"))
-      
-      // Create a compound priority: admin status (high bits) + display name presence (low bit)
-      if (getGroupMemberIsSuperAdmin({ member })) return hasDisplayName ? 7 : 6
-      if (getGroupMemberIsAdmin({ member })) return hasDisplayName ? 5 : 4
-      return hasDisplayName ? 3 : 0  // Regular members with display names are prioritized
-    }
-
-    const priorityA = getMemberPriority(a)
-    const priorityB = getMemberPriority(b)
-
-    // First sort by combined priority 
-    if (priorityB !== priorityA) {
-      return priorityB - priorityA
+    // First preserve admin sort order
+    if (a.permission === "super_admin" && b.permission !== "super_admin") return -1
+    if (a.permission !== "super_admin" && b.permission === "super_admin") return 1
+    if (a.permission === "admin" && b.permission !== "admin") return -1
+    if (a.permission !== "admin" && b.permission === "admin") return 1
+    
+    // Then check for display names
+    const displayInfoA = memberDisplayInfo.get(a.inboxId)
+    const displayInfoB = memberDisplayInfo.get(b.inboxId)
+    
+    const hasNameA = !!(displayInfoA?.displayName && 
+                     displayInfoA.displayName !== a.inboxId && 
+                     !displayInfoA.displayName.startsWith("0x"))
+    const hasNameB = !!(displayInfoB?.displayName && 
+                     displayInfoB.displayName !== b.inboxId && 
+                     !displayInfoB.displayName.startsWith("0x"))
+    
+    if (hasNameA && !hasNameB) return -1
+    if (!hasNameA && hasNameB) return 1
+    
+    // If both have display names, sort alphabetically
+    if (hasNameA && hasNameB) {
+      return displayInfoA!.displayName!.localeCompare(displayInfoB!.displayName!)
     }
     
-    // Then sort alphabetically by display name
-    const displayNameA = memberDisplayInfo.get(a.inboxId)?.displayName || a.inboxId
-    const displayNameB = memberDisplayInfo.get(b.inboxId)?.displayName || b.inboxId
-    
-    return displayNameA.localeCompare(displayNameB)
+    // Otherwise sort by inboxId for consistency
+    return a.inboxId.localeCompare(b.inboxId)
   })
 }
