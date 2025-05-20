@@ -1,19 +1,24 @@
 import { create } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
 
+type FullScreenLoaderOptions = {
+  isVisible?: boolean
+  texts?: string[]
+}
+
 type AppStoreType = {
   // State
   reactQueryIsHydrated: boolean
   multiInboxIsHydrated: boolean
   isInternetReachable: boolean
-  isLoggingOut: boolean
+  fullScreenLoaderOptions: FullScreenLoaderOptions
 
   // Actions
   actions: {
     setReactQueryIsHydrated: (isHydrated: boolean) => void
     setMultiInboxIsHydrated: (isHydrated: boolean) => void
     setIsInternetReachable: (reachable: boolean) => void
-    setIsLoggingOut: (isLoggingOut: boolean) => void
+    setFullScreenLoaderOptions: (options: FullScreenLoaderOptions) => void
   }
 }
 
@@ -23,7 +28,7 @@ export const useAppStore = create<AppStoreType>()(
     reactQueryIsHydrated: false,
     multiInboxIsHydrated: false,
     isInternetReachable: false,
-    isLoggingOut: false,
+    fullScreenLoaderOptions: {},
 
     // Actions
     actions: {
@@ -33,7 +38,7 @@ export const useAppStore = create<AppStoreType>()(
 
       setIsInternetReachable: (reachable) => set(() => ({ isInternetReachable: reachable })),
 
-      setIsLoggingOut: (isLoggingOut) => set(() => ({ isLoggingOut })),
+      setFullScreenLoaderOptions: (options) => set(() => ({ fullScreenLoaderOptions: options })),
     },
   })),
 )

@@ -171,6 +171,7 @@ async function handleValidNotification(args: {
     ensureMessageContentStringValue(convoMessage),
     ensurePreferredDisplayInfo({
       inboxId: convoMessage.senderInboxId,
+      caller: "handleValidNotification",
     }),
   ])
   notificationsLogger.debug("Fetched message content and sender info")

@@ -1,4 +1,5 @@
 import { useTurnkey } from "@turnkey/sdk-react-native"
+import { Image } from "expo-image"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getAllSenders, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
@@ -15,7 +16,6 @@ import { GenericError } from "@/utils/error"
 import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { authLogger } from "../../utils/logger/logger"
-import { Image } from "expo-image"
 
 export const useLogout = () => {
   const { clearAllSessions: clearTurnkeySessions } = useTurnkey()
@@ -24,7 +24,10 @@ export const useLogout = () => {
     async (args: { caller: string }) => {
       authLogger.debug(`Logging out called by "${args.caller}"`)
 
-      useAppStore.getState().actions.setIsLoggingOut(true)
+      useAppStore.getState().actions.setFullScreenLoaderOptions({
+        isVisible: true,
+        texts: ["Logging out...", "Déconnexion...", "Desconectando...", "登出中..."],
+      })
 
       try {
         const senders = getAllSenders()
@@ -144,9 +147,16 @@ export const useLogout = () => {
           await Image.clearDiskCache()
           await Image.clearMemoryCache()
         } catch (e) {
-          captureError(new GenericError({ error: e, additionalMessage: "Error clearing image cache after logout" }))
+          captureError(
+            new GenericError({
+              error: e,
+              additionalMessage: "Error clearing image cache after logout",
+            }),
+          )
         }
-        useAppStore.getState().actions.setIsLoggingOut(false)
+        useAppStore.getState().actions.setFullScreenLoaderOptions({
+          isVisible: false,
+        })
       }
     },
     [clearTurnkeySessions],

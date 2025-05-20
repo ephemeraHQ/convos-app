@@ -111,6 +111,12 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
                       router.navigate("Blocked")
                     },
                   },
+                  {
+                    label: `Security line`,
+                    onPress: () => {
+                      router.navigate("ChatsRequests")
+                    },
+                  },
                   /*{
                       label: translate("Keep messages"),
                       value: "Forever",

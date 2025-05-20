@@ -14,14 +14,14 @@ import { GenericError } from "@/utils/error"
 import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { refetchQueryIfNotAlreadyFetching } from "@/utils/react-query/react-query.helpers"
 
-export const useConversationListConversations = () => {
+export function useSortedAllowedConversationIds() {
   const currentSender = useSafeCurrentSender()
   const isRefetchingRef = useRef(false)
 
   const { data: allowedConversationIds = [], isLoading: isLoadingAllowedConversations } =
     useAllowedConsentConversationsQuery({
       clientInboxId: currentSender.inboxId,
-      caller: "useConversationListConversations",
+      caller: "useSortedAllowedConversationIds",
     })
 
   const conversationQueries = useQueries({
@@ -29,7 +29,7 @@ export const useConversationListConversations = () => {
       getConversationQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
-        caller: "useConversationListConversations",
+        caller: "useSortedAllowedConversationIds",
       }),
     ),
   })
@@ -39,7 +39,7 @@ export const useConversationListConversations = () => {
       getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
-        caller: "useConversationListConversations",
+        caller: "useSortedAllowedConversationIds",
       }),
     ),
   })
@@ -92,7 +92,7 @@ export const useConversationListConversations = () => {
       refetchQueryIfNotAlreadyFetching({
         queryKey: getAllowedConsentConversationsQueryOptions({
           clientInboxId: currentSender.inboxId,
-          caller: "useConversationListConversations",
+          caller: "useSortedAllowedConversationIds",
         }).queryKey,
       }),
       // Refetch all conversation metadata
