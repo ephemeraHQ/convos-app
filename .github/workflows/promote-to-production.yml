@@ -2,12 +2,6 @@ name: Promote to Production
 
 on:
   workflow_dispatch:
-    inputs:
-      source_branch:
-        description: "The source branch to merge into production. Defaults to 'main'."
-        type: string
-        default: "main"
-        required: true
 
 # Ensure only one promotion workflow runs at a time
 concurrency:
