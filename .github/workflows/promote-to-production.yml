@@ -18,9 +18,9 @@ jobs:
       - name: Checkout source branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.source_branch }}
-          token: ${{ secrets.PAT_GITHUB }} # Use a PAT to allow pushing to production
-          fetch-depth: 0 # Needed for merging
+          ref: ${{ github.ref }} # Use the ref from which the workflow is run
+          token: ${{ secrets.PAT_GITHUB }}
+          fetch-depth: 0
 
       - name: Configure Git
         run: |
@@ -29,7 +29,7 @@ jobs:
 
       - name: Merge source branch into production
         run: |
-          git fetch origin production:production # Ensure local production is up-to-date
-          git checkout production
-          git merge ${{ github.event.inputs.source_branch }} -Xours --no-ff --no-edit -m "Merge branch '${{ github.event.inputs.source_branch }}' into production via workflow_dispatch [skip ci]"
+          git fetch origin production
+          git checkout -B production origin/production
+          git merge ${{ github.ref_name }} -Xours --no-ff --no-edit -m "Merge branch '${{ github.ref_name }}' into production via workflow_dispatch [skip ci]"
           git push origin production
