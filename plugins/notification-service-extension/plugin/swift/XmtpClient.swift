@@ -1,7 +1,7 @@
 import Foundation
 import XMTP
 
-enum KeychainConstants {
+fileprivate enum KeychainConstants {
   static func appGroupIdentifier(for environment: XMTP.XMTPEnvironment,
                                  withTeamId: Bool = false) -> String {
     let appGroupIdentifier: String
@@ -13,7 +13,9 @@ enum KeychainConstants {
       log.debug("Failed getting app group ID from plist, using backup")
 
       switch environment {
-      case .dev, .local:
+      case .dev:
+        appGroupIdentifier = "group.com.convos.dev"
+      case .local:
         appGroupIdentifier = "group.com.convos.preview"
       case .production:
         appGroupIdentifier = "group.com.convos.prod"
@@ -21,31 +23,6 @@ enum KeychainConstants {
     }
     let teamIdPrefix: String = "FY4NZR34Z3."
     return withTeamId ? teamIdPrefix + appGroupIdentifier : appGroupIdentifier
-  }
-}
-
-extension Bundle {
-  static func getInfoPlistValue(for key: String) -> String? {
-    guard let value = main.infoDictionary?[key] as? String else {
-      log.error("Failed to find or cast Info.plist value for key: \(key)")
-      return nil
-    }
-
-    return value
-  }
-
-  static func mainAppBundleId(for environment: XMTP.XMTPEnvironment) -> String {
-    guard let bundleId = Bundle.getInfoPlistValue(for: "MainAppBundleIdentifier") else {
-      log.debug("Failed getting main app bundle ID from plist, using backup")
-
-      switch environment {
-      case .dev, .local:
-        return "com.convos.preview"
-      case .production:
-        return "com.convos.prod"
-      }
-    }
-    return bundleId
   }
 }
 
@@ -57,7 +34,7 @@ extension XMTP.Client {
   }
 
   static func client(for ethAddress: String) async throws -> XMTP.Client {
-    let xmtpEnv = getXmtpEnv()
+    let xmtpEnv = XMTP.Client.xmtpEnvironment
     let groupId = KeychainConstants.appGroupIdentifier(for: xmtpEnv)
     let groupUrl = FileManager.default.containerURL(
       forSecurityApplicationGroupIdentifier: groupId)
@@ -100,18 +77,17 @@ extension XMTP.Client {
     return client
   }
 
-  private static func getXmtpEnv() -> XMTP.XMTPEnvironment {
+  static var xmtpEnvironment: XMTP.XMTPEnvironment {
     let env = Bundle.getInfoPlistValue(for: "XmtpEnvironment")
 
-    if env == "production" {
-      return .production
+    switch env {
+    case "dev":
+        return .dev
+    case "production":
+        return .production
+    default:
+        return .local
     }
-
-    if env == "dev" {
-      return .dev
-    }
-
-    return .local
   }
 
 }

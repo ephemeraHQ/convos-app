@@ -21,7 +21,7 @@ class ProfileNameResolver {
 
     let apiBaseURL: String
 
-    static var shared: ProfileNameResolver = .init(environment: getXmtpEnv())
+    static var shared: ProfileNameResolver = .init(environment: XMTP.Client.xmtpEnvironment)
 
     private init(environment: XMTPEnvironment) {
         switch environment {
