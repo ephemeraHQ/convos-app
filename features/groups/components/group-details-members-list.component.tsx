@@ -12,7 +12,8 @@ import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { MemberListItem } from "./group-details-members-list-item.component"
 import { GroupDetailsMembersListHeader } from "./group-details-members-list-header.component"
-import { useGroupMembersWithSorting } from "@/features/groups/queries/group-members-sorted.query"
+import { useSortedGroupMembers } from "@/features/groups/queries/group-members-sorted.query"
+import { Loader } from "@/design-system/loader"
 
 export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(props: {
   xmtpConversationId: IXmtpConversationId
@@ -22,7 +23,7 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
   const { theme } = useAppTheme()
   const currentSenderInboxId = useSafeCurrentSender().inboxId
   
-  const { members, sortedMemberIds, isLoading } = useGroupMembersWithSorting({
+  const { data: sortedMemberIds = [], isLoading } = useSortedGroupMembers({
     caller: "GroupDetailsScreen",
     clientInboxId: currentSenderInboxId,
     xmtpConversationId,
@@ -50,14 +51,14 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
         }}
       >
         <Center style={{ height: 100 }}>
-          <ActivityIndicator size="small" />
+          <Loader />
         </Center>
       </VStack>
     )
   }
 
   // If no members, show nothing
-  if (!members?.ids?.length || sortedMemberIds.length === 0) {
+  if (sortedMemberIds.length === 0) {
     return null
   }
 
