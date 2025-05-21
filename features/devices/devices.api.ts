@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { deviceSchema, IDevice } from "@/features/devices/devices.types"
+import { IConvosUserId } from "@/features/current-user/current-user.types"
+import { deviceSchema, IDevice, IDeviceId } from "@/features/devices/devices.types"
 import { captureError } from "@/utils/capture-error"
 import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
@@ -82,15 +83,18 @@ export async function createDevice(args: { userId: string; device: IDeviceCreate
  * Updates an existing device
  */
 
-const deviceUpdateInputSchema = deviceSchema
-  .partial()
-  .omit({ id: true, userId: true, createdAt: true, updatedAt: true })
+const deviceUpdateInputSchema = deviceSchema.partial().omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
+})
 
 type IDeviceUpdateInput = z.infer<typeof deviceUpdateInputSchema>
 
 export async function updateDevice(args: {
-  userId: string
-  deviceId: string
+  userId: IConvosUserId
+  deviceId: IDeviceId
   updates: IDeviceUpdateInput
 }) {
   const { userId, deviceId, updates } = args

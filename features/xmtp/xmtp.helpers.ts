@@ -48,7 +48,7 @@ export async function wrapXmtpCallWithDuration<T>(
   // })
 
   try {
-    // xmtpLogger.debug(`Operation [${operationId}] "${xmtpFunctionName}" started...`)
+    xmtpLogger.debug(`Operation [${operationId}] "${xmtpFunctionName}" started...`)
 
     const xmtpSpanCall = Sentry.startSpan({ name: xmtpFunctionName, op: "XMTP" }, async () => {
       return await xmtpCall()
@@ -77,9 +77,9 @@ export async function wrapXmtpCallWithDuration<T>(
 
     totalActiveDurationMs = Date.now() - segmentStartTime
 
-    // xmtpLogger.debug(
-    //   `Operation [${operationId}] "${xmtpFunctionName}" finished successfully in ${totalActiveDurationMs}ms`,
-    // )
+    xmtpLogger.debug(
+      `Operation [${operationId}] "${xmtpFunctionName}" finished successfully in ${totalActiveDurationMs}ms`,
+    )
 
     logErrorIfXmtpRequestTookTooLong({
       durationMs: totalActiveDurationMs,

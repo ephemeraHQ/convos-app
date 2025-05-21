@@ -10,6 +10,8 @@ export const deviceSchema = z.object({
   userId: z.string(),
   os: DeviceOSSchema,
   name: z.string().nullable(),
+  appBuildNumber: z.string().nullable(),
+  appVersion: z.string().nullable(),
   pushToken: z.string().nullable(),
   expoToken: z.string().nullable(),
   createdAt: z.string().datetime(),

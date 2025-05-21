@@ -3,11 +3,11 @@ import { getStoredDeviceId } from "@/features/devices/device.storage"
 import { IDevice, IDeviceId } from "@/features/devices/devices.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { IConvosUserID } from "../current-user/current-user.types"
+import { IConvosUserId } from "../current-user/current-user.types"
 import { fetchDevice } from "./devices.api"
 
 type IDeviceQueryArgs = {
-  userId: IConvosUserID
+  userId: IConvosUserId
   deviceId: IDeviceId
 }
 
@@ -26,7 +26,7 @@ export function getUserDeviceQueryOptions({ userId, deviceId }: IDeviceQueryArgs
 }
 
 type IUserDeviceQueryArgs = {
-  userId: IConvosUserID
+  userId: IConvosUserId
 }
 
 export async function ensureUserDeviceQueryData({ userId }: IUserDeviceQueryArgs) {
@@ -39,7 +39,7 @@ export async function ensureUserDeviceQueryData({ userId }: IUserDeviceQueryArgs
   return reactQueryClient.ensureQueryData(getUserDeviceQueryOptions({ userId, deviceId }))
 }
 
-export function setUserDeviceQueryData(args: { userId: IConvosUserID; device: IDevice }) {
+export function setUserDeviceQueryData(args: { userId: IConvosUserId; device: IDevice }) {
   const { userId, device } = args
   return reactQueryClient.setQueryData(
     getUserDeviceQueryOptions({ userId, deviceId: device.id }).queryKey,

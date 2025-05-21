@@ -1,12 +1,11 @@
 import { convertConsentStateToXmtpConsentState } from "@/features/consent/consent.utils"
-import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
-import { ensureConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IConversation } from "@/features/conversation/conversation.types"
 import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
 import { convertXmtpGroupMemberToConvosMember } from "@/features/groups/utils/convert-xmtp-group-member-to-convos-member"
 import { isXmtpConversationGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import {
   IXmtpConversationId,
   IXmtpConversationWithCodecs,
@@ -93,36 +92,46 @@ async function getXmtpLastMessageFromMessages(args: {
 
   try {
     const { result, durationMs } = await measureTimeAsync(async () => {
-      const conversationMessagesData = await ensureConversationMessagesInfiniteQueryData({
+      const xmtpMessages = await getXmtpConversationMessages({
         clientInboxId,
         xmtpConversationId,
-        caller: `get-xmtp-last-message-from-messages`,
+        limit: 5,
       })
 
-      const firstMessageId = conversationMessagesData.pages[0].messageIds[0]
+      const lastMessage = xmtpMessages[0]
 
-      if (!firstMessageId) {
-        logger.debug(
-          `No last message found for conversation ${xmtpConversationId}, returning undefined`,
-        )
-        return undefined
-      }
+      return lastMessage ? convertXmtpMessageToConvosMessage(lastMessage) : undefined
 
-      const fullMessage = await ensureConversationMessageQueryData({
-        clientInboxId,
-        xmtpMessageId: firstMessageId,
-        xmtpConversationId,
-        caller: `get-xmtp-last-message-from-messages`,
-      })
+      // const conversationMessagesData = await ensureConversationMessagesInfiniteQueryData({
+      //   clientInboxId,
+      //   xmtpConversationId,
+      //   caller: `get-xmtp-last-message-from-messages`,
+      // })
 
-      if (!fullMessage) {
-        logger.debug(
-          `No last message found for conversation ${xmtpConversationId}, returning undefined`,
-        )
-        return undefined
-      }
+      // const firstMessageId = conversationMessagesData.pages[0].messageIds[0]
 
-      return fullMessage
+      // if (!firstMessageId) {
+      //   logger.debug(
+      //     `No last message found for conversation ${xmtpConversationId}, returning undefined`,
+      //   )
+      //   return undefined
+      // }
+
+      // const fullMessage = await ensureConversationMessageQueryData({
+      //   clientInboxId,
+      //   xmtpMessageId: firstMessageId,
+      //   xmtpConversationId,
+      //   caller: `get-xmtp-last-message-from-messages`,
+      // })
+
+      // if (!fullMessage) {
+      //   logger.debug(
+      //     `No last message found for conversation ${xmtpConversationId}, returning undefined`,
+      //   )
+      //   return undefined
+      // }
+
+      // return fullMessage
     })
 
     logger.debug(
