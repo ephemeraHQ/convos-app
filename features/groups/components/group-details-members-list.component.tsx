@@ -1,17 +1,19 @@
-import { memo, useCallback, useMemo } from "react"
+import { memo, useCallback } from "react"
+import { ActivityIndicator } from "react-native"
 import { VStack } from "@/design-system/VStack"
 import { Pressable } from "@/design-system/Pressable"
 import { ListItemEndRightChevron } from "@/design-system/list-item"
+import { Center } from "@/design-system/Center"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
-import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
 import { GroupDetailsListItem } from "@/features/groups/ui/group-details.ui"
-import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { MemberListItem } from "./group-details-members-list-item.component"
 import { GroupDetailsMembersListHeader } from "./group-details-members-list-header.component"
+import { useSortedGroupMembers } from "@/features/groups/queries/group-members-sorted.query"
+import { Loader } from "@/design-system/loader"
 
 export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(props: {
   xmtpConversationId: IXmtpConversationId
@@ -20,17 +22,13 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
   const router = useRouter()
   const { theme } = useAppTheme()
   const currentSenderInboxId = useSafeCurrentSender().inboxId
-
-  const { members } = useGroupMembers({
+  
+  const { data: sortedMemberIds = [], isLoading } = useSortedGroupMembers({
     caller: "GroupDetailsScreen",
     clientInboxId: currentSenderInboxId,
     xmtpConversationId,
   })
-
-  const sortedMembers = useMemo(() => {
-    return sortGroupMembers(Object.values(members?.byId || {}).filter(Boolean))
-  }, [members])
-
+  
   const handleAddMembersPress = useCallback(() => {
     router.push("AddGroupMembers", { xmtpConversationId })
   }, [xmtpConversationId, router])
@@ -39,9 +37,30 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
     router.push("GroupMembersList", { xmtpConversationId })
   }, [xmtpConversationId, router])
 
-  // For demo purposes, we'll show a limited number of members
-  const visibleMembers = sortedMembers.slice(0, 6)
-  const hasMoreMembers = sortedMembers.length > visibleMembers.length
+  // Show a limited number of members
+  const visibleMemberIds = sortedMemberIds.slice(0, 6)
+  const hasMoreMembers = sortedMemberIds.length > visibleMemberIds.length
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <VStack
+        style={{
+          backgroundColor: theme.colors.background.surface,
+          paddingVertical: theme.spacing.md,
+        }}
+      >
+        <Center style={{ height: 100 }}>
+          <Loader />
+        </Center>
+      </VStack>
+    )
+  }
+
+  // If no members, show nothing
+  if (sortedMemberIds.length === 0) {
+    return null
+  }
 
   return (
     <VStack
@@ -53,20 +72,20 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
       {/* Members Header */}
       <GroupDetailsMembersListHeader
         xmtpConversationId={xmtpConversationId}
-        memberCount={sortedMembers.length}
+        memberCount={sortedMemberIds.length}
         onAddMember={handleAddMembersPress}
       />
 
       {/* Members List */}
       <VStack>
-        {visibleMembers.map((member) => {
-          return <MemberListItem key={member.inboxId} memberInboxId={member.inboxId} />
+        {visibleMemberIds.map((inboxId) => {
+          return <MemberListItem key={inboxId} memberInboxId={inboxId} />
         })}
 
         {hasMoreMembers && (
           <Pressable onPress={handleSeeAllPress} hitSlop={theme.spacing.sm}>
             <GroupDetailsListItem
-              title={`See all ${sortedMembers.length}`}
+              title={`See all ${sortedMemberIds.length}`}
               end={<ListItemEndRightChevron />}
             />
           </Pressable>

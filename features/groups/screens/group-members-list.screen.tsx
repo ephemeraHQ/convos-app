@@ -1,18 +1,19 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { FlashList } from "@shopify/flash-list"
-import { memo, useCallback } from "react"
+import React, { memo, useCallback } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
+import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
-import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
-import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
+import { useSortedGroupMembers } from "@/features/groups/queries/group-members-sorted.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
 import { useRouteParams, useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
+import { Loader } from "@/design-system/loader"
 
 export const GroupMembersListScreen = memo(function GroupMembersListScreen(
   props: NativeStackScreenProps<NavigationParamList, "GroupMembersList">,
@@ -55,18 +56,23 @@ const List = memo(function List() {
   const insets = useSafeAreaInsets()
   const currentSender = useSafeCurrentSender()
   const { xmtpConversationId } = useRouteParams<"GroupMembersList">()
-
-  const { members, isLoading: isLoadingMembers } = useGroupMembers({
+  
+  const { data: sortedMemberIds = [], isLoading } = useSortedGroupMembers({
     xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "GroupMembersListScreen",
   })
 
-  if (isLoadingMembers) {
-    return null
+
+  if (isLoading) {
+    return (
+      <Center style={$globalStyles.flex1}>
+        <Loader />
+      </Center>
+    )
   }
 
-  if (!members) {
+  if (sortedMemberIds.length === 0) {
     return (
       <EmptyState
         title="Members not found"
@@ -80,8 +86,8 @@ const List = memo(function List() {
       contentContainerStyle={{
         paddingBottom: insets.bottom,
       }}
-      data={sortGroupMembers(Object.values(members.byId))}
-      renderItem={({ item }) => <MemberListItem memberInboxId={item.inboxId} />}
+      data={sortedMemberIds}
+      renderItem={({ item }) => <MemberListItem memberInboxId={item} />}
       estimatedItemSize={60}
     />
   )

@@ -4,19 +4,33 @@ import {
   getGroupMemberIsSuperAdmin,
 } from "@/features/groups/utils/group-admin.utils"
 
-export function sortGroupMembers(members: IGroupMember[]) {
-  return members.sort((a, b) => {
-    const getMemberPriority = (member: IGroupMember): number => {
-      if (getGroupMemberIsSuperAdmin({ member })) return 4
-      if (getGroupMemberIsAdmin({ member })) return 3
-      if (member.consentState === "allowed") return 2
-      if (member.consentState === "denied") return 0
-      return 1
+export type IGroupMemberWithProfile = IGroupMember & {
+  profile: {
+    name?: string
+  }
+}
+
+export function sortGroupMembers(members: IGroupMemberWithProfile[]) {
+  return [...members].sort((a, b) => {
+    // First sort by admin status
+    if (getGroupMemberIsSuperAdmin({ member: a }) && !getGroupMemberIsSuperAdmin({ member: b })) return -1
+    if (!getGroupMemberIsSuperAdmin({ member: a }) && getGroupMemberIsSuperAdmin({ member: b })) return 1
+    if (getGroupMemberIsAdmin({ member: a }) && !getGroupMemberIsAdmin({ member: b })) return -1
+    if (!getGroupMemberIsAdmin({ member: a }) && getGroupMemberIsAdmin({ member: b })) return 1
+    
+    // Then check for names
+    const hasNameA = !!(a.profile.name && !a.profile.name.startsWith("0x"))
+    const hasNameB = !!(b.profile.name && !b.profile.name.startsWith("0x"))
+    
+    if (hasNameA && !hasNameB) return -1
+    if (!hasNameA && hasNameB) return 1
+    
+    // If both have names, sort alphabetically
+    if (hasNameA && hasNameB) {
+      return a.profile.name!.localeCompare(b.profile.name!)
     }
-
-    const priorityA = getMemberPriority(a)
-    const priorityB = getMemberPriority(b)
-
-    return priorityB - priorityA
+    
+    // Otherwise sort by inboxId for consistency
+    return a.inboxId.localeCompare(b.inboxId)
   })
 }
