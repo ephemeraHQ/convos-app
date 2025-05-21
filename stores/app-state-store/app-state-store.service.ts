@@ -1,13 +1,10 @@
 import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppStateStatus } from "react-native"
+import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  getAllowedConsentConversationsQueryData,
-  invalidateAllowedConsentConversationsQuery,
-} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { invalidateAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
-import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { registerPushNotifications } from "@/features/notifications/notifications-register"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
@@ -107,6 +104,14 @@ export function startListeningToAppStateStore() {
 
       const senders = getAllSenders()
       const currentSender = getCurrentSender()
+
+      const authStatus = useAuthenticationStore.getState().status
+      const isSignedIn = authStatus === "signedIn"
+
+      // For now all actions requires to be signed in
+      if (!isSignedIn) {
+        return
+      }
 
       if (isOpenFromClosed || isOpenFromBackground) {
         // Tell react query we're now on "window focused" state

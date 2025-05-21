@@ -1,11 +1,8 @@
 import { getTodayNs } from "@/utils/date"
 import { TimeUtils } from "@/utils/time.utils"
 
-// Special timestamp value (earliest possible) used to clear all messages in chat history
-export const CLEAR_CHAT_TIMESTAMP = 1
-
-// Minimum retention duration in nanoseconds used when clearing a chat
-export const MIN_RETENTION_DURATION_NS = 1
+// Retention duration in nanoseconds used when clearing a chat
+export const CLEAR_CHAT_RETENTION_DURATION_NS = 1
 
 // Define the duration configurations
 export const DisappearingMessageDuration = {
@@ -37,7 +34,7 @@ export const defaultConversationDisappearingMessageSettings: IDisappearingMessag
  */
 export function getFormattedDisappearingDuration(nanoseconds: number | undefined): string {
   if (!nanoseconds || nanoseconds === 0) {
-    return "off";
+    return "off"
   }
 
   // First check if this matches one of our predefined durations

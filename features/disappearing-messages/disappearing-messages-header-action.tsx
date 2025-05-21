@@ -3,15 +3,15 @@ import { Alert, ViewStyle } from "react-native"
 import { DropdownMenu, IDropdownMenuAction } from "@/design-system/dropdown-menu/dropdown-menu"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useClearDisappearingMessageSettings } from "@/features/disappearing-messages/clear-disappearing-message-settings.mutation"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import {
+  CLEAR_CHAT_RETENTION_DURATION_NS,
   DisappearingMessageDuration,
   IDisappearingMessageDuration,
-  MIN_RETENTION_DURATION_NS,
 } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useUpdateDisappearingMessageSettings } from "@/features/disappearing-messages/update-disappearing-message-settings.mutation"
-import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
@@ -109,16 +109,16 @@ export const DisappearingMessagesHeaderAction = ({
                 onPress: async () => {
                   try {
                     // Save current settings if they exist
-                    const previousRetentionDurationInNs = settings?.retentionDurationInNs;
+                    const previousRetentionDurationInNs = settings?.retentionDurationInNs
 
                     // Step 1: Clear all existing messages by setting minimal retention duration (1ns)
                     // and a special flag that uses earliest possible timestamp in XMTP protocol
                     await updateSettingsMutateAsync({
                       clientInboxId: currentSender.inboxId,
                       conversationId: xmtpConversationId,
-                      retentionDurationInNs: MIN_RETENTION_DURATION_NS,
+                      retentionDurationInNs: CLEAR_CHAT_RETENTION_DURATION_NS,
                       clearChat: true,
-                    });
+                    })
 
                     // Step 2: Restore previous settings if they existed, otherwise turn disappearing messages off
                     // This ensures we keep user's preferences for new messages after clearing chat history
@@ -127,22 +127,25 @@ export const DisappearingMessagesHeaderAction = ({
                         clientInboxId: currentSender.inboxId,
                         conversationId: xmtpConversationId,
                         retentionDurationInNs: previousRetentionDurationInNs,
-                      });
+                      })
                     } else {
                       await clearSettingsMutateAsync({
                         clientInboxId: currentSender.inboxId,
                         conversationId: xmtpConversationId,
-                      });
+                      })
                     }
-                    
+
                     // Refresh the conversation messages to immediately show cleared state
                     await refetchConversationMessagesInfiniteQuery({
                       clientInboxId: currentSender.inboxId,
                       xmtpConversationId,
                       caller: "ClearChatAction",
-                    });
-                    
-                    Alert.alert("Chat Cleared", "Chat history has been cleared for everyone in the conversation")
+                    })
+
+                    Alert.alert(
+                      "Chat Cleared",
+                      "Chat history has been cleared for everyone in the conversation",
+                    )
                   } catch (error) {
                     captureErrorWithToast(
                       new GenericError({
@@ -156,7 +159,7 @@ export const DisappearingMessagesHeaderAction = ({
                   }
                 },
               },
-            ]
+            ],
           )
           return
         }
