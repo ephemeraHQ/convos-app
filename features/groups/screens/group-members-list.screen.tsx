@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { FlashList } from "@shopify/flash-list"
-import React, { memo, useCallback } from "react"
+import React, { memo, useCallback, useEffect } from "react"
 import { ActivityIndicator } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
@@ -10,10 +10,12 @@ import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
 import { useGroupMembersWithSorting } from "@/features/groups/queries/group-members-sorted.query"
+import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
 import { useRouteParams, useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
+import { captureError } from "@/utils/capture-error"
 
 export const GroupMembersListScreen = memo(function GroupMembersListScreen(
   props: NativeStackScreenProps<NavigationParamList, "GroupMembersList">,
@@ -62,6 +64,17 @@ const List = memo(function List() {
     clientInboxId: currentSender.inboxId,
     caller: "GroupMembersListScreen",
   })
+
+  // If members list is empty, trigger a reload
+  useEffect(() => {
+    if (!isLoading && (!members?.ids?.length || sortedMemberIds.length === 0)) {
+      refetchGroupQuery({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+        caller: "GroupMembersListScreen-EmptyListReload",
+      }).catch(captureError)
+    }
+  }, [isLoading, members?.ids?.length, sortedMemberIds.length, currentSender.inboxId, xmtpConversationId])
 
   if (isLoading) {
     return (
