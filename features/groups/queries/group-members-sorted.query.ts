@@ -65,14 +65,17 @@ export function getSortedGroupMembersQueryOptions(args: IArgsWithCaller) {
           )
         )
         
-        // Create member-profile pairs for enhanced sorting
+        // Create member-profile pairs with proper profiles
         const memberProfilePairs = Object.values(members.byId).map(member => {
           // Find the profile by matching member's inboxId
           const profileIndex = memberInboxIds.findIndex(id => id === member.inboxId)
+          // Ensure we have a proper profile object, even if data is missing
           const profile = profileIndex !== -1 ? profiles[profileIndex] : null
           return { 
             ...member,
-            profile
+            profile: {
+              name: profile?.name || ""
+            }
           } as IGroupMemberWithProfile
         })
         
