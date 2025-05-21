@@ -32,6 +32,7 @@ import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { getEnv, isProd } from "@/utils/getEnv"
 import { Haptics } from "@/utils/haptics"
+import { clearImageCache } from "@/utils/image"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { shareContent } from "@/utils/share"
@@ -468,8 +469,7 @@ function useShowDebugMenu() {
       },
       "Clear expo image cache": async () => {
         try {
-          await Image.clearDiskCache()
-          await Image.clearMemoryCache()
+          await clearImageCache()
           showSnackbar({
             message: "Expo image cache cleared",
           })

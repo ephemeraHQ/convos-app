@@ -45,6 +45,7 @@ export const colorsLight = {
     raised: lightPalette.light,
     blurred: lightPalette.alpha90,
     surfaceless: lightPalette.light,
+    scrim: lightPalette.scrim,
   },
   text: {
     primary: darkPalette.dark,

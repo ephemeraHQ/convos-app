@@ -12,6 +12,8 @@ type AppStoreType = {
   multiInboxIsHydrated: boolean
   isInternetReachable: boolean
   fullScreenLoaderOptions: FullScreenLoaderOptions
+  isShowingFullScreenOverlay: boolean
+  isLoggingOut: boolean
 
   // Actions
   actions: {
@@ -19,6 +21,8 @@ type AppStoreType = {
     setMultiInboxIsHydrated: (isHydrated: boolean) => void
     setIsInternetReachable: (reachable: boolean) => void
     setFullScreenLoaderOptions: (options: FullScreenLoaderOptions) => void
+    setIsShowingFullScreenOverlay: (isShowing: boolean) => void
+    setIsLoggingOut: (isLoggingOut: boolean) => void
   }
 }
 
@@ -29,6 +33,8 @@ export const useAppStore = create<AppStoreType>()(
     multiInboxIsHydrated: false,
     isInternetReachable: false,
     fullScreenLoaderOptions: {},
+    isShowingFullScreenOverlay: false,
+    isLoggingOut: false,
 
     // Actions
     actions: {
@@ -39,6 +45,11 @@ export const useAppStore = create<AppStoreType>()(
       setIsInternetReachable: (reachable) => set(() => ({ isInternetReachable: reachable })),
 
       setFullScreenLoaderOptions: (options) => set(() => ({ fullScreenLoaderOptions: options })),
+
+      setIsShowingFullScreenOverlay: (isShowing) =>
+        set(() => ({ isShowingFullScreenOverlay: isShowing })),
+
+      setIsLoggingOut: (isLoggingOut) => set(() => ({ isLoggingOut })),
     },
   })),
 )

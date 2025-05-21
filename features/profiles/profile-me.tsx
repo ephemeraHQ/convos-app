@@ -2,7 +2,8 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import React, { memo, useCallback, useEffect, useState } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
-import { SettingsList } from "@/design-system/settings-list/settings-list"
+import { ListItem } from "@/design-system/list-item"
+import { Loader } from "@/design-system/loader"
 import { Text } from "@/design-system/Text"
 import { TextField } from "@/design-system/TextField/TextField"
 import { VStack } from "@/design-system/VStack"
@@ -20,6 +21,7 @@ import { useProfileQuery } from "@/features/profiles/profiles.query"
 import { useAddOrRemovePfp } from "@/hooks/use-add-pfp"
 import { translate } from "@/i18n"
 import { useRouter } from "@/navigation/use-navigation"
+import { useAppStore } from "@/stores/app.store"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { ensureOurError, GenericError, UserCancelledError } from "@/utils/error"
@@ -32,8 +34,6 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
   const { theme } = useAppTheme()
 
   const router = useRouter()
-
-  const { logout } = useLogout()
 
   const insets = useSafeAreaInsets()
 
@@ -102,39 +102,27 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
 
           {/* Only show settings when viewing your own profile and not in edit mode */}
           {isMyProfile && !editMode && (
-            <ProfileSection withTopBorder>
-              <SettingsList
-                rows={[
-                  {
-                    label: translate("Archive"),
-                    onPress: () => {
-                      router.navigate("Blocked")
-                    },
-                  },
-                  {
-                    label: `Security line`,
-                    onPress: () => {
-                      router.navigate("ChatsRequests")
-                    },
-                  },
-                  /*{
-                      label: translate("Keep messages"),
-                      value: "Forever",
-                      onValueChange: () => {},
-                    },*/
-                  {
-                    label: translate("Log out"),
-                    isWarning: true,
-                    onPress: () => {
-                      logout({ caller: "ProfileMe" }).catch((error) => {
-                        captureErrorWithToast(ensureOurError(error), {
-                          message: "Error logging out, please restart the app.",
-                        })
-                      })
-                    },
-                  },
-                ]}
+            <ProfileSection
+              withTopBorder
+              style={{
+                paddingHorizontal: 0,
+              }}
+            >
+              <ListItem
+                chevron
+                title={translate("Archive")}
+                onPress={() => {
+                  router.navigate("Blocked")
+                }}
               />
+              <ListItem
+                chevron
+                title="Security line"
+                onPress={() => {
+                  router.navigate("ChatsRequests")
+                }}
+              />
+              <LogoutListItem />
             </ProfileSection>
           )}
         </>
@@ -142,6 +130,29 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
     </Screen>
   )
 }
+
+const LogoutListItem = memo(function LogoutListItem() {
+  const { logout } = useLogout()
+
+  const isLoggingOut = useAppStore((state) => state.isLoggingOut)
+
+  return (
+    <ListItem
+      chevron
+      title={translate("Log out")}
+      {...(isLoggingOut && {
+        end: <Loader size="xs" />,
+      })}
+      onPress={() => {
+        logout({ caller: "ProfileMe" }).catch((error) => {
+          captureErrorWithToast(ensureOurError(error), {
+            message: "Error logging out, please restart the app.",
+          })
+        })
+      }}
+    />
+  )
+})
 
 const EditableProfileContactCardNameInput = memo(function EditableProfileContactCardNameInput({
   inboxId,

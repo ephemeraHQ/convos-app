@@ -44,8 +44,9 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
   const [pressedOnContinue, setPressedOnContinue] = useState(false)
 
   const isAvatarUploading = useAuthOnboardingStore((state) => state.isAvatarUploading)
-  const isProcessingWeb3Stuff = useAuthOnboardingStore((s) => s.isProcessingWeb3Stuff)
   const setUserFriendlyError = useAuthOnboardingStore((s) => s.actions.setUserFriendlyError)
+  const isSigningIn = useAuthOnboardingStore((s) => s.isSigningIn)
+  const isSigningUp = useAuthOnboardingStore((s) => s.isSigningUp)
 
   const { user } = useTurnkey()
   const { hydrateAuth } = useHydrateAuth()
@@ -57,7 +58,11 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
 
       // Wait until we finished processing web3 stuff
       await waitUntilPromise({
-        checkFn: () => !useAuthOnboardingStore.getState().isProcessingWeb3Stuff,
+        checkFn: () => {
+          const isSigningIn = useAuthOnboardingStore.getState().isSigningIn
+          const isSigningUp = useAuthOnboardingStore.getState().isSigningUp
+          return !isSigningIn && !isSigningUp
+        },
       })
 
       const currentSender = useMultiInboxStore.getState().currentSender
@@ -126,7 +131,7 @@ export const AuthOnboardingContactCardProvider: React.FC<React.PropsWithChildren
   }, [createUserAsync, setUserFriendlyError, user?.id, hydrateAuth])
 
   const isPending =
-    isCreatingUser || isAvatarUploading || (pressedOnContinue && isProcessingWeb3Stuff)
+    isCreatingUser || isAvatarUploading || pressedOnContinue || isSigningIn || isSigningUp
 
   const contextValue = useMemo(
     () => ({

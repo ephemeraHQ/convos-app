@@ -34,6 +34,7 @@ import { useStartListeningToCurrentUserQuery } from "./features/current-user/use
 import { configureForegroundNotificationBehavior } from "./features/notifications/notifications-init"
 import "./utils/ignore-logs"
 import { FullScreenLoader } from "@/components/full-screen-loader"
+import { FullScreenOverlay } from "@/components/full-screen-overlay"
 import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
@@ -65,6 +66,7 @@ export const App = Sentry.wrap(function App() {
                     <AppNavigator />
                     {/* {__DEV__ && <DevToolsBubble />} */}
                     <FullScreenLoader />
+                    <FullScreenOverlay />
                     <Handlers />
                     <Snackbars />
                     <ActionSheet />

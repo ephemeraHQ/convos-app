@@ -1,5 +1,5 @@
 import { ReactElement } from "react"
-import { TextStyle, View, ViewStyle } from "react-native"
+import { View, ViewStyle } from "react-native"
 import { IIconName } from "@/design-system/Icon/Icon.types"
 import { translate } from "@/i18n"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -42,22 +42,19 @@ export function HeaderAction(props: HeaderActionProps) {
 
   if (ActionComponent) return ActionComponent
 
-  const disabledStyle: ViewStyle = disabled || isLoading ? { opacity: 0.7 } : {}
-
   if (content) {
     return (
       <TouchableOpacity
-        style={[themed([$actionTextContainer, { backgroundColor }]), style, disabledStyle]}
+        style={[themed([$actionTextContainer, { backgroundColor }]), style]}
         onPress={onPress}
         disabled={disabled || isLoading || !onPress}
         activeOpacity={0.8}
         hitSlop={theme.spacing.xxxs}
       >
-        {isLoading ? (
-          <Loader size="sm" />
-        ) : (
-          <Text preset="body" text={content} style={themed($actionText)} />
-        )}
+        <View style={themed($contentContainer)}>
+          {isLoading && <Loader size="xs" style={themed($loader)} />}
+          <Text preset="body" text={content} disabled={isLoading || disabled} />
+        </View>
       </TouchableOpacity>
     )
   }
@@ -68,11 +65,11 @@ export function HeaderAction(props: HeaderActionProps) {
         // {...debugBorder()}
         onPress={onPress}
         disabled={disabled || isLoading || !onPress}
-        style={[themed([$actionIconContainer, { backgroundColor }]), style, disabledStyle]}
+        style={[themed([$actionIconContainer, { backgroundColor }]), style]}
         hitSlop={theme.spacing.xxxs}
       >
         {isLoading ? (
-          <Loader size="sm" />
+          <Loader size="xs" style={themed($loader)} />
         ) : (
           <Icon size={theme.iconSize.md} icon={icon} color={iconColor} />
         )}
@@ -91,8 +88,13 @@ const $actionTextContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   zIndex: 2,
 })
 
-const $actionText: ThemedStyle<TextStyle> = ({ colors }) => ({
-  color: colors.text.primary,
+const $contentContainer: ThemedStyle<ViewStyle> = () => ({
+  flexDirection: "row",
+  alignItems: "center",
+})
+
+const $loader: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+  marginRight: spacing.xxs,
 })
 
 const $actionIconContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

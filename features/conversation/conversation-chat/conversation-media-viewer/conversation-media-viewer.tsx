@@ -1,4 +1,3 @@
-import { Image } from "expo-image"
 import React, { useCallback, useEffect, useState } from "react"
 import { Modal } from "react-native"
 import { GestureDetector } from "react-native-gesture-handler"
@@ -6,6 +5,7 @@ import { Easing, runOnJS, useSharedValue, withTiming } from "react-native-reanim
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { AnimatedHStack } from "@/design-system/HStack"
+import { Image } from "@/design-system/image"
 import { Text } from "@/design-system/Text"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -229,13 +229,13 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
       ? theme.colors.background.surfaceless
       : theme.colors.global.black,
   }
-  
+
   // Apply safe area top inset to the control container
-  const infoContainerStyle = themed($infoContainer);
+  const infoContainerStyle = themed($infoContainer)
   const safeInfoContainerStyle = {
     ...infoContainerStyle,
     paddingTop: insets.top + theme.spacing.md,
-  };
+  }
 
   return (
     <Modal
@@ -257,7 +257,6 @@ export const MediaViewer = function MediaViewer(props: IMediaViewerProps) {
                   style={$image}
                   contentFit="contain"
                   transition={0}
-                  cachePolicy="memory-disk"
                   recyclingKey={uri}
                 />
               </AnimatedVStack>

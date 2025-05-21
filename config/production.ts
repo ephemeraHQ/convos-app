@@ -8,7 +8,7 @@ export const productionConfig: IConfig = {
   app: {
     ...shared.app,
     storeUrl: Platform.select({
-      default: "TODO",
+      default: "itms-beta://testflight.apple.com/v1/app/6744714645",
       android: "TODO",
     }),
   },

@@ -65,6 +65,9 @@ export const getButtonViewStyle =
           if (pressed) {
             style.backgroundColor = colors.fill.minimal
           }
+          if (disabled) {
+            style.backgroundColor = colors.fill.tertiary
+          }
           break
 
         case "link":
@@ -77,6 +80,9 @@ export const getButtonViewStyle =
           // Temporary opacity change for the variant="text" button
           if (pressed) {
             style.opacity = 0.8
+          }
+          if (disabled) {
+            style.backgroundColor = colors.fill.tertiary
           }
           break
 

@@ -1,6 +1,7 @@
 import { useTurnkey } from "@turnkey/sdk-react-native"
 import { AxiosError } from "axios"
 import { useEffect } from "react"
+import { config } from "@/config"
 import { formatRandomUsername } from "@/features/auth-onboarding/utils/format-random-user-name"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
@@ -128,6 +129,8 @@ async function makeSureUserDeviceExists(args: { userId: IConvosUserId }) {
       name: getDeviceName(),
       expoToken,
       pushToken,
+      appBuildNumber: String(config.app.buildNumber),
+      appVersion: config.app.version,
     }
 
     try {

@@ -9,7 +9,6 @@ import { Pressable } from "@/design-system/Pressable"
 import { ITextProps, Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { debugBorder } from "@/utils/debug-style"
 
 // Reusable title component
 export const ListItemTitle = memo(function ListItemTitle(props: ITextProps) {
@@ -30,10 +29,11 @@ export type IListItemProps = {
   end?: ReactNode
   style?: StyleProp<ViewStyle>
   onPress?: () => void
+  chevron?: boolean
 }
 
 export const ListItem = memo(function ListItem(props: IListItemProps) {
-  const { avatar, avatarName, avatarSource, title, subtitle, end, style, onPress } = props
+  const { avatar, avatarName, avatarSource, title, subtitle, end, style, onPress, chevron } = props
   const { themed } = useAppTheme()
 
   const content = (
@@ -48,7 +48,11 @@ export const ListItem = memo(function ListItem(props: IListItemProps) {
           <ListItemTitle>{title}</ListItemTitle>
           {subtitle && <ListItemSubtitle>{subtitle}</ListItemSubtitle>}
         </VStack>
-        {end && <HStack style={themed($end)}>{end}</HStack>}
+        {end ? (
+          <HStack style={themed($end)}>{end}</HStack>
+        ) : chevron ? (
+          <ListItemEndRightChevron />
+        ) : null}
       </HStack>
     </HStack>
   )

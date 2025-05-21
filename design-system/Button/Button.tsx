@@ -44,6 +44,7 @@ export function Button(props: IButtonProps) {
     // @deprecated,
     title,
     picto,
+    loaderProps,
     ...rest
   } = props
 
@@ -54,7 +55,7 @@ export function Button(props: IButtonProps) {
   const $viewStyle = useCallback(
     ({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> => {
       return [
-        themed(getButtonViewStyle({ variant, size, action: "primary", pressed })),
+        themed(getButtonViewStyle({ variant, size, action: "primary", pressed, disabled })),
         $viewStyleOverride,
         pressed && $pressedViewStyleOverride,
         disabled && $disabledViewStyleOverride,
@@ -110,6 +111,13 @@ export function Button(props: IButtonProps) {
     return "xs"
   }, [size])
 
+  const defaultLoaderColor = useMemo(() => {
+    if (variant === "fill") {
+      return theme.colors.text.inverted.primary
+    }
+    return theme.colors.text.primary
+  }, [variant, theme.colors.text])
+
   return (
     <Pressable
       style={$viewStyle}
@@ -121,7 +129,7 @@ export function Button(props: IButtonProps) {
     >
       {(state) => {
         if (loading) {
-          return <Loader size="xs" />
+          return <Loader color={defaultLoaderColor} size="xs" {...loaderProps} />
         }
 
         return (
