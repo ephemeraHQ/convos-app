@@ -51,5 +51,4 @@ ios/
 # Google Services
 # google-services/
 
-# Plugins
-!plugins/notification-service-extension/plugin/build
+
