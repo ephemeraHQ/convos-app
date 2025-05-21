@@ -19,7 +19,7 @@ import {
   createUserMutation,
   ICreateUserMutationArgs,
 } from "@/features/current-user/create-user.mutation"
-import { IConvosUserID } from "@/features/current-user/current-user.types"
+import { IConvosUserId } from "@/features/current-user/current-user.types"
 import { getStoredDeviceId, storeDeviceId } from "@/features/devices/device.storage"
 import { createDevice, fetchUserDevices, IDeviceCreateInput } from "@/features/devices/devices.api"
 import { IDeviceId } from "@/features/devices/devices.types"
@@ -63,7 +63,7 @@ export function useCreateUserAndMissingThingsIfNoExist() {
 /**
  * Handles the device registration and identity creation/linking flow
  */
-async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
+async function makeSureUserDeviceExists(args: { userId: IConvosUserId }) {
   const { userId } = args
 
   // 1. Check for existing deviceId in SecureStore
@@ -149,7 +149,7 @@ async function makeSureUserDeviceExists(args: { userId: IConvosUserID }) {
 }
 
 async function makeSureIdentitiesExistAndAreValid(args: {
-  userId: IConvosUserID
+  userId: IConvosUserId
   deviceId: IDeviceId
 }) {
   const { userId, deviceId } = args
@@ -219,7 +219,7 @@ async function makeSureIdentitiesExistAndAreValid(args: {
 }
 
 async function makeSureIdentitiesAreLinkedToDevice(args: {
-  userId: IConvosUserID
+  userId: IConvosUserId
   deviceId: IDeviceId
 }) {
   const { userId, deviceId } = args
@@ -257,7 +257,7 @@ async function createUserAndMissingThingsIfNoExist(args: {
   // First check if user exists
   const { data: currentUser, error: fetchCurrentUserError } = await tryCatch(fetchCurrentUser())
 
-  let userId: IConvosUserID
+  let userId: IConvosUserId
 
   const needToCreateUserBecauseOf404 =
     fetchCurrentUserError &&

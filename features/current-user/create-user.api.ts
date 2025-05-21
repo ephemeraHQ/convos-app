@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
-import { createUserIdentitySchema, IConvosUserID } from "@/features/current-user/current-user.types"
+import { createUserIdentitySchema, IConvosUserId } from "@/features/current-user/current-user.types"
 import { deviceSchema } from "@/features/devices/devices.types"
 import { getDeviceName, getDeviceOs } from "@/features/devices/devices.utils"
 import { ConvosProfileSchema, IConvosProfile } from "@/features/profiles/profiles.types"
@@ -34,7 +34,7 @@ const createUserApiRequestBodySchema = z
 export type ICreateUserApiRequestBody = z.infer<typeof createUserApiRequestBodySchema>
 
 const createUserApiResponseSchema = z.object({
-  id: z.custom<IConvosUserID>(),
+  id: z.custom<IConvosUserId>(),
   turnkeyUserId: z.custom<ITurnkeyUserId>(),
   device: deviceSchema.pick({
     id: true,

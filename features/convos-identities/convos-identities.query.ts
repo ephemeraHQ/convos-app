@@ -1,11 +1,11 @@
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { fetchUserIdentities } from "@/features/convos-identities/convos-identities.api"
-import { IConvosUserID } from "@/features/current-user/current-user.types"
+import { IConvosUserId } from "@/features/current-user/current-user.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 
 export function getUserIdentitiesQueryOptions(args: {
-  userId: IConvosUserID | undefined
+  userId: IConvosUserId | undefined
   caller?: string
 }) {
   const { userId, caller } = args
@@ -21,18 +21,18 @@ export function getUserIdentitiesQueryOptions(args: {
   })
 }
 
-export async function ensureUserIdentitiesQueryData(args: { userId: IConvosUserID }) {
+export async function ensureUserIdentitiesQueryData(args: { userId: IConvosUserId }) {
   const { userId } = args
   return reactQueryClient.ensureQueryData(getUserIdentitiesQueryOptions({ userId }))
 }
 
-export function useUserIdentitiesQuery(args: { userId: IConvosUserID | undefined }) {
+export function useUserIdentitiesQuery(args: { userId: IConvosUserId | undefined }) {
   return useQuery({
     ...getUserIdentitiesQueryOptions(args),
   })
 }
 
-export function getUserIdentitiesQueryData(args: { userId: IConvosUserID }) {
+export function getUserIdentitiesQueryData(args: { userId: IConvosUserId }) {
   const { userId } = args
   return reactQueryClient.getQueryData(getUserIdentitiesQueryOptions({ userId }).queryKey)
 }

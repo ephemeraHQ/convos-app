@@ -1,15 +1,15 @@
 import { IDeviceId } from "@/features/devices/devices.types"
 import { StorageError } from "@/utils/error"
 import { deviceIdStorage } from "@/utils/storage/storages"
-import { IConvosUserID } from "../current-user/current-user.types"
+import { IConvosUserId } from "../current-user/current-user.types"
 
 const DEVICE_ID_KEY = "convos-device-id"
 
-function getDeviceIdKey(userId: IConvosUserID) {
+function getDeviceIdKey(userId: IConvosUserId) {
   return `${DEVICE_ID_KEY}-${userId}`
 }
 
-export async function getStoredDeviceId(args: { userId: IConvosUserID }) {
+export async function getStoredDeviceId(args: { userId: IConvosUserId }) {
   const { userId } = args
 
   try {
@@ -22,7 +22,7 @@ export async function getStoredDeviceId(args: { userId: IConvosUserID }) {
   }
 }
 
-export async function storeDeviceId(args: { userId: IConvosUserID; deviceId: IDeviceId }) {
+export async function storeDeviceId(args: { userId: IConvosUserId; deviceId: IDeviceId }) {
   const { userId, deviceId } = args
 
   try {
@@ -35,7 +35,7 @@ export async function storeDeviceId(args: { userId: IConvosUserID; deviceId: IDe
   }
 }
 
-export async function removeStoredDeviceId(args: { userId: IConvosUserID }) {
+export async function removeStoredDeviceId(args: { userId: IConvosUserId }) {
   const { userId } = args
 
   try {

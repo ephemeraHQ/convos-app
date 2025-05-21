@@ -3,7 +3,7 @@ import Constants from "expo-constants"
 import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
-import { memo, useCallback, useMemo, Fragment } from "react"
+import { memo, useCallback, useMemo } from "react"
 import { Alert, Platform } from "react-native"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { runOnJS } from "react-native-reanimated"
@@ -11,6 +11,7 @@ import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { useXmtpLogFilesModalStore } from "@/components/xmtp-log-files-modal"
 import { config } from "@/config"
 import { useLogout } from "@/features/authentication/use-logout"
+import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
 import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
 import { registerPushNotifications } from "@/features/notifications/notifications-register"
 import { getDevicePushNotificationsToken } from "@/features/notifications/notifications-token"
@@ -32,11 +33,9 @@ import { GenericError } from "@/utils/error"
 import { getEnv, isProd } from "@/utils/getEnv"
 import { Haptics } from "@/utils/haptics"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
-import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { shareContent } from "@/utils/share"
-import { reactQueryPersistingStorage } from "@/utils/storage/storages"
 import { showActionSheet } from "./action-sheet"
-import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
   const { children } = props
@@ -456,22 +455,15 @@ function useShowDebugMenu() {
           alert(error)
         }
       },
-      "Clear React Query cache": () => {
+      "Clear React Query cache": async () => {
         try {
           // Clear both in-memory cache and persisted data
-          reactQueryClient.getQueryCache().clear()
-          reactQueryClient.clear()
-          reactQueryClient.removeQueries()
-          reactQueryPersistingStorage.clearAll()
-
-          showSnackbar({
-            message: "React Query cache completely cleared",
-          })
+          clearReacyQueryQueriesAndCache()
+          await Updates.reloadAsync()
         } catch (error) {
           captureError(
             new GenericError({ error, additionalMessage: "Error clearing React Query cache" }),
           )
-          alert("Error clearing React Query cache")
         }
       },
       "Clear expo image cache": async () => {

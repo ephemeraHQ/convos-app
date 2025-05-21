@@ -3,7 +3,7 @@ import { IXmtpInboxId, IXmtpInstallationId } from "@/features/xmtp/xmtp.types"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { IDeviceIdentityId } from "../convos-identities/convos-identities.api"
 
-export type IConvosUserID = string & { readonly __brand: unique symbol }
+export type IConvosUserId = string & { readonly __brand: unique symbol }
 
 export type IConvosCurrentUser = z.infer<typeof currentUserSchema>
 
@@ -15,5 +15,5 @@ export const createUserIdentitySchema = z.object({
 })
 
 export const currentUserSchema = z.object({
-  id: z.custom<IConvosUserID>(),
+  id: z.custom<IConvosUserId>(),
 })
