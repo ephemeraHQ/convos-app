@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { FlashList } from "@shopify/flash-list"
-import React, { memo, useCallback, useEffect, useState } from "react"
+import React, { memo, useCallback } from "react"
 import { ActivityIndicator } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
@@ -9,16 +9,11 @@ import { EmptyState } from "@/design-system/empty-state"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
-import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
-import { sortGroupMembers } from "@/features/groups/utils/sort-group-members"
+import { useGroupMembersWithSorting } from "@/features/groups/queries/group-members-sorted.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
 import { useRouteParams, useRouter } from "@/navigation/use-navigation"
-import { ensureProfileQueryData } from "@/features/profiles/profiles.query"
 import { $globalStyles } from "@/theme/styles"
-import { captureError } from "@/utils/capture-error"
-import { GenericError } from "@/utils/error"
-import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 
 export const GroupMembersListScreen = memo(function GroupMembersListScreen(
   props: NativeStackScreenProps<NavigationParamList, "GroupMembersList">,
@@ -61,66 +56,14 @@ const List = memo(function List() {
   const insets = useSafeAreaInsets()
   const currentSender = useSafeCurrentSender()
   const { xmtpConversationId } = useRouteParams<"GroupMembersList">()
-  const [sortedMemberIds, setSortedMemberIds] = useState<IXmtpInboxId[]>([])
-  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false)
-
-  const { members, isLoading: isLoadingMembers } = useGroupMembers({
+  
+  const { members, sortedMemberIds, isLoading } = useGroupMembersWithSorting({
     xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "GroupMembersListScreen",
   })
 
-  useEffect(() => {
-    if (!members?.ids?.length) return
-
-    setIsLoadingProfiles(true)
-    
-    // Get member inbox IDs
-    const memberInboxIds = members.ids.map(id => members.byId[id].inboxId)
-    
-    // Load all profiles
-    Promise.all(
-      memberInboxIds.map(inboxId => 
-        ensureProfileQueryData({ 
-          xmtpId: inboxId, 
-          caller: "GroupMembersListScreen" 
-        })
-      )
-    )
-    .then(profiles => {
-      // Create member-profile pairs for enhanced sorting
-      const memberProfilePairs = Object.values(members.byId).map((member, idx) => {
-        // Find the profile by matching member's inboxId
-        const profileIndex = memberInboxIds.findIndex(id => id === member.inboxId)
-        const profile = profileIndex !== -1 ? profiles[profileIndex] : null
-        return { 
-          ...member,
-          profile
-        }
-      })
-      
-      // Use the enhanced sorting with profiles
-      const sorted = sortGroupMembers(memberProfilePairs)
-      
-      // Extract just the sorted inbox IDs
-      const sortedIds = sorted.map(member => member.inboxId)
-      setSortedMemberIds(sortedIds)
-      setIsLoadingProfiles(false)
-    })
-    .catch(error => {
-      captureError(new GenericError({
-        error,
-        additionalMessage: "Error loading profiles"
-      }))
-      // Fall back to existing sort without profile data
-      const sortedMembers = sortGroupMembers(Object.values(members.byId))
-      const sortedIds = sortedMembers.map(member => member.inboxId)
-      setSortedMemberIds(sortedIds)
-      setIsLoadingProfiles(false)
-    })
-  }, [members?.ids, members?.byId])
-
-  if (isLoadingMembers || isLoadingProfiles) {
+  if (isLoading) {
     return (
       <Center style={$globalStyles.flex1}>
         <ActivityIndicator size="large" />
