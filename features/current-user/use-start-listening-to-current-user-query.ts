@@ -39,7 +39,7 @@ export function useStartListeningToCurrentUserQuery() {
       })
         .then(() => {
           logger.debug(
-            `Updated device data for user ${currentUser.id} with appBuildNumber ${appBuildNumber} and appVersion ${appVersion}`,
+            `Updated device data with appBuildNumber ${appBuildNumber} and appVersion ${appVersion}`,
           )
         })
         .catch(captureError)
