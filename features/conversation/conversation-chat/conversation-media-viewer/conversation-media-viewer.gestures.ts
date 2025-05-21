@@ -34,6 +34,9 @@ export function useConversationMediaViewerGestureHandlers(props: IGestureHandler
       "worklet"
       savedTranslateX.value = translateX.value
       savedTranslateY.value = translateY.value
+      
+      // Ensure backgroundOpacity is 1 when starting a pinch gesture
+      backgroundOpacity.value = 1
     })
     .onUpdate(
       (event: { scale: number; focalX: number; focalY: number; numberOfPointers: number }) => {
@@ -205,6 +208,9 @@ export function useConversationMediaViewerGestureHandlers(props: IGestureHandler
 
         translateX.value = newTranslateX
         translateY.value = newTranslateY
+        
+        // Ensure backgroundOpacity is 1 when zoomed in and panning
+        backgroundOpacity.value = 1
       } else {
         // When at normal scale, only allow vertical drag to dismiss
         translateY.value = savedTranslateY.value + event.translationY

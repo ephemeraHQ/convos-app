@@ -29,10 +29,12 @@ export const $animatedImageContainer: ViewStyle = {
 
 export const $infoContainer: ThemedStyle<ViewStyle> = ({ colors, spacing }) => ({
   position: "absolute",
-  top: 64,
+  top: 0,
   left: 0,
   right: 0,
-  padding: spacing.md,
+  paddingVertical: spacing.md,
+  paddingRight: spacing.xs,
+  paddingLeft: spacing.xl,
   backgroundColor: colors.background.surfaceless,
   alignItems: "flex-start",
   justifyContent: "space-between",

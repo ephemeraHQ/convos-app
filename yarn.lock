@@ -11068,7 +11068,7 @@ __metadata:
     date-fns: "npm:^2.29.3"
     deepmerge: "npm:^4.3.1"
     eas-cli: "npm:^15.0.12"
-    emoji-regex: "npm:^10.3.0"
+    emoji-regex: "npm:^10.4.0"
     eslint: "npm:8.57.0"
     eslint-config-prettier: "npm:^10.0.1"
     eslint-import-resolver-typescript: "npm:^3.6.3"
@@ -12094,7 +12094,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"emoji-regex@npm:^10.3.0":
+"emoji-regex@npm:^10.3.0, emoji-regex@npm:^10.4.0":
   version: 10.4.0
   resolution: "emoji-regex@npm:10.4.0"
   checksum: 10c0/a3fcedfc58bfcce21a05a5f36a529d81e88d602100145fcca3dc6f795e3c8acc4fc18fe773fbf9b6d6e9371205edb3afa2668ec3473fa2aa7fd47d2a9d46482d
