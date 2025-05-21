@@ -3,6 +3,7 @@ declare global {
     // eslint-disable-next-line typescript-eslint/consistent-type-definitions
     interface ProcessEnv {
       EXPO_ENV: "development" | "preview" | "production"
+      EXPO_PUBLIC_DEBUG_ETH_ADDRESSES: string
       EXPO_PUBLIC_EVM_RPC_ENDPOINT: string
       EXPO_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN_ANDROID: string
       EXPO_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN_IOS: string

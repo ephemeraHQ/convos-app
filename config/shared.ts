@@ -42,7 +42,8 @@ export const shared = {
   loggerLevel: (process.env.EXPO_PUBLIC_LOGGER_LEVEL as LogLevel) || "debug",
   reactQueryPersistCacheIsEnabled:
     process.env.EXPO_PUBLIC_ENABLE_REACT_QUERY_PERSIST_CACHE !== "false",
-  debugEthAddresses: process.env.EXPO_PUBLIC_DEBUG_ETH_ADDRESSES?.split(",") || [],
+  debugEthAddresses:
+    process.env.EXPO_PUBLIC_DEBUG_ETH_ADDRESSES?.split(",")?.map((address) => address.trim()) || [],
   app: {
     scheme: Constants.expoConfig?.scheme as string,
     name: Constants.expoConfig?.name as string,
