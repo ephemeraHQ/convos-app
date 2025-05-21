@@ -95,13 +95,16 @@ async function getXmtpLastMessageFromMessages(args: {
       const xmtpMessages = await getXmtpConversationMessages({
         clientInboxId,
         xmtpConversationId,
-        limit: 5,
+        limit: 1,
       })
 
       const lastMessage = xmtpMessages[0]
 
       return lastMessage ? convertXmtpMessageToConvosMessage(lastMessage) : undefined
 
+      /**
+       * Doing this like this creates some kind of weird infinite loop when the function "convertXmtpConversationToConvosConversation" is getting called from "createConversationAndSendFirstMessage"
+       */
       // const conversationMessagesData = await ensureConversationMessagesInfiniteQueryData({
       //   clientInboxId,
       //   xmtpConversationId,

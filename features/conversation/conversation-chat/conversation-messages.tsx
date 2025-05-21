@@ -71,7 +71,7 @@ const ReanimatedFlashList = Animated.createAnimatedComponent(
 
 // Define some estimated heights for different message types.
 // You should adjust these values based on your actual UI.
-const ATTACHMENT_MESSAGE_HEIGHT = 300
+const ATTACHMENT_MESSAGE_HEIGHT = (window.height * 2) / 3 // Attachment are usually 2/3 of the screen height from what I've seen
 const GROUP_UPDATE_MESSAGE_HEIGHT = textSizeStyles["md"].lineHeight
 const GROUP_UPDATE_VERTICAL_PADDING = spacing.lg
 const TEXT_MESSAGE_HEIGHT = 80
