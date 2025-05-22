@@ -1,6 +1,9 @@
 import { getTodayNs } from "@/utils/date"
 import { TimeUtils } from "@/utils/time.utils"
 
+// Retention duration in nanoseconds used when clearing a chat
+export const CLEAR_CHAT_RETENTION_DURATION_NS = 1
+
 // Define the duration configurations
 export const DisappearingMessageDuration = {
   ONE_SECOND: { value: TimeUtils.seconds(1).toNanoseconds(), text: "1 second" },
@@ -31,7 +34,7 @@ export const defaultConversationDisappearingMessageSettings: IDisappearingMessag
  */
 export function getFormattedDisappearingDuration(nanoseconds: number | undefined): string {
   if (!nanoseconds || nanoseconds === 0) {
-    return "off";
+    return "off"
   }
 
   // First check if this matches one of our predefined durations

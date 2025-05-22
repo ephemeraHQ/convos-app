@@ -10,6 +10,8 @@ import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { getTodayNs } from "@/utils/date"
 import { XMTPError } from "@/utils/error"
 
+const CLEAR_CHAT_TIMESTAMP = 1
+
 /**
  * Get the current disappearing message settings for a conversation
  */
@@ -69,8 +71,9 @@ export async function updateXmtpDisappearingMessageSettings(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
   retentionDurationInNs: number
+  clearChat?: boolean
 }) {
-  const { clientInboxId, conversationId, retentionDurationInNs } = args
+  const { clientInboxId, conversationId, retentionDurationInNs, clearChat } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -78,10 +81,14 @@ export async function updateXmtpDisappearingMessageSettings(args: {
     })
 
     await wrapXmtpCallWithDuration("updateDisappearingMessageSettings", async () => {
+      const timestamp = clearChat
+        ? CLEAR_CHAT_TIMESTAMP // Use earliest possible timestamp (1) to clear all messages
+        : getTodayNs()
+
       return updateDisappearingMessageSettings(
         client.installationId,
         conversationId,
-        getTodayNs(),
+        timestamp,
         retentionDurationInNs,
       )
     })

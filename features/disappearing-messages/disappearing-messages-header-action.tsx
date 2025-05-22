@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo } from "react"
-import { ViewStyle } from "react-native"
+import { Alert, ViewStyle } from "react-native"
 import { DropdownMenu, IDropdownMenuAction } from "@/design-system/dropdown-menu/dropdown-menu"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { refetchConversationMessagesInfiniteQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useClearDisappearingMessageSettings } from "@/features/disappearing-messages/clear-disappearing-message-settings.mutation"
 import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import {
+  CLEAR_CHAT_RETENTION_DURATION_NS,
   DisappearingMessageDuration,
   IDisappearingMessageDuration,
 } from "@/features/disappearing-messages/disappearing-messages.constants"
@@ -19,7 +21,7 @@ type IDisappearingMessageOptionId =
   | "header"
   | "off"
   | IDisappearingMessageDuration
-  | "clear"
+  | "clear_chat"
   | "how_it_works"
 
 type IDisappearingMessageOptionItem = Omit<IDropdownMenuAction, "id"> & {
@@ -47,6 +49,10 @@ const DISAPPEARING_MESSAGE_OPTIONS: IDisappearingMessageOptionItem[] = [
     title: "Off",
   },
   ...createDurationOptions(),
+  {
+    id: "clear_chat",
+    title: "Clear Chat",
+  },
 ]
 
 type DisappearingMessagesHeaderActionProps = {
@@ -88,8 +94,73 @@ export const DisappearingMessagesHeaderAction = ({
           return
         }
 
-        if (option.id === "clear") {
-          // TODO: Implement clear chat
+        if (option.id === "clear_chat") {
+          Alert.alert(
+            "Clear Chat for Everyone",
+            "This action is irreversible and will clear chat history for everyone. All participants will permanently lose access to the chat history.",
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+              {
+                text: "Clear",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    // Save current settings if they exist
+                    const previousRetentionDurationInNs = settings?.retentionDurationInNs
+
+                    // Step 1: Clear all existing messages by setting minimal retention duration (1ns)
+                    // and a special flag that uses earliest possible timestamp in XMTP protocol
+                    await updateSettingsMutateAsync({
+                      clientInboxId: currentSender.inboxId,
+                      conversationId: xmtpConversationId,
+                      retentionDurationInNs: CLEAR_CHAT_RETENTION_DURATION_NS,
+                      clearChat: true,
+                    })
+
+                    // Step 2: Restore previous settings if they existed, otherwise turn disappearing messages off
+                    // This ensures we keep user's preferences for new messages after clearing chat history
+                    if (previousRetentionDurationInNs && previousRetentionDurationInNs > 0) {
+                      await updateSettingsMutateAsync({
+                        clientInboxId: currentSender.inboxId,
+                        conversationId: xmtpConversationId,
+                        retentionDurationInNs: previousRetentionDurationInNs,
+                      })
+                    } else {
+                      await clearSettingsMutateAsync({
+                        clientInboxId: currentSender.inboxId,
+                        conversationId: xmtpConversationId,
+                      })
+                    }
+
+                    // Refresh the conversation messages to immediately show cleared state
+                    await refetchConversationMessagesInfiniteQuery({
+                      clientInboxId: currentSender.inboxId,
+                      xmtpConversationId,
+                      caller: "ClearChatAction",
+                    })
+
+                    Alert.alert(
+                      "Chat Cleared",
+                      "Chat history has been cleared for everyone in the conversation",
+                    )
+                  } catch (error) {
+                    captureErrorWithToast(
+                      new GenericError({
+                        error,
+                        additionalMessage: "Failed to clear chat",
+                      }),
+                      {
+                        message: "Failed to clear chat",
+                      },
+                    )
+                  }
+                },
+              },
+            ],
+          )
           return
         }
 
@@ -124,6 +195,7 @@ export const DisappearingMessagesHeaderAction = ({
       xmtpConversationId,
       updateSettingsMutateAsync,
       clearSettingsMutateAsync,
+      settings?.retentionDurationInNs,
     ],
   )
 

@@ -2,6 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { IConvosCurrentUser } from "@/features/current-user/current-user.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { ensureQueryDataBetter } from "@/utils/react-query/react-query.helpers"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { fetchCurrentUser } from "./current-user.api"
 
@@ -15,7 +16,9 @@ export function getCurrentUserQueryOptions(args: { caller?: string }) {
     queryKey: getReactQueryKey({
       baseStr: "current-user",
     }),
-    queryFn: () => fetchCurrentUser(),
+    queryFn: () => {
+      return fetchCurrentUser()
+    },
   })
 }
 
@@ -44,5 +47,5 @@ export function getCurrentUserQueryData() {
 
 export function ensureCurrentUserQueryData(args: { caller: string }) {
   const { caller } = args
-  return reactQueryClient.ensureQueryData(getCurrentUserQueryOptions({ caller }))
+  return ensureQueryDataBetter(getCurrentUserQueryOptions({ caller }))
 }

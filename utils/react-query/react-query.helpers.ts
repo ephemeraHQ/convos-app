@@ -96,7 +96,7 @@ export async function fetchWithoutDuplicatesQuery<T>(args: QueryOptions<T>): Pro
  * Prefetches a query if it's enabled
  */
 export function prefetchReactQueryBetter<T>(args: UseQueryOptions<T>) {
-  if (!args.enabled) {
+  if ("enabled" in args && !args.enabled) {
     queryLogger.debug(`Skipping prefetch for ${args.queryKey} because it's disabled`)
     return
   }
@@ -107,7 +107,7 @@ export function prefetchReactQueryBetter<T>(args: UseQueryOptions<T>) {
  * Refetches a query if it's enabled
  */
 export function refetchReactQueryBetter<T>(args: UseQueryOptions<T>) {
-  if (!args.enabled) {
+  if ("enabled" in args && !args.enabled) {
     queryLogger.debug(`Skipping refetch for ${args.queryKey} because it's disabled`)
     return Promise.resolve()
   }
@@ -115,10 +115,11 @@ export function refetchReactQueryBetter<T>(args: UseQueryOptions<T>) {
 }
 
 export function ensureQueryDataBetter<T>(args: UseQueryOptions<T>) {
-  if (!args.enabled) {
-    queryLogger.debug(`Skipping ensureQueryData for ${args.queryKey} because it's disabled`)
+  if ("enabled" in args && !args.enabled) {
     throw new ReactQueryError({
-      error: new Error(`Can't call ensureQueryData because query ${args.queryKey} is disabled`),
+      error: new Error(
+        `Can't call ensureQueryData because query key "${args.queryKey}" is disabled`,
+      ),
     })
   }
   return reactQueryClient.ensureQueryData(args)

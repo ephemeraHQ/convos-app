@@ -48,7 +48,10 @@ import { useConversationQuery } from "@/features/conversation/queries/conversati
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
-import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
+import {
+  invalidateDisappearingMessageSettings,
+  useDisappearingMessageSettings,
+} from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useEffectOnce } from "@/hooks/use-effect-once"
@@ -375,6 +378,12 @@ function useHandleSrolling(props: {
     }
 
     isRefreshingRef.current = true
+
+    invalidateDisappearingMessageSettings({
+      clientInboxId: currentSender.inboxId,
+      conversationId: xmtpConversationId,
+      caller: "Conversation Messages refetch on scroll past bottom",
+    }).catch(captureError)
 
     logger.debug("Refetching newest messages because we're scrolled past the bottom...")
     refetchConversationMessagesInfiniteQuery({
