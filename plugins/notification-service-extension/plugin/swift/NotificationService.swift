@@ -11,7 +11,9 @@ final class NotificationService: UNNotificationServiceExtension {
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
-        log.debug("didReceive called for request ID: \(request.identifier)")
+        SentryManager.shared.startSentry()
+        SentryManager.shared.trackMessage("didReceive call for request ID: \(request.identifier)")
+        log.debug("didReceive call for request ID: \(request.identifier)")
         log.debug("Full UNNotificationRequest content:\n\(request.content.description)")
 
         self.contentHandler = contentHandler
@@ -23,14 +25,14 @@ final class NotificationService: UNNotificationServiceExtension {
     // Main asynchronous processing logic
     private func handleNotificationAsync(request: UNNotificationRequest) {
         guard let currentBestAttempt = bestAttempt else {
-            log.error("Failed to get mutable copy of notification content")
+            SentryManager.shared.trackMessage("Failed to get mutable copy of notification content")
             contentHandler?(request.content)
             return
         }
 
         // Ensure userInfo is not nil and can be cast to [String: Any]
         guard let userInfo = request.content.userInfo as? [String: Any] else {
-            log.error(
+            SentryManager.shared.trackMessage(
                 "Could not extract userInfo as [String: Any] from notification content or userInfo is nil."
             )
             contentHandler?(request.content)
@@ -59,14 +61,14 @@ final class NotificationService: UNNotificationServiceExtension {
 
         } catch {
             // Log detailed error information if decoding fails
-            log.error("Failed to decode notification payload or extract required fields:", error)
+            SentryManager.shared.trackError(error, extras: ["info": "Failed to decode notification payload or extract required fields"])
             contentHandler?(request.content)
             return
         }
 
         // Make sure we have a valid ethAddress
         guard !ethAddress.isEmpty else {
-            log.error("ethAddress is empty after decoding, cannot proceed.")
+            SentryManager.shared.trackMessage("ethAddress is empty after decoding, cannot proceed.")
             contentHandler?(request.content)
             return
         }
@@ -83,7 +85,7 @@ final class NotificationService: UNNotificationServiceExtension {
                     let conversation = try await client.conversations.findConversationByTopic(
                         topic: topic)
                 else {
-                    log.error("Conversation not found for topic: ", topic)
+                    SentryManager.shared.trackMessage("Conversation not found for topic")
                     contentHandler?(currentBestAttempt)
                     return
                 }
@@ -92,7 +94,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 try await conversation.sync()
 
                 guard let messageBytes = Data(base64Encoded: Data(encryptedMessage.utf8)) else {
-                    log.error("Failed to decode base64 encryptedMessage payload")
+                    SentryManager.shared.trackMessage("Failed to decode base64 encryptedMessage payload")
                     contentHandler?(request.content); return
                 }
 
@@ -102,7 +104,7 @@ final class NotificationService: UNNotificationServiceExtension {
                     let decodedMessage = try await conversation.processMessage(
                         messageBytes: messageBytes)
                 else {
-                    log.error("Failed to process message bytes for topic: ", topic)
+                    SentryManager.shared.trackMessage("Failed to process message bytes for topic")
                     contentHandler?(currentBestAttempt)
                     return
                 }
@@ -111,7 +113,7 @@ final class NotificationService: UNNotificationServiceExtension {
               guard let notification = try await notificationFactory.notification(from: request.content,
                                                                                   with: decodedMessage,
                                                                                   in: conversation) else {
-                log.error("Failed getting notification from decoded message")
+                SentryManager.shared.trackMessage("Failed getting notification from decoded message")
                 contentHandler?(currentBestAttempt)
                 return
               }
@@ -132,7 +134,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
               contentHandler?(notification)
             } catch {
-                log.error("Error during XMTP client build or message processing: ", error: error)
+                SentryManager.shared.trackError(error, extras: ["info": "Failed to decode notification payload or extract required fields"])
                 contentHandler?(currentBestAttempt)
             }
         }

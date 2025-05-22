@@ -51,17 +51,17 @@ enum KeychainWrapper {
     switch status {
     case errSecSuccess:
       guard let itemData = item as? Data else {
-        log.error("Keychain item found for key: \(forKey), but failed to cast to Data.")
+        SentryManager.shared.trackMessage("Keychain item found for key: \(forKey), but failed to cast to Data.")
         return nil
       }
       log.debug("Successfully retrieved and cast keychain item for key: \(forKey).")
       return String(data: itemData, encoding: .utf8)
     case errSecItemNotFound:
-      log.error(
+      SentryManager.shared.trackMessage(
         "Keychain item not found for key: \(forKey). Status: errSecItemNotFound (\(status))")
       return nil
     default:
-      log.error(
+      SentryManager.shared.trackMessage(
         "Failed to get keychain item for key: \(forKey). Status: \(status), OSStatus: \(status.description)"
       )
       return nil
@@ -90,7 +90,7 @@ enum KeychainWrapper {
       log.debug("Found legacy (auth unspecified) keychain item for key: \(forKey)")
       return legacyItem
     }
-    log.error("No keychain item found for key: \(forKey) after trying all methods.")
+    SentryManager.shared.trackMessage("No keychain item found for key: \(forKey) after trying all methods.")
     return nil
   }
 }

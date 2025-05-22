@@ -38,19 +38,19 @@ class ProfileNameResolver {
                 string:
                     "\(apiBaseURL)/api/v1/profiles/public/xmtpId/\(inboxId)"
             ) else {
-                log.error("Failed to create API URL for inboxId \(inboxId)")
+                SentryManager.shared.trackMessage("Failed to create API URL for inboxId \(inboxId)")
                 return nil
             }
 
             let (data, response) = try await URLSession.shared.data(from: url)
 
             guard let httpResponse = response as? HTTPURLResponse else {
-                log.error("Failed to get HTTP response for inboxId \(inboxId)")
+                SentryManager.shared.trackMessage("Failed to get HTTP response for inboxId \(inboxId)")
                 return nil
             }
 
             guard httpResponse.statusCode == 200 else {
-                log.error(
+                SentryManager.shared.trackMessage(
                     "Failed to fetch username for inboxId \(inboxId). HTTP Response: \(httpResponse)"
                 )
                 return nil
@@ -61,7 +61,7 @@ class ProfileNameResolver {
             let profile = try decoder.decode(Response.self, from: data)
           return profile.name ?? profile.username
         } catch {
-            log.error("Failed to fetch username for inboxId \(inboxId)", error: error)
+            SentryManager.shared.trackError(error, extras: ["info": "Failed to fetch username for inboxId \(inboxId)"])
             return nil
         }
     }

@@ -257,6 +257,7 @@ target '${NSE_TARGET_NAME}' do
   pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
   # Same value that we use in the react-native app
   pod 'MMKV', '~> 2.2.1', :modular_headers => true
+  pod 'Sentry/HybridSDK', '8.48.0'
 
   # NSEs often use static frameworks. Adjust if your setup differs.
   use_frameworks! :linkage => :static

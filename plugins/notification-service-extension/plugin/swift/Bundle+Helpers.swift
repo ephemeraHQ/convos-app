@@ -4,7 +4,7 @@ import XMTP
 extension Bundle {
   static func getInfoPlistValue(for key: String) -> String? {
     guard let value = main.infoDictionary?[key] as? String else {
-      log.error("Failed to find or cast Info.plist value for key: \(key)")
+      SentryManager.shared.trackMessage("Failed to find or cast Info.plist value for key: \(key)")
       return nil
     }
 
@@ -13,7 +13,7 @@ extension Bundle {
 
   static func mainAppBundleId(for environment: XMTP.XMTPEnvironment) -> String {
     guard let bundleId = Bundle.getInfoPlistValue(for: "MainAppBundleIdentifier") else {
-      log.debug("Failed getting main app bundle ID from plist, using backup")
+      SentryManager.shared.trackMessage("Failed getting main app bundle ID from plist, using backup")
 
       switch environment {
       case .dev:

@@ -30,7 +30,7 @@ class MMKVHelper {
 
   private func getValueFromMmkv(key: String) -> String? {
     guard let value = mmkv.string(forKey: key) else {
-      log.error("No value found in group instance for key \(key)")
+      SentryManager.shared.trackMessage("MMKVHelper: No value found in group instance for key \(key)")
       return nil
     }
 
