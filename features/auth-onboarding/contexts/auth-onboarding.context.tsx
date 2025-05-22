@@ -28,6 +28,7 @@ import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { getHumanReadableDateWithTime } from "@/utils/date"
 import { AuthenticationError, ensureError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
+import { getEnv } from "@/utils/getEnv"
 import { authLogger } from "@/utils/logger/logger"
 import { TimeUtils } from "@/utils/time.utils"
 import { tryCatch } from "@/utils/try-catch"
@@ -179,7 +180,11 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
         useAuthOnboardingStore.getState().actions.reset()
       } finally {
         isCreatingXmtpClient.current = false
-        useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(false)
+        if (flowType.current === "login") {
+          useAuthOnboardingStore.getState().actions.setIsSigningIn(false)
+        } else {
+          useAuthOnboardingStore.getState().actions.setIsSigningUp(false)
+        }
       }
     })()
   }, [
@@ -205,7 +210,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     try {
       authLogger.debug("Starting login flow")
       flowType.current = "login"
-      useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
+      useAuthOnboardingStore.getState().actions.setIsSigningIn(true)
 
       // Clear all sessions to avoid issues with Turnkey auth
       authLogger.debug("Clearing all Turnkey sessions")
@@ -281,7 +286,7 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
     try {
       authLogger.debug("Starting signup flow")
       flowType.current = "signup"
-      useAuthOnboardingStore.getState().actions.setIsProcessingWeb3Stuff(true)
+      useAuthOnboardingStore.getState().actions.setIsSigningUp(true)
 
       // Clear all sessions to avoid issues with Turnkey auth
       authLogger.debug("Clearing all Turnkey sessions")
@@ -289,7 +294,13 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
       authLogger.debug("All Turnkey sessions cleared")
 
       const todayBeautifulString = getHumanReadableDateWithTime(new Date())
-      const passkeyName = `Convos ${todayBeautifulString}`
+      const env = getEnv()
+      const envSuffix = {
+        production: "",
+        preview: " Preview",
+        development: " Dev",
+      }[env]
+      const passkeyName = `Convos${envSuffix} ${todayBeautifulString}`
 
       authLogger.debug("Creating passkey")
       const authenticatorParams = await createPasskey({

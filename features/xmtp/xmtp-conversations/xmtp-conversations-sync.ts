@@ -2,10 +2,11 @@ import { ConsentState, syncAllConversations, syncConversation } from "@xmtp/reac
 import { create, windowScheduler } from "@yornaath/batshit"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { getUniqueItemsByKey } from "@/utils/array"
 import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
-const DEBOUNCE_MS = 50
+const DEBOUNCE_MS = 100
 const SYNC_ALL_THRESHOLD = 5
 
 // Cache to prevent multiple syncAll operations for the same inbox
@@ -30,13 +31,13 @@ function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
       }
 
       const client = await getXmtpClientByInboxId({ inboxId: clientInboxId })
-      const uniqueConversationIds = new Set(itemsToSync.map((item) => item.conversationId))
+      const uniqueConversationsWithCallers = getUniqueItemsByKey(itemsToSync, "conversationId")
 
       try {
-        if (uniqueConversationIds.size >= SYNC_ALL_THRESHOLD) {
+        if (uniqueConversationsWithCallers.length >= SYNC_ALL_THRESHOLD) {
           const callers = itemsToSync.map((item) => item.caller).join(", ") || "unknown"
           await wrapXmtpCallWithDuration(
-            `syncAllConversations (${callers}) for ${uniqueConversationIds.size} convos via batch`,
+            `syncAllConversations (${callers}) for ${uniqueConversationsWithCallers.length} convos via batch`,
             () =>
               syncAllConversations(
                 client.installationId,
@@ -47,9 +48,10 @@ function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
         } else {
           // Perform individual syncs
           await Promise.all(
-            Array.from(uniqueConversationIds).map((cid) =>
-              wrapXmtpCallWithDuration(`syncConversation ${cid} (via batch)`, () =>
-                syncConversation(client.installationId, cid),
+            uniqueConversationsWithCallers.map(({ conversationId, caller }) =>
+              wrapXmtpCallWithDuration(
+                `syncConversation ${conversationId} (${caller}) (via batch)`,
+                () => syncConversation(client.installationId, conversationId),
               ),
             ),
           )

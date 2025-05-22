@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
+import { ensureDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
@@ -91,6 +92,16 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("Conversation not found")
   }
 
+  const disappearingMessagesSettings = await ensureDisappearingMessageSettings({
+    clientInboxId,
+    conversationId: conversation.xmtpId,
+    caller: "conversationMessagesInfiniteQueryFn",
+  })
+
+  const priotorizeServerResponse =
+    disappearingMessagesSettings?.retentionDurationInNs &&
+    disappearingMessagesSettings?.retentionDurationInNs > 0
+
   const timestampBeforeXmtpFetchMs = Date.now()
 
   await syncOneXmtpConversation({
@@ -111,6 +122,7 @@ const conversationMessagesInfiniteQueryFn = async (
   const convosMessagesFromServer = xmtpMessages.map(convertXmtpMessageToConvosMessage)
   let combinedMessagesForPage: IConversationMessage[] = [...convosMessagesFromServer]
 
+  // Only if we're fetching the first page
   if (direction === "next" && !cursorNs) {
     const currentInfiniteData = getConversationMessagesInfiniteQueryData({
       clientInboxId,
@@ -120,34 +132,47 @@ const conversationMessagesInfiniteQueryFn = async (
     if (currentInfiniteData && currentInfiniteData.pages.length > 0) {
       const cachedFirstPageMessageIds = currentInfiniteData.pages[0].messageIds
       const serverMessageIdsSet = new Set(convosMessagesFromServer.map((m) => m.xmtpId))
-      const optimisticMessagesToConsider: IConversationMessage[] = []
+      const messagesToConsider: IConversationMessage[] = []
 
-      for (const cachedMsgId of cachedFirstPageMessageIds) {
-        if (!serverMessageIdsSet.has(cachedMsgId)) {
-          const cachedMsgData = getConversationMessageQueryData({
-            clientInboxId,
-            xmtpMessageId: cachedMsgId,
-            xmtpConversationId,
-          })
-          if (cachedMsgData) {
-            // If the cached message's timestamp is at or after we started fetching,
-            // It means it was adding after so we need to count it.
-            if (
-              cachedMsgData.sentMs >= timestampBeforeXmtpFetchMs &&
-              cachedMsgData.status === "sent"
-            ) {
-              optimisticMessagesToConsider.push(cachedMsgData)
-            } else if (cachedMsgData.sentMs < timestampBeforeXmtpFetchMs) {
-              queryLogger.debug(
-                `Cached message ${cachedMsgId} (sent: ${cachedMsgData.sentMs}) is older than fetch start time (${timestampBeforeXmtpFetchMs}) and not in server response. Discarding.`,
-              )
+      if (priotorizeServerResponse) {
+        // Only consider messages newer than the fetch timestamp
+        for (const cachedMsgId of cachedFirstPageMessageIds) {
+          if (!serverMessageIdsSet.has(cachedMsgId)) {
+            const cachedMsgData = getConversationMessageQueryData({
+              clientInboxId,
+              xmtpMessageId: cachedMsgId,
+              xmtpConversationId,
+            })
+            if (cachedMsgData) {
+              if (cachedMsgData.sentMs >= timestampBeforeXmtpFetchMs) {
+                messagesToConsider.push(cachedMsgData)
+              } else if (cachedMsgData.sentMs < timestampBeforeXmtpFetchMs) {
+                queryLogger.debug(
+                  `Removing cached message ${cachedMsgId} because it's older than fetch start and it's not in server response and we priotorize server response`,
+                )
+              }
+            }
+          }
+        }
+      } else {
+        // Consider all cached messages from the first page that are not already in the server response.
+        for (const cachedMsgId of cachedFirstPageMessageIds) {
+          if (!serverMessageIdsSet.has(cachedMsgId)) {
+            const cachedMsgData = getConversationMessageQueryData({
+              clientInboxId,
+              xmtpMessageId: cachedMsgId,
+              xmtpConversationId,
+            })
+            if (cachedMsgData) {
+              messagesToConsider.push(cachedMsgData)
             }
           }
         }
       }
 
-      if (optimisticMessagesToConsider.length > 0) {
-        const allMessagesForMerge = [...convosMessagesFromServer, ...optimisticMessagesToConsider]
+      // Make sure unique and sorted messages
+      if (messagesToConsider.length > 0) {
+        const allMessagesForMerge = [...convosMessagesFromServer, ...messagesToConsider]
 
         const uniqueMessagesMap = new Map<IXmtpMessageId, IConversationMessage>()
         for (const msg of allMessagesForMerge) {
@@ -223,7 +248,7 @@ const conversationMessagesInfiniteQueryFn = async (
 export function getConversationMessagesInfiniteQueryOptions(
   args: Optional<IArgsWithCaller, "caller">,
 ) {
-  const { clientInboxId, xmtpConversationId, caller, limit } = args
+  const { clientInboxId, xmtpConversationId, limit, caller } = args
 
   return infiniteQueryOptions({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
@@ -473,40 +498,23 @@ export const removeMessageFromConversationMessagesInfiniteQueryData = (args: {
 }
 
 export function invalidateConversationMessagesInfiniteMessagesQuery(args: IArgs) {
-  const { clientInboxId, xmtpConversationId } = args
-  const queryKey = getConversationMessagesInfiniteQueryOptions({
-    clientInboxId,
-    xmtpConversationId,
-  }).queryKey
+  const queryKey = getConversationMessagesInfiniteQueryOptions(args).queryKey
   return reactQueryClient.invalidateQueries({ queryKey })
 }
 
 export function refetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
-  const { clientInboxId, xmtpConversationId, caller } = args
   return refetchQueryIfNotAlreadyFetching({
-    queryKey: getConversationMessagesInfiniteQueryOptions({
-      clientInboxId,
-      xmtpConversationId,
-      caller,
-    }).queryKey,
+    queryKey: getConversationMessagesInfiniteQueryOptions(args).queryKey,
   })
 }
 
 export function getConversationMessagesInfiniteQueryData(args: IArgs) {
-  const { clientInboxId, xmtpConversationId } = args
-  const queryKey = getConversationMessagesInfiniteQueryOptions({
-    clientInboxId,
-    xmtpConversationId,
-  }).queryKey
+  const queryKey = getConversationMessagesInfiniteQueryOptions(args).queryKey
   return reactQueryClient.getQueryData(queryKey)
 }
 
 export function getAllConversationMessageInInfiniteQueryData(args: IArgs) {
-  const { clientInboxId, xmtpConversationId } = args
-  const queryKey = getConversationMessagesInfiniteQueryOptions({
-    clientInboxId,
-    xmtpConversationId,
-  }).queryKey
+  const queryKey = getConversationMessagesInfiniteQueryOptions(args).queryKey
   return reactQueryClient.getQueryData(queryKey)?.pages.flatMap((page) => page.messageIds)
 }
 

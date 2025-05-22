@@ -5,15 +5,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
 import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
+import { Loader } from "@/design-system/loader"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
+import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
 import { useSortedGroupMembers } from "@/features/groups/queries/group-members-sorted.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
 import { useRouteParams, useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
-import { Loader } from "@/design-system/loader"
 
 export const GroupMembersListScreen = memo(function GroupMembersListScreen(
   props: NativeStackScreenProps<NavigationParamList, "GroupMembersList">,
@@ -56,13 +57,19 @@ const List = memo(function List() {
   const insets = useSafeAreaInsets()
   const currentSender = useSafeCurrentSender()
   const { xmtpConversationId } = useRouteParams<"GroupMembersList">()
-  
-  const { data: sortedMemberIds = [], isLoading } = useSortedGroupMembers({
+
+  const { members } = useGroupMembers({
     xmtpConversationId,
     clientInboxId: currentSender.inboxId,
     caller: "GroupMembersListScreen",
   })
 
+  const { data: sortedMemberIds = [], isLoading } = useSortedGroupMembers({
+    xmtpConversationId,
+    clientInboxId: currentSender.inboxId,
+    caller: "GroupMembersListScreen",
+    members: Object.values(members?.byId || {}),
+  })
 
   if (isLoading) {
     return (

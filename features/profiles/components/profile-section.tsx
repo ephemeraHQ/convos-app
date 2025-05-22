@@ -8,11 +8,13 @@ export const ProfileSection = memo(function ProfileSection(
     withTopBorder?: boolean
   },
 ) {
-  const { withTopBorder, ...rest } = props
+  const { withTopBorder, style: styleProp, ...rest } = props
 
   const { themed } = useAppTheme()
 
-  return <VStack style={[themed($section), withTopBorder && themed($borderTop)]} {...rest} />
+  return (
+    <VStack style={[themed($section), withTopBorder && themed($borderTop), styleProp]} {...rest} />
+  )
 })
 
 const $section: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({

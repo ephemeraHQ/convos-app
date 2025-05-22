@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query"
 import React, { memo } from "react"
 import { TextStyle, ViewStyle } from "react-native"
 import { GroupAvatar } from "@/components/group-avatar"
@@ -6,10 +7,10 @@ import { Icon } from "@/design-system/Icon/Icon"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
+import { useDisappearingMessageSettingsQuery } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
-import { useGroupQuery } from "@/features/groups/queries/group.query"
+import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
 import { useCurrentXmtpConversationIdSafe } from "./conversation.store-context"
 
@@ -22,12 +23,16 @@ export const ConversationInfoBanner = memo(function ConversationInfoBanner() {
     xmtpConversationId,
   })
 
-  const { data: group } = useGroupQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
+  const { data: groupDescription } = useQuery({
+    ...getGroupQueryOptions({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "ConversationInfoBanner",
+    }),
+    select: (data) => data?.description,
   })
 
-  const { data: disappearingMessageSettings } = useDisappearingMessageSettings({
+  const { data: disappearingMessageSettings } = useDisappearingMessageSettingsQuery({
     clientInboxId: currentSender.inboxId,
     conversationId: xmtpConversationId,
     caller: "ConversationInfoBanner",
@@ -66,9 +71,9 @@ export const ConversationInfoBanner = memo(function ConversationInfoBanner() {
             {groupName}
           </Text>
         </HStack>
-        {group?.description && (
+        {groupDescription && (
           <Text preset="small" color="secondary" style={themed($groupDescription)}>
-            {group.description}
+            {groupDescription}
           </Text>
         )}
       </VStack>

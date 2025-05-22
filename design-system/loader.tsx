@@ -15,18 +15,22 @@ import { AnimatedVStack } from "@/design-system/VStack"
 import { ILoaderSize } from "@/theme/loader"
 import { useAppTheme } from "@/theme/use-app-theme"
 
-type ILoaderProps = {
+export type ILoaderProps = {
   size?: keyof ILoaderSize
   style?: StyleProp<ViewStyle>
+  color?: string
 }
 
-export const Loader = memo(function Loader({ size = "md", style }: ILoaderProps) {
+export const Loader = memo(function Loader({ size = "md", style: styleProp, color }: ILoaderProps) {
   const { theme } = useAppTheme()
   const sizeValue = theme.loaderSize[size]
   const strokeWidth = Math.max(sizeValue * 0.1, 2)
   const radius = (sizeValue - strokeWidth) / 2
   const canvasPadding = sizeValue * 0.15
   const canvasSize = sizeValue + canvasPadding
+
+  const primaryColor = color || theme.colors.text.primary
+  const secondaryColor = color || theme.colors.text.secondary
 
   const circle = useMemo(() => {
     const path = Skia.Path.Make()
@@ -65,6 +69,7 @@ export const Loader = memo(function Loader({ size = "md", style }: ILoaderProps)
           width: canvasSize,
           height: canvasSize,
         },
+        styleProp,
       ]}
     >
       <Canvas
@@ -75,7 +80,7 @@ export const Loader = memo(function Loader({ size = "md", style }: ILoaderProps)
       >
         <Path
           path={circle}
-          color={theme.colors.text.primary}
+          color={primaryColor}
           style="stroke"
           strokeWidth={strokeWidth}
           start={startPath}
@@ -84,7 +89,7 @@ export const Loader = memo(function Loader({ size = "md", style }: ILoaderProps)
         >
           <SweepGradient
             c={vec(canvasSize / 2, canvasSize / 2)}
-            colors={[theme.colors.text.primary, theme.colors.text.secondary]}
+            colors={[primaryColor, secondaryColor]}
           />
         </Path>
       </Canvas>

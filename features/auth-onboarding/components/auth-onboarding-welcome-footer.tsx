@@ -10,7 +10,8 @@ export const AuthOnboardingWelcomeFooter = memo(function AuthOnboardingWelcomeFo
   const { theme } = useAppTheme()
   const { signup } = useAuthOnboardingContext()
 
-  const isProcessingWeb3Stuff = useAuthOnboardingStore((s) => s.isProcessingWeb3Stuff)
+  const isSigningUp = useAuthOnboardingStore((s) => s.isSigningUp)
+  const isSigningIn = useAuthOnboardingStore((s) => s.isSigningIn)
 
   return (
     <AnimatedVStack
@@ -21,8 +22,8 @@ export const AuthOnboardingWelcomeFooter = memo(function AuthOnboardingWelcomeFo
       <OnboardingFooter
         text="Create your Contact Card"
         onPress={signup}
-        isLoading={isProcessingWeb3Stuff}
-        disabled={isProcessingWeb3Stuff}
+        isLoading={isSigningUp}
+        disabled={isSigningUp || isSigningIn}
       />
     </AnimatedVStack>
   )

@@ -31,7 +31,6 @@ export const lightPalette = {
   ...paletteShared,
 
   danger: "#FF3B30",
-  scrim: "rgb(0, 0, 0)",
 }
 
 export const darkPalette = {
@@ -60,5 +59,4 @@ export const darkPalette = {
   ...paletteShared,
 
   danger: "#FF3B30",
-  scrim: "rgb(0, 0, 0)",
 }

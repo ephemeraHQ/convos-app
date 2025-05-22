@@ -61,42 +61,55 @@ export const AuthOnboardingWelcome = memo(function AuthOnboardingWelcome() {
       </Center>
 
       <AuthOnboardingWelcomeFooter />
+      <TermsAndConditions />
+    </Screen>
+  )
+})
 
-      <AnimatedCenter
-        entering={theme.animation
-          .reanimatedFadeInSpringSlow()
-          .delay(ONBOARDING_ENTERING_DELAY.FIFTH)}
-        style={themed($termsContainer)}
-      >
-        <Pressable>
-          <Text
+const TermsAndConditions = memo(function TermsAndConditions() {
+  const { theme, themed } = useAppTheme()
+
+  const isSigningUp = useAuthOnboardingStore((s) => s.isSigningUp)
+  const isSigningIn = useAuthOnboardingStore((s) => s.isSigningIn)
+
+  const isDisabled = isSigningUp || isSigningIn
+
+  return (
+    <AnimatedCenter
+      entering={theme.animation.reanimatedFadeInSpringSlow().delay(ONBOARDING_ENTERING_DELAY.FIFTH)}
+      style={themed($termsContainer)}
+    >
+      <Pressable>
+        <Text
+          preset="smaller"
+          color="secondary"
+          disabled={isDisabled}
+          style={{
+            textAlign: "center",
+            lineHeight: theme.spacing.md,
+          }}
+        >
+          When you continue, you agree to the{"\n"}Convos{" "}
+          <Link
             preset="smaller"
             color="secondary"
-            style={{
-              textAlign: "center",
-              lineHeight: theme.spacing.md,
-            }}
+            disabled={isDisabled}
+            onPress={() => openLink({ url: "https://convos.org/terms-of-service" })}
           >
-            When you continue, you agree to the{"\n"}Convos{" "}
-            <Link
-              preset="smaller"
-              color="secondary"
-              onPress={() => openLink({ url: "https://convos.org/terms-of-service" })}
-            >
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link
-              preset="smaller"
-              color="secondary"
-              onPress={() => openLink({ url: "https://convos.org/privacy-policy" })}
-            >
-              Privacy Policy
-            </Link>
-          </Text>
-        </Pressable>
-      </AnimatedCenter>
-    </Screen>
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link
+            preset="smaller"
+            color="secondary"
+            disabled={isDisabled}
+            onPress={() => openLink({ url: "https://convos.org/privacy-policy" })}
+          >
+            Privacy Policy
+          </Link>
+        </Text>
+      </Pressable>
+    </AnimatedCenter>
   )
 })
 
@@ -105,7 +118,8 @@ function useHeaderWrapper() {
 
   const { login } = useAuthOnboardingContext()
 
-  const isProcessingWeb3Stuff = useAuthOnboardingStore((s) => s.isProcessingWeb3Stuff)
+  const isSigningIn = useAuthOnboardingStore((s) => s.isSigningIn)
+  const isSigningUp = useAuthOnboardingStore((s) => s.isSigningUp)
 
   return useHeader(
     {
@@ -118,8 +132,8 @@ function useHeaderWrapper() {
         >
           <HeaderAction
             text="Sign in"
-            isLoading={isProcessingWeb3Stuff}
-            disabled={isProcessingWeb3Stuff}
+            isLoading={isSigningIn}
+            disabled={isSigningIn || isSigningUp}
             onPress={login}
           />
         </AnimatedCenter>
@@ -142,12 +156,14 @@ function useHeaderWrapper() {
               color="secondary"
               // This is to make the text look centered vertically
               style={{ paddingLeft: theme.spacing.xxs, paddingTop: 3 }}
-            >EARLY</Text>
+            >
+              EARLY
+            </Text>
           </HStack>
         </AnimatedCenter>
       ),
     },
-    [isProcessingWeb3Stuff],
+    [isSigningIn],
   )
 }
 

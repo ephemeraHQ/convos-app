@@ -17,7 +17,12 @@ export async function fetchProfile(args: { xmtpId: IXmtpInboxId; signal?: AbortS
     const result = ConvosProfileSchema.safeParse(data)
 
     if (!result.success) {
-      captureError(new ValidationError({ error: result.error }))
+      captureError(
+        new ValidationError({
+          error: result.error,
+          additionalMessage: `Error fetching profile for xmtpId ${xmtpId}`,
+        }),
+      )
     }
 
     return data
@@ -43,10 +48,15 @@ export async function fetchProfiles(args: { xmtpIds: IXmtpInboxId[] }) {
     const result = fetchProfilesResponseSchema.safeParse(data)
 
     if (!result.success) {
-      captureError(new ValidationError({ error: result.error }))
+      captureError(
+        new ValidationError({
+          error: result.error,
+          additionalMessage: `Error fetching profiles for xmtpIds ${xmtpIds}`,
+        }),
+      )
     }
 
-    return result.data?.profiles
+    return data?.profiles
   } catch (error) {
     throw new ConvosApiError({ error })
   }
@@ -71,7 +81,12 @@ export async function saveProfile(args: {
   const result = ConvosProfileSchema.safeParse(data)
 
   if (!result.success) {
-    captureError(new ValidationError({ error: result.error }))
+    captureError(
+      new ValidationError({
+        error: result.error,
+        additionalMessage: `Error saving profile for inboxId ${inboxId}`,
+      }),
+    )
   }
 
   return data

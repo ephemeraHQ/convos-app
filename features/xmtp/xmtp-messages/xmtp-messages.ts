@@ -26,6 +26,11 @@ import {
   IXmtpMessageId,
 } from "../xmtp.types"
 
+// Caches for active promises
+const activeGetMessagesPromises = new Map<string, Promise<IXmtpDecodedMessage[]>>()
+const activeGetMessagePromises = new Map<string, Promise<IXmtpDecodedMessage | null>>()
+const activeDecryptPromises = new Map<string, Promise<IXmtpDecodedMessage>>()
+
 export async function getXmtpConversationMessages(args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
@@ -35,30 +40,42 @@ export async function getXmtpConversationMessages(args: {
   direction?: "next" | "prev"
 }) {
   const { clientInboxId, xmtpConversationId, limit, afterNs, beforeNs, direction = "next" } = args
-
-  try {
-    const client = await getXmtpClientByInboxId({
-      inboxId: clientInboxId,
-    })
-
-    const messages = await wrapXmtpCallWithDuration("conversationMessages", () =>
-      conversationMessages(
-        client.installationId,
-        xmtpConversationId,
-        limit,
-        beforeNs,
-        afterNs,
-        direction === "next" ? "DESCENDING" : "ASCENDING",
-      ),
-    )
-
-    return messages.filter(isSupportedXmtpMessage)
-  } catch (error) {
-    throw new XMTPError({
-      error,
-      additionalMessage: `Error fetching messages for xmtpConversationId ${xmtpConversationId}`,
-    })
+  const promiseKey = `${clientInboxId}-${xmtpConversationId}-${limit}-${afterNs ?? "null"}-${beforeNs ?? "null"}-${direction}`
+  const existingPromise = activeGetMessagesPromises.get(promiseKey)
+  if (existingPromise) {
+    return existingPromise
   }
+
+  const promise = (async () => {
+    try {
+      const client = await getXmtpClientByInboxId({
+        inboxId: clientInboxId,
+      })
+
+      const messages = await wrapXmtpCallWithDuration("conversationMessages", () =>
+        conversationMessages(
+          client.installationId,
+          xmtpConversationId,
+          limit,
+          beforeNs,
+          afterNs,
+          direction === "next" ? "DESCENDING" : "ASCENDING",
+        ),
+      )
+
+      return messages.filter(isSupportedXmtpMessage)
+    } catch (error) {
+      throw new XMTPError({
+        error,
+        additionalMessage: `Error fetching messages for xmtpConversationId ${xmtpConversationId}`,
+      })
+    } finally {
+      activeGetMessagesPromises.delete(promiseKey)
+    }
+  })()
+
+  activeGetMessagesPromises.set(promiseKey, promise)
+  return promise
 }
 
 export async function getXmtpConversationMessage(args: {
@@ -66,22 +83,36 @@ export async function getXmtpConversationMessage(args: {
   clientInboxId: IXmtpInboxId
 }) {
   const { messageId, clientInboxId } = args
-  try {
-    const client = await getXmtpClientByInboxId({
-      inboxId: clientInboxId,
-    })
-
-    const message = await wrapXmtpCallWithDuration("findMessage", () =>
-      client.conversations.findMessage(messageId),
-    )
-
-    return message
-  } catch (error) {
-    throw new XMTPError({
-      error,
-      additionalMessage: `Error finding message ${messageId}`,
-    })
+  const promiseKey = `${clientInboxId}-${messageId}`
+  const existingPromise = activeGetMessagePromises.get(promiseKey)
+  if (existingPromise) {
+    return existingPromise
   }
+
+  const promise = (async () => {
+    try {
+      const client = await getXmtpClientByInboxId({
+        inboxId: clientInboxId,
+      })
+
+      const message =
+        (await wrapXmtpCallWithDuration("findMessage", () =>
+          client.conversations.findMessage(messageId),
+        )) ?? null
+
+      return message
+    } catch (error) {
+      throw new XMTPError({
+        error,
+        additionalMessage: `Error finding message ${messageId}`,
+      })
+    } finally {
+      activeGetMessagePromises.delete(promiseKey)
+    }
+  })()
+
+  activeGetMessagePromises.set(promiseKey, promise)
+  return promise
 }
 
 export async function decryptXmtpMessage(args: {
@@ -90,23 +121,40 @@ export async function decryptXmtpMessage(args: {
   clientInboxId: IXmtpInboxId
 }) {
   const { encryptedMessage, xmtpConversationId, clientInboxId } = args
+  // Using a portion of the encrypted message for the key to avoid overly long keys
+  // and potential performance issues with map lookups if messages are very large.
+  // Hashing would be more robust but adds complexity; a substring is a simpler approach.
+  const messageSnippet = encryptedMessage.substring(0, Math.min(encryptedMessage.length, 50))
+  const promiseKey = `${clientInboxId}-${xmtpConversationId}-${messageSnippet}`
+  const existingPromise = activeDecryptPromises.get(promiseKey)
 
-  try {
-    const client = await getXmtpClientByInboxId({
-      inboxId: clientInboxId,
-    })
-
-    const message = await wrapXmtpCallWithDuration("processMessage", () =>
-      processMessage(client.installationId, xmtpConversationId, encryptedMessage),
-    )
-
-    return message
-  } catch (error) {
-    throw new XMTPError({
-      error,
-      additionalMessage: `Error decrypting message for conversation ${xmtpConversationId}`,
-    })
+  if (existingPromise) {
+    return existingPromise
   }
+
+  const promise = (async () => {
+    try {
+      const client = await getXmtpClientByInboxId({
+        inboxId: clientInboxId,
+      })
+
+      const message = await wrapXmtpCallWithDuration("processMessage", () =>
+        processMessage(client.installationId, xmtpConversationId, encryptedMessage),
+      )
+
+      return message
+    } catch (error) {
+      throw new XMTPError({
+        error,
+        additionalMessage: `Error decrypting message for conversation ${xmtpConversationId}`,
+      })
+    } finally {
+      activeDecryptPromises.delete(promiseKey)
+    }
+  })()
+
+  activeDecryptPromises.set(promiseKey, promise)
+  return promise
 }
 
 export function getXmtpMessageIsTextMessage(

@@ -142,7 +142,6 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
 
   return (
     <AnimatedVStack
-      // {...debugBorder()}
       layout={theme.animation.reanimatedLayoutSpringTransition}
       style={containerStyle}
     >

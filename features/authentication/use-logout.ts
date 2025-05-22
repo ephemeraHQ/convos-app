@@ -1,5 +1,4 @@
 import { useTurnkey } from "@turnkey/sdk-react-native"
-import { Image } from "expo-image"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getAllSenders, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
@@ -13,6 +12,7 @@ import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { clearImageCache } from "@/utils/image"
 import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { authLogger } from "../../utils/logger/logger"
@@ -24,10 +24,8 @@ export const useLogout = () => {
     async (args: { caller: string }) => {
       authLogger.debug(`Logging out called by "${args.caller}"`)
 
-      useAppStore.getState().actions.setFullScreenLoaderOptions({
-        isVisible: true,
-        texts: ["Logging out...", "Déconnexion...", "Desconectando...", "登出中..."],
-      })
+      useAppStore.getState().actions.setIsShowingFullScreenOverlay(true)
+      useAppStore.getState().actions.setIsLoggingOut(true)
 
       try {
         const senders = getAllSenders()
@@ -144,8 +142,7 @@ export const useLogout = () => {
       } finally {
         // Clear expo-image cache after logout for privacy and to avoid stale images
         try {
-          await Image.clearDiskCache()
-          await Image.clearMemoryCache()
+          await clearImageCache()
         } catch (e) {
           captureError(
             new GenericError({
@@ -154,9 +151,9 @@ export const useLogout = () => {
             }),
           )
         }
-        useAppStore.getState().actions.setFullScreenLoaderOptions({
-          isVisible: false,
-        })
+
+        useAppStore.getState().actions.setIsShowingFullScreenOverlay(false)
+        useAppStore.getState().actions.setIsLoggingOut(false)
       }
     },
     [clearTurnkeySessions],

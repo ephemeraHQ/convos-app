@@ -35,6 +35,10 @@ export type ITextStyleProps = {
    * Inverted text color.
    */
   inverted?: boolean
+  /**
+   * Whether the text is disabled.
+   */
+  disabled?: boolean
 }
 
 export type ITextProps = RNTextProps &

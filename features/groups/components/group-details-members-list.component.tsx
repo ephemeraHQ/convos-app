@@ -1,19 +1,19 @@
 import { memo, useCallback } from "react"
-import { ActivityIndicator } from "react-native"
-import { VStack } from "@/design-system/VStack"
-import { Pressable } from "@/design-system/Pressable"
-import { ListItemEndRightChevron } from "@/design-system/list-item"
 import { Center } from "@/design-system/Center"
+import { ListItemEndRightChevron } from "@/design-system/list-item"
+import { Loader } from "@/design-system/loader"
+import { Pressable } from "@/design-system/Pressable"
+import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
+import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
+import { useSortedGroupMembers } from "@/features/groups/queries/group-members-sorted.query"
 import { GroupDetailsListItem } from "@/features/groups/ui/group-details.ui"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useRouter } from "@/navigation/use-navigation"
 import { useAppTheme } from "@/theme/use-app-theme"
-import { MemberListItem } from "./group-details-members-list-item.component"
 import { GroupDetailsMembersListHeader } from "./group-details-members-list-header.component"
-import { useSortedGroupMembers } from "@/features/groups/queries/group-members-sorted.query"
-import { Loader } from "@/design-system/loader"
+import { MemberListItem } from "./group-details-members-list-item.component"
 
 export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(props: {
   xmtpConversationId: IXmtpConversationId
@@ -22,13 +22,20 @@ export const GroupDetailsMembersList = memo(function GroupDetailsMembersList(pro
   const router = useRouter()
   const { theme } = useAppTheme()
   const currentSenderInboxId = useSafeCurrentSender().inboxId
-  
+
+  const { members } = useGroupMembers({
+    xmtpConversationId,
+    clientInboxId: currentSenderInboxId,
+    caller: "GroupDetailsScreen",
+  })
+
   const { data: sortedMemberIds = [], isLoading } = useSortedGroupMembers({
     caller: "GroupDetailsScreen",
     clientInboxId: currentSenderInboxId,
     xmtpConversationId,
+    members: Object.values(members?.byId || {}),
   })
-  
+
   const handleAddMembersPress = useCallback(() => {
     router.push("AddGroupMembers", { xmtpConversationId })
   }, [xmtpConversationId, router])

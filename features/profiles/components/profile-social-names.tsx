@@ -9,6 +9,7 @@ import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useSocialProfilesForInboxIdQuery } from "@/features/social-profiles/social-profiles-for-inbox-id.query"
+import { ISocialProfile } from "@/features/social-profiles/social-profiles.api"
 import { supportedSocialProfiles } from "@/features/social-profiles/supported-social-profiles"
 import { translate } from "@/i18n"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -30,7 +31,7 @@ export function ProfileSocialsNames({ inboxId }: IProfileSocialsNamesProps) {
     caller: "ProfileSocialsNames",
   })
 
-  const handleNamePress = (name: string) => {
+  const handleNamePress = (socialProfile: ISocialProfile) => {
     showActionSheet({
       options: {
         options: ["Copy address", "Remove from inbox", "Cancel"],
@@ -39,14 +40,14 @@ export function ProfileSocialsNames({ inboxId }: IProfileSocialsNamesProps) {
       callback: async (selectedIndex) => {
         if (selectedIndex === 0) {
           try {
-            Clipboard.setString(name)
+            Clipboard.setString(socialProfile.address)
             Alert.alert(translate("userProfile.copied"))
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error copying address" }),
               {
-                message: "Error copying address"
-              }
+                message: "Error copying address",
+              },
             )
           }
         } else if (selectedIndex === 1) {
@@ -56,8 +57,8 @@ export function ProfileSocialsNames({ inboxId }: IProfileSocialsNamesProps) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error removing wallet from inbox" }),
               {
-                message: "Error removing wallet from inbox"
-              }
+                message: "Error removing wallet from inbox",
+              },
             )
           }
         }
@@ -77,7 +78,7 @@ export function ProfileSocialsNames({ inboxId }: IProfileSocialsNamesProps) {
           {socialProfiles.map((socialProfile) => (
             <Chip
               key={`${socialProfile.name}-${socialProfile.type}`}
-              onPress={() => handleNamePress(socialProfile.name)}
+              onPress={() => handleNamePress(socialProfile)}
             >
               <ChipAvatar
                 name={socialProfile.name}

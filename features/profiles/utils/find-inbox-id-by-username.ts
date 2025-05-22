@@ -39,11 +39,16 @@ export async function findInboxIdByUsername(username: string): Promise<IXmtpInbo
     const result = PublicProfileResponseSchema.safeParse(data)
 
     if (!result.success) {
-      captureError(new ValidationError({ error: result.error }))
+      captureError(
+        new ValidationError({
+          error: result.error,
+          additionalMessage: `Error parsing public profile response for username ${username}`,
+        }),
+      )
       return null
     }
 
-    return result.data.xmtpId
+    return data?.xmtpId
   } catch (error) {
     // Handle 404 (not found) - this is an expected case, not an error
     if (isConvosApi404Error(error)) {

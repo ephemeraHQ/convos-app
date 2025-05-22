@@ -7,6 +7,7 @@ import {
   TextStyle,
   ViewStyle,
 } from "react-native"
+import { ILoaderProps } from "@/design-system/loader"
 import { ITextProps } from "../Text"
 
 export type IButtonVariant =
@@ -110,6 +111,10 @@ export type IButtonProps = {
    * Replace the deprecated `picto` prop.
    */
   icon?: IIconName
+  /**
+   * The color of the loader.
+   */
+  loaderProps?: ILoaderProps
 
   /** @deprecated use text instead */
   title?: string

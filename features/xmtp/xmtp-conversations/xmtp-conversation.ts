@@ -76,7 +76,9 @@ export async function publishXmtpConversationMessages(args: {
       inboxId: clientInboxId,
     })
 
-    await publishPreparedMessages(client.installationId, conversationId)
+    await wrapXmtpCallWithDuration("publishPreparedMessages", () =>
+      publishPreparedMessages(client.installationId, conversationId),
+    )
   } catch (error) {
     throw new XMTPError({
       error,
@@ -94,7 +96,7 @@ export function isXmtpConversationGroup(
 export function isXmtpConversationDm(
   conversation: IXmtpConversationWithCodecs,
 ): conversation is IXmtpDmWithCodecs {
-  return conversation.version === ConversationVersion.GROUP
+  return conversation.version === ConversationVersion.DM
 }
 
 export const getXmtpConversationIdFromXmtpTopic = (xmtpTopic: IXmtpConversationTopic) => {

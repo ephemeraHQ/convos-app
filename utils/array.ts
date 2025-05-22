@@ -62,3 +62,32 @@ export function mergeArraysObjects<T extends Record<string, unknown>>(args: {
 
   return result
 }
+
+export function getUniqueItemsByKey<T extends Record<string, unknown>, K extends keyof T>(
+  items: T[],
+  key: K,
+): T[] {
+  return Array.from(
+    items.reduce((map, item) => {
+      map.set(item[key], item)
+      return map
+    }, new Map<T[K], T>()),
+  ).map(([_, value]) => value)
+}
+
+export function groupBy<T, K extends string | number | symbol>(
+  array: T[],
+  keyGetter: (item: T) => K,
+): Record<K, T[]> {
+  return array.reduce(
+    (acc, item) => {
+      const key = keyGetter(item)
+      if (!acc[key]) {
+        acc[key] = []
+      }
+      acc[key].push(item)
+      return acc
+    },
+    {} as Record<K, T[]>,
+  )
+}

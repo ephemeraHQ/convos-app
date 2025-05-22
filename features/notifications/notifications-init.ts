@@ -84,7 +84,7 @@ async function handleNotification(notification: Notifications.Notification) {
     }
 
     if (isNotificationExpoNewMessageNotification(notification)) {
-      await handleValidNotification({
+      await handlingNonDecryptedExpoNewMessageNotification({
         encryptedMessage: notification.request.content.data.encryptedMessage,
         conversationTopic: notification.request.content.data.contentTopic,
       })
@@ -118,13 +118,13 @@ async function handleNotification(notification: Notifications.Notification) {
   }
 }
 
-async function handleValidNotification(args: {
+async function handlingNonDecryptedExpoNewMessageNotification(args: {
   encryptedMessage: string
   conversationTopic: IConversationTopic
 }) {
   const { encryptedMessage, conversationTopic } = args
 
-  notificationsLogger.debug("Handling valid notification...")
+  notificationsLogger.debug("Handling non-decrypted expo new message notification...")
 
   const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
 
@@ -132,13 +132,12 @@ async function handleValidNotification(args: {
 
   if (!currentSender) {
     throw new NotificationError({
-      error: "No current sender found in handleValidNotification",
+      error: "No current sender found in handlingNonDecryptedExpoNewMessageNotification",
     })
   }
 
   const clientInboxId = currentSender.inboxId
 
-  notificationsLogger.debug("Fetching conversation and decrypting message...")
   const [conversation, xmtpDecryptedMessage] = await Promise.all([
     ensureConversationQueryData({
       clientInboxId,
@@ -151,7 +150,6 @@ async function handleValidNotification(args: {
       clientInboxId,
     }),
   ])
-  notificationsLogger.debug("Fetched conversation and decrypted message")
 
   if (!conversation) {
     throw new NotificationError({
@@ -160,13 +158,11 @@ async function handleValidNotification(args: {
   }
 
   if (!isSupportedXmtpMessage(xmtpDecryptedMessage)) {
-    notificationsLogger.debug(`Skipping notification because message is not supported`)
     return
   }
 
   const convoMessage = convertXmtpMessageToConvosMessage(xmtpDecryptedMessage)
 
-  notificationsLogger.debug("Fetching message content and sender info...")
   const [messageContent, senderInfo] = await Promise.all([
     ensureMessageContentStringValue(convoMessage),
     ensurePreferredDisplayInfo({
@@ -174,7 +170,6 @@ async function handleValidNotification(args: {
       caller: "handleValidNotification",
     }),
   ])
-  notificationsLogger.debug("Fetched message content and sender info")
 
   // Add to local cache
   setConversationMessageQueryData({
@@ -192,7 +187,6 @@ async function handleValidNotification(args: {
   // Don't show notifications when app is in foreground
   const appState = useAppStateStore.getState().currentState
   if (appState === "active") {
-    notificationsLogger.debug("App is in foreground, don't show notification")
     return
   }
 
