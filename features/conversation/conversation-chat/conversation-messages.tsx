@@ -439,32 +439,35 @@ function useHandleSrolling(props: {
       })
   }, [fetchNextPage])
 
-  const scrollHandler = useAnimatedScrollHandler((event) => {
-    "worklet"
+  const scrollHandler = useAnimatedScrollHandler(
+    (event) => {
+      "worklet"
 
-    // contentOffset: Current scroll position (y is positive when scrolling up in inverted list)
-    // contentSize: Total size of all content in the list
-    // layoutMeasurement: Size of the visible viewport
-    const { contentOffset, contentSize, layoutMeasurement } = event
+      // contentOffset: Current scroll position (y is positive when scrolling up in inverted list)
+      // contentSize: Total size of all content in the list
+      // layoutMeasurement: Size of the visible viewport
+      const { contentOffset, contentSize, layoutMeasurement } = event
 
-    // Calculate distance from top of older messages
-    // In inverted lists, we're at "top" of old messages when contentOffset.y is large
-    const distanceFromTop = contentSize.height - layoutMeasurement.height - contentOffset.y
+      // Calculate distance from top of older messages
+      // In inverted lists, we're at "top" of old messages when contentOffset.y is large
+      const distanceFromTop = contentSize.height - layoutMeasurement.height - contentOffset.y
 
-    // Trigger loading when within 20% of viewport height from the top
-    const isPastTopThreshold = distanceFromTop < layoutMeasurement.height * 0.2
+      // Trigger loading when within 1 list height from the top
+      const isPastTopThreshold = distanceFromTop < layoutMeasurement.height
 
-    if (isPastTopThreshold && hasNextPage) {
-      runOnJS(handleFetchNext)()
-    }
+      if (isPastTopThreshold && hasNextPage) {
+        runOnJS(handleFetchNext)()
+      }
 
-    // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
-    const isPastBottomThreshold = contentOffset.y < -25
+      // For inverted list, we need to check if we're scrolled past the bottom to refetch latest messages
+      const isPastBottomThreshold = contentOffset.y < -50
 
-    if (isPastBottomThreshold) {
-      runOnJS(handleRefetch)()
-    }
-  })
+      if (isPastBottomThreshold) {
+        runOnJS(handleRefetchBecauseScrolledBottom)()
+      }
+    },
+    [hasNextPage, handleFetchNext, handleRefetchBecauseScrolledBottom],
+  )
 
   return {
     scrollHandler,
