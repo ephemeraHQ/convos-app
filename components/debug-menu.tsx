@@ -21,7 +21,11 @@ import {
 } from "@/features/notifications/notifications.service"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
-import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import {
+  syncAllXmtpConversations,
+  syncOneXmtpConversation,
+} from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import { getXmtpDisappearingMessageSettings } from "@/features/xmtp/xmtp-disappearing-messages/xmtp-disappearing-messages"
 import {
   clearXmtpLogFiles,
   clearXmtpLogs,
@@ -29,11 +33,13 @@ import {
   startXmtpFileLogging,
   stopXmtpFileLogging,
 } from "@/features/xmtp/xmtp-logs"
-import type { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
+import type { IXmtpDecodedMessage, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
-import { navigate } from "@/navigation/navigation.utils"
+import { getCurrentRouteParams, navigate } from "@/navigation/navigation.utils"
 import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
+import { convertNanosecondsToMilliseconds } from "@/utils/date"
 import { GenericError } from "@/utils/error"
 import { getEnv, isProd } from "@/utils/getEnv"
 import { Haptics } from "@/utils/haptics"
@@ -41,6 +47,7 @@ import { clearImageCache } from "@/utils/image"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { shareContent } from "@/utils/share"
+import { getHumanReadableTimeFromMs } from "@/utils/time.utils"
 import { showActionSheet } from "./action-sheet"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
@@ -459,6 +466,109 @@ function useShowDebugMenu() {
     const clientInboxId = currentSenderInboxId as IXmtpInboxId
 
     const xmtpMethods = {
+      "Get last 10 XMTP messages": async () => {
+        try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Loading messages..."],
+          })
+
+          const params = getCurrentRouteParams<"Conversation">()
+          const conversationId = params?.xmtpConversationId
+
+          if (!conversationId) {
+            Alert.alert("Error", "Select this debug option in a conversation")
+            return
+          }
+
+          await syncOneXmtpConversation({
+            clientInboxId,
+            conversationId,
+            caller: "debugMenu",
+          })
+
+          const messages = await getXmtpConversationMessages({
+            clientInboxId,
+            xmtpConversationId: conversationId,
+            limit: 10,
+          })
+
+          const messageContents = messages
+            .map((msg: IXmtpDecodedMessage) => JSON.stringify(msg.nativeContent))
+            .join("\n\n")
+          Alert.alert("Last few Messages", messageContents)
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error getting messages",
+            }),
+          )
+          Alert.alert("Error", "Failed to get messages")
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
+        }
+      },
+      "Get disappearing message settings": async () => {
+        try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Loading disappearing message settings..."],
+          })
+
+          const params = getCurrentRouteParams<"Conversation">()
+
+          const conversationId = params?.xmtpConversationId
+
+          if (!conversationId) {
+            Alert.alert("Error", "Select this debug option in a conversation")
+            return
+          }
+
+          await syncOneXmtpConversation({
+            clientInboxId,
+            conversationId,
+            caller: "debugMenu",
+          })
+
+          const settings = await getXmtpDisappearingMessageSettings({
+            clientInboxId,
+            conversationId,
+          })
+
+          if (!settings) {
+            Alert.alert("Error", "No disappearing message settings found for this conversation")
+            return
+          }
+
+          const formattedSettings = {
+            disappearStartingAt: new Date(
+              convertNanosecondsToMilliseconds(settings.disappearStartingAtNs),
+            ).toLocaleString(),
+            retentionDuration: getHumanReadableTimeFromMs(
+              convertNanosecondsToMilliseconds(settings.retentionDurationInNs),
+            ),
+          }
+          Alert.alert(
+            "Disappearing Message Settings",
+            `Messages will start disappearing at:\n${formattedSettings.disappearStartingAt}\n\nMessages will be retained for:\n${formattedSettings.retentionDuration}`,
+          )
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error getting disappearing message settings",
+            }),
+          )
+          Alert.alert("Error", "Failed to get disappearing message settings")
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
+        }
+      },
       "List Allowed XMTP Conversations": async () => {
         try {
           useAppStore.getState().actions.setFullScreenLoaderOptions({

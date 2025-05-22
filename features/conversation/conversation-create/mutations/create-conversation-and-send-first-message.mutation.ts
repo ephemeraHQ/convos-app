@@ -1,6 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { executeUpdateConsentForInboxIdMutation } from "@/features/consent/update-consent-for-inbox-id.mutation"
 import { addConversationToAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
@@ -111,6 +112,17 @@ export const getCreateConversationAndSendFirstMessageMutationOptions =
             xmtpConversationId: result.conversation.xmtpId,
           }).catch(captureError)
         }
+
+        // We allow those inboxIds if we invited them to chat
+        Promise.all(
+          variables.inboxIds.map(async (inboxId) =>
+            executeUpdateConsentForInboxIdMutation({
+              clientInboxId: currentSender.inboxId,
+              peerInboxId: inboxId,
+              consent: "allowed",
+            }),
+          ),
+        ).catch(captureError)
 
         // Handle the new conversation
         setConversationQueryData({

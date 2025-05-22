@@ -1,6 +1,7 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { MutationObserver, MutationOptions, useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { executeUpdateConsentForInboxIdMutation } from "@/features/consent/update-consent-for-inbox-id.mutation"
 import {
   addConversationToAllowedConsentConversationsQuery,
   removeConversationFromAllowedConsentConversationsQuery,
@@ -18,10 +19,7 @@ import {
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { IGroup } from "../groups/group.types"
-import {
-  setXmtpConsentStateForInboxId,
-  updateXmtpConsentForGroupsForInbox,
-} from "../xmtp/xmtp-consent/xmtp-consent"
+import { updateXmtpConsentForConversationForInbox } from "../xmtp/xmtp-consent/xmtp-consent"
 
 type IAllowGroupMutationOptions = {
   clientInboxId: IXmtpInboxId
@@ -31,8 +29,8 @@ type IAllowGroupMutationOptions = {
 type IAllowGroupReturnType = Awaited<ReturnType<typeof allowGroup>>
 
 type IAllowGroupArgs = {
-  includeAddedBy?: boolean
-  includeCreator?: boolean
+  includeAddedBy: boolean
+  includeCreator: boolean
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
 }
@@ -69,14 +67,14 @@ async function allowGroup({
   }
 
   await Promise.all([
-    updateXmtpConsentForGroupsForInbox({
+    updateXmtpConsentForConversationForInbox({
       clientInboxId,
-      groupIds: [xmtpConversationId],
+      conversationIds: [xmtpConversationId],
       consent: "allowed",
     }),
     ...(inboxIdsToAllow.length > 0
       ? [
-          setXmtpConsentStateForInboxId({
+          executeUpdateConsentForInboxIdMutation({
             peerInboxId: clientInboxId,
             consent: "allowed",
             clientInboxId,

@@ -8,14 +8,14 @@ import { isConversationDenied } from "@/features/conversation/utils/is-conversat
 export const useBlockedConversationsForCurrentAccount = () => {
   const currentSender = useSafeCurrentSender()
 
-  const { data: conversationIds } = useAllowedConsentConversationsQuery({
+  const { data: allowedConversationIds } = useAllowedConsentConversationsQuery({
     clientInboxId: currentSender.inboxId,
     caller: "useBlockedConversationsForCurrentAccount",
   })
 
   // Create an array of metadata query configs and conversation query configs
   const metadataQueries = useQueries({
-    queries: (conversationIds ?? []).map((conversationId) => ({
+    queries: (allowedConversationIds ?? []).map((conversationId) => ({
       ...getConversationMetadataQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
@@ -25,7 +25,7 @@ export const useBlockedConversationsForCurrentAccount = () => {
   })
 
   const conversationQueries = useQueries({
-    queries: (conversationIds ?? []).map((conversationId) => ({
+    queries: (allowedConversationIds ?? []).map((conversationId) => ({
       ...getConversationQueryOptions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: conversationId,
@@ -35,9 +35,11 @@ export const useBlockedConversationsForCurrentAccount = () => {
   })
 
   // Find blocked conversations by comparing both query results
-  const blockedConversationIds = (conversationIds ?? []).filter((conversationId, index) => {
+  const blockedConversationIds = (allowedConversationIds ?? []).filter((conversationId, index) => {
     const metadataQuery = metadataQueries[index]
     const conversationQuery = conversationQueries[index]
+
+    console.log("conversationQuery:", conversationQuery)
 
     return (
       metadataQuery.data?.deleted ||

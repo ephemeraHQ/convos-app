@@ -2,13 +2,13 @@ import { translate } from "@i18n/index"
 import React from "react"
 import { Screen } from "@/components/screen/screen"
 import { EmptyState } from "@/design-system/empty-state"
-import { useBlockedConversationsForCurrentAccount } from "@/features/blocked-conversations/use-blocked-conversations-for-current-account"
+import { useBlockedConversationsForCurrentAccount } from "@/features/archived-conversations/use-archived-conversations-for-current-sender"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
 import { useHeader } from "@/navigation/use-header"
 import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 
-export function BlockedConversationsScreen() {
+export function ArchivedConversationsScreen() {
   const { data: blockedConversationsIds = [] } = useBlockedConversationsForCurrentAccount()
 
   const router = useRouter()

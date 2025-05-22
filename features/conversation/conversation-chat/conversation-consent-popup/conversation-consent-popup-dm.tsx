@@ -3,7 +3,7 @@ import React, { useCallback } from "react"
 import { showActionSheet } from "@/components/action-sheet"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useAllowDmMutation } from "@/features/consent/use-allow-dm.mutation"
-import { useDenyDmMutation } from "@/features/consent/use-deny-dm.mutation"
+import { useDeleteConversationsMutation } from "@/features/conversation/conversation-requests-list/delete-conversations.mutation"
 import { useDmQuery } from "@/features/dm/dm.query"
 import { useRouter } from "@/navigation/use-navigation"
 import { captureErrorWithToast } from "@/utils/capture-error"
@@ -28,10 +28,10 @@ export function ConversationConsentPopupDm() {
 
   const navigation = useRouter()
 
-  const { mutateAsync: denyDmConsentAsync } = useDenyDmMutation()
+  const { mutateAsync: deleteConversationsAsync } = useDeleteConversationsMutation()
   const { mutateAsync: allowDmConsentAsync } = useAllowDmMutation()
 
-  const handleBlock = useCallback(async () => {
+  const handleDelete = useCallback(async () => {
     if (!dm) {
       throw new Error("Dm not found")
     }
@@ -41,28 +41,28 @@ export function ConversationConsentPopupDm() {
         options: [translate("Delete"), translate("Cancel")],
         cancelButtonIndex: 1,
         destructiveButtonIndex: 0,
-        title: translate("if_you_block_contact"),
+        title: `If you delete this conversation, you won't be able to see any messages from them anymore.`,
       },
       callback: async (selectedIndex?: number) => {
         if (selectedIndex === 0) {
           try {
-            await denyDmConsentAsync({
-              xmtpConversationId,
-              peerInboxId: dm.peerInboxId,
+            await deleteConversationsAsync({
+              conversationIds: [xmtpConversationId],
+              alsoDenyInviterConsent: true, // If we delete here it's almost certain we also don't want to see any messages from them anymore
             })
             navigation.pop()
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error consenting" }),
               {
-                message: "Error deleting conversation"
-              }
+                message: "Error deleting conversation",
+              },
             )
           }
         }
       },
     })
-  }, [navigation, denyDmConsentAsync, dm, xmtpConversationId])
+  }, [navigation, deleteConversationsAsync, dm, xmtpConversationId])
 
   const handleAccept = useCallback(async () => {
     try {
@@ -75,7 +75,7 @@ export function ConversationConsentPopupDm() {
       })
     } catch (error) {
       captureErrorWithToast(new GenericError({ error, additionalMessage: "Error consenting" }), {
-        message: "Error joining conversation"
+        message: "Error joining conversation",
       })
     }
   }, [allowDmConsentAsync, dm, xmtpConversationId])
@@ -92,7 +92,7 @@ export function ConversationConsentPopupDm() {
           variant="text"
           action="danger"
           text={translate("Delete")}
-          onPress={handleBlock}
+          onPress={handleDelete}
         />
         <ConversationConsentPopupHelperText>
           {translate("They won't be notified if you delete it")}
