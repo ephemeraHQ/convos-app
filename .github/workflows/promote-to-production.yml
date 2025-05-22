@@ -5,7 +5,7 @@ on:
 
 # Ensure only one promotion workflow runs at a time
 concurrency:
-  group: "promote-to-production"
+  group: "promote-to-production-${{ github.ref_name }}"
   cancel-in-progress: false
 
 permissions:
@@ -15,12 +15,37 @@ jobs:
   merge-to-production:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source branch
+      - name: Checkout source branch (the one being promoted)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }} # Use the ref from which the workflow is run
-          token: ${{ secrets.PAT_GITHUB }}
-          fetch-depth: 0
+          ref: ${{ github.ref }} # Use the ref from which the workflow is run (e.g., main)
+          # token: ${{ secrets.PAT_GITHUB }} # Only if default GITHUB_TOKEN is not enough
+          fetch-depth: 0 # Fetch history to read package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "package.json" # Reads from "engines" field in package.json
+
+      - name: Get App Version from package.json
+        id: package_version
+        run: echo "app_version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: yarn
+          eas-cache: true
+          patch-watchers: true
+
+      - name: Get next build number
+        id: build_number
+        run: |
+          CURRENT_BUILD=$(eas build:version:get --profile=production --platform=ios | grep 'iOS buildNumber -' | awk '{print $4}')
+          NEXT_BUILD=$((CURRENT_BUILD + 1))
+          echo "build_number=$NEXT_BUILD" >> $GITHUB_OUTPUT
 
       - name: Configure Git
         run: |
@@ -28,8 +53,20 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Merge source branch into production
+        env:
+          APP_VERSION: ${{ steps.package_version.outputs.app_version }}
+          BUILD_NUMBER: ${{ steps.build_number.outputs.build_number }}
         run: |
+          echo "App Version: $APP_VERSION"
+          echo "Build Number: $BUILD_NUMBER"
+          COMMIT_MSG="Merge branch '${{ github.ref_name }}' into production. v${APP_VERSION} ($BUILD_NUMBER)"
+
+          # Checkout production branch from remote
           git fetch origin production
           git checkout -B production origin/production
-          git merge ${{ github.ref_name }} -Xours --no-ff --no-edit -m "Merge branch '${{ github.ref_name }}' into production via workflow_dispatch"
+
+          # Merge the source branch (already checked out by the first step, HEAD points to it)
+          # ${{ github.ref_name }} is the short name of the branch, e.g., "main"
+          git merge ${{ github.ref_name }} -Xtheirs --no-ff --no-edit -m "$COMMIT_MSG"
+
           git push origin production
