@@ -392,7 +392,7 @@ function useHandleSrolling(props: {
   const isRefreshingRef = useRef(false)
   const isFetchingMoreMessagesRef = useRef(false)
 
-  function handleRefetchBecauseScrolledBottom() {
+  const handleRefetchBecauseScrolledBottom = useCallback(() => {
     if (isRefreshingRef.current) {
       return
     }
@@ -419,9 +419,9 @@ function useHandleSrolling(props: {
       xmtpConversationId,
       caller: "Conversation Messages",
     }).catch(captureError)
-  }
+  }, [currentSender.inboxId, xmtpConversationId])
 
-  function handleFetchNext() {
+  const handleFetchNext = useCallback(() => {
     if (isFetchingMoreMessagesRef.current) {
       return
     }
@@ -437,7 +437,7 @@ function useHandleSrolling(props: {
       .finally(() => {
         isFetchingMoreMessagesRef.current = false
       })
-  }
+  }, [fetchNextPage])
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     "worklet"
