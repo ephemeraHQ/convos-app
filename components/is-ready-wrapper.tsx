@@ -1,5 +1,8 @@
 import { useIsReady } from "@/hooks/use-is-ready"
 
+/**
+ * Often used when we want to render a component only after other more important components have been rendered.
+ */
 export function IsReadyWrapper({
   children,
   NotReadyElement,

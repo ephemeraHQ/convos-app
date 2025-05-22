@@ -5,12 +5,13 @@ import { addConversationToAllowedConsentConversationsQuery } from "@/features/co
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { defaultConversationDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-messages.constants"
-import { publishXmtpConversationMessages } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { createXmtpDm } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-dm"
 import { createXmtpGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 import { captureError } from "@/utils/capture-error"
+import { ReactQueryError } from "@/utils/error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import {
+  handleOptimisticMessagesSent,
   ISendMessageOptimisticallyParams,
   sendMessageOptimistically,
 } from "../../hooks/use-send-message.mutation"
@@ -70,10 +71,18 @@ export async function createConversationAndSendFirstMessage(
 
     return {
       conversation,
-      sentMessages: sentMessages,
+      sentMessages,
       errorSendingMessage: undefined,
     }
   } catch (error) {
+    captureError(
+      new ReactQueryError({
+        error,
+        additionalMessage: `Error sending message optimistically`,
+      }),
+    )
+
+    // We still want to return the conversation so that the UI can still be updated
     return {
       conversation,
       sentMessages: undefined,
@@ -95,17 +104,20 @@ export const getCreateConversationAndSendFirstMessageMutationOptions =
       onSuccess: (result, variables, context) => {
         const currentSender = getSafeCurrentSender()
 
-        publishXmtpConversationMessages({
-          clientInboxId: currentSender.inboxId,
-          conversationId: result.conversation.xmtpId,
-        }).catch(captureError)
+        // Handle the optimistic messages
+        if (result.sentMessages) {
+          handleOptimisticMessagesSent({
+            optimisticMessages: result.sentMessages,
+            xmtpConversationId: result.conversation.xmtpId,
+          }).catch(captureError)
+        }
 
+        // Handle the new conversation
         setConversationQueryData({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: result.conversation.xmtpId,
           conversation: result.conversation,
         })
-
         addConversationToAllowedConsentConversationsQuery({
           clientInboxId: currentSender.inboxId,
           conversationId: result.conversation.xmtpId,

@@ -111,8 +111,18 @@ export const reactQueryClient = new QueryClient({
       gcTime: DEFAULT_GC_TIME,
       staleTime: DEFAULT_STALE_TIME,
 
-      // For now let's control our retries
-      retry: false,
+      // Retry max 3 times
+      retry: (failureCount, error) => {
+        if (failureCount >= 3) {
+          return false
+        }
+        return true
+      },
+      // Exponential backoff with a max delay of 30 seconds:
+      // 1st retry: 2s delay
+      // 2nd retry: 4s delay
+      // 3rd retry: 8s delay
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 
       // For now let's control our retries
       retryOnMount: false,
@@ -128,9 +138,6 @@ export const reactQueryClient = new QueryClient({
 
       // Put this to "false" if we see sloweness with react-query but otherwise
       structuralSharing: true,
-
-      // Handle errors during rehydration more gracefully
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
   },
 })

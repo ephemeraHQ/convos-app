@@ -86,6 +86,6 @@ export const shared = {
   },
   xmtp: {
     env: (process.env.EXPO_PUBLIC_XMTP_ENV || "local") as IXmtpEnv,
-    maxMsUntilLogError: 10000,
+    maxMsUntilLogError: 6000,
   },
 } as const satisfies Partial<IConfig>

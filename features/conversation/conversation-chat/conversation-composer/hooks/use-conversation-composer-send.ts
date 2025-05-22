@@ -111,16 +111,13 @@ export function useCreateConversationAndSend() {
       composerStore.getState().reset()
 
       // Create conversation and send message
-      const {
-        conversation: createdConversation,
-        errorSendingMessage,
-        sentMessages,
-      } = await createConversationAndSendFirstMessageMutation({
-        variables: {
-          inboxIds: searchSelectedUserInboxIds,
-          contents: messageContents,
-        },
-      })
+      const { conversation: createdConversation, errorSendingMessage } =
+        await createConversationAndSendFirstMessageMutation({
+          variables: {
+            inboxIds: searchSelectedUserInboxIds,
+            contents: messageContents,
+          },
+        })
 
       if (errorSendingMessage) {
         showSnackbar({
@@ -134,12 +131,6 @@ export function useCreateConversationAndSend() {
         xmtpConversationId: createdConversation?.xmtpId,
         isCreatingNewConversation: false,
       })
-
-      return {
-        createdConversation,
-        sentMessages,
-        errorSendingMessage,
-      }
     } catch (error) {
       // Reset conversation state to allow for retrying
       conversationStore.setState({

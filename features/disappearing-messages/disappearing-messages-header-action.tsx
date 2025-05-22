@@ -4,7 +4,7 @@ import { DropdownMenu, IDropdownMenuAction } from "@/design-system/dropdown-menu
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useClearDisappearingMessageSettings } from "@/features/disappearing-messages/clear-disappearing-message-settings.mutation"
-import { useDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
+import { useDisappearingMessageSettingsQuery } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import {
   DisappearingMessageDuration,
   IDisappearingMessageDuration,
@@ -61,7 +61,7 @@ export const DisappearingMessagesHeaderAction = ({
   const { mutateAsync: updateSettingsMutateAsync } = useUpdateDisappearingMessageSettings()
   const { mutateAsync: clearSettingsMutateAsync } = useClearDisappearingMessageSettings()
 
-  const { data: settings } = useDisappearingMessageSettings({
+  const { data: disappearingMessageSettings } = useDisappearingMessageSettingsQuery({
     clientInboxId: currentSender.inboxId,
     conversationId: xmtpConversationId,
     caller: "DisappearingMessagesHeaderAction",
@@ -134,15 +134,15 @@ export const DisappearingMessagesHeaderAction = ({
       // For "off" option, show checkmark when there are no settings
       image:
         option.id === "off"
-          ? !settings?.retentionDurationInNs
+          ? !disappearingMessageSettings?.retentionDurationInNs
             ? "checkmark"
             : ""
-          : settings?.retentionDurationInNs &&
-              option.retentionDurationInNs === settings?.retentionDurationInNs
+          : disappearingMessageSettings?.retentionDurationInNs &&
+              option.retentionDurationInNs === disappearingMessageSettings?.retentionDurationInNs
             ? "checkmark"
             : "",
     }))
-  }, [settings?.retentionDurationInNs])
+  }, [disappearingMessageSettings?.retentionDurationInNs])
 
   return (
     <DropdownMenu actions={menuActions} onPress={handleMenuPress} style={themed($menuContainer)}>

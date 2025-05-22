@@ -144,6 +144,12 @@ export async function fetchOrRefetchQuery<T>(args: UseQueryOptions<T>) {
  * Creates a query observer that tracks previous data and provides it in the callback
  * This is useful for detecting changes between query updates
  */
+
+export type IQueryObserverWithPreviousDataResult<TData, TError> = QueryObserverResult<
+  TData,
+  TError
+> & { previousData: TData | undefined }
+
 export function createQueryObserverWithPreviousData<
   TQueryFnData = unknown,
   TError = Error,
@@ -151,9 +157,7 @@ export function createQueryObserverWithPreviousData<
   TQueryKey extends QueryKey = QueryKey,
 >(args: {
   queryOptions: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>
-  observerCallbackFn: (
-    result: QueryObserverResult<TData, TError> & { previousData: TData | undefined },
-  ) => void
+  observerCallbackFn: (result: IQueryObserverWithPreviousDataResult<TData, TError>) => void
 }) {
   const { queryOptions, observerCallbackFn } = args
 

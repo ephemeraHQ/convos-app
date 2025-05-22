@@ -1,6 +1,5 @@
 import Clipboard from "@react-native-clipboard/clipboard"
 import Constants from "expo-constants"
-import { Image } from "expo-image"
 import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
 import { memo, useCallback, useMemo } from "react"
@@ -10,6 +9,7 @@ import { runOnJS } from "react-native-reanimated"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { useXmtpLogFilesModalStore } from "@/components/xmtp-log-files-modal"
 import { config } from "@/config"
+import { useCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
 import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
 import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
@@ -19,6 +19,9 @@ import {
   canAskForNotificationsPermissions,
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
+import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
+import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import {
   clearXmtpLogFiles,
   clearXmtpLogs,
@@ -26,8 +29,10 @@ import {
   startXmtpFileLogging,
   stopXmtpFileLogging,
 } from "@/features/xmtp/xmtp-logs"
+import type { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
+import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { getEnv, isProd } from "@/utils/getEnv"
@@ -53,7 +58,7 @@ export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: Re
       Haptics.softImpactAsyncAnimated()
       runOnJS(showDebugMenu)()
     })
-    .minDuration(1000)
+    .minDuration(600)
 
   // For non-debug users, simply render the children directly without the debug gesture
   // This makes the component act as a pass-through, preserving the normal UI
@@ -67,6 +72,7 @@ export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: Re
 function useShowDebugMenu() {
   const { logout } = useLogout()
   const { currentlyRunning } = Updates.useUpdates()
+  const currentSenderInboxId = useCurrentSender()?.inboxId
 
   const showLogsMenu = useCallback(() => {
     const logsMethods = {
@@ -445,30 +451,201 @@ function useShowDebugMenu() {
     })
   }, [])
 
-  const primaryMethods = useMemo(() => {
-    return {
-      Logout: async () => {
+  const showXmtpMenu = useCallback(() => {
+    if (!currentSenderInboxId) {
+      Alert.alert("Error", "Current user XMTP Inbox ID not found.")
+      return
+    }
+    const clientInboxId = currentSenderInboxId as IXmtpInboxId
+
+    const xmtpMethods = {
+      "List Allowed XMTP Conversations": async () => {
         try {
-          await logout({
-            caller: "debug_menu",
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Loading XMTP conversations..."],
           })
+
+          await syncAllXmtpConversations({
+            clientInboxId,
+            caller: "debugMenuListAllowed",
+          })
+          const conversations = await getXmtpConversations({
+            clientInboxId,
+            consentStates: ["allowed"],
+            caller: "debugMenu",
+          })
+          if (conversations.length === 0) {
+            Alert.alert("XMTP Conversations", "No allowed conversations found.")
+            return
+          }
+          const conversationIds = conversations
+            .map((conv) => getXmtpConversationIdFromXmtpTopic(conv.topic))
+            .join(",")
+          Alert.alert(`Allowed XMTP Conversation IDs (${conversations.length})`, conversationIds, [
+            { text: "OK" },
+            {
+              text: "Copy IDs",
+              onPress: () => Clipboard.setString(conversationIds),
+            },
+          ])
         } catch (error) {
-          alert(error)
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error listing allowed XMTP conversations",
+            }),
+          )
+          Alert.alert("Error", "Failed to list allowed XMTP conversations.")
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
         }
       },
+      "List Denied XMTP Conversations": async () => {
+        try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Loading XMTP conversations..."],
+          })
+
+          await syncAllXmtpConversations({
+            clientInboxId,
+            caller: "debugMenuListDenied",
+          })
+          const conversations = await getXmtpConversations({
+            clientInboxId,
+            consentStates: ["denied"],
+            caller: "debugMenu",
+          })
+          if (conversations.length === 0) {
+            Alert.alert("XMTP Conversations", "No denied conversations found.")
+            return
+          }
+          const conversationIds = conversations
+            .map((conv) => getXmtpConversationIdFromXmtpTopic(conv.topic))
+            .join(",")
+          Alert.alert(`Denied XMTP Conversation IDs (${conversations.length})`, conversationIds, [
+            { text: "OK" },
+            {
+              text: "Copy IDs",
+              onPress: () => Clipboard.setString(conversationIds),
+            },
+          ])
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error listing denied XMTP conversations",
+            }),
+          )
+          Alert.alert("Error", "Failed to list denied XMTP conversations.")
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
+        }
+      },
+      "List Unknown XMTP Conversations": async () => {
+        try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Loading XMTP conversations..."],
+          })
+
+          await syncAllXmtpConversations({
+            clientInboxId,
+            caller: "debugMenuListUnknown",
+          })
+          const conversations = await getXmtpConversations({
+            clientInboxId,
+            consentStates: ["unknown"],
+            caller: "debugMenu",
+          })
+          if (conversations.length === 0) {
+            Alert.alert("XMTP Conversations", "No unknown conversations found.")
+            return
+          }
+          const conversationIds = conversations
+            .map((conv) => getXmtpConversationIdFromXmtpTopic(conv.topic))
+            .join(",")
+          Alert.alert(`Unknown XMTP Conversation IDs (${conversations.length})`, conversationIds, [
+            { text: "OK" },
+            {
+              text: "Copy IDs",
+              onPress: () => Clipboard.setString(conversationIds),
+            },
+          ])
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: "Error listing unknown XMTP conversations",
+            }),
+          )
+          Alert.alert("Error", "Failed to list unknown XMTP conversations.")
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
+        }
+      },
+      Cancel: undefined,
+    }
+
+    const options = Object.keys(xmtpMethods)
+    showActionSheet({
+      options: {
+        title: "XMTP Debug",
+        options,
+        cancelButtonIndex: options.indexOf("Cancel"),
+      },
+      callback: async (selectedIndex?: number) => {
+        if (selectedIndex === undefined) {
+          return
+        }
+        const method = xmtpMethods[options[selectedIndex] as keyof typeof xmtpMethods]
+        if (method) {
+          try {
+            await method()
+          } catch (error) {
+            captureError(new GenericError({ error, additionalMessage: "Error in XMTP menu" }))
+          }
+        }
+      },
+    })
+  }, [currentSenderInboxId])
+
+  const showCacheMenu = useCallback(() => {
+    const cacheMethods = {
       "Clear React Query cache": async () => {
         try {
-          // Clear both in-memory cache and persisted data
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Clearing React Query cache..."],
+          })
           clearReacyQueryQueriesAndCache()
+          // Give some time for the cache to clear before reloading
+          await new Promise((resolve) => setTimeout(resolve, 500))
           await Updates.reloadAsync()
         } catch (error) {
           captureError(
             new GenericError({ error, additionalMessage: "Error clearing React Query cache" }),
           )
+          Alert.alert("Error", "Failed to clear React Query cache.")
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
         }
       },
       "Clear expo image cache": async () => {
         try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Clearing Expo Image cache..."],
+          })
           await clearImageCache()
           showSnackbar({
             message: "Expo image cache cleared",
@@ -477,7 +654,49 @@ function useShowDebugMenu() {
           captureError(
             new GenericError({ error, additionalMessage: "Error clearing expo image cache" }),
           )
-          alert("Error clearing expo image cache")
+          Alert.alert("Error", "Failed to clear expo image cache.")
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
+        }
+      },
+      Cancel: undefined,
+    }
+
+    const options = Object.keys(cacheMethods)
+    showActionSheet({
+      options: {
+        title: "Cache Management",
+        options,
+        cancelButtonIndex: options.indexOf("Cancel"),
+      },
+      callback: async (selectedIndex?: number) => {
+        if (selectedIndex === undefined) {
+          return
+        }
+        const method = cacheMethods[options[selectedIndex] as keyof typeof cacheMethods]
+        if (method) {
+          try {
+            await method()
+          } catch (error) {
+            captureError(new GenericError({ error, additionalMessage: "Error in Cache menu" }))
+          }
+        }
+      },
+    })
+  }, [])
+
+  const primaryMethods = useMemo(() => {
+    return {
+      Logout: async () => {
+        try {
+          await logout({
+            caller: "debug_menu",
+          })
+        } catch (error) {
+          // Cast to alert as it's not necessarily an Error type
+          Alert.alert("Logout Error", String(error))
         }
       },
       "Show App Info": () => {
@@ -545,11 +764,13 @@ function useShowDebugMenu() {
           Alert.alert("Error", JSON.stringify(error))
         }
       },
+      "Cache Menu": () => showCacheMenu(),
       "Notifications Menu": () => showNotificationsMenu(),
       "Logs Menu": () => showLogsMenu(),
+      "XMTP Menu": () => showXmtpMenu(),
       Cancel: undefined,
     }
-  }, [logout, currentlyRunning, showLogsMenu, showNotificationsMenu])
+  }, [logout, currentlyRunning, showLogsMenu, showNotificationsMenu, showXmtpMenu, showCacheMenu])
 
   const showDebugMenu = useCallback(() => {
     const options = Object.keys(primaryMethods)

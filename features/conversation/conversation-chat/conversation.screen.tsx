@@ -77,9 +77,12 @@ const Content = memo(function Content() {
 
   useEffect(() => {
     if (xmtpConversationId) {
-      clearNotificationsForConversation({ xmtpConversationId }).catch(captureError)
+      clearNotificationsForConversation({
+        xmtpConversationId,
+        clientInboxId: currentSender.inboxId,
+      }).catch(captureError)
     }
-  }, [xmtpConversationId])
+  }, [xmtpConversationId, currentSender.inboxId])
 
   if (isLoadingConversation) {
     return (
