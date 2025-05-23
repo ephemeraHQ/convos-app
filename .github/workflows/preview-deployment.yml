@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       force_native_build:
-        description: "Force native build"
+        description: "Force native build (will ignore check-changes logic if re-enabled)"
         type: boolean
         default: true
         required: true
@@ -18,6 +18,7 @@ on:
       - "assets/**"
       - "package.json"
       - "app.config.ts"
+      - "versions.json"
       - "yarn.lock"
       - "i18n/**"
       - "patches/**"
@@ -26,12 +27,13 @@ on:
 
 # Ensure only one workflow runs at a time
 concurrency:
-  group: "preview-deployment"
-  cancel-in-progress: false
+  group: "preview-deployment-${{ github.ref }}"
+  cancel-in-progress: true
 
+# Permissions might be needed if you decide to commit preview build numbers later,
+# but for now, not committing them back.
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   # check-changes:
@@ -68,16 +70,19 @@ jobs:
   #           echo "has_native_changes=false" >> $GITHUB_OUTPUT
   #         fi
 
-  ios-build:
+  ios-preview-build:
     # needs: [check-changes]
     # if: needs.check-changes.outputs.has_native_changes == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      ios_preview_build_number: ${{ steps.update_versions_json_preview.outputs.new_build_number }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref }}
+          token: ${{ secrets.PAT_GITHUB }}
           fetch-depth: 0
 
       - name: Setup node
@@ -91,7 +96,42 @@ jobs:
       - run: corepack enable
 
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --immutable
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot (Preview Build)"
+          git config --global user.email "github-actions-bot-preview@users.noreply.github.com"
+
+      - name: Update iOS Preview Build Number in versions.json
+        id: update_versions_json_preview
+        run: |
+          node scripts/update-versions.js --platform=ios --env=preview
+          # The script outputs 'new_build_number'
+
+      - name: Commit and Push versions.json
+        run: |
+          if ! git diff --quiet versions.json; then
+            echo "versions.json was updated. Committing and pushing..."
+            git add versions.json
+            COMMIT_MSG="chore: Update iOS preview build number to ${{ steps.update_versions_json_preview.outputs.new_build_number }}"
+            git commit -m "$COMMIT_MSG"
+            git push origin ${{ github.ref_name }}
+          else
+            echo "versions.json was not changed. No commit needed."
+          fi
+
+      - name: Update app.config.ts with New iOS Preview Build Number (local to runner)
+        id: update_app_config_preview
+        run: |
+          NEW_BUILD_NUM_PREVIEW=${{ steps.update_versions_json_preview.outputs.new_build_number }}
+          if [ -z "$NEW_BUILD_NUM_PREVIEW" ]; then
+            echo "Error: Failed to get new_build_number from update_versions_json_preview step."
+            exit 1
+          fi
+          echo "New iOS Preview build number for this build is: $NEW_BUILD_NUM_PREVIEW"
+          node scripts/update-app-config-buildnum.js --platform=ios --env=preview --buildNumber=$NEW_BUILD_NUM_PREVIEW
+          echo "app.config.ts updated locally for preview build."
 
       # Need this here because the "Setup EAS" setup will execute npx expo config and will need the "build" folder of the plugin to be there
       - name: Build iOS notification extension plugin
@@ -107,10 +147,12 @@ jobs:
           eas-cache: true
           patch-watchers: true # Prevents ENOSPC errors on Ubuntu runners
 
-      - name: Build and submit to store
+      - name: Build and submit Preview to store
         run: |
-          # Use the --non-interactive flag to run in CI mode
-          # Use the --auto-submit flag to submit to App Store
+          # EAS will now use the app.config.ts that has been locally modified
+          # with the incremented preview build number.
+          # EXPO_ENV=preview should be set for eas build if your app.config.ts relies on it
+          # to pick the right settings block. EAS CLI often does this automatically based on profile.
           eas build --platform ios --profile preview --non-interactive --auto-submit
 
       # - name: Resolve Sentry Issues
