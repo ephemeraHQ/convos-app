@@ -12,6 +12,7 @@ import { ensureMessageContentStringValue } from "@/features/conversation/convers
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { isNotificationExpoNewMessageNotification } from "@/features/notifications/notifications-assertions"
+import { getNotificationId } from "@/features/notifications/notifications.service"
 import { INotificationMessageConvertedData } from "@/features/notifications/notifications.types"
 import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
@@ -50,7 +51,7 @@ const processedNotificationIds = new Set<string>()
 
 async function handleNotification(notification: Notifications.Notification) {
   try {
-    const notificationId = notification.request.identifier
+    const notificationId = getNotificationId(notification)
 
     // Check if we've already processed this specific notification
     if (processedNotificationIds.has(notificationId)) {
@@ -74,7 +75,7 @@ async function handleNotification(notification: Notifications.Notification) {
       }
     }
 
-    // If we processed the notification we can now display it!
+    // If we processed and decrypted the notification we can now display it!
     if (notification.request.content.data?.isProcessedByConvo) {
       return {
         shouldShowAlert: true,
@@ -85,10 +86,11 @@ async function handleNotification(notification: Notifications.Notification) {
 
     if (isNotificationExpoNewMessageNotification(notification)) {
       await handlingNonDecryptedExpoNewMessageNotification({
+        notificationId: getNotificationId(notification),
         encryptedMessage: notification.request.content.data.encryptedMessage,
         conversationTopic: notification.request.content.data.contentTopic,
       })
-      // Prevent the original notification from showing
+      // Prevent the original non-decrypted notification from showing
       return {
         shouldShowAlert: false,
         shouldPlaySound: false,
@@ -119,12 +121,15 @@ async function handleNotification(notification: Notifications.Notification) {
 }
 
 async function handlingNonDecryptedExpoNewMessageNotification(args: {
+  notificationId: string
   encryptedMessage: string
   conversationTopic: IConversationTopic
 }) {
-  const { encryptedMessage, conversationTopic } = args
+  const { notificationId, encryptedMessage, conversationTopic } = args
 
-  notificationsLogger.debug("Handling non-decrypted expo new message notification...")
+  notificationsLogger.debug(
+    `Handling non-decrypted expo new message notification ${notificationId}`,
+  )
 
   const xmtpConversationId = getXmtpConversationIdFromXmtpTopic(conversationTopic)
 

@@ -1,22 +1,26 @@
 import { ForwardedRef, forwardRef } from "react"
 import { View } from "react-native"
 import Animated, { AnimatedProps } from "react-native-reanimated"
+import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
 import { HStack, IHStackProps } from "./HStack"
 import { VStack } from "./VStack"
 
 export type ICenterProps = IHStackProps & {
   vertical?: boolean
+  safeAreaInsets?: ExtendedEdge[]
 }
 
 export const Center = forwardRef((props: ICenterProps, ref: ForwardedRef<View>) => {
-  const { style, vertical = false, ...rest } = props
+  const { style, vertical = false, safeAreaInsets, ...rest } = props
 
   const Stack = vertical ? VStack : HStack
+
+  const safeAreaInsetsStyle = useSafeAreaInsetsStyle(safeAreaInsets ?? [])
 
   return (
     <Stack
       ref={ref}
-      style={[{ alignItems: "center", justifyContent: "center" }, style]}
+      style={[{ alignItems: "center", justifyContent: "center" }, safeAreaInsetsStyle, style]}
       {...rest}
     />
   )
