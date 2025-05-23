@@ -62,16 +62,17 @@ export async function createXmtpClient(args: {
 }): Promise<IXmtpClientWithCodecs> {
   const { inboxSigner } = args
 
+  const identity = await inboxSigner.getIdentifier()
+
+  if (!xmtpIdentityIsEthereumAddress(identity)) {
+    throw new XMTPError({
+      error: new Error("Identifier is not an Ethereum address"),
+    })
+  }
+
+  const ethAddress = lowercaseEthAddress(identity.identifier)
+
   try {
-    const identity = await inboxSigner.getIdentifier()
-
-    if (!xmtpIdentityIsEthereumAddress(identity)) {
-      throw new XMTPError({
-        error: new Error("Identifier is not an Ethereum address"),
-      })
-    }
-
-    const ethAddress = lowercaseEthAddress(identity.identifier)
     const dbEncryptionKey = await getOrCreateXmtpDbEncryptionKey({
       ethAddress,
     })
@@ -107,6 +108,8 @@ export async function createXmtpClient(args: {
       throw error
     }
   } catch (error) {
+    clientByEthAddress.delete(ethAddress)
+
     throw new XMTPError({
       error,
       additionalMessage: `Failed to create XMTP client`,

@@ -24,9 +24,7 @@ export async function getXmtpClientByInboxId(args: { inboxId: IXmtpInboxId }) {
     // Try to get from store
     const sender = useMultiInboxStore.getState().senders.find((s) => s.inboxId === inboxId)
     if (!sender) {
-      throw new XMTPError({
-        error: new Error(`No sender found for inboxId: ${inboxId}`),
-      })
+      throw new Error(`No sender found for inboxId: ${inboxId}`)
     }
 
     const client = await buildXmtpClient({

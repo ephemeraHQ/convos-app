@@ -23,6 +23,10 @@ export function ensureOurError(error: unknown): BaseError {
   return new GenericError({ error })
 }
 
+export function isPromiseTimeoutError(error: unknown): boolean {
+  return error instanceof PromiseTimeoutError
+}
+
 export type BaseErrorArgs = {
   error: unknown
   additionalMessage?: string // This could be an "extra" property but since we're using it a lot we prefer to have it as a separate property
@@ -161,5 +165,11 @@ export class ConnectWalletError extends BaseError {
 export class ExternalCancellationError extends BaseError {
   constructor(args: BaseErrorArgs) {
     super("[External Cancellation]", args)
+  }
+}
+
+export class PromiseTimeoutError extends BaseError {
+  constructor(args: BaseErrorArgs) {
+    super("[Promise Timeout]", args)
   }
 }

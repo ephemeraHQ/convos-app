@@ -115,25 +115,25 @@ export async function buildXmtpClient(args: {
 }): Promise<IXmtpClientWithCodecs> {
   const { ethereumAddress, inboxId } = args
 
+  const existingPromise = clientByEthAddress.get(ethereumAddress)
+  if (existingPromise) {
+    return existingPromise
+  }
+
+  const buildPromise: Promise<IXmtpClientWithCodecs> = createXmtpBuildPromise({
+    ethereumAddress,
+    inboxId,
+  })
+
+  clientByEthAddress.set(ethereumAddress, buildPromise)
+  clientByInboxId.set(inboxId, buildPromise)
+
   try {
-    const existingPromise = clientByEthAddress.get(ethereumAddress)
-    if (existingPromise) {
-      return existingPromise
-    }
-
-    const buildPromise: Promise<IXmtpClientWithCodecs> = createXmtpBuildPromise({
-      ethereumAddress,
-      inboxId,
-    })
-
-    clientByEthAddress.set(ethereumAddress, buildPromise)
-    clientByInboxId.set(inboxId, buildPromise)
-
-    return buildPromise
+    const client = await buildPromise
+    return client
   } catch (error) {
-    throw new XMTPError({
-      error,
-      additionalMessage: `Failed to build XMTP client for address: ${ethereumAddress}`,
-    })
+    clientByEthAddress.delete(ethereumAddress)
+    clientByInboxId.delete(inboxId)
+    throw error
   }
 }

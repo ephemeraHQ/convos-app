@@ -7,7 +7,12 @@ import { isXmtpNoNetworkError } from "@/features/xmtp/xmtp-errors"
 import { validateXmtpInstallation } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
-import { AuthenticationError, BaseError, ExternalCancellationError } from "@/utils/error"
+import {
+  AuthenticationError,
+  BaseError,
+  ExternalCancellationError,
+  isPromiseTimeoutError,
+} from "@/utils/error"
 import { authLogger } from "@/utils/logger/logger"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
 
@@ -35,8 +40,24 @@ export function useHydrateAuth() {
     getXmtpClientByInboxId({
       inboxId: currentSender.inboxId,
     }).catch((error) => {
-      if (isXmtpNoNetworkError(error) || !useAppStore.getState().isInternetReachable) {
-        authLogger.debug("No network error while hydrating auth so just returning...")
+      if (isXmtpNoNetworkError(error)) {
+        authLogger.debug(
+          "XMTP network error while hydrating auth, will retry when network is available...",
+        )
+        return
+      }
+
+      if (!useAppStore.getState().isInternetReachable) {
+        authLogger.debug(
+          "Internet not reachable while hydrating auth, will retry when network is available...",
+        )
+        return
+      }
+
+      if (isPromiseTimeoutError(error)) {
+        authLogger.debug(
+          "Timeout error while hydrating auth, will retry when network is available...",
+        )
         return
       }
 
