@@ -7,6 +7,7 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
+import { getMessageTypeBaseOnContent } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-type-based-on-content"
 import {
   addMessagesToConversationMessagesInfiniteQueryData,
   invalidateConversationMessagesInfiniteMessagesQuery,
@@ -25,6 +26,7 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import {
   IConversationMessage,
   IConversationMessageContent,
+  IConversationMessageContentType,
 } from "../conversation-chat/conversation-message/conversation-message.types"
 import { IConversation } from "../conversation.types"
 
@@ -39,6 +41,14 @@ type ISentOptimisticMessage = IConversationMessage & {
 
 export type ISendMessageReturnType = Awaited<ReturnType<typeof sendMessageOptimistically>>
 
+const messageTypeOrder: IConversationMessageContentType[] = [
+  "remoteAttachment",
+  "staticAttachment",
+  "multiRemoteAttachment",
+  "text",
+  "reply",
+]
+
 export async function sendMessageOptimistically(args: ISendMessageOptimisticallyParams) {
   const { contents, xmtpConversationId } = args
 
@@ -46,8 +56,15 @@ export async function sendMessageOptimistically(args: ISendMessageOptimistically
 
   const sentMessages: ISentOptimisticMessage[] = []
 
+  // Sort contents based on their type
+  const sortedContents = [...contents].sort((a, b) => {
+    const typeA = getMessageTypeBaseOnContent({ content: a })
+    const typeB = getMessageTypeBaseOnContent({ content: b })
+    return messageTypeOrder.indexOf(typeA) - messageTypeOrder.indexOf(typeB)
+  })
+
   // Send each content as a separate message
-  for (const content of contents) {
+  for (const content of sortedContents) {
     let sentXmtpMessageId: IXmtpMessageId | null = null
 
     const payload = convertConvosMessageContentToXmtpMessageContent(content)

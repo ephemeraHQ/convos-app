@@ -4,10 +4,10 @@ import React, { memo, ReactNode, useCallback, useEffect, useMemo, useRef } from 
 import { Platform } from "react-native"
 import Animated, {
   AnimatedRef,
-  FadeInDown,
   runOnJS,
   useAnimatedRef,
   useAnimatedScrollHandler,
+  withSpring,
 } from "react-native-reanimated"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
 import { textSizeStyles } from "@/design-system/Text/Text.styles"
@@ -27,7 +27,10 @@ import {
   getConversationMessageQueryData,
   useConversationMessageQuery,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import {
+  ConversationMessageContextStoreProvider,
+  useConversationMessageContextSelector,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useMessageHasReactions } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-message-has-reactions"
 import {
   isAnActualMessage,
@@ -52,6 +55,7 @@ import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { useEffectOnce } from "@/hooks/use-effect-once"
 import { useAppStateHandler } from "@/stores/app-state-store/app-state-store.service"
+import { SICK_DAMPING, SICK_STIFFNESS } from "@/theme/animations"
 import { window } from "@/theme/layout"
 import { spacing } from "@/theme/spacing"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -123,18 +127,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
           isLatestXmtpMessageIdFromCurrentSender={latestXmtpMessageIdFromCurrentSender === item}
           previousXmtpMessageId={previousXmtpMessageId}
           nextXmtpMessageId={nextXmtpMessageId}
-          animateEntering={
-            index === 0 &&
-            getConversationMessageQueryData({
-              xmtpMessageId: item,
-              clientInboxId: currentSender.inboxId,
-              xmtpConversationId,
-            })?.status === "sending"
-          }
+          animateEntering={index === 0}
         />
       )
     },
-    [currentSender.inboxId, latestXmtpMessageIdFromCurrentSender, messageIds, xmtpConversationId],
+    [latestXmtpMessageIdFromCurrentSender, messageIds],
   )
 
   const getItemType = useCallback(
@@ -626,32 +623,82 @@ const ConversationMessagesListItem = memo(
   },
 )
 
+// This function generates the custom entering animation configuration.
+// It's called on the JS thread, and returns a worklet that Reanimated executes on the UI thread.
+function createCustomMessageEnteringAnimation(isIncoming: boolean) {
+  // The returned function is the actual worklet.
+  return (targetValues: {
+    targetOriginX: number
+    targetOriginY: number
+    targetWidth: number
+    targetHeight: number
+  }) => {
+    "worklet"
+    const rotationInRad = isIncoming ? -60 : 60 // Increased rotation
+    const initialXOffset = isIncoming ? -60 : 60 // Increased X offset
+    const initialYOffset = 100 // Increased Y offset for more dramatic bottom entry
+
+    const initialValues = {
+      opacity: 0,
+      originX: targetValues.targetOriginX + initialXOffset,
+      originY: targetValues.targetOriginY + initialYOffset,
+      width: targetValues.targetWidth,
+      height: targetValues.targetHeight,
+      transform: [
+        { rotate: `${rotationInRad}deg` },
+        // { scale: 0.8 }
+      ],
+    }
+
+    const animations = {
+      opacity: withSpring(1, {
+        damping: SICK_DAMPING,
+        stiffness: SICK_STIFFNESS,
+      }),
+      originX: withSpring(targetValues.targetOriginX, {
+        damping: SICK_DAMPING,
+        stiffness: SICK_STIFFNESS,
+      }),
+      originY: withSpring(targetValues.targetOriginY, {
+        damping: SICK_DAMPING,
+        stiffness: SICK_STIFFNESS,
+      }),
+      transform: [
+        // {
+        //   scale: withSpring(1, {
+        //     damping: SICK_DAMPING,
+        //     stiffness: SICK_STIFFNESS,
+        //   }),
+        // },
+        {
+          rotate: withSpring("0deg", {
+            damping: SICK_DAMPING,
+            stiffness: SICK_STIFFNESS,
+          }),
+        },
+      ],
+    }
+    return {
+      initialValues,
+      animations,
+    }
+  }
+}
+
 const ConversationNewMessageAnimationWrapper = memo(
   function ConversationNewMessageAnimationWrapper(props: {
     animateEntering: boolean
     children: ReactNode
   }) {
     const { animateEntering, children } = props
-    const { theme } = useAppTheme()
+    const fromMe = useConversationMessageContextSelector((state) => state.fromMe)
 
     const wrapper = useCallback(() => {
-      return (
-        <AnimatedVStack
-          entering={FadeInDown.springify()
-            .damping(theme.animation.spring.damping)
-            .stiffness(theme.animation.spring.stiffness)
-            .withInitialValues({
-              transform: [
-                {
-                  translateY: 60,
-                },
-              ],
-            })}
-        >
-          {children}
-        </AnimatedVStack>
-      )
-    }, [children, theme.animation.spring.damping, theme.animation.spring.stiffness])
+      // Create the specific animation worklet for the current message direction
+      const messageEnteringAnimationWorklet = createCustomMessageEnteringAnimation(!fromMe)
+
+      return <AnimatedVStack entering={messageEnteringAnimationWorklet}>{children}</AnimatedVStack>
+    }, [children, fromMe])
 
     return (
       <ConditionalWrapper condition={animateEntering} wrapper={wrapper}>
