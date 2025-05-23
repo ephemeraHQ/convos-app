@@ -117,23 +117,28 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
           Log.log(`Setting CFBundleShortVersionString to ${shortVersion} in ${infoPlistFilename}`)
           infoPlistContents.CFBundleShortVersionString = shortVersion
 
+          // Set the Environment
+          const env = process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
+          Log.log(`Setting 'Environment' in ${infoPlistFilename} to: ${env}`)
+          infoPlistContents.Environment = env
+
           // Set XMTP Environment
-          const expoEnv =
-            process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
-          let xmtpEnvironment = "local"
-          if (expoEnv === "production") xmtpEnvironment = "production"
-          else if (expoEnv === "preview") xmtpEnvironment = "dev"
-          else if (expoEnv === "development") xmtpEnvironment = "local"
-          Log.log(`Setting XmtpEnvironment in ${infoPlistFilename} to: ${xmtpEnvironment}`)
-          infoPlistContents.XmtpEnvironment = xmtpEnvironment
+          // const expoEnv =
+          //   process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
+          // let xmtpEnvironment = "local"
+          // if (expoEnv === "production") xmtpEnvironment = "production"
+          // else if (expoEnv === "preview") xmtpEnvironment = "dev"
+          // else if (expoEnv === "development") xmtpEnvironment = "local"
+          // Log.log(`Setting 'XmtpEnvironment' in ${infoPlistFilename} to: ${xmtpEnvironment}`)
+          // infoPlistContents.XmtpEnvironment = xmtpEnvironment
 
           // Set App Group Identifier
-          Log.log(`Setting AppGroupIdentifier in ${infoPlistFilename} to: ${appGroupId}`)
+          Log.log(`Setting 'AppGroupIdentifier' in ${infoPlistFilename} to: ${appGroupId}`)
           infoPlistContents.AppGroupIdentifier = appGroupId
 
           // Set Main App Bundle Identifier
           Log.log(
-            `Setting MainAppBundleIdentifier in ${infoPlistFilename} to: ${config.ios?.bundleIdentifier}`,
+            `Setting 'MainAppBundleIdentifier' in ${infoPlistFilename} to: ${config.ios?.bundleIdentifier}`,
           )
           infoPlistContents.MainAppBundleIdentifier = config.ios?.bundleIdentifier
 
@@ -257,6 +262,7 @@ target '${NSE_TARGET_NAME}' do
   pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
   # Same value that we use in the react-native app
   pod 'MMKV', '~> 2.2.1', :modular_headers => true
+  pod 'Sentry/HybridSDK', '8.48.0'
 
   # NSEs often use static frameworks. Adjust if your setup differs.
   use_frameworks! :linkage => :static

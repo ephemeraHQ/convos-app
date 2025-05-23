@@ -1,62 +1,38 @@
 import Foundation
 import MMKV
 
-private var mmkvInstanceWithGroup: MMKV? = nil
-private var mmkvInstanceNoGroup: MMKV? = nil
-private var secureMmkvForAccount: [String: MMKV?] = [:]
-private var mmkvInitialized = false
+class MMKVHelper {
+  private let mmkv: MMKV
+  private var secureMmkvForAccount: [String: MMKV?] = [:]
 
-func initializeMmkv() {
-    if (!mmkvInitialized) {
-        mmkvInitialized = true
-        let bundleId = getInfoPlistValue(key: "MainAppBundleIdentifier")
-        let groupId = "group.\(bundleId)"
-        let groupDir = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: groupId)?.path
-        guard let groupDir else {
-            log.error("Failed to get bundleId + group: \(#function)")
-            return
-        }
+  private let databaseKeyPrefix = "BACKUP_XMTP_KEY_"
 
-        // Initialize MMKV with group directory
-        MMKV.initialize(rootDir: nil, groupDir: groupDir, logLevel: MMKVLogLevel.warning)
+  init?(appGroupDirectoryURL: URL) {
+    let bundleId = Bundle.mainAppBundleId()
+    let groupDir = appGroupDirectoryURL.path
 
-        // Initialize MMKV without group directory
-        MMKV.initialize(rootDir: nil, logLevel: MMKVLogLevel.warning)
-    }
-}
+    MMKV.initialize(rootDir: nil, groupDir: groupDir, logLevel: MMKVLogLevel.warning)
 
-func getMmkv(id: String? = nil) -> (MMKV?, MMKV?) {
-    if (mmkvInstanceWithGroup == nil || mmkvInstanceNoGroup == nil) {
-        initializeMmkv()
-        let mmapId = id ?? "mmkv.default"
-
-        mmkvInstanceWithGroup = MMKV(mmapID: mmapId, cryptKey: nil, mode: MMKVMode.multiProcess)
-        mmkvInstanceNoGroup = MMKV(mmapID: mmapId, cryptKey: nil)
+    guard let mmkv = MMKV(mmapID: bundleId,
+                          cryptKey: nil,
+                          mode: MMKVMode.multiProcess) else {
+      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "Failed to initialize MMKV with mmapID: \(bundleId)"))
+      return nil
     }
 
-    return (mmkvInstanceWithGroup, mmkvInstanceNoGroup)
-}
+    self.mmkv = mmkv
+  }
 
-func getValueFromMmkv(key: String, id: String? = nil) -> String? {
-    let (mmkvWithGroup, mmkvNoGroup) = getMmkv(id: id)
+  func getDatabaseKey(for ethereumAddress: String) -> String? {
+    return getValueFromMmkv(key: databaseKeyPrefix + ethereumAddress)
+  }
 
-    // Try getting from group instance first
-    if let value = mmkvWithGroup?.string(forKey: key) {
-        log.debug("Found value in group instance for key \(key): \(value)")
-        return value
-    } else {
-        log.error("No value found in group instance for key \(key)")
+  private func getValueFromMmkv(key: String) -> String? {
+    guard let value = mmkv.string(forKey: key) else {
+      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "No value found in group instance for key \(key)"))
+      return nil
     }
 
-    // Try getting from non-group instance
-    if let value = mmkvNoGroup?.string(forKey: key) {
-        log.debug("Found value in non-group instance for key \(key): \(value)")
-        return value
-    } else {
-        log.error("No value found in non-group instance for key \(key)")
-    }
-
-    log.error("No value found in either MMKV instance for key \(key)")
-    return nil
+    return value
+  }
 }

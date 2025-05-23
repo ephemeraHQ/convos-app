@@ -11,8 +11,8 @@ final class NotificationService: UNNotificationServiceExtension {
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
-        log.debug("didReceive called for request ID: \(request.identifier)")
-        log.debug("Full UNNotificationRequest content:\n\(request.content.description)")
+        SentryManager.shared.startSentry()
+        SentryManager.shared.addBreadcrumb("Received a new notification")
 
         self.contentHandler = contentHandler
         self.bestAttempt = (request.content.mutableCopy() as? UNMutableNotificationContent)
@@ -22,29 +22,28 @@ final class NotificationService: UNNotificationServiceExtension {
 
     // Main asynchronous processing logic
     private func handleNotificationAsync(request: UNNotificationRequest) {
+        SentryManager.shared.addBreadcrumb("handleNotificationAsync called")
         guard let currentBestAttempt = bestAttempt else {
-            log.error("Failed to get mutable copy of notification content")
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to get mutable copy of notification content"))
             contentHandler?(request.content)
             return
         }
 
         // Ensure userInfo is not nil and can be cast to [String: Any]
         guard let userInfo = request.content.userInfo as? [String: Any] else {
-            log.error(
-                "Could not extract userInfo as [String: Any] from notification content or userInfo is nil."
-            )
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Could not extract userInfo as [String: Any] from notification content or userInfo is nil."))
             contentHandler?(request.content)
             return
         }
 
-        // Log the received userInfo for debugging
-        log.debug("Received notification userInfo: \(getPrettyPrintString(dictionary: userInfo))")
+        SentryManager.shared.addBreadcrumb("Successfully extracted userInfo")
 
         let encryptedMessage: String
         let topic: String
         let ethAddress: String
 
         do {
+            SentryManager.shared.addBreadcrumb("Attempting to decode notification payload")
             // Convert the userInfo dictionary to Data
             let jsonDataForDecoding = try JSONSerialization.data(
                 withJSONObject: userInfo, options: [])
@@ -56,93 +55,81 @@ final class NotificationService: UNNotificationServiceExtension {
             encryptedMessage = payload.body.encryptedMessage
             topic = payload.body.contentTopic
             ethAddress = payload.body.ethAddress.lowercased()
+            SentryManager.shared.addBreadcrumb("Successfully decoded notification payload")
 
         } catch {
             // Log detailed error information if decoding fails
-            log.error("Failed to decode notification payload or extract required fields:", error)
+            SentryManager.shared.trackError(error, extras: ["info": "Failed to decode notification payload or extract required fields"])
             contentHandler?(request.content)
             return
         }
 
         // Make sure we have a valid ethAddress
         guard !ethAddress.isEmpty else {
-            log.error("ethAddress is empty after decoding, cannot proceed.")
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "ethAddress is empty after decoding, cannot proceed."))
             contentHandler?(request.content)
             return
         }
+        SentryManager.shared.addBreadcrumb("ethAddress is valid")
 
         Task {
+            SentryManager.shared.addBreadcrumb("Starting Task for XMTP processing")
             do {
+                SentryManager.shared.addBreadcrumb("Attempting to create XMTP client for address: \(ethAddress)")
                 // Note: Building the client might be resource-intensive for an NSE. Monitor performance.
-              guard let client = await getXmtpClient(ethAddress: ethAddress) else {
-                log.error("Failed building XMTP Client")
-                contentHandler?(currentBestAttempt)
-                return
-              }
-
-              Client.register(codec: ReplyCodec())
-              Client.register(codec: ReactionCodec())
-              Client.register(codec: ReactionV2Codec())
-              Client.register(codec: AttachmentCodec())
-              Client.register(codec: RemoteAttachmentCodec())
+              let client = try await Client.client(for: ethAddress)
+                SentryManager.shared.addBreadcrumb("Successfully created XMTP client")
 
                 // --- 4. Decrypt Message ---
-                log.debug("Attempting to find conversation by topic: ", topic)
+                SentryManager.shared.addBreadcrumb("Attempting to find conversation by topic: \(topic)")
 
                 guard
                     let conversation = try await client.conversations.findConversationByTopic(
                         topic: topic)
                 else {
-                    log.error("Conversation not found for topic: ", topic)
+                    SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Conversation not found for topic: \(topic)"))
                     contentHandler?(currentBestAttempt)
                     return
                 }
+                SentryManager.shared.addBreadcrumb("Conversation found for topic: \(topic)")
 
-                log.debug("Conversation found. Syncing...")
+                SentryManager.shared.addBreadcrumb("Attempting to sync conversation")
                 try await conversation.sync()
+                SentryManager.shared.addBreadcrumb("Successfully synced conversation")
 
                 guard let messageBytes = Data(base64Encoded: Data(encryptedMessage.utf8)) else {
-                    log.error("Failed to decode base64 encryptedMessage payload")
+                    SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to decode base64 encryptedMessage payload"))
                     contentHandler?(request.content); return
                 }
-
-                log.debug("Decoded message bytes.")
+                SentryManager.shared.addBreadcrumb("Successfully decoded base64 encryptedMessage payload")
 
                 guard
                     let decodedMessage = try await conversation.processMessage(
                         messageBytes: messageBytes)
                 else {
-                    log.error("Failed to process message bytes for topic: ", topic)
+                    SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to process message bytes for topic: \(topic)"))
                     contentHandler?(currentBestAttempt)
                     return
                 }
+                SentryManager.shared.addBreadcrumb("Successfully processed message bytes")
 
               let notificationFactory = PushNotificationContentFactory(client: client)
+              SentryManager.shared.addBreadcrumb("Attempting to create notification content from decoded message")
               guard let notification = try await notificationFactory.notification(from: request.content,
                                                                                   with: decodedMessage,
                                                                                   in: conversation) else {
-                log.error("Failed getting notification from decoded message")
+                SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed getting notification from decoded message for topic: \(topic)"))
                 contentHandler?(currentBestAttempt)
                 return
               }
+              SentryManager.shared.addBreadcrumb("Successfully created notification content")
 
               prettyPrint(dictionary: notification.userInfo)
-              log.debug("Current notification content: ", notification.description)
 
-              log.debug(
-                "Delivering decrypted notification with title:",
-                "'\(notification.title)'",
-                "and body:", "'\(notification.body)'")
-              log.debug(
-                "Final notification content: ",
-                String(describing: notification.debugDescription))
-              log.debug(
-                "Final notification content.userInfo: ",
-                getPrettyPrintString(dictionary: notification.userInfo))
-
+              SentryManager.shared.addBreadcrumb("Delivering decrypted notification with title: '\(notification.title)' and body: '\(notification.body)'")
               contentHandler?(notification)
             } catch {
-                log.error("Error during XMTP client build or message processing: ", error: error)
+                SentryManager.shared.trackError(error, extras: ["info": "Failed to decode notification payload or extract required fields"])
                 contentHandler?(currentBestAttempt)
             }
         }
@@ -150,7 +137,8 @@ final class NotificationService: UNNotificationServiceExtension {
     }
 
     override func serviceExtensionTimeWillExpire() {
-        log.warn("serviceExtensionTimeWillExpire called")
+        SentryManager.shared.addBreadcrumb("serviceExtensionTimeWillExpire called")
+        SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "serviceExtensionTimeWillExpire called"))
         if let contentHandler = contentHandler, let bestAttempt = bestAttempt {
             contentHandler(bestAttempt)
         }
