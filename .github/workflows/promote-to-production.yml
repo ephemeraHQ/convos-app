@@ -5,7 +5,7 @@ on:
 
 # Ensure only one promotion workflow runs at a time
 concurrency:
-  group: "promote-to-production"
+  group: "promote-to-production-${{ github.ref_name }}"
   cancel-in-progress: false
 
 permissions:
@@ -15,12 +15,12 @@ jobs:
   merge-to-production:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source branch
+      - name: Checkout source branch (the one being promoted)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }} # Use the ref from which the workflow is run
-          token: ${{ secrets.PAT_GITHUB }}
-          fetch-depth: 0
+          ref: ${{ github.ref }} # Use the ref from which the workflow is run (e.g., main)
+          token: ${{ secrets.PAT_GITHUB }} # Since production is protected, we need a PAT to push to it
+          fetch-depth: 0 # Fetch history to read package.json
 
       - name: Configure Git
         run: |
@@ -29,7 +29,14 @@ jobs:
 
       - name: Merge source branch into production
         run: |
+          COMMIT_MSG="Merge branch '${{ github.ref_name }}' into production"
+
+          # Checkout production branch from remote
           git fetch origin production
           git checkout -B production origin/production
-          git merge ${{ github.ref_name }} -Xours --no-ff --no-edit -m "Merge branch '${{ github.ref_name }}' into production via workflow_dispatch"
+
+          # Merge the source branch (already checked out by the first step, HEAD points to it)
+          # ${{ github.ref_name }} is the short name of the branch, e.g., "main"
+          git merge ${{ github.ref_name }} -Xtheirs --no-ff --no-edit -m "$COMMIT_MSG"
+
           git push origin production
