@@ -22,85 +22,14 @@ jobs:
           token: ${{ secrets.PAT_GITHUB }} # Since production is protected, we need a PAT to push to it
           fetch-depth: 0 # Fetch history to read package.json
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: "package.json" # Reads from "engines" field in package.json
-
-      - name: Get App Version from package.json
-        id: package_version
-        run: echo "app_version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: yarn
-          eas-cache: true
-          patch-watchers: true
-
-      - name: Get next build number
-        id: build_number
-        run: |
-          echo "Fetching build number for iOS production profile..."
-          # Run the EAS command and capture its output and exit code
-          EAS_OUTPUT=$(eas build:version:get --profile=production --platform=ios)
-          EAS_EXIT_CODE=$?
-          echo "--- EAS CLI Full Output (Exit Code: $EAS_EXIT_CODE) ---"
-          echo "$EAS_OUTPUT"
-          echo "--- End EAS CLI Full Output ---"
-
-          CURRENT_BUILD=""
-          # Check if EAS command was successful and output is not empty
-          if [ $EAS_EXIT_CODE -eq 0 ] && [ -n "$EAS_OUTPUT" ]; then
-            # Attempt to parse iOS build number
-            # Use set +e temporarily if we want to check grep's success without exiting the script due to set -e
-            set +e # Disable exit on error for this specific parsing block
-            IOS_BUILD_LINE=$(echo "$EAS_OUTPUT" | grep 'iOS buildNumber -')
-            GREP_EXIT_CODE=$?
-            set -e # Re-enable exit on error
-
-            echo "Grep exit code for iOS line: $GREP_EXIT_CODE"
-            echo "Line matched by grep for iOS: '$IOS_BUILD_LINE'"
-
-            if [ $GREP_EXIT_CODE -eq 0 ] && [ -n "$IOS_BUILD_LINE" ]; then
-              CURRENT_BUILD=$(echo "$IOS_BUILD_LINE" | awk '{print $4}')
-              echo "Parsed CURRENT_BUILD from iOS line: '$CURRENT_BUILD'"
-            else
-              echo "Could not find 'iOS buildNumber -' line in EAS output, or the line was empty."
-            fi
-          else
-            echo "EAS command failed (Exit Code: $EAS_EXIT_CODE) or produced no output."
-          fi
-
-          # Validate CURRENT_BUILD and default to 0 if not a number or empty
-          if ! [[ "$CURRENT_BUILD" =~ ^[0-9]+$ ]]; then
-            echo "CURRENT_BUILD ('$CURRENT_BUILD') is not a valid number. Setting to 0 for safety."
-            CURRENT_BUILD=0
-          elif [ -z "$CURRENT_BUILD" ]; then
-             echo "CURRENT_BUILD is empty after parsing. Setting to 0 for safety."
-             CURRENT_BUILD=0
-          fi
-
-          NEXT_BUILD=$((CURRENT_BUILD + 1))
-          echo "Final CURRENT_BUILD used for increment: $CURRENT_BUILD"
-          echo "Calculated NEXT_BUILD: $NEXT_BUILD"
-          echo "build_number=$NEXT_BUILD" >> $GITHUB_OUTPUT
-
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Merge source branch into production
-        env:
-          APP_VERSION: ${{ steps.package_version.outputs.app_version }}
-          BUILD_NUMBER: ${{ steps.build_number.outputs.build_number }}
         run: |
-          echo "App Version: $APP_VERSION"
-          echo "Build Number: $BUILD_NUMBER"
-          COMMIT_MSG="Merge branch '${{ github.ref_name }}' into production. v${APP_VERSION} ($BUILD_NUMBER)"
+          COMMIT_MSG="Merge branch '${{ github.ref_name }}' into production"
 
           # Checkout production branch from remote
           git fetch origin production
