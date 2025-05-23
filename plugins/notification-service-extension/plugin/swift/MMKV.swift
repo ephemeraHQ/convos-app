@@ -1,6 +1,5 @@
 import Foundation
 import MMKV
-import XMTP
 
 class MMKVHelper {
   private let mmkv: MMKV
@@ -8,9 +7,8 @@ class MMKVHelper {
 
   private let databaseKeyPrefix = "BACKUP_XMTP_KEY_"
 
-  init?(environment: XMTP.XMTPEnvironment,
-        appGroupDirectoryURL: URL) {
-    let bundleId = Bundle.mainAppBundleId(for: environment)
+  init?(appGroupDirectoryURL: URL) {
+    let bundleId = Bundle.mainAppBundleId()
     let groupDir = appGroupDirectoryURL.path
 
     MMKV.initialize(rootDir: nil, groupDir: groupDir, logLevel: MMKVLogLevel.warning)
@@ -18,6 +16,7 @@ class MMKVHelper {
     guard let mmkv = MMKV(mmapID: bundleId,
                           cryptKey: nil,
                           mode: MMKVMode.multiProcess) else {
+      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "Failed to initialize MMKV with mmapID: \(bundleId)"))
       return nil
     }
 
@@ -30,7 +29,7 @@ class MMKVHelper {
 
   private func getValueFromMmkv(key: String) -> String? {
     guard let value = mmkv.string(forKey: key) else {
-      SentryManager.shared.trackMessage("MMKVHelper: No value found in group instance for key \(key)")
+      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "No value found in group instance for key \(key)"))
       return nil
     }
 

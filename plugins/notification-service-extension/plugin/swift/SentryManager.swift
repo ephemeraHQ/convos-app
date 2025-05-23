@@ -4,12 +4,12 @@ import XMTP
 
 final class SentryManager {
   static let shared = SentryManager()
-
   private init() {
-      let sentryEnv = XMTP.Client.xmtpEnvironment.rawValue
+      log.debug("[Sentry] Initializing Sentry")
+      let sentryEnv = Bundle.getEnv()
       SentrySDK.start { options in
-        options.dsn = "https://o4504757119680512.ingest.us.sentry.io/4509079521067008"
-        options.environment = sentryEnv
+        options.dsn = "https://dc072f632e53ca5d87b47120ad0a2e31@o4504757119680512.ingest.us.sentry.io/4509079521067008"
+        options.environment = sentryEnv.rawValue
         options.debug = false
       }
   }
@@ -21,29 +21,27 @@ final class SentryManager {
       var extrasWithMessage: [String: Any] = ["where": "NOTIFICATION_EXTENSION_IOS"]
       extras?.forEach { extrasWithMessage[$0] = $1 }
       scope.setExtras(extrasWithMessage)
-      print(message)
-      print(extrasWithMessage)
+      log.debug("[Sentry] Tracking message: \(message), Message extras: \(extrasWithMessage)")
     }
     SentrySDK.flush(timeout: 3)
   }
 
   func trackError(_ error: Error, extras: [String: Any]? = nil) {
-    print([error, extras ?? [:]])
+    log.debug("[Sentry] Tracking error with context:", [error, extras ?? [:]])
     SentrySDK.capture(error: error) { scope in
       var extrasWithMessage: [String: Any] = [:]
       extras?.forEach { extrasWithMessage[$0] = $1 }
       scope.setExtras(extrasWithMessage)
-      print(error)
-      print(extrasWithMessage)
+      log.debug("[Sentry] Error details and extras:", [error, extrasWithMessage])
     }
     SentrySDK.flush(timeout: 3)
   }
 
   func addBreadcrumb(_ message: String) {
-    print(message)
+    log.debug("[Sentry] Adding breadcrumb: \(message)")
     let crumb = Breadcrumb()
     crumb.level = .info
-    crumb.category = "extension"
+    crumb.category = "ios-notification-service-extension"
     crumb.message = message
     SentrySDK.addBreadcrumb(crumb)
   }

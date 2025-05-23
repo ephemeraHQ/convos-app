@@ -21,13 +21,14 @@ class ProfileNameResolver {
 
     let apiBaseURL: String
 
-    static var shared: ProfileNameResolver = .init(environment: XMTP.Client.xmtpEnvironment)
+    static var shared: ProfileNameResolver = .init()
 
-    private init(environment: XMTPEnvironment) {
+    private init() {
+        let environment = Bundle.getEnv()
         switch environment {
         case .production:
             apiBaseURL = "https://api.convos-prod.convos-api.xyz"
-        case .local, .dev:
+        case .development, .preview:
             apiBaseURL = "https://api.convos-dev.convos-api.xyz"
         }
     }
@@ -38,21 +39,19 @@ class ProfileNameResolver {
                 string:
                     "\(apiBaseURL)/api/v1/profiles/public/xmtpId/\(inboxId)"
             ) else {
-                SentryManager.shared.trackMessage("Failed to create API URL for inboxId \(inboxId)")
+                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to create API URL for inboxId \(inboxId)"))
                 return nil
             }
 
             let (data, response) = try await URLSession.shared.data(from: url)
 
             guard let httpResponse = response as? HTTPURLResponse else {
-                SentryManager.shared.trackMessage("Failed to get HTTP response for inboxId \(inboxId)")
+                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to get HTTP response for inboxId \(inboxId)"))
                 return nil
             }
 
             guard httpResponse.statusCode == 200 else {
-                SentryManager.shared.trackMessage(
-                    "Failed to fetch username for inboxId \(inboxId). HTTP Response: \(httpResponse)"
-                )
+                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to fetch username for inboxId \(inboxId). HTTP Status Code: \(httpResponse.statusCode)"))
                 return nil
             }
 

@@ -10,7 +10,7 @@ fileprivate enum KeychainConstants {
     ) {
       appGroupIdentifier = appGroupIdentifierFromPlist
     } else {
-      log.debug("Failed getting app group ID from plist, using backup")
+      SentryManager.shared.trackError(ErrorFactory.create(domain: "XmtpClient", description: "Failed getting app group ID from plist, using backup"))
 
       switch environment {
       case .dev:
@@ -51,8 +51,7 @@ extension XMTP.Client {
 //      throw ClientInitializationError.noEncryptionKey
 //    }
 
-    guard let mmkvHelper = MMKVHelper(environment: xmtpEnv,
-                                      appGroupDirectoryURL: groupUrl) else {
+    guard let mmkvHelper = MMKVHelper(appGroupDirectoryURL: groupUrl) else {
       throw ClientInitializationError.failedInitializingMMKV
     }
     guard let encryptionKeyString = mmkvHelper.getDatabaseKey(for: ethAddress),
@@ -78,16 +77,21 @@ extension XMTP.Client {
   }
 
   static var xmtpEnvironment: XMTP.XMTPEnvironment {
-    let env = Bundle.getInfoPlistValue(for: "XmtpEnvironment")
+    let env = Bundle.getEnv()
 
-    switch env {
-    case "dev":
-        return .dev
-    case "production":
-        return .production
-    default:
-        return .local
+    let xmtpEnv: XMTP.XMTPEnvironment = switch env {
+      case .development:
+        .local
+      case .preview:
+        .dev
+      case .production:
+        .production
+      default:
+        .local
     }
+    
+    SentryManager.shared.addBreadcrumb("Using XMTP Environment: \(xmtpEnv.rawValue)")
+    return xmtpEnv
   }
 
 }
