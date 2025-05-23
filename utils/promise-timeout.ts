@@ -1,3 +1,5 @@
+import { PromiseTimeoutError } from "@/utils/error"
+
 export function withTimeout<T>(args: {
   promise: Promise<T>
   timeoutMs: number
@@ -14,7 +16,11 @@ export function withTimeout<T>(args: {
     timeoutId = setTimeout(() => {
       if (isSettled) return
       isSettled = true
-      reject(new Error(errorMessage))
+      reject(
+        new PromiseTimeoutError({
+          error: new Error(errorMessage),
+        }),
+      )
     }, timeoutMs)
 
     originalPromise

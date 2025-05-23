@@ -57,7 +57,7 @@ export async function wrapXmtpCallWithDuration<T>(
     const { promise: timedPromise } = withTimeout({
       promise: xmtpSpanCall,
       timeoutMs: 15000, // Timeout remains as a safety net (wall-clock time)
-      errorMessage: `Operation "${xmtpFunctionName}" timed out after 15 seconds`,
+      errorMessage: `Operation [${operationId}] "${xmtpFunctionName}" timed out after 15 seconds`,
     })
 
     // // NOW add the operation to the store

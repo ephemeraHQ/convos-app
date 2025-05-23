@@ -112,7 +112,7 @@ export const reactQueryClient = new QueryClient({
       staleTime: DEFAULT_STALE_TIME,
 
       // Retry max 3 times
-      retry: (failureCount, error) => {
+      retry: (failureCount) => {
         if (failureCount >= 3) {
           return false
         }
