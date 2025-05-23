@@ -5,7 +5,7 @@ import { config } from "@/config"
 import { useAppStore } from "@/stores/app.store"
 import { persistLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
-import { DEFAULT_GC_TIME } from "@/utils/react-query/react-query.constants"
+import { DEFAULT_GC_TIME_MS } from "@/utils/react-query/react-query.constants"
 import { reactQueryPersister } from "./react-query-persister"
 
 export const ReactQueryProvider = memo(function ReactQueryProvider(props: {
@@ -38,7 +38,7 @@ function PersistQueryClientProvider(props: { children: React.ReactNode }) {
       client={reactQueryClient}
       persistOptions={{
         persister: reactQueryPersister,
-        maxAge: DEFAULT_GC_TIME,
+        maxAge: DEFAULT_GC_TIME_MS,
         buster: "v5", // Changing this will force a new cache
         dehydrateOptions: {
           // Determines which queries should be persisted to storage

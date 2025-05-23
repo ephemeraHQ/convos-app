@@ -12,8 +12,10 @@ import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
+import { convertNanosecondsToMilliseconds } from "@/utils/date"
 import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { DEFAULT_GC_TIME_MS } from "@/utils/react-query/react-query.constants"
 import { refetchQueryIfNotAlreadyFetching } from "@/utils/react-query/react-query.helpers"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import {
@@ -66,6 +68,8 @@ type IInfiniteMessagesPageParam = {
 const conversationMessagesInfiniteQueryFn = async (
   args: IArgs & { pageParam: IInfiniteMessagesPageParam },
 ) => {
+  const timestampBeforeXmtpFetchMs = Date.now()
+
   const { clientInboxId, xmtpConversationId, pageParam, limit: argLimit } = args
   const { cursorNs, direction } = pageParam || {
     cursorNs: undefined,
@@ -100,9 +104,11 @@ const conversationMessagesInfiniteQueryFn = async (
 
   const priotorizeServerResponse =
     disappearingMessagesSettings?.retentionDurationInNs &&
-    disappearingMessagesSettings?.retentionDurationInNs > 0
-
-  const timestampBeforeXmtpFetchMs = Date.now()
+    disappearingMessagesSettings?.retentionDurationInNs > 0 &&
+    // Don't priotorize server response if the retention duration is less than the default GC time
+    // Messages will get deleted from the cache after the default GC time anyway
+    convertNanosecondsToMilliseconds(disappearingMessagesSettings?.retentionDurationInNs) <=
+      DEFAULT_GC_TIME_MS
 
   await syncOneXmtpConversation({
     clientInboxId,
@@ -144,7 +150,8 @@ const conversationMessagesInfiniteQueryFn = async (
               xmtpConversationId,
             })
             if (cachedMsgData) {
-              if (cachedMsgData.sentMs >= timestampBeforeXmtpFetchMs) {
+              const OPTIMISTIC_GRACE_PERIOD = 5000 // 5 seconds
+              if (cachedMsgData.sentMs >= timestampBeforeXmtpFetchMs - OPTIMISTIC_GRACE_PERIOD) {
                 messagesToConsider.push(cachedMsgData)
               } else if (cachedMsgData.sentMs < timestampBeforeXmtpFetchMs) {
                 queryLogger.debug(

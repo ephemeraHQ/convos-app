@@ -3,7 +3,7 @@ import { AxiosError } from "axios"
 import { captureError } from "@/utils/capture-error"
 import { ReactQueryError } from "@/utils/error"
 import { queryLogger } from "@/utils/logger/logger"
-import { DEFAULT_GC_TIME, DEFAULT_STALE_TIME } from "./react-query.constants"
+import { DEFAULT_GC_TIME_MS, DEFAULT_STALE_TIME_MS } from "./react-query.constants"
 
 const queryStartTimes = new Map<string, number>()
 
@@ -108,8 +108,8 @@ export const reactQueryClient = new QueryClient({
 
   defaultOptions: {
     queries: {
-      gcTime: DEFAULT_GC_TIME,
-      staleTime: DEFAULT_STALE_TIME,
+      gcTime: DEFAULT_GC_TIME_MS,
+      staleTime: DEFAULT_STALE_TIME_MS,
 
       // Retry max 3 times
       retry: (failureCount) => {
