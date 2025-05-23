@@ -27,6 +27,9 @@ fileprivate enum KeychainConstants {
 }
 
 extension XMTP.Client {
+  private static var clientCache: [String: XMTP.Client] = [:]
+  private static let cacheQueue = DispatchQueue(label: "com.xmtp.client.cacheQueue", attributes: .concurrent)
+
   enum ClientInitializationError: Error {
     case noEncryptionKey,
          appGroupContainerNotFound,
@@ -34,6 +37,14 @@ extension XMTP.Client {
   }
 
   static func client(for ethAddress: String) async throws -> XMTP.Client {
+    // Check cache first
+    if let cachedClient = cacheQueue.sync(execute: { self.clientCache[ethAddress] }) {
+      SentryManager.shared.addBreadcrumb("XMTP client cache hit for \(ethAddress)")
+      return cachedClient
+    }
+
+    SentryManager.shared.addBreadcrumb("XMTP client cache miss for \(ethAddress), creating new client.")
+
     let xmtpEnv = XMTP.Client.xmtpEnvironment
     let groupId = KeychainConstants.appGroupIdentifier(for: xmtpEnv)
     let groupUrl = FileManager.default.containerURL(
@@ -73,6 +84,12 @@ extension XMTP.Client {
     Client.register(codec: ReactionV2Codec())
     Client.register(codec: AttachmentCodec())
     Client.register(codec: RemoteAttachmentCodec())
+
+    // Store the newly created client in the cache
+    cacheQueue.async(flags: .barrier) {
+        self.clientCache[ethAddress] = client
+    }
+
     return client
   }
 

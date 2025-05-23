@@ -9,6 +9,7 @@ import {
 } from "@/features/notifications/notifications-assertions"
 import {
   addNotificationsToConversationCacheData,
+  getNotificationId,
   getNotificationsForConversation,
 } from "@/features/notifications/notifications.service"
 import { useNotificationsStore } from "@/features/notifications/notifications.store"
@@ -33,8 +34,10 @@ export function useNotificationListeners() {
     Notifications.getLastNotificationResponseAsync().then((response) => {
       if (response) {
         const lastHandledNotificationId = useNotificationsStore.getState().lastHandledNotificationId
-        if (lastHandledNotificationId !== response.notification.request.identifier) {
-          notificationsLogger.debug(`Handling last notification:`, response)
+        if (lastHandledNotificationId !== getNotificationId(response.notification)) {
+          notificationsLogger.debug(
+            `Handling last notification ${getNotificationId(response.notification)}`,
+          )
           handleNotification(response).catch(captureError)
         }
       }
@@ -50,7 +53,9 @@ export function useNotificationListeners() {
     // Listen for notification taps while app is running
     notificationTapListenerRef.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
-        notificationsLogger.debug(`Handling notification tap...`)
+        notificationsLogger.debug(
+          `Handling tap notification ${getNotificationId(response.notification)}`,
+        )
         handleNotification(response).catch(captureError)
       },
     )
@@ -87,7 +92,7 @@ async function handleNotification(response: Notifications.NotificationResponse) 
 
     useNotificationsStore
       .getState()
-      .actions.setLastHandledNotificationId(tappedNotification.request.identifier)
+      .actions.setLastHandledNotificationId(getNotificationId(tappedNotification))
 
     // Sometimes we tap on a notification while the app is killed and this is triggered
     // before we finished hydrating auth so we push to a screen that isn't in the navigator yet
@@ -113,7 +118,9 @@ async function handleNotification(response: Notifications.NotificationResponse) 
     }
 
     if (isNotificationExpoNewMessageNotification(tappedNotification)) {
-      notificationsLogger.debug(`Handling Expo new message notification...`)
+      notificationsLogger.debug(
+        `Handling Expo new message notification ${getNotificationId(tappedNotification)}`,
+      )
 
       const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
       const tappedXmtpConversationId = getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)

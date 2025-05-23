@@ -1,7 +1,7 @@
 import React, { memo } from "react"
-import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
+import { Loader } from "@/design-system/loader"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import {
@@ -50,7 +50,7 @@ export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewP
     <VStack style={$globalStyles.flex1}>
       {isLoading ? (
         <Center style={$globalStyles.flex1}>
-          <ActivityIndicator />
+          <Loader />
         </Center>
       ) : !conversation ? (
         <Center style={$globalStyles.flex1}>

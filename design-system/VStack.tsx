@@ -1,14 +1,18 @@
 import React, { ForwardedRef, forwardRef, memo, ReactNode } from "react"
 import { View, ViewProps } from "react-native"
 import Animated, { AnimatedProps } from "react-native-reanimated"
+import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
 
 export type IVStackProps = ViewProps & {
   separator?: ReactNode
+  safeAreaInsets?: ExtendedEdge[]
 }
 
 export const VStack = memo(
   forwardRef((props: IVStackProps, ref: ForwardedRef<View>) => {
-    const { separator, children, ...restProps } = props
+    const { separator, children, safeAreaInsets, ...restProps } = props
+
+    const safeAreaInsetsStyle = useSafeAreaInsetsStyle(safeAreaInsets ?? [])
 
     const renderChildren = React.useMemo(() => {
       const childrenArray = React.Children.toArray(children)
@@ -28,6 +32,7 @@ export const VStack = memo(
           {
             flexDirection: "column",
           },
+          safeAreaInsetsStyle,
           props.style,
         ]}
       >

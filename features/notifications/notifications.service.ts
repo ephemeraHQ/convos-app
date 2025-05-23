@@ -148,3 +148,7 @@ export async function addNotificationsToConversationCacheData(args: {
     )
   }
 }
+
+export function getNotificationId(notification: Notifications.Notification) {
+  return notification.request.identifier
+}

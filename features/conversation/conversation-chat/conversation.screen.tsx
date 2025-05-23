@@ -4,8 +4,9 @@ import React, { memo, useEffect } from "react"
 import { GlobalMediaViewerPortal } from "@/components/global-media-viewer/global-media-viewer"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
-import { ActivityIndicator } from "@/design-system/activity-indicator"
 import { Center } from "@/design-system/Center"
+import { EmptyState } from "@/design-system/empty-state"
+import { Loader } from "@/design-system/loader"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationComposer } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer"
@@ -59,6 +60,9 @@ export const ConversationScreen = memo(function ConversationScreen(
 })
 
 const Content = memo(function Content() {
+  useConversationScreenHeader()
+  useClearNotificationsForConversationOnMount()
+
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const isCreatingNewConversation = useConversationStoreContext(
@@ -73,21 +77,21 @@ const Content = memo(function Content() {
     }),
   })
 
-  useConversationScreenHeader()
-
-  useEffect(() => {
-    if (xmtpConversationId) {
-      clearNotificationsForConversation({
-        xmtpConversationId,
-        clientInboxId: currentSender.inboxId,
-      }).catch(captureError)
-    }
-  }, [xmtpConversationId, currentSender.inboxId])
-
   if (isLoadingConversation) {
     return (
       <Center style={$globalStyles.flex1}>
-        <ActivityIndicator />
+        <Loader />
+      </Center>
+    )
+  }
+
+  if (!conversation && !isCreatingNewConversation) {
+    return (
+      <Center safeAreaInsets={["bottom"]} style={{ ...$globalStyles.flex1 }}>
+        <EmptyState
+          title="Conversation not found"
+          description="If you think this is an error, please contact us."
+        />
       </Center>
     )
   }
@@ -96,7 +100,6 @@ const Content = memo(function Content() {
     <>
       <VStack style={$globalStyles.flex1}>
         {isCreatingNewConversation && <ConversationCreateSearchInput />}
-
         <VStack style={$globalStyles.flex1}>
           {isCreatingNewConversation && <ConversationCreateListResults />}
           {conversation ? (
@@ -119,3 +122,17 @@ const Content = memo(function Content() {
     </>
   )
 })
+
+function useClearNotificationsForConversationOnMount() {
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+
+  useEffect(() => {
+    if (xmtpConversationId) {
+      clearNotificationsForConversation({
+        xmtpConversationId,
+        clientInboxId: currentSender.inboxId,
+      }).catch(captureError)
+    }
+  }, [xmtpConversationId, currentSender.inboxId])
+}
