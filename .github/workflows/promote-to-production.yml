@@ -3,40 +3,96 @@ name: Promote to Production
 on:
   workflow_dispatch:
 
-# Ensure only one promotion workflow runs at a time
-concurrency:
-  group: "promote-to-production-${{ github.ref_name }}"
-  cancel-in-progress: false
-
 permissions:
-  contents: write # Needed to push the merge commit
+  contents: write
 
 jobs:
-  merge-to-production:
+  prepare_and_merge:
+    name: Promote iOS Production Build
     runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.tag_and_commit.outputs.new_tag }}
+      app_version: ${{ steps.read_package_version.outputs.app_version }}
+      build_number: ${{ steps.update_versions_json.outputs.new_build_number }}
+
     steps:
-      - name: Checkout source branch (the one being promoted)
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }} # Use the ref from which the workflow is run (e.g., main)
-          token: ${{ secrets.PAT_GITHUB }} # Since production is protected, we need a PAT to push to it
-          fetch-depth: 0 # Fetch history to read package.json
+          ref: main
+          token: ${{ secrets.PAT_GITHUB }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+        env:
+          SKIP_YARN_COREPACK_CHECK: "1"
+      - run: corepack enable
+      - run: yarn install --immutable
 
       - name: Configure Git
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge source branch into production
+      - name: Read App Version from package.json
+        id: read_package_version
         run: |
-          COMMIT_MSG="Merge branch '${{ github.ref_name }}' into production"
+          APP_VERSION=$(node -p "require('./package.json').version")
+          if [ -z "$APP_VERSION" ]; then
+            echo "Error: Could not read version from package.json"
+            exit 1
+          fi
+          echo "App Version from package.json: $APP_VERSION"
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
 
-          # Checkout production branch from remote
+      - name: Update iOS Production Build Number in versions.json
+        id: update_versions_json
+        run: |
+          node scripts/update-versions.js --platform=ios --env=production
+          # The script itself uses `::set-output name=new_build_number::VALUE`
+
+      - name: Update app.config.ts with New iOS Production Build Number
+        id: update_app_config
+        run: |
+          NEW_BUILD_NUM_FROM_VERSIONS_JSON=${{ steps.update_versions_json.outputs.new_build_number }}
+          if [ -z "$NEW_BUILD_NUM_FROM_VERSIONS_JSON" ]; then
+            echo "Error: Failed to get new_build_number from update_versions_json step."
+            exit 1
+          fi
+          echo "New iOS Production build number from versions.json is: $NEW_BUILD_NUM_FROM_VERSIONS_JSON"
+          node scripts/update-app-config-buildnum.js --platform=ios --env=production --buildNumber=$NEW_BUILD_NUM_FROM_VERSIONS_JSON
+
+      - name: Commit Changes and Create Tag for iOS Production
+        id: tag_and_commit
+        run: |
+          APP_VERSION=${{ steps.read_package_version.outputs.app_version }}
+          NEW_BUILD_NUMBER=${{ steps.update_versions_json.outputs.new_build_number }}
+
+          git add versions.json
+          git add app.config.ts
+
+          COMMIT_MSG="chore(release): Increment iOS Production Build to $NEW_BUILD_NUMBER for App Version $APP_VERSION"
+          if git diff --staged --quiet; then
+            echo "No changes to commit for build number."
+          else
+            git commit -m "$COMMIT_MSG"
+          fi
+          git push origin main
+
+          NEW_TAG="v${APP_VERSION}-ios-build.${NEW_BUILD_NUMBER}"
+          echo "Creating and pushing tag $NEW_TAG..."
+          git tag -a "$NEW_TAG" -m "Release App Version $APP_VERSION (iOS Production Build $NEW_BUILD_NUMBER)"
+          git push origin "$NEW_TAG"
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Merge main into production
+        run: |
+          echo "Merging main into production..."
           git fetch origin production
           git checkout -B production origin/production
-
-          # Merge the source branch (already checked out by the first step, HEAD points to it)
-          # ${{ github.ref_name }} is the short name of the branch, e.g., "main"
-          git merge ${{ github.ref_name }} -Xtheirs --no-ff --no-edit -m "$COMMIT_MSG"
-
+          git merge main -Xtheirs --no-ff -m "Merge branch 'main' into production for release ${{ steps.tag_and_commit.outputs.new_tag }}"
           git push origin production

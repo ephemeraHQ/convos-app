@@ -1,0 +1,24 @@
+{
+  "ios": {
+    "production": {
+      "buildNumber": 0 // TODO set the right version using eas:version:get (something like this)
+    },
+    "preview": {
+      "buildNumber": 0 // TODO set the right version using eas:version:get (something like this)
+    },
+    "development": {
+      "buildNumber": 0 // TODO set the right version using eas:version:get (something like this)
+    }
+  },
+  "android": {
+    "production": {
+      "buildCode": 0
+    },
+    "preview": {
+      "buildCode": 0
+    },
+    "development": {
+      "buildCode": 0
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { ExpoConfig } from "expo/config"
 import { version } from "./package.json"
+import { android as androidVersions, ios as iosVersions } from "./versions.json"
 
 type Environment = "development" | "preview" | "production"
 
@@ -12,6 +13,7 @@ type EnvironmentConfig = {
     bundleIdentifier: string
     associatedDomains: string[]
     googleServicesFile: string
+    buildNumber: string
     icon?: {
       dark: string
       light: string
@@ -21,6 +23,7 @@ type EnvironmentConfig = {
   android: {
     package: string
     googleServicesFile: string
+    versionCode: number
     adaptiveIcon: {
       foregroundImage: string
       backgroundColor: string
@@ -53,6 +56,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
         "webcredentials:*.preview.convos.org",
       ],
       googleServicesFile: "./google-services/google-services-ios-dev.plist",
+      buildNumber: String(iosVersions.development.buildNumber),
       icon: {
         dark: "./assets/icon-dark.png",
         light: "./assets/icon-light.png",
@@ -62,6 +66,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     android: {
       package: "com.convos.dev",
       googleServicesFile: "./google-services/google-services-android-dev.json",
+      versionCode: androidVersions.development.buildCode,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#FFFFFF",
@@ -83,6 +88,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
         "webcredentials:*.preview.convos.org",
       ],
       googleServicesFile: "./google-services/google-services-ios-preview.plist",
+      buildNumber: String(iosVersions.preview.buildNumber),
       icon: {
         dark: "./assets/icon-preview-dark.png",
         light: "./assets/icon-preview-dark.png",
@@ -92,6 +98,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     android: {
       package: "com.convos.preview",
       googleServicesFile: "./google-services/google-services-android-preview.json",
+      versionCode: androidVersions.preview.buildCode,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#FFFFFF",
@@ -112,6 +119,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
         "webcredentials:*.convos.org",
       ],
       googleServicesFile: "./google-services/google-services-ios-prod.plist",
+      buildNumber: String(iosVersions.production.buildNumber),
       icon: {
         dark: "./assets/icon-dark.png",
         light: "./assets/icon-light.png",
@@ -121,6 +129,7 @@ const settings: Record<Environment, EnvironmentConfig> = {
     android: {
       package: "com.convos.prod",
       googleServicesFile: "./google-services/google-services-android-prod.json",
+      versionCode: androidVersions.production.buildCode,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#FFFFFF",
@@ -146,7 +155,9 @@ export default () => {
     userInterfaceStyle: "automatic",
     version: version,
     assetBundlePatterns: ["**/*"],
-    runtimeVersion: version,
+    runtimeVersion: {
+      policy: "nativeVersion",
+    },
     updates: {
       url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
     },
@@ -159,6 +170,7 @@ export default () => {
     },
     ios: {
       bundleIdentifier: config.ios.bundleIdentifier,
+      buildNumber: config.ios.buildNumber,
       supportsTablet: true,
       associatedDomains: config.ios.associatedDomains,
       googleServicesFile: config.ios.googleServicesFile,
@@ -200,6 +212,7 @@ export default () => {
     },
     android: {
       package: config.android.package,
+      versionCode: config.android.versionCode,
       googleServicesFile: config.android.googleServicesFile,
       intentFilters: [
         {

@@ -1,51 +1,54 @@
+# .github/workflows/production-deployment.yml
 name: Production Deployment
 
 on:
   push:
-    branches:
-      - production # Triggers on push to the production branch
+    tags: # Trigger on new tags that match the pattern
+      - "v[0-9]+.[0-9]+.[0-9]+-build.[0-9]+" # e.g. v1.0.1-build.123
 
-# Ensure only one deployment workflow runs at a time for production
 concurrency:
-  group: "production-deployment"
-  cancel-in-progress: true # It's okay to cancel in-progress deployments if a newer commit comes in
+  group: "production-deployment-${{ github.ref }}"
+  cancel-in-progress: true
 
 permissions:
-  id-token: write # For EAS Build
-  contents: read # For checkout
+  id-token: write
+  contents: write # For GitHub Release creation
 
 jobs:
-  build-and-deploy:
+  build_and_deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout production branch
+      - name: Checkout code for the specific tag
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history to access parent commits
+          ref: ${{ github.ref }} # Checks out the specific tag that triggered the workflow
+          fetch-depth: 0 # For release notes
 
-      - name: Extract Meaningful Commit Messages
-        id: commit_messages
+      - name: Extract Version and Build Info from Tag
+        id: version_info
         run: |
-          # HEAD is the merge commit on the production branch
-          # HEAD^1 is the first parent (previous state of production)
-          # HEAD^2 is the second parent (tip of main that was merged)
-          # This command gets the subject of commits from main introduced in this merge
-          # It formats them as "- Subject" and handles multi-line messages for the output
-          # It also reverses the order to show oldest first, newest last.
-          MESSAGES=$(git log --pretty="format:- %s" HEAD^1..HEAD^2 --reverse)
-          if [ -z "$MESSAGES" ]; then
-            # If no distinct commits (e.g., main was already merged or only fast-forward if that was allowed)
-            # Fallback to the merge commit's subject
-            MESSAGES="Changes from merge: $(git log -1 --pretty=%s)"
-          fi
-          # Escape for multiline shell output to GITHUB_OUTPUT and EAS message
-          MESSAGES="${MESSAGES//'%'/'%25'}"
-          MESSAGES="${MESSAGES//$'\n'/'%0A'}" # For GITHUB_OUTPUT
-          MESSAGES="${MESSAGES//$'\r'/'%0D'}"
-          echo "formatted_messages<<EOF" >> $GITHUB_OUTPUT
-          echo "$MESSAGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          TAG_NAME="${{ github.ref_name }}" # e.g., v1.0.1-build.123
+          # Extract package version (e.g., 1.0.1)
+          APP_VERSION=$(echo "$TAG_NAME" | sed -n 's/^v\([0-9]*\.[0-9]*\.[0-9]*\)-build\.[0-9]*$/\1/p')
+          # Extract build number (e.g., 123)
+          BUILD_NUMBER=$(echo "$TAG_NAME" | sed -n 's/^v[0-9]*\.[0-9]*\.[0-9]*-build\.\([0-9]*\)$/\1/p')
 
+          if [ -z "$APP_VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
+            echo "Error: Could not parse APP_VERSION or BUILD_NUMBER from tag $TAG_NAME"
+            # Fallback to package.json version if parsing fails, though tag should be the source of truth here
+            APP_VERSION=$(node -p "require('./package.json').version")
+            echo "Fallback APP_VERSION: $APP_VERSION"
+            # Build number might be harder to get as a fallback without reading versions.json for the specific context
+          fi
+
+          echo "Release Tag: $TAG_NAME"
+          echo "App Version: $APP_VERSION"
+          echo "Build Number: $BUILD_NUMBER"
+          echo "release_tag=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+
+      # ... (Setup Node, Install Deps, Build Plugin - same as before) ...
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -59,7 +62,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-        # Need this here because the "Setup EAS" setup will execute npx expo config and will need the "build" folder of the plugin to be there
       - name: Build iOS notification extension plugin
         run: |
           yarn plugins:build:notification-service-extension
@@ -74,19 +76,28 @@ jobs:
           patch-watchers: true
 
       - name: Build and Submit iOS production
+        id: eas_build
+        env:
+          RELEASE_TAG_VAL: ${{ steps.version_info.outputs.release_tag }}
         run: |
-          echo "EAS Build Message Content:"
-          # For the actual EAS command, we need to replace %0A with actual newlines for readability if supported,
-          # or keep as a long string. EAS CLI message is a single string.
-          # Let's prepare a version for the CLI command.
-          CLI_MESSAGE=$(echo "${{ steps.commit_messages.outputs.formatted_messages }}" | sed 's/%0A/\n/g')
-          # Truncate if too long, EAS might have a limit (e.g. 250 chars, adjust as needed)
-          # This example truncates to 240 chars to be safe, adding "..."
-          MAX_LEN=240
-          if [ ${#CLI_MESSAGE} -gt $MAX_LEN ]; then
-            CLI_MESSAGE="$(echo "$CLI_MESSAGE" | cut -c 1-$((MAX_LEN-3)))..."
-          fi
-          echo "$CLI_MESSAGE"
-
-          # The EAS build will be associated with this specific commit.
+          CLI_MESSAGE="Production build for ${RELEASE_TAG_VAL}"
+          echo "EAS Build Message: $CLI_MESSAGE"
+          # EAS should pick up version from package.json and build number from app.config.ts
+          # which were set correctly by prepare-release.yml for this tag
           eas build --platform ios --profile production --non-interactive --auto-submit --message "$CLI_MESSAGE"
+          echo "EAS Build and Submission successful."
+
+      - name: Create GitHub Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.version_info.outputs.release_tag }}
+          APP_VERSION: ${{ steps.version_info.outputs.app_version }} # Just the semver part
+          BUILD_NUM: ${{ steps.version_info.outputs.build_number }}
+        run: |
+          echo "Creating GitHub Release for $RELEASE_TAG..."
+          gh release create "$RELEASE_TAG" \
+            --title "Release $APP_VERSION (Build $BUILD_NUM)" \
+            --generate-notes \
+            --target ${{ github.ref_name }} # Target the tag itself
+          echo "GitHub Release $RELEASE_TAG created successfully."
