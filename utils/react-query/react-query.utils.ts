@@ -2,15 +2,17 @@ import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { reactQueryPersistingStorage } from "../storage/storages"
 
-// Doing this because we onced added caller to the query key and we should never do that.
-type DisallowedKey = "caller"
-
-export function getReactQueryKey<T extends Record<string, string | undefined>>(
-  args: { baseStr: string } & { [K in Exclude<keyof T, DisallowedKey>]?: string },
+export function getReactQueryKey<ArgType extends { baseStr: string; [key: string]: unknown }>(
+  args: ArgType &
+    // We don't want people to pass in a "caller" key.
+    ("caller" extends keyof ArgType ? never : {}),
 ): string[] {
-  const { baseStr, ...rest } = args
+  const { baseStr, ...rest } = args as { baseStr: string; [key: string]: unknown }
+
+  // Make sure caller isn't in the rest of the keys.
   const filteredEntries = Object.entries(rest).filter(([key]) => key !== "caller")
-  return [baseStr, ...filteredEntries.map(([key, value]) => `${key}: ${value}`)]
+
+  return [baseStr, ...filteredEntries.map(([key, value]) => `${key}: ${String(value)}`)]
 }
 
 export function clearReacyQueryQueriesAndCache() {

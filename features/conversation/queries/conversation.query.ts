@@ -148,6 +148,16 @@ export async function maybeUpdateConversationQueryLastMessage(args: {
   const { clientInboxId, xmtpConversationId, messageIds } = args
 
   try {
+    const conversation = getConversationQueryData({
+      clientInboxId,
+      xmtpConversationId,
+    })
+
+    if (!conversation) {
+      // If we don't even have the conversation, we can't update the last message
+      return
+    }
+
     const messages = await Promise.all(
       messageIds.map((messageId) =>
         ensureConversationMessageQueryData({
@@ -158,17 +168,6 @@ export async function maybeUpdateConversationQueryLastMessage(args: {
         }),
       ),
     )
-
-    const conversation = getConversationQueryData({
-      clientInboxId,
-      xmtpConversationId,
-    })
-
-    if (!conversation) {
-      throw new Error(
-        "Conversation not found when wanting to update conversation last message with messages",
-      )
-    }
 
     // Find the most recent message from the new messages
     let mostRecentMessage = messages.filter(Boolean).sort((a, b) => a.sentMs - b.sentMs)[0]

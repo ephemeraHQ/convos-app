@@ -9,7 +9,7 @@ import {
 } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
 import { getGroupQueryData } from "@/features/groups/queries/group.query"
-import { updateXmtpConsentForGroupsForInbox } from "@/features/xmtp/xmtp-consent/xmtp-consent"
+import { updateXmtpConsentForConversationForInbox } from "@/features/xmtp/xmtp-consent/xmtp-consent"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
 import { captureErrorWithToast } from "@/utils/capture-error"
@@ -84,9 +84,9 @@ export const useDeleteGroup = (args: { xmtpConversationId: IXmtpConversationId }
         action: async () => {
           try {
             await deleteGroupAsync()
-            await updateXmtpConsentForGroupsForInbox({
+            await updateXmtpConsentForConversationForInbox({
               clientInboxId: currentSender.inboxId,
-              groupIds: [group.xmtpId],
+              conversationIds: [group.xmtpId],
               consent: "denied",
             })
           } catch (error) {

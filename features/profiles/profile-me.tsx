@@ -110,16 +110,16 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
             >
               <ListItem
                 chevron
-                title={translate("Archive")}
+                title="Security line"
                 onPress={() => {
-                  router.navigate("Blocked")
+                  router.navigate("ChatsRequests")
                 }}
               />
               <ListItem
                 chevron
-                title="Security line"
+                title={translate("Archive")}
                 onPress={() => {
-                  router.navigate("ChatsRequests")
+                  router.navigate("Blocked")
                 }}
               />
               <LogoutListItem />

@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { executeUpdateConsentForInboxIdMutation } from "@/features/consent/update-consent-for-inbox-id.mutation"
 import {
   addConversationToAllowedConsentConversationsQuery,
   removeConversationFromAllowedConsentConversationsQuery,
@@ -12,10 +13,7 @@ import { getDmQueryData, setDmQueryData } from "@/features/dm/dm.query"
 import { IDm } from "@/features/dm/dm.types"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
-import {
-  setXmtpConsentStateForInboxId,
-  updateXmtpConsentForGroupsForInbox,
-} from "../xmtp/xmtp-consent/xmtp-consent"
+import { updateXmtpConsentForConversationForInbox } from "../xmtp/xmtp-consent/xmtp-consent"
 
 export function useAllowDmMutation() {
   const currentSenderInboxId = useSafeCurrentSender().inboxId
@@ -25,12 +23,12 @@ export function useAllowDmMutation() {
       const { xmtpConversationId } = args
 
       await Promise.all([
-        updateXmtpConsentForGroupsForInbox({
+        updateXmtpConsentForConversationForInbox({
           clientInboxId: currentSenderInboxId,
-          groupIds: [xmtpConversationId],
+          conversationIds: [xmtpConversationId],
           consent: "allowed",
         }),
-        setXmtpConsentStateForInboxId({
+        executeUpdateConsentForInboxIdMutation({
           peerInboxId: currentSenderInboxId,
           consent: "allowed",
           clientInboxId: currentSenderInboxId,

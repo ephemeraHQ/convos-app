@@ -1,14 +1,8 @@
-import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { showActionSheet } from "@/components/action-sheet"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useDenyDmMutation } from "@/features/consent/use-deny-dm.mutation"
-import { deleteConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
-import {
-  getConversationMetadataQueryData,
-  updateConversationMetadataQueryData,
-} from "@/features/conversation/conversation-metadata/conversation-metadata.query"
-import { ensureDeviceIdentityForInboxId } from "@/features/convos-identities/convos-identities.service"
+import { useDeleteConversationsMutation } from "@/features/conversation/conversation-requests-list/delete-conversations.mutation"
 import { useDmQuery } from "@/features/dm/dm.query"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -35,38 +29,7 @@ export const useDeleteDm = ({
   })
 
   const { mutateAsync: denyDmConsentAsync } = useDenyDmMutation()
-
-  const { mutateAsync: deleteDmAsync } = useMutation({
-    mutationFn: async () => {
-      const deviceIdentity = await ensureDeviceIdentityForInboxId(currentSender.inboxId)
-
-      return deleteConversationMetadata({
-        deviceIdentityId: deviceIdentity.id,
-        xmtpConversationId,
-      })
-    },
-    onMutate: () => {
-      const previousDeleted = getConversationMetadataQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-      })?.deleted
-
-      updateConversationMetadataQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-        updateData: { deleted: true },
-      })
-
-      return { previousDeleted }
-    },
-    onError: (error, _, context) => {
-      updateConversationMetadataQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-        updateData: { deleted: context?.previousDeleted },
-      })
-    },
-  })
+  const { mutateAsync: deleteConversationsAsync } = useDeleteConversationsMutation()
 
   return useCallback(() => {
     const title = `${translate("delete_chat_with")} ${displayName}?`
@@ -84,7 +47,10 @@ export const useDeleteDm = ({
         label: translate("delete"),
         action: async () => {
           try {
-            await deleteDmAsync()
+            await deleteConversationsAsync({
+              conversationIds: [xmtpConversationId],
+              alsoDenyInviterConsent: false,
+            })
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting dm" }),
@@ -99,11 +65,16 @@ export const useDeleteDm = ({
         label: translate("delete_and_block"),
         action: async () => {
           try {
-            await deleteDmAsync()
-            await denyDmConsentAsync({
-              peerInboxId: dm.peerInboxId,
-              xmtpConversationId,
-            })
+            await Promise.all([
+              deleteConversationsAsync({
+                conversationIds: [xmtpConversationId],
+                alsoDenyInviterConsent: true,
+              }),
+              denyDmConsentAsync({
+                peerInboxId: dm.peerInboxId,
+                xmtpConversationId,
+              }),
+            ])
           } catch (error) {
             captureErrorWithToast(
               new GenericError({ error, additionalMessage: "Error deleting dm" }),
@@ -133,5 +104,11 @@ export const useDeleteDm = ({
         }
       },
     })
-  }, [displayName, deleteDmAsync, denyDmConsentAsync, dm?.peerInboxId, xmtpConversationId])
+  }, [
+    displayName,
+    deleteConversationsAsync,
+    denyDmConsentAsync,
+    dm?.peerInboxId,
+    xmtpConversationId,
+  ])
 }

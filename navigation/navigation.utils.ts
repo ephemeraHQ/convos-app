@@ -166,3 +166,11 @@ RNLinking.openURL = (url: string) => {
 export function getCurrentRoute() {
   return navigationRef.getCurrentRoute()
 }
+
+export function getCurrentRouteParams<T extends keyof NavigationParamList>():
+  | NavigationParamList[T]
+  | undefined {
+  const currentRoute = navigationRef.getCurrentRoute()
+  if (!currentRoute) return undefined
+  return currentRoute.params as NavigationParamList[T]
+}

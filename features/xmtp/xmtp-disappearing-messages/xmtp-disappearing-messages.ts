@@ -77,14 +77,17 @@ export async function updateXmtpDisappearingMessageSettings(args: {
       inboxId: clientInboxId,
     })
 
-    await wrapXmtpCallWithDuration("updateDisappearingMessageSettings", async () => {
-      return updateDisappearingMessageSettings(
-        client.installationId,
-        conversationId,
-        getTodayNs(),
-        retentionDurationInNs,
-      )
-    })
+    await wrapXmtpCallWithDuration(
+      `updateDisappearingMessageSettings ${conversationId} ${retentionDurationInNs}`,
+      async () => {
+        return updateDisappearingMessageSettings(
+          client.installationId,
+          conversationId,
+          getTodayNs(),
+          retentionDurationInNs,
+        )
+      },
+    )
   } catch (error) {
     throw new XMTPError({
       error,
