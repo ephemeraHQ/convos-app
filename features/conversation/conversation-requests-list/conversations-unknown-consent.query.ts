@@ -17,6 +17,8 @@ async function getUnknownConversationsQueryFn(args: { inboxId: IXmtpInboxId }) {
     throw new Error("InboxId is required")
   }
 
+  // Not sure you want to sync all here as well. If you just want to make sure you have the most recent list of conversation
+  // I would just call conversations.sync() and that way you aren't storing all the spam messages in your local database
   await syncAllXmtpConversations({
     clientInboxId: inboxId,
     caller: "getUnknownConversationsQueryFn",

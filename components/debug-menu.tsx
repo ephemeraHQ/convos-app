@@ -509,7 +509,8 @@ function useShowDebugMenu() {
             isVisible: true,
             texts: ["Loading XMTP conversations..."],
           })
-
+          // I don't think we need this sync method here or want it
+          // If do you really want to sync all the messages from conversations that you denied?
           await syncAllXmtpConversations({
             clientInboxId,
             caller: "debugMenuListDenied",
@@ -558,6 +559,7 @@ function useShowDebugMenu() {
             clientInboxId,
             caller: "debugMenuListUnknown",
           })
+          // Similar comment here I don't think you ever want to sync all your spam conversations. This feels risky.
           const conversations = await getXmtpConversations({
             clientInboxId,
             consentStates: ["unknown"],

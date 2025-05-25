@@ -42,7 +42,7 @@ function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
               syncAllConversations(
                 client.installationId,
                 // TODO: Handle consent states correctly per conversation
-                ["allowed", "unknown", "denied"],
+                ["allowed"],
               ),
           )
         } else {
@@ -103,7 +103,7 @@ export async function syncAllXmtpConversations(args: {
   consentStates?: ConsentState[]
   caller: string
 }) {
-  const { clientInboxId, consentStates = ["allowed", "unknown", "denied"], caller } = args
+  const { clientInboxId, consentStates = ["allowed"], caller } = args
 
   const existingSyncPromise = syncAllConversationsPromisesCache.get(clientInboxId)
   if (existingSyncPromise) {

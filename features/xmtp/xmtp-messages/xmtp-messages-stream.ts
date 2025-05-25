@@ -25,7 +25,7 @@ export const streamAllMessages = async (args: {
         }
         xmtpLogger.debug(`Received new message from messages stream: ${newMessage.id}`)
         return onNewMessage(newMessage)
-      })
+      }, undefined, ["allowed"])
     })
   } catch (error) {
     throw new XMTPError({
