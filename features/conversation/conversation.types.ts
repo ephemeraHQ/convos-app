@@ -14,6 +14,8 @@ export type IConversationType = "dm" | "group"
 // We don't really need a topic here so we can just reuse the xmtp topic type
 export type IConversationTopic = IXmtpConversationTopic
 
+export type IConversationId = IXmtpConversationId
+
 export type IConversationBase = {
   // id: IConversationId // Not needed
   createdAt: number

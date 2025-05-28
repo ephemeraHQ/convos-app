@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications"
+import { getNotificationsForConversation } from "@/features/notifications/notifications-assertions"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -13,9 +14,15 @@ export async function clearNotificationsForConversation(args: {
 
     const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
 
-    // Dismiss each notification
+    // Get notifications for this conversation only
+    const conversationNotifications = await getNotificationsForConversation({
+      conversationId: xmtpConversationId,
+      notifications: presentedNotifications,
+    })
+
+    // Dismiss filtered notifications
     await Promise.all(
-      presentedNotifications.map((notification) =>
+      conversationNotifications.map((notification) =>
         Notifications.dismissNotificationAsync(notification.request.identifier),
       ),
     )
