@@ -5,7 +5,7 @@ import { GroupAvatar } from "@/components/group-avatar"
 import { ISwipeableRenderActionsArgs } from "@/components/swipeable"
 import { MIDDLE_DOT } from "@/design-system/middle-dot"
 import { isCurrentSender, useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { isTextMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { ConversationListItemSwipeable } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable"
 import { useConversationIsUnread } from "@/features/conversation/conversation-list/hooks/use-conversation-is-unread"
 import { useDeleteGroup } from "@/features/conversation/conversation-list/hooks/use-delete-group"
@@ -92,7 +92,14 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
     const timestamp = lastMessage.sentNs ?? 0
     const timeToShow = getCompactRelativeTime(timestamp)
-    if (!timeToShow || !messageText) return ""
+    if (!timeToShow || !messageText) {
+      return ""
+    }
+
+    // We already put the sender name in group update messages
+    if (isGroupUpdatedMessage(lastMessage)) {
+      return `${timeToShow} ${MIDDLE_DOT} ${messageText.trim()}`
+    }
 
     let senderPrefix = ""
     const isCurrentUserSender =
@@ -101,7 +108,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     if (isCurrentUserSender) {
       senderPrefix = "You: "
     } else if (senderDisplayName) {
-      senderPrefix = isTextMessage(lastMessage) ? `${senderDisplayName}: ` : `${senderDisplayName} `
+      senderPrefix = senderDisplayName
     }
 
     return `${timeToShow} ${MIDDLE_DOT} ${senderPrefix}${messageText.trim()}`

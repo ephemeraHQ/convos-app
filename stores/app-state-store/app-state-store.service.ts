@@ -2,14 +2,10 @@ import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppStateStatus } from "react-native"
 import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  getAllowedConsentConversationsQueryData,
-  invalidateAllowedConsentConversationsQuery,
-} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { invalidateAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { registerPushNotifications } from "@/features/notifications/notifications-register"
-import { addConversationNotificationMessageFromStorageInOurCache } from "@/features/notifications/notifications-storage"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
 import { useAppStateStore } from "@/stores/app-state-store/app-state.store"
 import { captureError } from "@/utils/capture-error"
@@ -131,18 +127,6 @@ export function startListeningToAppStateStore() {
           invalidateUnknownConsentConversationsQuery({
             inboxId: currentSender.inboxId,
           }).catch(captureError)
-
-          const allowedConversationIds = getAllowedConsentConversationsQueryData({
-            clientInboxId: currentSender.inboxId,
-          })
-
-          if (allowedConversationIds) {
-            for (const conversationId of allowedConversationIds) {
-              addConversationNotificationMessageFromStorageInOurCache({
-                conversationId,
-              }).catch(captureError)
-            }
-          }
         }
       }
 

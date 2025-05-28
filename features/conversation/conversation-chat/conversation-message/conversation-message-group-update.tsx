@@ -5,6 +5,10 @@ import { memo, useCallback, useMemo } from "react"
 import { ViewStyle } from "react-native"
 import { Avatar } from "@/components/avatar"
 import { Center } from "@/design-system/Center"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
+import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
+import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
@@ -13,16 +17,14 @@ import {
   IConversationMessageGroupUpdated,
   IGroupUpdatedMetadataEntry,
 } from "./conversation-message.types"
-import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
-import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
 
 type IConversationMessageGroupUpdateProps = {
   message: IConversationMessageGroupUpdated
 }
 
-export const ConversationMessageGroupUpdate = memo(function ConversationMessageGroupUpdate({ message }: IConversationMessageGroupUpdateProps) {
+export const ConversationMessageGroupUpdate = memo(function ConversationMessageGroupUpdate({
+  message,
+}: IConversationMessageGroupUpdateProps) {
   const { themed } = useAppTheme()
   const content = message.content
 
@@ -32,17 +34,18 @@ export const ConversationMessageGroupUpdate = memo(function ConversationMessageG
       {content.membersAdded.map((member) => (
         <ChatGroupMemberJoined
           key={`joined-${member.inboxId}`}
-          inboxId={member.inboxId as IXmtpInboxId}
-          initiatedByInboxId={content.initiatedByInboxId as IXmtpInboxId}
+          inboxId={member.inboxId}
+          initiatedByInboxId={content.initiatedByInboxId}
           xmtpConversationId={message.xmtpConversationId}
         />
       ))}
 
       {/* Member removals */}
       {content.membersRemoved.map((member) => (
-        <ChatGroupMemberLeft
+        <ChatGroupMemberRemoved
           key={`left-${member.inboxId}`}
-          inboxId={member.inboxId as IXmtpInboxId}
+          removedMemberInboxId={member.inboxId}
+          initiatorMemberInboxId={content.initiatedByInboxId}
         />
       ))}
 
@@ -51,41 +54,60 @@ export const ConversationMessageGroupUpdate = memo(function ConversationMessageG
         <ChatGroupMetadataUpdate
           key={`metadata-${index}`}
           metadataEntry={entry}
-          initiatorInboxId={content.initiatedByInboxId as IXmtpInboxId}
+          initiatorInboxId={content.initiatedByInboxId}
         />
       ))}
     </Center>
   )
 })
 
-type IChatGroupMemberLeftProps = {
-  inboxId: IXmtpInboxId
-}
-
-const ChatGroupMemberLeft = memo(function ChatGroupMemberLeft({ inboxId }: IChatGroupMemberLeftProps) {
+const ChatGroupMemberRemoved = memo(function ChatGroupMemberRemoved({
+  removedMemberInboxId,
+  initiatorMemberInboxId,
+}: {
+  removedMemberInboxId: IXmtpInboxId
+  initiatorMemberInboxId: IXmtpInboxId
+}) {
   const { themed, theme } = useAppTheme()
-  
-  const displayInfoParams = useMemo(() => ({
-    inboxId,
-    caller: "ChatGroupMemberLeft" as const,
-  }), [inboxId]);
-  
-  const { displayName, avatarUrl } = usePreferredDisplayInfo(displayInfoParams)
+
+  const { displayName: removedMemberDisplayName, avatarUrl: removedMemberAvatarUrl } =
+    usePreferredDisplayInfo({
+      inboxId: removedMemberInboxId,
+      caller: "ChatGroupMemberRemoved",
+    })
+  const { displayName: initiatorDisplayName, avatarUrl: initiatorAvatarUrl } =
+    usePreferredDisplayInfo({
+      inboxId: initiatorMemberInboxId,
+      caller: "ChatGroupMemberRemoved",
+    })
 
   const handlePress = useCallback(() => {
-    navigate("Profile", { inboxId })
-  }, [inboxId])
+    navigate("Profile", { inboxId: removedMemberInboxId })
+  }, [removedMemberInboxId])
+
+  const handleInitiatorPress = useCallback(() => {
+    navigate("Profile", { inboxId: initiatorMemberInboxId })
+  }, [initiatorMemberInboxId])
 
   return (
     <HStack style={themed($memberContainer)}>
-      <Pressable
-        style={themed($pressableContent)}
-        onPress={handlePress}
-      >
-        <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
-        <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
+      <Pressable onPress={handleInitiatorPress} style={themed($pressableContent)}>
+        <Avatar
+          sizeNumber={theme.avatarSize.xs}
+          uri={initiatorAvatarUrl}
+          name={initiatorDisplayName ?? ""}
+        />
+        <ChatGroupUpdateText weight="bold">{initiatorDisplayName ?? ""}</ChatGroupUpdateText>
       </Pressable>
-      <ChatGroupUpdateText>left</ChatGroupUpdateText>
+      <ChatGroupUpdateText>removed</ChatGroupUpdateText>
+      <Pressable style={themed($pressableContent)} onPress={handlePress}>
+        <Avatar
+          sizeNumber={theme.avatarSize.xs}
+          uri={removedMemberAvatarUrl}
+          name={removedMemberDisplayName ?? ""}
+        />
+        <ChatGroupUpdateText weight="bold">{removedMemberDisplayName ?? ""}</ChatGroupUpdateText>
+      </Pressable>
     </HStack>
   )
 })
@@ -96,28 +118,31 @@ type IChatGroupMemberJoinedProps = {
   xmtpConversationId: IXmtpConversationId
 }
 
-const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({ 
-  inboxId, 
+const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({
+  inboxId,
   initiatedByInboxId,
-  xmtpConversationId 
+  xmtpConversationId,
 }: IChatGroupMemberJoinedProps) {
   const { themed, theme } = useAppTheme()
 
   const currentSender = useSafeCurrentSender()
-  
-  const memberDisplayInfoParams = useMemo(() => ({
-    inboxId,
-    caller: "ChatGroupMemberJoined" as const,
-  }), [inboxId]);
-  
-  const { displayName, avatarUrl } = usePreferredDisplayInfo(memberDisplayInfoParams)
 
-  const initiatorDisplayInfoParams = useMemo(() => ({
-    inboxId: initiatedByInboxId,
-    caller: "ChatGroupMemberJoined" as const,
-  }), [initiatedByInboxId]);
-  
-  const { displayName: initiatorDisplayName, avatarUrl: initiatorAvatarUrl } = usePreferredDisplayInfo(initiatorDisplayInfoParams)
+  const memberDisplayInfoParams = useMemo(
+    () => ({
+      inboxId,
+      caller: "ChatGroupMemberJoined" as const,
+    }),
+    [inboxId],
+  )
+
+  const { displayName: memberDisplayName, avatarUrl: memberAvatarUrl } =
+    usePreferredDisplayInfo(memberDisplayInfoParams)
+
+  const { displayName: initiatorDisplayName, avatarUrl: initiatorAvatarUrl } =
+    usePreferredDisplayInfo({
+      inboxId: initiatedByInboxId,
+      caller: "ChatGroupMemberJoined",
+    })
 
   const handleMemberPress = useCallback(() => {
     navigate("Profile", { inboxId })
@@ -138,23 +163,25 @@ const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({
 
   return (
     <HStack style={themed($memberContainer)}>
-      <Pressable
-        onPress={handleMemberPress}
-        style={themed($pressableContent)}
-      >
-        <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
-        <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
+      <Pressable onPress={handleMemberPress} style={themed($pressableContent)}>
+        <Avatar
+          sizeNumber={theme.avatarSize.xs}
+          uri={memberAvatarUrl}
+          name={memberDisplayName ?? ""}
+        />
+        <ChatGroupUpdateText weight="bold">{memberDisplayName ?? ""}</ChatGroupUpdateText>
       </Pressable>
       <ChatGroupUpdateText>{isDm ? "joined" : "was invited"}</ChatGroupUpdateText>
 
       {/* Show inviter if their displayName is available and it's not a DM */}
       {!isDm && initiatorDisplayName && (
-        <Pressable
-          onPress={handleInitiatorPress}
-          style={themed($pressableContent)}
-        >
+        <Pressable onPress={handleInitiatorPress} style={themed($pressableContent)}>
           <ChatGroupUpdateText>by</ChatGroupUpdateText>
-          <Avatar sizeNumber={theme.avatarSize.xs} uri={initiatorAvatarUrl} name={initiatorDisplayName ?? ""} />
+          <Avatar
+            sizeNumber={theme.avatarSize.xs}
+            uri={initiatorAvatarUrl}
+            name={initiatorDisplayName ?? ""}
+          />
           <ChatGroupUpdateText weight="bold">{initiatorDisplayName ?? ""}</ChatGroupUpdateText>
         </Pressable>
       )}
@@ -172,13 +199,11 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
   initiatorInboxId,
 }: IChatGroupMetadataUpdateProps) {
   const { themed, theme } = useAppTheme()
-  
-  const displayInfoParams = useMemo(() => ({
+
+  const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: initiatorInboxId,
     caller: "ChatGroupMetadataUpdate" as const,
-  }), [initiatorInboxId]);
-  
-  const { displayName, avatarUrl } = usePreferredDisplayInfo(displayInfoParams)
+  })
 
   const handlePress = useCallback(() => {
     navigate("Profile", { inboxId: initiatorInboxId })
@@ -187,11 +212,11 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
   const updateMessage = useMemo(() => {
     switch (metadataEntry.fieldName) {
       case "group_name":
-        return `changed group name to ${metadataEntry.newValue}`
+        return `changed the group name to ${metadataEntry.newValue}`
       case "group_image_url_square":
-        return "changed group photo"
+        return "changed the group photo"
       case "description":
-        return `changed group description to ${metadataEntry.newValue}`
+        return `changed the group description to ${metadataEntry.newValue}`
       case "message_disappear_in_ns": {
         const newValue = parseInt(metadataEntry.newValue, 10)
         const newTime = getFormattedDisappearingDuration(newValue)
@@ -222,10 +247,7 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
 
   return (
     <HStack style={themed($memberContainer)}>
-      <Pressable
-        onPress={handlePress}
-        style={themed($pressableContent)}
-      >
+      <Pressable onPress={handlePress} style={themed($pressableContent)}>
         <Avatar sizeNumber={theme.avatarSize.xs} uri={avatarUrl} name={displayName ?? ""} />
         <ChatGroupUpdateText weight="bold">{displayName ?? ""}</ChatGroupUpdateText>
       </Pressable>

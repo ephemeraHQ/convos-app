@@ -1,6 +1,7 @@
 import type { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@features/xmtp/xmtp.types"
 import { Query, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { isAnActualMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { messageWasSentAfter } from "@/features/conversation/conversation-chat/conversation-message/utils/message-was-sent-after"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
@@ -170,8 +171,11 @@ export async function maybeUpdateConversationQueryLastMessage(args: {
       )
     }
 
+    // XMTP lastMessage from conversation list only returns messages that are not group updates
+    const validMessages = messages.filter(Boolean).filter((message) => isAnActualMessage(message))
+
     // Find the most recent message from the new messages
-    let mostRecentMessage = messages.filter(Boolean).sort((a, b) => a.sentMs - b.sentMs)[0]
+    let mostRecentMessage = validMessages.sort((a, b) => a.sentMs - b.sentMs)[0]
 
     // If we found a message and it's more recent than the conversation's current lastMessage
     if (

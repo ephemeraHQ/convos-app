@@ -9,7 +9,10 @@ import {
   messageContentIsStaticAttachment,
   messageContentIsText,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { ensurePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
+import {
+  ensurePreferredDisplayInfo,
+  usePreferredDisplayInfo,
+} from "@/features/preferred-display-info/use-preferred-display-info"
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { Nullable } from "@/types/general"
 import { captureError } from "@/utils/capture-error"
@@ -19,54 +22,18 @@ import {
   IConversationMessageContent,
 } from "../../conversation-chat/conversation-message/conversation-message.types"
 
-export function getMessageContentUniqueStringValue(args: {
-  messageContent: IConversationMessageContent
-}): string {
-  const { messageContent } = args
-
-  if (messageContentIsText(messageContent)) {
-    return messageContent.text
-  }
-
-  if (messageContentIsReaction(messageContent)) {
-    return `${messageContent.action}-${messageContent.content}`
-  }
-
-  if (messageContentIsGroupUpdated(messageContent)) {
-    // Join field names with commas to create a summary of what changed
-    return `${messageContent.initiatedByInboxId}-${messageContent.metadataFieldsChanged
-      .map((field) => `${field.fieldName}-${field.newValue}-${field.oldValue}`)
-      .join(", ")}-${messageContent.membersAdded.length}-${messageContent.membersRemoved.length}`
-  }
-
-  if (messageContentIsRemoteAttachment(messageContent)) {
-    return messageContent.url
-  }
-
-  if (messageContentIsStaticAttachment(messageContent)) {
-    return messageContent.data.slice(0, 10)
-  }
-
-  if (messageContentIsMultiRemoteAttachment(messageContent)) {
-    return messageContent.attachments.map((attachment) => attachment.url).join(", ")
-  }
-
-  if (messageContentIsReply(messageContent)) {
-    return `${messageContent.reference}-${getMessageContentUniqueStringValue({
-      messageContent: messageContent.content,
-    })}`
-  }
-
-  const _exhaustiveCheck: never = messageContent
-  return "unknown message content type"
-}
-
 export function getMessageContentStringValue(args: {
   messageContent: IConversationMessageContent
-  addedMemberDisplayInfos?: Array<{ displayName?: string }>
-  removedMemberDisplayInfos?: Array<{ displayName?: string }>
+  addedMemberDisplayInfos?: { displayName?: string }[]
+  removedMemberDisplayInfos?: { displayName?: string }[]
+  initiatorDisplayInfo?: { displayName?: string } | null
 }): string {
-  const { messageContent, addedMemberDisplayInfos = [], removedMemberDisplayInfos = [] } = args
+  const {
+    messageContent,
+    addedMemberDisplayInfos = [],
+    removedMemberDisplayInfos = [],
+    initiatorDisplayInfo,
+  } = args
 
   // Process based on content type
   if (messageContentIsText(messageContent)) {
@@ -87,26 +54,28 @@ export function getMessageContentStringValue(args: {
   if (messageContentIsGroupUpdated(messageContent)) {
     // Handle metadata changes
     if (messageContent.metadataFieldsChanged.length > 0) {
+      const initiatorName = initiatorDisplayInfo?.displayName ?? "someone"
+
       if (messageContent.metadataFieldsChanged.length === 1) {
         const change = messageContent.metadataFieldsChanged[0]
         switch (change.fieldName) {
           case "group_name":
-            return `changed group name to ${change.newValue}`
+            return `${initiatorName} changed the group name to ${change.newValue}`
           case "description":
-            return `changed description to ${change.newValue}`
+            return `${initiatorName} changed the group description to ${change.newValue}`
           case "group_image_url_square":
-            return "changed group image"
+            return `${initiatorName} changed the group image`
           default:
-            return "updated the group"
+            return `${initiatorName} updated the group`
         }
       }
 
       return messageContent.metadataFieldsChanged
         .map((field) => {
           if (field.fieldName === "group_name") {
-            return `group name changed from "${field.oldValue}" to "${field.newValue}"`
+            return `${initiatorName} changed the group name from "${field.oldValue}" to "${field.newValue}"`
           }
-          return `${field.fieldName} updated`
+          return `${initiatorName} updated the group ${field.fieldName}`
         })
         .join(", ")
     }
@@ -115,17 +84,19 @@ export function getMessageContentStringValue(args: {
     if (messageContent.membersAdded.length > 0) {
       if (messageContent.membersAdded.length === 1 && addedMemberDisplayInfos.length > 0) {
         const memberName = addedMemberDisplayInfos[0]?.displayName ?? "someone"
-        return `added ${memberName}`
+        const initiatorName = initiatorDisplayInfo?.displayName ?? "someone"
+        return `${initiatorName} added ${memberName}`
       }
-      return `added ${messageContent.membersAdded.length} member${messageContent.membersAdded.length === 1 ? "" : "s"}`
+      return `${initiatorDisplayInfo?.displayName ?? "someone"} added ${messageContent.membersAdded.length} member${messageContent.membersAdded.length === 1 ? "" : "s"}`
     }
 
     if (messageContent.membersRemoved.length > 0) {
       if (messageContent.membersRemoved.length === 1 && removedMemberDisplayInfos.length > 0) {
         const memberName = removedMemberDisplayInfos[0]?.displayName ?? "someone"
-        return `removed ${memberName}`
+        const initiatorName = initiatorDisplayInfo?.displayName ?? "someone"
+        return `${initiatorName} removed ${memberName}`
       }
-      return `removed ${messageContent.membersRemoved.length} member${messageContent.membersRemoved.length === 1 ? "" : "s"}`
+      return `${initiatorDisplayInfo?.displayName ?? "someone"} removed ${messageContent.membersRemoved.length} member${messageContent.membersRemoved.length === 1 ? "" : "s"}`
     }
 
     return "group updated"
@@ -151,33 +122,41 @@ export function getMessageContentStringValue(args: {
 }
 
 export async function ensureMessageContentStringValue(message: IConversationMessage) {
-  const [addedMemberDisplayInfos, removedMemberDisplayInfos] = await Promise.all([
-    isGroupUpdatedMessage(message)
-      ? Promise.all(
-          message.content.membersAdded.map((m) =>
-            ensurePreferredDisplayInfo({
-              inboxId: m.inboxId,
-              caller: "ensureMessageContentStringValue",
-            }),
-          ),
-        )
-      : Promise.resolve([]),
-    isGroupUpdatedMessage(message)
-      ? Promise.all(
-          message.content.membersRemoved.map((m) =>
-            ensurePreferredDisplayInfo({
-              inboxId: m.inboxId,
-              caller: "ensureMessageContentStringValue",
-            }),
-          ),
-        )
-      : Promise.resolve([]),
-  ])
+  const [addedMemberDisplayInfos, removedMemberDisplayInfos, initiatorDisplayInfo] =
+    await Promise.all([
+      isGroupUpdatedMessage(message)
+        ? Promise.all(
+            message.content.membersAdded.map((m) =>
+              ensurePreferredDisplayInfo({
+                inboxId: m.inboxId,
+                caller: "ensureMessageContentStringValue",
+              }),
+            ),
+          )
+        : Promise.resolve([]),
+      isGroupUpdatedMessage(message)
+        ? Promise.all(
+            message.content.membersRemoved.map((m) =>
+              ensurePreferredDisplayInfo({
+                inboxId: m.inboxId,
+                caller: "ensureMessageContentStringValue",
+              }),
+            ),
+          )
+        : Promise.resolve([]),
+      isGroupUpdatedMessage(message)
+        ? ensurePreferredDisplayInfo({
+            inboxId: message.senderInboxId,
+            caller: "ensureMessageContentStringValue",
+          })
+        : Promise.resolve(null),
+    ])
 
   return getMessageContentStringValue({
     messageContent: message.content,
     addedMemberDisplayInfos,
     removedMemberDisplayInfos,
+    initiatorDisplayInfo,
   })
 }
 
@@ -204,6 +183,11 @@ export function useMessageContentStringValue(message: Nullable<IConversationMess
     caller: "useMessageContentStringValue",
   })
 
+  const initiatorDisplayInfo = usePreferredDisplayInfo({
+    inboxId: message?.senderInboxId,
+    caller: "useMessageContentStringValue",
+  })
+
   return useMemo(() => {
     if (!message) {
       return ""
@@ -214,6 +198,7 @@ export function useMessageContentStringValue(message: Nullable<IConversationMess
         messageContent: message.content,
         addedMemberDisplayInfos,
         removedMemberDisplayInfos,
+        initiatorDisplayInfo,
       })
     } catch (error) {
       captureError(
@@ -224,5 +209,5 @@ export function useMessageContentStringValue(message: Nullable<IConversationMess
       )
       return ""
     }
-  }, [message, addedMemberDisplayInfos, removedMemberDisplayInfos])
+  }, [message, addedMemberDisplayInfos, removedMemberDisplayInfos, initiatorDisplayInfo])
 }

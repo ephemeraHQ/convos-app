@@ -22,12 +22,14 @@ export async function convertXmtpConversationToConvosConversation(
 ): Promise<IConversation> {
   // Group conversation
   if (isXmtpConversationGroup(xmtpConversation)) {
-    const [members, creatorInboxId, consentState, conversationXmtpLastMessage] = await Promise.all([
-      xmtpConversation.members(),
-      xmtpConversation.creatorInboxId() as unknown as IXmtpInboxId,
-      xmtpConversation.consentState(),
-      xmtpConversation.lastMessage,
-    ])
+    const [members, creatorInboxId, consentState, conversationXmtpLastMessage, isActive] =
+      await Promise.all([
+        xmtpConversation.members(),
+        xmtpConversation.creatorInboxId() as unknown as IXmtpInboxId,
+        xmtpConversation.consentState(),
+        xmtpConversation.lastMessage,
+        xmtpConversation.isActive(),
+      ])
 
     // TMP until we have lastMessage function available from the SDK
     const lastMessage = conversationXmtpLastMessage
@@ -55,6 +57,7 @@ export async function convertXmtpConversationToConvosConversation(
         (member) => member.inboxId,
       ),
       createdAt: xmtpConversation.createdAt,
+      isActive: isActive,
     } satisfies IGroup
   }
 
@@ -81,6 +84,7 @@ export async function convertXmtpConversationToConvosConversation(
     createdAt: xmtpConversation.createdAt,
     xmtpTopic: xmtpConversation.topic,
     consentState: convertConsentStateToXmtpConsentState(consentState),
+    isActive: true,
   } satisfies IDm
 }
 

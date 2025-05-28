@@ -23,8 +23,6 @@ export function useNotificationListeners() {
   const notificationTapListenerRef = useRef<Notifications.Subscription>()
   // const systemDropListener = useRef<Notifications.Subscription>()
 
-  // Check if app was launched by tapping a notification while killed
-
   useEffect(() => {
     // Check if app was launched by tapping a notification while killed
     Notifications.getLastNotificationResponseAsync().then((response) => {
@@ -124,16 +122,6 @@ async function handleNotification(response: Notifications.NotificationResponse) 
       await addConversationNotificationMessageFromStorageInOurCache({
         conversationId: tappedXmtpConversationId,
       }).catch(captureError)
-
-      // Waiting for this might delay the navigation to the conversation.
-      // But it's still better UX and anyway soon we will have notification messages in the local storage
-      // so it will be instant.
-      // const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
-      // await addNotificationsToConversationCacheData({
-      //   conversationId: tappedXmtpConversationId,
-      //   clientInboxId: getSafeCurrentSender().inboxId,
-      //   notifications: [tappedNotification, ...presentedNotifications],
-      // }).catch(captureError)
 
       // To make sure we don't navigate to a conversation that doesn't exist.
       // Happens because our notifications unsubscribing logic is not perfect.

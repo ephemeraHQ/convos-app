@@ -52,9 +52,4 @@ class MMKVHelper {
     mmkv.removeValue(forKey: key)
     SentryManager.shared.addBreadcrumb("Removed value from MMKV for key: \(key)")
   }
-
-  func testKeys() {
-    let keys = mmkv.allKeys()
-    SentryManager.shared.addBreadcrumb("Keys in MMKV: \(keys)")
-  }
 }

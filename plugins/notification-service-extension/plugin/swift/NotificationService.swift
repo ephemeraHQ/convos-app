@@ -46,32 +46,30 @@ final class NotificationService: UNNotificationServiceExtension {
         }
     }
     
-    private static func unsubscribeFromTopics(_ topics: [String], installationId: String, reason: String) {
+    private static func unsubscribeFromTopics(_ topics: [String], ethAddress: String, reason: String) async {
         guard !topics.isEmpty else {
             SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Topics array is empty"))
             return
         }
         
-        guard !installationId.isEmpty else {
-            SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Installation ID is empty or nil"))
+        guard !ethAddress.isEmpty else {
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "ethAddress is empty or nil"))
             return
         }
         
-        Task {
-            do {
-                try await ConvosAPIService.shared.unsubscribeFromTopics(
-                    installationId: installationId,
-                    topics: topics
-                )
-                SentryManager.shared.addBreadcrumb("Successfully unsubscribed from \(topics.count) topic(s) - Reason: \(reason)")
-            } catch {
-                SentryManager.shared.trackError(error, extras: [
-                    "info": "Failed to unsubscribe from topics",
-                    "reason": reason,
-                    "topicCount": topics.count,
-                    "installationId": installationId
-                ])
-            }
+        do {
+            try await ConvosAPIService.shared.unsubscribeFromTopics(
+                ethAddress: ethAddress,
+                topics: topics
+            )
+            SentryManager.shared.addBreadcrumb("Successfully unsubscribed from \(topics.count) topic(s) - Reason: \(reason)")
+        } catch {
+            SentryManager.shared.trackError(error, extras: [
+                "info": "Failed to unsubscribe from topics",
+                "reason": reason,
+                "topicCount": topics.count,
+                "ethAddress": ethAddress
+            ])
         }
     }
 
@@ -160,9 +158,9 @@ final class NotificationService: UNNotificationServiceExtension {
                     SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Conversation not found for topic: \(topic)"))
                     
                     // Unsubscribe because this conversation doesn't exist for this client
-                    NotificationService.unsubscribeFromTopics(
+                    await NotificationService.unsubscribeFromTopics(
                         [topic], 
-                        installationId: installationId, 
+                        ethAddress: ethAddress, 
                         reason: "Conversation not found for topic: \(topic)"
                     )
                     
@@ -198,9 +196,9 @@ final class NotificationService: UNNotificationServiceExtension {
                     guard isActive else {
                         SentryManager.shared.addBreadcrumb("User is no longer active in this group")
                         
-                        NotificationService.unsubscribeFromTopics(
+                        await NotificationService.unsubscribeFromTopics(
                             [topic], 
-                            installationId: installationId, 
+                            ethAddress: ethAddress, 
                             reason: "User no longer active in group"
                         )
                         
@@ -212,9 +210,9 @@ final class NotificationService: UNNotificationServiceExtension {
                     SentryManager.shared.trackError(error, extras: ["info": "Failed to check group membership"])
                     
                     // Unsubscribe on membership check failure as safety measure
-                    NotificationService.unsubscribeFromTopics(
+                    await NotificationService.unsubscribeFromTopics(
                         [topic], 
-                        installationId: installationId, 
+                        ethAddress: ethAddress, 
                         reason: "Failed to verify group membership"
                     )
                     

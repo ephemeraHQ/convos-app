@@ -128,6 +128,12 @@ const notificationProfileDisplayNameStorage = {
     return displayName || null
   },
   setValue: (inboxId: string, value: string) => {
+    // Check if value is already the same to avoid unnecessary writes
+    const currentValue = notificationProfileDisplayNameStorage.getValue(inboxId)
+    if (currentValue === value) {
+      return
+    }
+
     notificationsLogger.debug(
       `Saving profile display name for notification extension for inboxId: ${inboxId} with value: ${value}`,
     )

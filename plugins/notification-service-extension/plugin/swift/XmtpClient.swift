@@ -17,8 +17,6 @@ extension XMTP.Client {
   }
 
   static func client(for ethAddress: String) async throws -> XMTP.Client {
-    MMKVHelper.shared.testKeys()
-    
     // Check cache first
     if let cachedClient = cacheQueue.sync(execute: { self.clientCache[ethAddress] }) {
       SentryManager.shared.addBreadcrumb("XMTP client cache hit for \(ethAddress)")
@@ -54,15 +52,12 @@ extension XMTP.Client {
       throw ClientInitializationError.noEncryptionKey
     }
 
-    SentryManager.shared.addBreadcrumb("Found encryption key: \(encryptionKeyString)")
-
     let groupDir = groupUrl.path
 
     SentryManager.shared.addBreadcrumb("Creating XMTP client", extras: [
       "xmtpEnv": xmtpEnv.rawValue,
       "groupId": groupId,
       "groupUrl": groupUrl.path,
-      "encryptionKeyString": encryptionKeyString,
       "ethAddress": ethAddress
     ])
 

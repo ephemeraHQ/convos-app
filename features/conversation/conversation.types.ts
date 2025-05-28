@@ -24,6 +24,7 @@ export type IConversationBase = {
   xmtpId: IXmtpConversationId
   consentState: IConsentState
   lastMessage: IConversationMessage | undefined
+  isActive: boolean // true meaning we're still in it. False meaning we left or we've been removed from it.
 }
 
 export type IConversation = IGroup | IDm
