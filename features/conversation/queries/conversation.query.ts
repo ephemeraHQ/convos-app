@@ -175,7 +175,7 @@ export async function maybeUpdateConversationQueryLastMessage(args: {
     const validMessages = messages.filter(Boolean).filter((message) => isAnActualMessage(message))
 
     // Find the most recent message from the new messages
-    let mostRecentMessage = validMessages.sort((a, b) => a.sentMs - b.sentMs)[0]
+    let mostRecentMessage = validMessages.sort((a, b) => b.sentMs - a.sentMs)[0]
 
     // If we found a message and it's more recent than the conversation's current lastMessage
     if (
