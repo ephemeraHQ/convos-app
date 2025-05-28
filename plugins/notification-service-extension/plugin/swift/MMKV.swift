@@ -13,8 +13,9 @@ class MMKVHelper {
     guard let groupUrl = FileManager.default.containerURL(
       forSecurityApplicationGroupIdentifier: groupId
     ) else {
-      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "Failed to get App Group container URL"))
-      return nil
+      let error = ErrorFactory.create(domain: "MMKVHelper", description: "Failed to get App Group container URL")
+      SentryManager.shared.trackError(error)
+      fatalError("Failed to get App Group container URL")
     }
     
     let groupDir = groupUrl.path
@@ -23,10 +24,16 @@ class MMKVHelper {
 
     // NEVER change the mmapID unless you know what you're doing. This will break the app group because we need to use the same mmapID for the main app and the notification service extension.
     guard let mmkv = MMKV(mmapID: bundleId,
-                          cryptKey: nil,
-                          mode: MMKVMode.multiProcess) else {
-      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "Failed to initialize MMKV with mmapID: \(bundleId)"))
-      return nil
+                          cryptKey: nil, 
+                          mode: .multiProcess) else {
+        // Create and track error if initialization fails
+        let errorMessage = "Failed to initialize MMKV with mmapID: \(bundleId)"
+        let error = ErrorFactory.create(
+            domain: "MMKVHelper",
+            description: errorMessage
+        )
+        SentryManager.shared.trackError(error)
+        fatalError(errorMessage)
     }
 
     self.mmkv = mmkv

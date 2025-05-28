@@ -185,8 +185,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 SentryManager.shared.addBreadcrumb("Successfully synced conversation")
             } catch {
                 SentryManager.shared.trackError(error, extras: ["info": "Failed to sync conversation"])
-                contentHandler?(currentBestAttempt)
-                return
+                // If sync fails, we still want to continue because syncing might not be needed!
             }
 
             // Check if group is still active meaning the user is still a member
@@ -257,10 +256,12 @@ final class NotificationService: UNNotificationServiceExtension {
             // Create notification content
             do {
                 SentryManager.shared.addBreadcrumb("Attempting to create notification content from decrypted message")
-                let notificationFactory = PushNotificationContentFactory(client: client)
-                guard let notification = try await notificationFactory.notification(from: request.content,
-                                                                                  with: decodedMessage,
-                                                                                  in: conversation) else {
+                guard let notification = try await PushNotificationContentFactory.notification(
+                    from: request.content,
+                    with: decodedMessage,
+                    in: conversation,
+                    ethAddress: ethAddress
+                ) else {
                     SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed getting notification from decrypted message for topic: \(topic)"))
                     contentHandler?(currentBestAttempt)
                     return

@@ -69,7 +69,8 @@ export function useHydrateAuth() {
       captureError(
         new AuthenticationError({
           error,
-          additionalMessage: "Error while hydrating auth so signing out...",
+          additionalMessage:
+            "Error while getting the XMTP client while hydrating auth so signing out...",
         }),
       )
       logout({ caller: "useHydrateAuth xmtp client error" }).catch(captureError)

@@ -4,6 +4,7 @@ import XMTP
 
 final class SentryManager {
   static let shared = SentryManager()
+  
   private init() {
       let sentryEnv = Bundle.getEnv()
       log.debug("[Sentry] Initializing Sentry with environment: \(sentryEnv.rawValue)")

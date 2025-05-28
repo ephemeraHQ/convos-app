@@ -24,4 +24,9 @@ final class XmtpHelpers {
         return topic.replacingOccurrences(of: prefix, with: "")
                    .replacingOccurrences(of: "/proto", with: "")
     }
+    
+    func findMessage(from reference: String, ethAddress: String) async throws -> DecodedMessage? {
+        let client = try await Client.client(for: ethAddress)
+        return try await client.conversations.findMessage(messageId: reference)
+    }
 }

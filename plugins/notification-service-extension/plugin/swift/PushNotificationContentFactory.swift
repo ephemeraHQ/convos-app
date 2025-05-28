@@ -29,37 +29,26 @@ extension Reaction {
 }
 
 class PushNotificationContentFactory {
-    let client: Client
-    let nameResolver: ProfileNameResolver
-
-    init(client: Client) {
-        self.client = client
-        self.nameResolver = ProfileNameResolver.shared
-    }
-
-    private func message(from reference: String) async throws -> DecodedMessage? {
-        try await client.conversations.sync()
-        return try await client.conversations.findMessage(messageId: reference)
-    }
-
-  func notification(from originalNotification: UNNotificationContent,
-                    with decodedMessage: DecodedMessage,
-                    in conversation: Conversation) async throws -> UNNotificationContent? {
+    
+    static func notification(from originalNotification: UNNotificationContent,
+                           with decodedMessage: DecodedMessage,
+                           in conversation: Conversation,
+                           ethAddress: String) async throws -> UNNotificationContent? {
         SentryManager.shared.addBreadcrumb("Attempting to create notification content from decrypted message")
         
+        let client = try await Client.client(for: ethAddress)
         let mutableNotification = originalNotification.mutableCopy() as? UNMutableNotificationContent ?? UNMutableNotificationContent()
         let decoder = XMTPContentDecoder()
         let content = try decoder.decode(message: decodedMessage)
 
         mutableNotification.threadIdentifier = conversation.id
 
-        // skip our own messages
         guard decodedMessage.senderInboxId != client.inboxID else {
             return nil
         }
 
-        let profileName = await nameResolver.resolveProfileName(for: decodedMessage.senderInboxId)
-        mutableNotification.title = profileName ?? "Convos" // default title is Sender's name
+        let profileName = await ProfileNameResolver.shared.resolveProfileName(for: decodedMessage.senderInboxId)
+        mutableNotification.title = profileName ?? "Convos"
 
         switch conversation {
         case .group(let group):
@@ -82,7 +71,7 @@ class PushNotificationContentFactory {
 
         case .reply(let reply):
             let originalMessageId = reply.reference
-            if let originalMessage = try await message(from: originalMessageId) {
+            if let originalMessage = try await XmtpHelpers.shared.findMessage(from: originalMessageId, ethAddress: ethAddress) {
                 let originalContentType = try originalMessage.encodedContent.type
                 switch originalContentType {
                 case ContentTypeText:
@@ -92,7 +81,7 @@ class PushNotificationContentFactory {
                     case .group(_):
                         if originalMessage.senderInboxId == client.inboxID {
                             senderString = "you "
-                        } else if let senderName = await nameResolver.resolveProfileName(
+                        } else if let senderName = await ProfileNameResolver.shared.resolveProfileName(
                             for: originalMessage.senderInboxId
                         ) {
                             senderString = "\(senderName) "
@@ -105,9 +94,9 @@ class PushNotificationContentFactory {
                     if let replyString: String = reply.content as? String {
                         mutableNotification.body = "Replied to \(senderString)\"\(originalMessageBody)\": \(replyString)"
                     } else {
-                        mutableNotification.body = "Replied to \(senderString)\"\(originalMessageBody)\"" // unknown reply type?
+                        mutableNotification.body = "Replied to \(senderString)\"\(originalMessageBody)\""
                     }
-                case ContentTypeRemoteAttachment: // replying to media
+                case ContentTypeRemoteAttachment:
                     let isYou = originalMessage.senderInboxId == client.inboxID
                     let replyString: String
                     if let reply = reply.content as? String {
@@ -125,7 +114,7 @@ class PushNotificationContentFactory {
 
         case .reaction(let reaction):
             let originalMessageId = reaction.reference
-            let originalMessage = try await message(from: originalMessageId)
+            let originalMessage = try await XmtpHelpers.shared.findMessage(from: originalMessageId, ethAddress: ethAddress)
             let isYou = originalMessage?.senderInboxId == client.inboxID
             let originalContentType = try originalMessage?.encodedContent.type
             let body: String
@@ -137,11 +126,11 @@ class PushNotificationContentFactory {
                 } else {
                     fallthrough
                 }
-            case ContentTypeRemoteAttachment: // replying to media
+            case ContentTypeRemoteAttachment:
                 if isYou {
                     body = "your photo"
                 } else if case .group(_) = conversation, let originalMessage,
-                          let senderName = await nameResolver.resolveProfileName(
+                          let senderName = await ProfileNameResolver.shared.resolveProfileName(
                             for: originalMessage.senderInboxId
                           ) {
                     body = "\(senderName)'s photo"
@@ -152,7 +141,7 @@ class PushNotificationContentFactory {
                 if isYou {
                     body = "your message"
                 } else if case .group(_) = conversation, let originalMessage,
-                          let senderName = await nameResolver.resolveProfileName(
+                          let senderName = await ProfileNameResolver.shared.resolveProfileName(
                             for: originalMessage.senderInboxId
                           ) {
                     body = "\(senderName)'s message"
@@ -160,7 +149,6 @@ class PushNotificationContentFactory {
                     body = "an earlier message"
                 }
             }
-
 
             switch reaction.action {
             case .added:
