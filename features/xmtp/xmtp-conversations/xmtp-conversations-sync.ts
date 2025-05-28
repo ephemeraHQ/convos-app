@@ -100,10 +100,10 @@ export async function syncOneXmtpConversation(args: {
 
 export async function syncAllXmtpConversations(args: {
   clientInboxId: IXmtpInboxId
-  consentStates?: ConsentState[]
+  consentStates: ConsentState[]
   caller: string
 }) {
-  const { clientInboxId, consentStates = ["allowed", "unknown", "denied"], caller } = args
+  const { clientInboxId, consentStates, caller } = args
 
   const existingSyncPromise = syncAllConversationsPromisesCache.get(clientInboxId)
   if (existingSyncPromise) {

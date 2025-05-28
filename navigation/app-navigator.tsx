@@ -4,11 +4,11 @@ import * as Linking from "expo-linking"
 import React, { memo, useCallback } from "react"
 import { config } from "@/config"
 import { AppSettingsScreen } from "@/features/app-settings/app-settings.screen"
+import { ArchivedConversationsScreen } from "@/features/archived-conversations/archived-conversations.screen"
 import { AuthOnboardingContactCardImportInfoScreen } from "@/features/auth-onboarding/screens/auth-onboarding-contact-card-import-info.screen"
 import { AuthOnboardingScreen } from "@/features/auth-onboarding/screens/auth-onboarding.screen"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { useHydrateAuth } from "@/features/authentication/hydrate-auth"
-import { BlockedConversationsScreen } from "@/features/blocked-conversations/blocked-conversations.screen"
 import { ConversationScreen } from "@/features/conversation/conversation-chat/conversation.screen"
 import { ConversationListScreen } from "@/features/conversation/conversation-list/conversation-list.screen"
 import { ConversationRequestsListScreen } from "@/features/conversation/conversation-requests-list/conversation-requests-list.screen"
@@ -207,7 +207,7 @@ function renderSignedInScreens(theme: ITheme) {
         // Fade animation when transitioning to authenticated state
         options={{ animation: "fade" }}
       />
-      <AppNativeStack.Screen name="Blocked" component={BlockedConversationsScreen} />
+      <AppNativeStack.Screen name="Blocked" component={ArchivedConversationsScreen} />
       <AppNativeStack.Screen name="ChatsRequests" component={ConversationRequestsListScreen} />
       <AppNativeStack.Screen
         name="ChatsRequestsUncleared"

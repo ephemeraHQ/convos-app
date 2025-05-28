@@ -11,7 +11,7 @@ import { getGroupQueryData, setGroupQueryData } from "@/features/groups/queries/
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { logger } from "@/utils/logger/logger"
 import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
-import { updateXmtpConsentForGroupsForInbox } from "../xmtp/xmtp-consent/xmtp-consent"
+import { updateXmtpConsentForConversationForInbox } from "../xmtp/xmtp-consent/xmtp-consent"
 
 export const useDenyGroupMutation = (args: {
   clientInboxId: IXmtpInboxId
@@ -21,9 +21,9 @@ export const useDenyGroupMutation = (args: {
 
   return useMutation({
     mutationFn: async () => {
-      await updateXmtpConsentForGroupsForInbox({
+      await updateXmtpConsentForConversationForInbox({
         clientInboxId,
-        groupIds: [xmtpConversationId],
+        conversationIds: [xmtpConversationId],
         consent: "denied",
       })
       return "denied"

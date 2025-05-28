@@ -9,59 +9,42 @@ export async function xmtpInboxIdCanMessageEthAddress(args: {
   ethAddress: IEthereumAddress
 }) {
   const { inboxId, ethAddress } = args
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId,
+    })
 
-  const client = await getXmtpClientByInboxId({
-    inboxId,
-  })
+    const canMessageResult = await wrapXmtpCallWithDuration("canMessage", () =>
+      client.canMessage([{ kind: "ETHEREUM", identifier: ethAddress }]),
+    )
 
-  const canMessageResult = await wrapXmtpCallWithDuration("canMessage", () =>
-    client.canMessage([{ kind: "ETHEREUM", identifier: ethAddress }]),
-  )
-
-  return canMessageResult[ethAddress.toLowerCase()]
+    return canMessageResult[ethAddress.toLowerCase()]
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "failed to check if inbox can message eth address",
+    })
+  }
 }
 
-// export const updateConsentForAddressesForAccount = async (args: {
-//   account: string
-//   addresses: string[]
-//   consent: ConsentState
-// }) => {
-//   const { account, addresses, consent } = args
+export async function getXmtpConsentStateForInboxId(args: {
+  clientInboxId: IXmtpInboxId
+  inboxIdToCheck: IXmtpInboxId
+}) {
+  const { clientInboxId, inboxIdToCheck } = args
 
-//   const client = await getXmtpClientByEthAddress({
-//     ethAddress: account,
-//   })
-
-//   if (!client) {
-//     throw new Error("Client not found")
-//   }
-
-//   const start = new Date().getTime()
-
-//   if (consent === "allowed") {
-//     for (const address of addresses) {
-//       await client.preferences.setConsentState({
-//         value: address,
-//         entryType: "address",
-//         state: "allowed",
-//       })
-//     }
-//   } else if (consent === "denied") {
-//     for (const address of addresses) {
-//       await client.preferences.setConsentState({
-//         value: address,
-//         entryType: "address",
-//         state: "denied",
-//       })
-//     }
-//   } else {
-//     throw new Error(`Invalid consent type: ${consent}`)
-//   }
-
-//   const end = new Date().getTime()
-//     `[XMTPRN Contacts] Consented to addresses on protocol in ${(end - start) / 1000} sec`,
-//   )
-// }
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+    return client.preferences.inboxIdConsentState(inboxIdToCheck)
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "failed to get XMTP consent state for inboxId",
+    })
+  }
+}
 
 export async function setXmtpConsentStateForInboxId(args: {
   peerInboxId: IXmtpInboxId
@@ -90,21 +73,21 @@ export async function setXmtpConsentStateForInboxId(args: {
   }
 }
 
-export const updateXmtpConsentForGroupsForInbox = async (args: {
-  groupIds: IXmtpConversationId[]
+export const updateXmtpConsentForConversationForInbox = async (args: {
+  conversationIds: IXmtpConversationId[]
   consent: IXmtpConsentState
   clientInboxId: IXmtpInboxId
 }) => {
-  const { clientInboxId, groupIds, consent } = args
+  const { clientInboxId, conversationIds, consent } = args
   try {
     const client = await getXmtpClientByInboxId({
       inboxId: clientInboxId,
     })
 
-    for (const groupId of groupIds) {
-      await wrapXmtpCallWithDuration("setConsentState (group)", () =>
+    for (const conversationId of conversationIds) {
+      await wrapXmtpCallWithDuration("setConsentState (conversation)", () =>
         client.preferences.setConsentState({
-          value: groupId,
+          value: conversationId,
           entryType: "conversation_id",
           state: consent,
         }),
@@ -113,7 +96,7 @@ export const updateXmtpConsentForGroupsForInbox = async (args: {
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: "Failed to update consent for groups",
+      additionalMessage: "Failed to update consent for conversations",
     })
   }
 }

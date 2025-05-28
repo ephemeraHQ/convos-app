@@ -14,3 +14,17 @@ export function convertConsentStateToXmtpConsentState(
 
   return "denied"
 }
+
+export function convertXmtpConsentStateToConsentState(
+  consentState: IXmtpConsentState,
+): IConsentState {
+  if (consentState === "allowed") {
+    return "allowed"
+  }
+
+  if (consentState === "unknown") {
+    return "unknown"
+  }
+
+  return "denied"
+}

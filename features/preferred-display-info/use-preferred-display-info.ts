@@ -52,13 +52,14 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
   const currentSender = useSafeCurrentSender()
   const caller = `${callerArg}:usePreferredDisplayInfo`
 
+  const getXmtpInboxIdFromEthAddressOptions = getXmtpInboxIdFromEthAddressQueryOptions({
+    clientInboxId: currentSender.inboxId,
+    targetEthAddress: ethAddressArg!, // ! because we check enabled
+    caller,
+  })
   const { data: inboxIdFromEthAddress } = useQuery({
-    ...getXmtpInboxIdFromEthAddressQueryOptions({
-      clientInboxId: currentSender.inboxId,
-      targetEthAddress: ethAddressArg!, // ! because we check enabled
-      caller,
-    }),
-    enabled: enabled && !!ethAddressArg,
+    ...getXmtpInboxIdFromEthAddressOptions,
+    enabled: enabled && !!ethAddressArg && getXmtpInboxIdFromEthAddressOptions.enabled !== false,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
@@ -69,41 +70,43 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
     inboxId,
     caller,
   })
-
   const { data: ethAddressesForXmtpInboxId } = useQuery({
     ...ethAddressesOptions,
     enabled: enabled && ethAddressesOptions.enabled !== false,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
+  const getProfileQueryOptions = getProfileQueryConfig({ xmtpId: inboxId, caller })
   const { data: profile, isLoading: isLoadingProfile } = useQuery({
     // Get Convos profile data
-    ...getProfileQueryConfig({ xmtpId: inboxId, caller }),
-    enabled,
+    ...getProfileQueryOptions,
+    enabled: enabled && getProfileQueryOptions.enabled !== false,
     ...(freshData && { ...reactQueryFreshDataQueryOptions }),
   })
 
+  const getSocialProfilesForInboxIdOptions = getSocialProfilesForInboxIdQueryOptions({
+    inboxId,
+    clientInboxId: currentSender.inboxId,
+    caller,
+  })
   const { data: socialProfilesForInboxId, isLoading: isLoadingSocialProfilesForInboxId } = useQuery(
     {
-      ...getSocialProfilesForInboxIdQueryOptions({
-        inboxId,
-        clientInboxId: currentSender.inboxId,
-        caller,
-      }),
-      enabled,
+      ...getSocialProfilesForInboxIdOptions,
+      enabled: enabled && getSocialProfilesForInboxIdOptions.enabled !== false,
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     },
   )
 
   const ethAddress = ethAddressArg || ethAddressesForXmtpInboxId?.[0]
 
+  const getSocialProfilesForEthAddressOptions = getSocialProfilesForEthAddressQueryOptions({
+    ethAddress,
+    caller,
+  })
   const { data: socialProfilesForEthAddress, isLoading: isLoadingSocialProfilesForEthAddress } =
     useQuery({
-      ...getSocialProfilesForEthAddressQueryOptions({
-        ethAddress,
-        caller,
-      }),
-      enabled,
+      ...getSocialProfilesForEthAddressOptions,
+      enabled: enabled && getSocialProfilesForEthAddressOptions.enabled !== false,
       ...(freshData && { ...reactQueryFreshDataQueryOptions }),
     })
 
