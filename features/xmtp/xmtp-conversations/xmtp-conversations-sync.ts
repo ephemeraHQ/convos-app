@@ -42,6 +42,8 @@ function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
               syncAllConversations(
                 client.installationId,
                 // NEVER add more than allowed here, it's useless and dangerous
+                // Otherwise it will sync all conversations, including those that are not allowed
+                // and if a spammer decides to create 100000 groups with us, then all of those will get synced every time
                 ["allowed"],
               ),
           )
@@ -118,6 +120,8 @@ export async function syncAllXmtpConversations(args: {
         syncAllConversations(
           client.installationId,
           // NEVER add more than allowed here, it's useless and dangerous
+          // Otherwise it will sync all conversations, including those that are not allowed
+          // and if a spammer decides to create 100000 groups with us, then all of those will get synced every time
           ["allowed"],
         ),
       )

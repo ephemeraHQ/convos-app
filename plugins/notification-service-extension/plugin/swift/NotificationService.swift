@@ -185,12 +185,11 @@ final class NotificationService: UNNotificationServiceExtension {
                 SentryManager.shared.addBreadcrumb("Successfully synced conversation")
             } catch {
                 SentryManager.shared.trackError(error, extras: ["info": "Failed to sync conversation"])
-                // Don't unsubscribe here - sync failures are temporary
                 contentHandler?(currentBestAttempt)
                 return
             }
 
-            // Check group membership (if applicable) - unsubscribe if not a member
+            // Check if group is still active meaning the user is still a member
             switch conversation {
             case .group(let group):
                 do {
@@ -212,7 +211,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 } catch {
                     SentryManager.shared.trackError(error, extras: ["info": "Failed to check group membership"])
                     
-                    // Unsubscribe on membership check failure as safety measure
+                    // This is a safety measure to prevent the user from receiving notifications for a group that they are no longer a member of
                     await NotificationService.unsubscribeFromTopics(
                         [topic], 
                         ethAddress: ethAddress, 
@@ -246,7 +245,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 decodedMessage = message
                 SentryManager.shared.addBreadcrumb("Successfully decrypted message")
                 
-                // Store the decrypted message in SharedDefaults
+                // Store the decrypted message so that the main app can display it faster
                 NotificationService.storeDecryptedMessage(decodedMessage, forTopic: topic)
                 
             } catch {

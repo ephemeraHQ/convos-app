@@ -138,11 +138,11 @@ async function handlingNonDecryptedExpoNewMessageNotification(args: {
 }) {
   const { notificationId, encryptedMessage, conversationTopic } = args
 
-  notificationsLogger.debug(
-    `Handling non-decrypted expo new message notification ${notificationId}`,
-  )
-
   try {
+    notificationsLogger.debug(
+      `Handling non-decrypted expo new message notification ${notificationId}`,
+    )
+
     await messageProcessingDeduplicationManager.executeOnce({
       id: notificationId,
       fn: async () => {
@@ -209,6 +209,9 @@ async function handlingNonDecryptedExpoNewMessageNotification(args: {
         // Don't show notifications when app is in foreground
         const appState = useAppStateStore.getState().currentState
         if (appState === "active") {
+          notificationsLogger.debug(
+            `Skipping showing notification ${notificationId} because app is in foreground`,
+          )
           return
         }
 
