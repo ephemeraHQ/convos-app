@@ -108,7 +108,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     if (isCurrentUserSender) {
       senderPrefix = "You: "
     } else if (senderDisplayName) {
-      senderPrefix = senderDisplayName
+      senderPrefix = `${senderDisplayName}: `
     }
 
     return `${timeToShow} ${MIDDLE_DOT} ${senderPrefix}${messageText.trim()}`
