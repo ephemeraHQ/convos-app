@@ -7,6 +7,9 @@ final class NotificationService: UNNotificationServiceExtension {
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttempt: UNMutableNotificationContent?
 
+    // IF YOU CHANGE THIS KEY, YOU MUST CHANGE THE KEY IN THE MAIN APP TOO
+    private static let CONVERSATION_MESSAGES_KEY_PREFIX = "conversation_messages_"
+
     private static func storeDecryptedMessage(_ message: DecodedMessage, forTopic topic: String) {
         SentryManager.shared.addBreadcrumb("Attempting to store decrypted message")
 
@@ -14,8 +17,8 @@ final class NotificationService: UNNotificationServiceExtension {
         
         // Get existing messages for this topic
         var existingMessages: [[String: Any]] = []
-        // IF YOU CHANGE THIS KEY, YOU MUST CHANGE THE KEY IN THE MAIN APP TOO
-        let storageKey = "conversation_messages_\(conversationId)"
+
+        let storageKey = "\(NotificationService.CONVERSATION_MESSAGES_KEY_PREFIX)\(conversationId)"
         if let existingData = MMKVHelper.shared.getString(forKey: storageKey),
            let data = existingData.data(using: .utf8),
            let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {

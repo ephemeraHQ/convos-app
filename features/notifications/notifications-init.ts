@@ -247,6 +247,9 @@ async function handlingNonDecryptedExpoNewMessageNotification(args: {
       },
     })
   } catch (error) {
-    throw error
+    throw new NotificationError({
+      error,
+      additionalMessage: `Error handling non-decrypted expo new message notification ${notificationId}`,
+    })
   }
 }

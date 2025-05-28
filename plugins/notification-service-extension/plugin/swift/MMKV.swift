@@ -14,7 +14,7 @@ class MMKVHelper {
       forSecurityApplicationGroupIdentifier: groupId
     ) else {
       SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "Failed to get App Group container URL"))
-      fatalError("Failed to get App Group container URL")
+      return nil
     }
     
     let groupDir = groupUrl.path
@@ -26,7 +26,7 @@ class MMKVHelper {
                           cryptKey: nil,
                           mode: MMKVMode.multiProcess) else {
       SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "Failed to initialize MMKV with mmapID: \(bundleId)"))
-      fatalError("Failed to initialize MMKV")
+      return nil
     }
 
     self.mmkv = mmkv
