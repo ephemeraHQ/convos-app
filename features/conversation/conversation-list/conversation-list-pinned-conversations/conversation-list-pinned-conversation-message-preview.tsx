@@ -3,7 +3,6 @@ import { AnimatedHStack, HStack } from "@/design-system/HStack"
 import { Text } from "@/design-system/Text"
 import { useMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { captureError } from "@/utils/capture-error"
 import { IConversationMessage } from "../../conversation-chat/conversation-message/conversation-message.types"
 
 export type IPinnedConversationMessagePreviewProps = {
@@ -18,7 +17,6 @@ export const PinnedConversationMessagePreview = (props: IPinnedConversationMessa
   const textContent = useMessageContentStringValue(message)
 
   if (!textContent) {
-    captureError
     return null
   }
 

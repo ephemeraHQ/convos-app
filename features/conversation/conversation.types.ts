@@ -14,6 +14,8 @@ export type IConversationType = "dm" | "group"
 // We don't really need a topic here so we can just reuse the xmtp topic type
 export type IConversationTopic = IXmtpConversationTopic
 
+export type IConversationId = IXmtpConversationId
+
 export type IConversationBase = {
   // id: IConversationId // Not needed
   createdAt: number
@@ -22,6 +24,7 @@ export type IConversationBase = {
   xmtpId: IXmtpConversationId
   consentState: IConsentState
   lastMessage: IConversationMessage | undefined
+  isActive: boolean // true meaning we're still in it. False meaning we left or we've been removed from it.
 }
 
 export type IConversation = IGroup | IDm

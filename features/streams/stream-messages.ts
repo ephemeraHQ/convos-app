@@ -5,6 +5,7 @@ import {
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { invalidateDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
@@ -64,7 +65,7 @@ async function handleNewMessage(args: {
   if (isGroupUpdatedMessage(message)) {
     try {
       handleNewGroupUpdatedMessage({
-        inboxId: clientInboxId,
+        clientInboxId,
         message,
       })
     } catch (error) {
@@ -112,15 +113,15 @@ const METADATA_FIELD_NAME_MAP_TO_GROUP_PROPERTY_NAME: Record<
 } as const
 
 function handleNewGroupUpdatedMessage(args: {
-  inboxId: IXmtpInboxId
+  clientInboxId: IXmtpInboxId
   message: IConversationMessageGroupUpdated
 }) {
-  const { inboxId, message } = args
+  const { clientInboxId, message } = args
 
   // If no changes, just invalidate the group query data
   if (isEmptyGroupUpdatedMessage(message)) {
     invalidateGroupQuery({
-      clientInboxId: inboxId,
+      clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
     }).catch(captureError)
     return
@@ -129,7 +130,7 @@ function handleNewGroupUpdatedMessage(args: {
   // Add new members
   for (const member of message.content.membersAdded) {
     addGroupMemberToGroupQueryData({
-      clientInboxId: inboxId,
+      clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
       member: {
         inboxId: member.inboxId,
@@ -142,10 +143,19 @@ function handleNewGroupUpdatedMessage(args: {
   // Remove members
   for (const member of message.content.membersRemoved) {
     removeGroupMemberToGroupQuery({
-      clientInboxId: inboxId,
+      clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
       memberInboxId: member.inboxId,
     }).catch(captureError)
+
+    // If the removed member is the current user
+    if (member.inboxId === clientInboxId) {
+      // To make sure we refetch the right conversation state
+      invalidateConversationQuery({
+        clientInboxId,
+        xmtpConversationId: message.xmtpConversationId,
+      }).catch(captureError)
+    }
   }
 
   // Process metadata changes (e.g., group name, image, description)
@@ -156,7 +166,7 @@ function handleNewGroupUpdatedMessage(args: {
 
     if (disappearingMessageFields.length > 0) {
       invalidateDisappearingMessageSettings({
-        clientInboxId: inboxId,
+        clientInboxId,
         conversationId: message.xmtpConversationId,
         caller: "handleNewGroupUpdatedMessage",
       }).catch(captureError)
@@ -193,7 +203,7 @@ function handleNewGroupUpdatedMessage(args: {
 
     if (Object.keys(groupUpdates).length > 0) {
       updateGroupQueryData({
-        clientInboxId: inboxId,
+        clientInboxId,
         xmtpConversationId: message.xmtpConversationId,
         updates: groupUpdates,
       })

@@ -122,11 +122,19 @@ export const ConversationMessages = memo(function ConversationMessages() {
           isLatestXmtpMessageIdFromCurrentSender={latestXmtpMessageIdFromCurrentSender === item}
           previousXmtpMessageId={previousXmtpMessageId}
           nextXmtpMessageId={nextXmtpMessageId}
-          animateEntering={index === 0}
+          animateEntering={
+            index === 0 &&
+            // For now just animate the new message the current user sent
+            getConversationMessageQueryData({
+              clientInboxId: currentSender.inboxId,
+              xmtpConversationId,
+              xmtpMessageId: item,
+            })?.status === "sending"
+          }
         />
       )
     },
-    [latestXmtpMessageIdFromCurrentSender, messageIds],
+    [latestXmtpMessageIdFromCurrentSender, messageIds, currentSender.inboxId, xmtpConversationId],
   )
 
   const getItemType = useCallback(

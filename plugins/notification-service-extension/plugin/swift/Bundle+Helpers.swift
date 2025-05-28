@@ -50,4 +50,25 @@ extension Bundle {
     }
     return bundleId
   }
+
+  static func appGroupIdentifier() -> String {
+    if let appGroupIdentifierFromPlist = Bundle.getInfoPlistValue(
+      for: "AppGroupIdentifier"
+    ) {
+      return appGroupIdentifierFromPlist
+    } else {
+      SentryManager.shared.trackError(ErrorFactory.create(domain: "BundleHelpers", description: "Failed getting app group ID from plist, using backup"))
+
+      let environment = Bundle.getEnv()
+
+      switch environment {
+      case .development:
+        return "group.com.convos.dev"
+      case .preview:
+        return "group.com.convos.preview"
+      case .production:
+        return "group.com.convos.prod"
+      }
+    }
+  }
 }

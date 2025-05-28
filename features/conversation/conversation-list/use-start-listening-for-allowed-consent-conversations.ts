@@ -1,10 +1,16 @@
 import { useEffect } from "react"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { getAllowedConsentConversationsQueryOptions } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { IConversationId } from "@/features/conversation/conversation.types"
+import {
+  getConversationQueryData,
+  getConversationQueryOptions,
+} from "@/features/conversation/queries/conversation.query"
 import {
   subscribeToConversationsNotifications,
   unsubscribeFromConversationsNotifications,
 } from "@/features/notifications/notifications-conversations-subscriptions"
+import { addConversationNotificationMessageFromStorageInOurCache } from "@/features/notifications/notifications-storage"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { createQueryObserverWithPreviousData } from "@/utils/react-query/react-query.helpers"
@@ -30,7 +36,10 @@ export function useStartListeningForAllowedConsentConversations() {
 function createSenderAllowedConversationsObserver(args: { inboxId: IXmtpInboxId }) {
   const { inboxId } = args
 
-  return createQueryObserverWithPreviousData({
+  // Track conversation observers to clean them up
+  const conversationObservers = new Map<IConversationId, { unsubscribe: () => void }>()
+
+  const allowedConversationsObserver = createQueryObserverWithPreviousData({
     queryOptions: getAllowedConsentConversationsQueryOptions({
       clientInboxId: inboxId,
     }),
@@ -42,11 +51,53 @@ function createSenderAllowedConversationsObserver(args: { inboxId: IXmtpInboxId 
         return
       }
 
-      const conversationIdsToSubscribe = currentConversationIds.filter(
+      // Put all the data we have in storage from our iOS NSE into our cache
+      for (const conversationId of currentConversationIds) {
+        addConversationNotificationMessageFromStorageInOurCache({
+          conversationId,
+        }).catch(captureError)
+      }
+
+      // Get active conversations from current IDs
+      const activeConversationIds = currentConversationIds.filter((id) => {
+        const conversation = getConversationQueryData({
+          clientInboxId: inboxId,
+          xmtpConversationId: id,
+        })
+        return conversation?.isActive
+      })
+
+      // Create observers for new conversations
+      const newConversationIds = activeConversationIds.filter(
+        (id) => !conversationObservers.has(id),
+      )
+
+      newConversationIds.forEach((conversationId) => {
+        const conversationObserver = createConversationContentObserver({
+          inboxId,
+          conversationId,
+        })
+        conversationObservers.set(conversationId, conversationObserver)
+      })
+
+      // Clean up observers for conversations no longer in the list
+      const conversationsToRemove = Array.from(conversationObservers.keys()).filter(
+        (id) => !activeConversationIds.includes(id),
+      )
+
+      conversationsToRemove.forEach((conversationId) => {
+        const observer = conversationObservers.get(conversationId)
+        if (observer) {
+          observer.unsubscribe()
+          conversationObservers.delete(conversationId)
+        }
+      })
+
+      // Only subscribe to notifications for new active allowed conversations
+      const conversationIdsToSubscribe = activeConversationIds.filter(
         (id) => !previousConversationIds || !previousConversationIds.includes(id),
       )
 
-      // Subscribe to notifications for new allowed conversations
       if (conversationIdsToSubscribe.length > 0) {
         subscribeToConversationsNotifications({
           conversationIds: conversationIdsToSubscribe,
@@ -54,18 +105,76 @@ function createSenderAllowedConversationsObserver(args: { inboxId: IXmtpInboxId 
         }).catch(captureError)
       }
 
-      // Unsubscribe from notifications for conversations that are no longer allowed
+      // Unsubscribe from notifications for conversations that are no longer active
+      const inactiveCurrentConversations = currentConversationIds.filter((id) => {
+        const conversation = getConversationQueryData({
+          clientInboxId: inboxId,
+          xmtpConversationId: id,
+        })
+        return conversation && !conversation.isActive
+      })
+
+      if (inactiveCurrentConversations.length > 0) {
+        unsubscribeFromConversationsNotifications({
+          conversationIds: inactiveCurrentConversations,
+          clientInboxId: inboxId,
+        }).catch(captureError)
+      }
+
+      // If we have previous conversations, unsubscribe from ones no longer in the allowed list
       if (previousConversationIds) {
-        const conversationIdsToUnsubscribe = previousConversationIds.filter(
+        const removedConversations = previousConversationIds.filter(
           (id) => !currentConversationIds.includes(id),
         )
 
-        if (conversationIdsToUnsubscribe.length > 0) {
+        if (removedConversations.length > 0) {
           unsubscribeFromConversationsNotifications({
-            conversationIds: conversationIdsToUnsubscribe,
+            conversationIds: removedConversations,
             clientInboxId: inboxId,
           }).catch(captureError)
         }
+      }
+    },
+  })
+
+  return {
+    unsubscribe: () => {
+      allowedConversationsObserver.unsubscribe()
+      // Clean up all conversation observers
+      conversationObservers.forEach((observer) => {
+        observer.unsubscribe()
+      })
+      conversationObservers.clear()
+    },
+  }
+}
+
+function createConversationContentObserver(args: {
+  inboxId: IXmtpInboxId
+  conversationId: IConversationId
+}) {
+  const { inboxId, conversationId } = args
+
+  return createQueryObserverWithPreviousData({
+    queryOptions: getConversationQueryOptions({
+      clientInboxId: inboxId,
+      xmtpConversationId: conversationId,
+      caller: "useStartListeningForAllowedConsentConversations",
+    }),
+    observerCallbackFn: (result) => {
+      const previousConversation = result.previousData
+      const currentConversation = result.data
+
+      if (!currentConversation) {
+        return
+      }
+
+      // If the conversation is no longer active, unsubscribe from notifications
+      if (previousConversation?.isActive && !currentConversation.isActive) {
+        unsubscribeFromConversationsNotifications({
+          conversationIds: [conversationId],
+          clientInboxId: inboxId,
+        }).catch(captureError)
       }
     },
   })

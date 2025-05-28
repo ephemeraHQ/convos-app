@@ -13,59 +13,6 @@ extension Attachment {
   }
 }
 
-class ProfileNameResolver {
-    private struct Response: Codable {
-      let name: String?
-      let username: String
-    }
-
-    let apiBaseURL: String
-
-    static var shared: ProfileNameResolver = .init()
-
-    private init() {
-        let environment = Bundle.getEnv()
-        switch environment {
-        case .production:
-            apiBaseURL = "https://api.convos-prod.convos-api.xyz"
-        case .development, .preview:
-            apiBaseURL = "https://api.convos-dev.convos-api.xyz"
-        }
-    }
-
-    func resolveProfileName(for inboxId: String) async -> String? {
-        do {
-            guard let url = URL(
-                string:
-                    "\(apiBaseURL)/api/v1/profiles/public/xmtpId/\(inboxId)"
-            ) else {
-                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to create API URL for inboxId \(inboxId)"))
-                return nil
-            }
-
-            let (data, response) = try await URLSession.shared.data(from: url)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to get HTTP response for inboxId \(inboxId)"))
-                return nil
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to fetch username for inboxId \(inboxId). HTTP Status Code: \(httpResponse.statusCode)"))
-                return nil
-            }
-
-            // Parse the JSON response
-            let decoder = JSONDecoder()
-            let profile = try decoder.decode(Response.self, from: data)
-          return profile.name ?? profile.username
-        } catch {
-            SentryManager.shared.trackError(error, extras: ["info": "Failed to fetch username for inboxId \(inboxId)"])
-            return nil
-        }
-    }
-}
-
 extension Reaction {
     var emoji: String {
         switch schema {
@@ -82,35 +29,26 @@ extension Reaction {
 }
 
 class PushNotificationContentFactory {
-    let client: Client
-    let nameResolver: ProfileNameResolver
-
-    init(client: Client) {
-        self.client = client
-        self.nameResolver = ProfileNameResolver.shared
-    }
-
-    private func message(from reference: String) async throws -> DecodedMessage? {
-        try await client.conversations.sync()
-        return try await client.conversations.findMessage(messageId: reference)
-    }
-
-  func notification(from originalNotification: UNNotificationContent,
-                    with decodedMessage: DecodedMessage,
-                    in conversation: Conversation) async throws -> UNNotificationContent? {
+    
+    static func notification(from originalNotification: UNNotificationContent,
+                           with decodedMessage: DecodedMessage,
+                           in conversation: Conversation,
+                           ethAddress: String) async throws -> UNNotificationContent? {
+        SentryManager.shared.addBreadcrumb("Attempting to create notification content from decrypted message")
+        
+        let client = try await Client.client(for: ethAddress)
         let mutableNotification = originalNotification.mutableCopy() as? UNMutableNotificationContent ?? UNMutableNotificationContent()
         let decoder = XMTPContentDecoder()
         let content = try decoder.decode(message: decodedMessage)
 
         mutableNotification.threadIdentifier = conversation.id
 
-        // skip our own messages
         guard decodedMessage.senderInboxId != client.inboxID else {
             return nil
         }
 
-        let profileName = await nameResolver.resolveProfileName(for: decodedMessage.senderInboxId)
-        mutableNotification.title = profileName ?? "Convos" // default title is Sender's name
+        let profileName = await ProfileNameResolver.shared.resolveProfileName(for: decodedMessage.senderInboxId)
+        mutableNotification.title = profileName ?? "Convos"
 
         switch conversation {
         case .group(let group):
@@ -133,7 +71,7 @@ class PushNotificationContentFactory {
 
         case .reply(let reply):
             let originalMessageId = reply.reference
-            if let originalMessage = try await message(from: originalMessageId) {
+            if let originalMessage = try await XmtpHelpers.shared.findMessage(from: originalMessageId, ethAddress: ethAddress) {
                 let originalContentType = try originalMessage.encodedContent.type
                 switch originalContentType {
                 case ContentTypeText:
@@ -143,7 +81,7 @@ class PushNotificationContentFactory {
                     case .group(_):
                         if originalMessage.senderInboxId == client.inboxID {
                             senderString = "you "
-                        } else if let senderName = await nameResolver.resolveProfileName(
+                        } else if let senderName = await ProfileNameResolver.shared.resolveProfileName(
                             for: originalMessage.senderInboxId
                         ) {
                             senderString = "\(senderName) "
@@ -156,9 +94,9 @@ class PushNotificationContentFactory {
                     if let replyString: String = reply.content as? String {
                         mutableNotification.body = "Replied to \(senderString)\"\(originalMessageBody)\": \(replyString)"
                     } else {
-                        mutableNotification.body = "Replied to \(senderString)\"\(originalMessageBody)\"" // unknown reply type?
+                        mutableNotification.body = "Replied to \(senderString)\"\(originalMessageBody)\""
                     }
-                case ContentTypeRemoteAttachment: // replying to media
+                case ContentTypeRemoteAttachment:
                     let isYou = originalMessage.senderInboxId == client.inboxID
                     let replyString: String
                     if let reply = reply.content as? String {
@@ -176,7 +114,7 @@ class PushNotificationContentFactory {
 
         case .reaction(let reaction):
             let originalMessageId = reaction.reference
-            let originalMessage = try await message(from: originalMessageId)
+            let originalMessage = try await XmtpHelpers.shared.findMessage(from: originalMessageId, ethAddress: ethAddress)
             let isYou = originalMessage?.senderInboxId == client.inboxID
             let originalContentType = try originalMessage?.encodedContent.type
             let body: String
@@ -188,11 +126,11 @@ class PushNotificationContentFactory {
                 } else {
                     fallthrough
                 }
-            case ContentTypeRemoteAttachment: // replying to media
+            case ContentTypeRemoteAttachment:
                 if isYou {
                     body = "your photo"
                 } else if case .group(_) = conversation, let originalMessage,
-                          let senderName = await nameResolver.resolveProfileName(
+                          let senderName = await ProfileNameResolver.shared.resolveProfileName(
                             for: originalMessage.senderInboxId
                           ) {
                     body = "\(senderName)'s photo"
@@ -203,7 +141,7 @@ class PushNotificationContentFactory {
                 if isYou {
                     body = "your message"
                 } else if case .group(_) = conversation, let originalMessage,
-                          let senderName = await nameResolver.resolveProfileName(
+                          let senderName = await ProfileNameResolver.shared.resolveProfileName(
                             for: originalMessage.senderInboxId
                           ) {
                     body = "\(senderName)'s message"
@@ -211,7 +149,6 @@ class PushNotificationContentFactory {
                     body = "an earlier message"
                 }
             }
-
 
             switch reaction.action {
             case .added:
@@ -235,14 +172,20 @@ class PushNotificationContentFactory {
                                                                   UNNotificationAttachmentOptionsTypeHintKey: UTType.image
                                                                  ])
             mutableNotification.attachments = [attachment]
+          } else {
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "PushNotificationContentFactory", description: "Failed to process remote attachment"))
           }
             mutableNotification.body = "Sent a photo"
         case .remoteURL(_):
           mutableNotification.body = "Sent a photo"
 
         case .unknown:
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "PushNotificationContentFactory", description: "Unknown message content type"))
             return nil
         }
+        
+        SentryManager.shared.addBreadcrumb("Successfully created notification content from decrypted message")
+
         return mutableNotification
     }
 }

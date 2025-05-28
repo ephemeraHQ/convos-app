@@ -1,4 +1,6 @@
 import { getRandomBytesAsync } from "expo-crypto"
+import { Platform } from "react-native"
+import RNFS from "react-native-fs"
 import { XMTPError } from "@/utils/error"
 import { ILowercaseEthereumAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
@@ -7,6 +9,7 @@ import {
   xmtpDbEncryptionKeySecureStorage,
   xmtpDbEncryptionKeySharedDefaultBackupStorage,
 } from "@/utils/storage/storages"
+import { getSharedAppGroupDirectory } from "./xmtp-client-utils"
 
 // Constants
 const DB_ENCRYPTION_KEY_STORAGE_KEY_STRING = "LIBXMTP_DB_ENCRYPTION_KEY" // NEVER CHANGE THIS
@@ -112,6 +115,80 @@ function _deleteFromSecondBackup(ethAddress: ILowercaseEthereumAddress) {
   xmtpLogger.debug(`"Deleted" encryption key from second backup for ${ethAddress}`)
 }
 
+// File-based storage operations
+async function _saveToFileBackup(ethAddress: ILowercaseEthereumAddress, value: string) {
+  if (Platform.OS !== "ios") {
+    xmtpLogger.debug("File backup only supported on iOS, skipping")
+    return
+  }
+
+  try {
+    const groupPath = await getSharedAppGroupDirectory()
+    if (!groupPath) {
+      xmtpLogger.warn("No app group path available for file backup")
+      return
+    }
+
+    const keyFileName = `${BACKUP_PREFIX}${ethAddress}.key`
+    const keyFilePath = `${groupPath}/${keyFileName}`
+
+    await RNFS.writeFile(keyFilePath, value, "utf8")
+    xmtpLogger.debug(`Saved encryption key to file backup for ${ethAddress}`)
+  } catch (error) {
+    xmtpLogger.warn(`Failed to save encryption key to file backup for ${ethAddress}`, { error })
+  }
+}
+
+async function _getFromFileBackup(ethAddress: ILowercaseEthereumAddress): Promise<string | null> {
+  if (Platform.OS !== "ios") {
+    return null
+  }
+
+  try {
+    const groupPath = await getSharedAppGroupDirectory()
+    if (!groupPath) {
+      return null
+    }
+
+    const keyFileName = `${BACKUP_PREFIX}${ethAddress}.key`
+    const keyFilePath = `${groupPath}/${keyFileName}`
+
+    if (await RNFS.exists(keyFilePath)) {
+      const value = await RNFS.readFile(keyFilePath, "utf8")
+      xmtpLogger.debug(`Retrieved encryption key from file backup for ${ethAddress}`)
+      return value
+    }
+
+    return null
+  } catch (error) {
+    xmtpLogger.debug(`Failed to read encryption key from file backup for ${ethAddress}`, { error })
+    return null
+  }
+}
+
+async function _deleteFromFileBackup(ethAddress: ILowercaseEthereumAddress) {
+  if (Platform.OS !== "ios") {
+    return
+  }
+
+  try {
+    const groupPath = await getSharedAppGroupDirectory()
+    if (!groupPath) {
+      return
+    }
+
+    const keyFileName = `${BACKUP_PREFIX}${ethAddress}.key`
+    const keyFilePath = `${groupPath}/${keyFileName}`
+
+    if (await RNFS.exists(keyFilePath)) {
+      await RNFS.unlink(keyFilePath)
+      xmtpLogger.debug(`Deleted encryption key file backup for ${ethAddress}`)
+    }
+  } catch (error) {
+    xmtpLogger.warn(`Failed to delete encryption key file backup for ${ethAddress}`, { error })
+  }
+}
+
 // Key management operations
 export async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; key: string }) {
   const { ethAddress, key } = args
@@ -122,6 +199,7 @@ export async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; ke
     xmtpLogger.debug(`Saved DB encryption key for ${ethAddress} at ${storageKey}`)
     _saveToBackup(ethAddress, key)
     _saveToSecondBackup(ethAddress, key)
+    await _saveToFileBackup(ethAddress, key)
   } catch (error) {
     throw new XMTPError({
       error,
@@ -136,6 +214,7 @@ export async function cleanXmtpDbEncryptionKey(args: { ethAddress: ILowercaseEth
   await deleteDbKey({ ethAddress })
   _deleteFromBackup(ethAddress)
   _deleteFromSecondBackup(ethAddress)
+  await _deleteFromFileBackup(ethAddress)
 }
 
 export async function getOrCreateXmtpDbEncryptionKey(args: {
@@ -152,6 +231,7 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
       // Ensure backups are consistent
       _saveToBackup(ethAddress, existingKey)
       _saveToSecondBackup(ethAddress, existingKey)
+      await _saveToFileBackup(ethAddress, existingKey)
       return _formatKey(existingKey)
     }
 
@@ -162,6 +242,7 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
 
       await xmtpDbEncryptionKeySecureStorage.setItem(_getSecureStorageKey(ethAddress), existingKey)
       _saveToSecondBackup(ethAddress, existingKey)
+      await _saveToFileBackup(ethAddress, existingKey)
       return _formatKey(existingKey)
     }
 
@@ -171,6 +252,18 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
 
       await xmtpDbEncryptionKeySecureStorage.setItem(_getSecureStorageKey(ethAddress), existingKey)
       _saveToBackup(ethAddress, existingKey)
+      await _saveToFileBackup(ethAddress, existingKey)
+      return _formatKey(existingKey)
+    }
+
+    // Check if key exists in file backup
+    existingKey = await _getFromFileBackup(ethAddress)
+    if (existingKey) {
+      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in file backup`)
+
+      await xmtpDbEncryptionKeySecureStorage.setItem(_getSecureStorageKey(ethAddress), existingKey)
+      _saveToBackup(ethAddress, existingKey)
+      _saveToSecondBackup(ethAddress, existingKey)
       return _formatKey(existingKey)
     }
 

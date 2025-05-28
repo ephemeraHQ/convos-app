@@ -124,15 +124,13 @@ const Content = memo(function Content() {
 })
 
 function useClearNotificationsForConversationOnMount() {
-  const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
   useEffect(() => {
     if (xmtpConversationId) {
       clearNotificationsForConversation({
         xmtpConversationId,
-        clientInboxId: currentSender.inboxId,
       }).catch(captureError)
     }
-  }, [xmtpConversationId, currentSender.inboxId])
+  }, [xmtpConversationId])
 }

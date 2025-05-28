@@ -1,9 +1,11 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useQuery } from "@tanstack/react-query"
+import { useEffect } from "react"
 import {
   getSafeCurrentSender,
   useSafeCurrentSender,
 } from "@/features/authentication/multi-inbox.store"
+import { saveProfileDisplayNameForNotificationExtension } from "@/features/notifications/notifications-storage"
 import {
   getPreferredAvatarUrl,
   getPreferredDisplayName,
@@ -132,6 +134,15 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
   })
 
   const preferredUsername = profile?.username
+
+  useEffect(() => {
+    if (displayName && inboxId) {
+      saveProfileDisplayNameForNotificationExtension({
+        inboxId,
+        displayName,
+      })
+    }
+  }, [displayName, inboxId])
 
   return {
     displayName,
@@ -275,6 +286,13 @@ export async function ensurePreferredDisplayInfo(
   })
 
   const preferredUsername = profile?.username
+
+  if (displayName && inboxId) {
+    saveProfileDisplayNameForNotificationExtension({
+      inboxId,
+      displayName,
+    })
+  }
 
   return {
     displayName,

@@ -1,7 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { createStore, useStore } from "zustand"
 import { persist, subscribeWithSelector } from "zustand/middleware"
-import { createProfileStorage } from "@/utils/storage/storages"
+import { createProfileStoreStorage } from "@/utils/storage/storages"
 
 type IProfileMeStoreState = {
   editMode: boolean
@@ -57,12 +57,12 @@ function createProfileMeStore(inboxId: IXmtpInboxId) {
             reset: () => {
               set(DEFAULT_STATE)
               // Clear persisted data
-              createProfileStorage.removeItem(storageKey)
+              createProfileStoreStorage.removeItem(storageKey)
             },
           },
         }),
         {
-          storage: createProfileStorage,
+          storage: createProfileStoreStorage,
           name: storageKey,
           partialize: (state) => ({
             editMode: state.editMode,
