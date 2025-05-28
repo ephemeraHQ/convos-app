@@ -3,7 +3,7 @@ import { queryOptions, skipToken } from "@tanstack/react-query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
-import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import { syncNewXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
 
 export type IUnknownConversationsQueryData = Awaited<
@@ -17,7 +17,7 @@ async function getUnknownConversationsQueryFn(args: { inboxId: IXmtpInboxId }) {
     throw new Error("InboxId is required")
   }
 
-  await syncAllXmtpConversations({
+  await syncNewXmtpConversations({
     clientInboxId: inboxId,
     caller: "getUnknownConversationsQueryFn",
   })

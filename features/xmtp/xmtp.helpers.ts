@@ -92,9 +92,6 @@ export async function wrapXmtpCallWithDuration<T>(
     // if (currentAppState === "active") {
     //   totalActiveDurationMs += Date.now() - segmentStartTime
     // }
-    xmtpLogger.error(
-      `Operation [${operationId}] "${xmtpFunctionName}" failed after ${totalActiveDurationMs}ms`,
-    )
     throw error
   } finally {
     // removeOperation(operationId)

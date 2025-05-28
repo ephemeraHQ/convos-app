@@ -100,12 +100,25 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   }, [xmtpConversationId])
 
   const onLeftSwipe = useCallback(async () => {
-    try {
-      await (isDeleted ? restoreConversationAsync() : deleteDm())
-    } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error deleting dm" }), {
-        message: "Error deleting chat",
-      })
+    if (isDeleted) {
+      try {
+        await restoreConversationAsync()
+      } catch (error) {
+        captureErrorWithToast(
+          new GenericError({ error, additionalMessage: "Error restoring dm" }),
+          {
+            message: "Error restoring chat",
+          },
+        )
+      }
+    } else {
+      try {
+        await deleteDm()
+      } catch (error) {
+        captureErrorWithToast(new GenericError({ error, additionalMessage: "Error deleting dm" }), {
+          message: "Error deleting chat",
+        })
+      }
     }
   }, [isDeleted, deleteDm, restoreConversationAsync])
 

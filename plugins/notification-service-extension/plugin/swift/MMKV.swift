@@ -2,17 +2,26 @@ import Foundation
 import MMKV
 
 class MMKVHelper {
+  static let shared = MMKVHelper()
+  
   private let mmkv: MMKV
-  private var secureMmkvForAccount: [String: MMKV?] = [:]
 
-  private let databaseKeyPrefix = "BACKUP_XMTP_KEY_"
-
-  init?(appGroupDirectoryURL: URL) {
+  private init() {
     let bundleId = Bundle.mainAppBundleId()
-    let groupDir = appGroupDirectoryURL.path
+    let groupId = Bundle.appGroupIdentifier()
+    
+    guard let groupUrl = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: groupId
+    ) else {
+      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "Failed to get App Group container URL"))
+      return nil
+    }
+    
+    let groupDir = groupUrl.path
 
     MMKV.initialize(rootDir: nil, groupDir: groupDir, logLevel: MMKVLogLevel.warning)
 
+    // NEVER change the mmapID unless you know what you're doing. This will break the app group because we need to use the same mmapID for the main app and the notification service extension.
     guard let mmkv = MMKV(mmapID: bundleId,
                           cryptKey: nil,
                           mode: MMKVMode.multiProcess) else {
@@ -21,18 +30,26 @@ class MMKVHelper {
     }
 
     self.mmkv = mmkv
+    SentryManager.shared.addBreadcrumb("MMKVHelper singleton initialized with mmapID: \(bundleId) and groupDir: \(groupDir)")
   }
-
-  func getDatabaseKey(for ethereumAddress: String) -> String? {
-    return getValueFromMmkv(key: databaseKeyPrefix + ethereumAddress)
-  }
-
-  private func getValueFromMmkv(key: String) -> String? {
+  
+  func getString(forKey key: String) -> String? {
     guard let value = mmkv.string(forKey: key) else {
-      SentryManager.shared.trackError(ErrorFactory.create(domain: "MMKVHelper", description: "No value found in group instance for key \(key)"))
+      SentryManager.shared.addBreadcrumb("No value found in MMKV for key: \(key)")
       return nil
     }
-
+    
+    SentryManager.shared.addBreadcrumb("Found value in MMKV for key: \(key)")
     return value
+  }
+  
+  func setString(_ value: String, forKey key: String) {
+    mmkv.set(value, forKey: key)
+    SentryManager.shared.addBreadcrumb("Set value in MMKV for key: \(key)")
+  }
+  
+  func removeValue(forKey key: String) {
+    mmkv.removeValue(forKey: key)
+    SentryManager.shared.addBreadcrumb("Removed value from MMKV for key: \(key)")
   }
 }

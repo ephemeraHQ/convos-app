@@ -41,8 +41,10 @@ function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
             () =>
               syncAllConversations(
                 client.installationId,
-                // TODO: Handle consent states correctly per conversation
-                ["allowed", "unknown", "denied"],
+                // NEVER add more than allowed here, it's useless and dangerous
+                // Otherwise it will sync all conversations, including those that are not allowed
+                // and if a spammer decides to create 100000 groups with us, then all of those will get synced every time
+                ["allowed"],
               ),
           )
         } else {
@@ -100,10 +102,9 @@ export async function syncOneXmtpConversation(args: {
 
 export async function syncAllXmtpConversations(args: {
   clientInboxId: IXmtpInboxId
-  consentStates?: ConsentState[]
   caller: string
 }) {
-  const { clientInboxId, consentStates = ["allowed", "unknown", "denied"], caller } = args
+  const { clientInboxId, caller } = args
 
   const existingSyncPromise = syncAllConversationsPromisesCache.get(clientInboxId)
   if (existingSyncPromise) {
@@ -116,7 +117,13 @@ export async function syncAllXmtpConversations(args: {
         inboxId: clientInboxId,
       })
       await wrapXmtpCallWithDuration(`syncAllConversations (${caller})`, () =>
-        syncAllConversations(client.installationId, consentStates),
+        syncAllConversations(
+          client.installationId,
+          // NEVER add more than allowed here, it's useless and dangerous
+          // Otherwise it will sync all conversations, including those that are not allowed
+          // and if a spammer decides to create 100000 groups with us, then all of those will get synced every time
+          ["allowed"],
+        ),
       )
     } catch (error) {
       throw new XMTPError({
@@ -130,4 +137,24 @@ export async function syncAllXmtpConversations(args: {
 
   syncAllConversationsPromisesCache.set(clientInboxId, syncPromise)
   return syncPromise
+}
+
+export async function syncNewXmtpConversations(args: {
+  clientInboxId: IXmtpInboxId
+  caller: string
+}) {
+  const { clientInboxId, caller } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({ inboxId: clientInboxId })
+
+    await wrapXmtpCallWithDuration(`client.conversations.sync (${caller})`, () =>
+      client.conversations.sync(),
+    )
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to sync new conversations for inbox: ${clientInboxId}`,
+    })
+  }
 }

@@ -1,39 +1,19 @@
 import Foundation
 import XMTP
 
-fileprivate enum KeychainConstants {
-  static func appGroupIdentifier(for environment: XMTP.XMTPEnvironment,
-                                 withTeamId: Bool = false) -> String {
-    let appGroupIdentifier: String
-    if let appGroupIdentifierFromPlist = Bundle.getInfoPlistValue(
-      for: "AppGroupIdentifier"
-    ) {
-      appGroupIdentifier = appGroupIdentifierFromPlist
-    } else {
-      SentryManager.shared.trackError(ErrorFactory.create(domain: "XmtpClient", description: "Failed getting app group ID from plist, using backup"))
-
-      switch environment {
-      case .dev:
-        appGroupIdentifier = "group.com.convos.dev"
-      case .local:
-        appGroupIdentifier = "group.com.convos.preview"
-      case .production:
-        appGroupIdentifier = "group.com.convos.prod"
-      }
-    }
-    let teamIdPrefix: String = "FY4NZR34Z3."
-    return withTeamId ? teamIdPrefix + appGroupIdentifier : appGroupIdentifier
-  }
-}
-
 extension XMTP.Client {
   private static var clientCache: [String: XMTP.Client] = [:]
   private static let cacheQueue = DispatchQueue(label: "com.xmtp.client.cacheQueue", attributes: .concurrent)
+  private static let databaseKeyPrefix = "BACKUP_XMTP_KEY_"
 
   enum ClientInitializationError: Error {
     case noEncryptionKey,
          appGroupContainerNotFound,
          failedInitializingMMKV
+  }
+
+  private static func getDatabaseKey(for ethereumAddress: String) -> String? {
+    return MMKVHelper.shared.getString(forKey: databaseKeyPrefix + ethereumAddress)
   }
 
   static func client(for ethAddress: String) async throws -> XMTP.Client {
@@ -42,11 +22,10 @@ extension XMTP.Client {
       SentryManager.shared.addBreadcrumb("XMTP client cache hit for \(ethAddress)")
       return cachedClient
     }
-
     SentryManager.shared.addBreadcrumb("XMTP client cache miss for \(ethAddress), creating new client.")
 
-    let xmtpEnv = XMTP.Client.xmtpEnvironment
-    let groupId = KeychainConstants.appGroupIdentifier(for: xmtpEnv)
+    let xmtpEnv = XmtpHelpers.shared.getEnvironment()
+    let groupId = Bundle.appGroupIdentifier()
     let groupUrl = FileManager.default.containerURL(
       forSecurityApplicationGroupIdentifier: groupId)
     guard let groupUrl else {
@@ -62,15 +41,25 @@ extension XMTP.Client {
 //      throw ClientInitializationError.noEncryptionKey
 //    }
 
-    guard let mmkvHelper = MMKVHelper(appGroupDirectoryURL: groupUrl) else {
-      throw ClientInitializationError.failedInitializingMMKV
+    // Try to get the encryption key from MMKV storage using the ethereum address
+    let encryptionKeyString = Self.getDatabaseKey(for: ethAddress)
+    guard let encryptionKeyString else {
+      throw ClientInitializationError.noEncryptionKey
     }
-    guard let encryptionKeyString = mmkvHelper.getDatabaseKey(for: ethAddress),
-          let encryptionKey = Data(base64Encoded: encryptionKeyString) else {
+    
+    let encryptionKey = Data(base64Encoded: encryptionKeyString)
+    guard let encryptionKey else {
       throw ClientInitializationError.noEncryptionKey
     }
 
     let groupDir = groupUrl.path
+
+    SentryManager.shared.addBreadcrumb("Creating XMTP client", extras: [
+      "xmtpEnv": xmtpEnv.rawValue,
+      "groupId": groupId,
+      "groupUrl": groupUrl.path,
+      "ethAddress": ethAddress
+    ])
 
     let options = ClientOptions(
       api: .init(env: xmtpEnv),
@@ -92,23 +81,4 @@ extension XMTP.Client {
 
     return client
   }
-
-  static var xmtpEnvironment: XMTP.XMTPEnvironment {
-    let env = Bundle.getEnv()
-
-    let xmtpEnv: XMTP.XMTPEnvironment = switch env {
-      case .development:
-        .local
-      case .preview:
-        .dev
-      case .production:
-        .production
-      default:
-        .local
-    }
-    
-    SentryManager.shared.addBreadcrumb("Using XMTP Environment: \(xmtpEnv.rawValue)")
-    return xmtpEnv
-  }
-
 }

@@ -2,6 +2,7 @@ import { IXmtpDecodedMessage, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
+import { getEnv } from "@/utils/getEnv"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
@@ -23,7 +24,12 @@ export const streamAllMessages = async (args: {
           xmtpLogger.debug(`Skipping message streamed because it's not supported`)
           return Promise.resolve()
         }
-        xmtpLogger.debug(`Received new message from messages stream: ${newMessage.id}`)
+
+        if (getEnv() === "production") {
+          xmtpLogger.debug(`Received new message from messages stream: ${newMessage.id}`)
+        } else {
+          xmtpLogger.debug(`Received new message from messages stream`, newMessage)
+        }
         return onNewMessage(newMessage)
       })
     })
