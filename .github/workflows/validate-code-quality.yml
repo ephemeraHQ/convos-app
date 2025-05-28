@@ -73,5 +73,4 @@ jobs:
           SKIP_YARN_COREPACK_CHECK: "1"
       - run: corepack enable
       - run: yarn
-      - run: yarn plugins:build:notification-service-extension
-      - run: yarn ios:prebuild
+      - run: yarn ios:prebuild:clean

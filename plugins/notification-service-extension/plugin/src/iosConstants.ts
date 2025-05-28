@@ -24,7 +24,10 @@ export const NSE_SWIFT_SOURCE_FILES = [
   "ConvosApiService.swift",
   "ProfileNameResolver.swift",
   "Xmtp+Helpers.swift",
+  "AppGroupFileManager.swift",
+  "RetryUtils.swift",
 ]
+
 export const NSE_INFO_PLIST_FILE_NAME = `${NSE_TARGET_NAME}-Info.plist`
 export const NSE_EXT_FILES = [`${NSE_TARGET_NAME}.entitlements`, NSE_INFO_PLIST_FILE_NAME]
 

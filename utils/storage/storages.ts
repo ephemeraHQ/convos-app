@@ -30,10 +30,3 @@ export const xmtpDbEncryptionKeyMmkvStorage = mmkvGroupSharedStorage
 export const deviceIdStorage = secureStorage
 
 export const notificationExtensionSharedDataStorage = mmkvGroupSharedStorage
-
-export function clearAllNonImportantStorages() {
-  // Clear all non important storages
-  reactQueryPersistingStorage.clearAll()
-  favoritedEmojisStorage.clearAll()
-  persistStateStorage.clearAll()
-}

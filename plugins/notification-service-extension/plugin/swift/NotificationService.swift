@@ -181,7 +181,9 @@ final class NotificationService: UNNotificationServiceExtension {
              // Sync conversation
             do {
                 SentryManager.shared.addBreadcrumb("Attempting to sync conversation")
-                try await conversation.sync()
+                try await withRetry(context: "Syncing conversation for topic: \(topic)") {
+                    try await conversation.sync()
+                }
                 SentryManager.shared.addBreadcrumb("Successfully synced conversation")
             } catch {
                 SentryManager.shared.trackError(error, extras: ["info": "Failed to sync conversation"])

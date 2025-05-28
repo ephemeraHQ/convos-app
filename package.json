@@ -17,7 +17,7 @@
     "ios:clean": "node scripts/run-ios.js --env=dev --clean",
     "ios:device": "node scripts/run-ios.js --env=dev --use-device",
     "ios:device:clean": "node scripts/run-ios.js --env=dev --clean --use-device",
-    "ios:prebuild": "expo prebuild -p ios",
+    "ios:prebuild:clean": "yarn plugins:build:notification-service-extension && expo prebuild -p ios --clean",
     "ios:preview": "node scripts/run-ios.js --env=preview",
     "ios:preview:clean": "node scripts/run-ios.js --env=preview --clean",
     "ios:preview:device": "node scripts/run-ios.js --env=preview --use-device",

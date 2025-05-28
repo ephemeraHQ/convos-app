@@ -5,7 +5,7 @@ import { clientByEthAddress, clientByInboxId } from "@/features/xmtp/xmtp-client
 import {
   getBackupXmtpDbEncryptionKey,
   getOrCreateXmtpDbEncryptionKey,
-} from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key"
+} from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
 import {
   getSharedAppGroupDirectory,
   getXmtpLocalUrl,

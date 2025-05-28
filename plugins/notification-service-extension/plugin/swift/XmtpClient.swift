@@ -4,16 +4,43 @@ import XMTP
 extension XMTP.Client {
   private static var clientCache: [String: XMTP.Client] = [:]
   private static let cacheQueue = DispatchQueue(label: "com.xmtp.client.cacheQueue", attributes: .concurrent)
-  private static let databaseKeyPrefix = "BACKUP_XMTP_KEY_"
+  
+  // Storage prefixes - NEVER CHANGE THESE! They must match the React Native app
+  private static let mmkvKeyPrefix = "BACKUP_XMTP_KEY_"
+  private static let keychainKeyPrefix = "LIBXMTP_DB_ENCRYPTION_KEY"
+  private static let fileKeyPrefix = "FILE_BACKUP_PREFIX"
 
   enum ClientInitializationError: Error {
     case noEncryptionKey,
          appGroupContainerNotFound,
          failedInitializingMMKV
   }
-
+  
   private static func getDatabaseKey(for ethereumAddress: String) -> String? {
-    return MMKVHelper.shared.getString(forKey: databaseKeyPrefix + ethereumAddress)
+    // 1. Try MMKV first (current implementation)
+    if let mmkvKey = MMKVHelper.shared.getString(forKey: mmkvKeyPrefix + ethereumAddress) {
+      SentryManager.shared.addBreadcrumb("Retrieved encryption key from MMKV for \(ethereumAddress)")
+      return mmkvKey
+    }
+    
+    // 2. Try file-based storage in App Group container
+    let fileName = "\(fileKeyPrefix)\(ethereumAddress).key"
+    if let fileKey = AppGroupFileManager.shared.readFile(fileName: fileName) {
+      SentryManager.shared.addBreadcrumb("Retrieved encryption key from file backup for \(ethereumAddress)")
+      return fileKey
+    }
+    
+    // 3. Try Keychain as last resort until we move to Expo SDK 53
+    if let keychainKey = KeychainWrapper.getValue(forKey: ethereumAddress) {
+      SentryManager.shared.addBreadcrumb("Retrieved encryption key from Keychain for \(ethereumAddress)")
+      return keychainKey
+    }
+    
+    SentryManager.shared.trackError(ErrorFactory.create(
+      domain: "XmtpClient",
+      description: "Failed to retrieve encryption key from all storage methods for \(ethereumAddress)"
+    ))
+    return nil
   }
 
   static func client(for ethAddress: String) async throws -> XMTP.Client {
@@ -31,15 +58,6 @@ extension XMTP.Client {
     guard let groupUrl else {
       throw ClientInitializationError.appGroupContainerNotFound
     }
-
-    /// For when we can use our Keychain Access group, waiting on upgrade to Expo SDK 53
-//    guard let encryptionKeyString = KeychainWrapper.getValue(
-//      forKey: ethAddress,
-//      groupId: groupId
-//    ),
-//          let encryptionKey = Data(base64Encoded: encryptionKeyString) else {
-//      throw ClientInitializationError.noEncryptionKey
-//    }
 
     // Try to get the encryption key from MMKV storage using the ethereum address
     let encryptionKeyString = Self.getDatabaseKey(for: ethAddress)
