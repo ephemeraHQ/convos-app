@@ -148,14 +148,6 @@ final class NotificationService: UNNotificationServiceExtension {
                 SentryManager.shared.addBreadcrumb("Successfully created XMTP client")
             } catch {
                 SentryManager.shared.trackError(error, extras: ["info": "Failed to create XMTP client for address: \(ethAddress)"])
-                
-                NotificationService.unsubscribeFromTopics(
-                    [topic],
-                    installationId: installationId,
-                    reason: "Failed to create XMTP client for address: \(ethAddress)"
-                )
-                
-                SentryManager.shared.addBreadcrumb("Showing generic notification due to client creation failure")
                 contentHandler?(currentBestAttempt)
                 return
             }
@@ -170,7 +162,7 @@ final class NotificationService: UNNotificationServiceExtension {
                     // Unsubscribe because this conversation doesn't exist for this client
                     NotificationService.unsubscribeFromTopics(
                         [topic], 
-                        installationId: client.installationID, 
+                        installationId: installationId, 
                         reason: "Conversation not found for topic: \(topic)"
                     )
                     
@@ -208,7 +200,7 @@ final class NotificationService: UNNotificationServiceExtension {
                         
                         NotificationService.unsubscribeFromTopics(
                             [topic], 
-                            installationId: client.installationID, 
+                            installationId: installationId, 
                             reason: "User no longer active in group"
                         )
                         
@@ -222,7 +214,7 @@ final class NotificationService: UNNotificationServiceExtension {
                     // Unsubscribe on membership check failure as safety measure
                     NotificationService.unsubscribeFromTopics(
                         [topic], 
-                        installationId: client.installationID, 
+                        installationId: installationId, 
                         reason: "Failed to verify group membership"
                     )
                     
