@@ -5,8 +5,8 @@ import XMTP
 final class SentryManager {
   static let shared = SentryManager()
   private init() {
-      log.debug("[Sentry] Initializing Sentry")
       let sentryEnv = Bundle.getEnv()
+      log.debug("[Sentry] Initializing Sentry with environment: \(sentryEnv.rawValue)")
       SentrySDK.start { options in
         options.dsn = "https://dc072f632e53ca5d87b47120ad0a2e31@o4504757119680512.ingest.us.sentry.io/4509079521067008"
         options.environment = sentryEnv.rawValue
@@ -37,12 +37,17 @@ final class SentryManager {
     SentrySDK.flush(timeout: 3)
   }
 
-  func addBreadcrumb(_ message: String) {
-    log.debug("[Sentry] Adding breadcrumb: \(message)")
+  func addBreadcrumb(_ message: String, extras: [String: Any]? = nil) {
+    if let extras = extras {
+      log.debug("[Sentry] Adding breadcrumb: \(message), extras: \(extras)")
+    } else {
+      log.debug("[Sentry] Adding breadcrumb: \(message)")
+    }
     let crumb = Breadcrumb()
     crumb.level = .info
     crumb.category = "ios-notification-service-extension"
     crumb.message = message
+    crumb.data = extras
     SentrySDK.addBreadcrumb(crumb)
   }
 }

@@ -6,7 +6,7 @@ import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { IEthereumAddress } from "@/utils/evm/address"
 import { logger } from "@/utils/logger/logger"
-import { multiInboxStorage, oldMultiInboxStorage } from "@/utils/storage/storages"
+import { multiInboxStoreStorage, oldMultiInboxStoreStorage } from "@/utils/storage/storages"
 
 export type ISender = {
   ethereumAddress: IEthereumAddress
@@ -65,7 +65,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
         actions: {
           reset: () => {
             set(initialState)
-            multiInboxStorage.removeItem(STORE_KEY_NAME)
+            multiInboxStoreStorage.removeItem(STORE_KEY_NAME)
           },
 
           setCurrentSender: (sender) => {
@@ -156,7 +156,7 @@ export const useMultiInboxStore = create<IMultiInboxStoreType>()(
       {
         name: STORE_NAME, // DON'T CHANGE THIS unless you know what you are doing
         version: CURRENT_STORE_VERSION, // DON'T CHANGE THIS unless you know what you are doing
-        storage: multiInboxStorage,
+        storage: multiInboxStoreStorage,
         partialize: (state) => {
           const {
             // We never want the actions in the persisted state
@@ -221,7 +221,7 @@ async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewSto
     `MultiInboxStore: New storage ('${STORE_KEY_NAME}') is not populated (or version ${oldVersionInNewStorage} is outdated). Attempting to load from old 'mmkv.default' storage.`,
   )
   try {
-    const rawOldStateString = await oldMultiInboxStorage.getItem(STORE_KEY_NAME)
+    const rawOldStateString = await oldMultiInboxStoreStorage.getItem(STORE_KEY_NAME)
 
     if (rawOldStateString && typeof rawOldStateString === "string") {
       logger.debug(
@@ -240,7 +240,7 @@ async function migrate(persistedStateFromNewStorage: unknown, oldVersionInNewSto
         )
 
         try {
-          await oldMultiInboxStorage.removeItem(STORE_KEY_NAME)
+          await oldMultiInboxStoreStorage.removeItem(STORE_KEY_NAME)
           logger.debug(
             `MultiInboxStore: Successfully removed data from old 'mmkv.default' storage (key '${STORE_KEY_NAME}').`,
           )

@@ -4,6 +4,7 @@ import {
   getSafeCurrentSender,
   useSafeCurrentSender,
 } from "@/features/authentication/multi-inbox.store"
+import { saveProfileDisplayNameForNotificationExtension } from "@/features/notifications/notifications-storage"
 import {
   getPreferredAvatarUrl,
   getPreferredDisplayName,
@@ -132,6 +133,13 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
   })
 
   const preferredUsername = profile?.username
+
+  if (displayName && inboxId) {
+    saveProfileDisplayNameForNotificationExtension({
+      inboxId,
+      displayName,
+    })
+  }
 
   return {
     displayName,

@@ -13,59 +13,6 @@ extension Attachment {
   }
 }
 
-class ProfileNameResolver {
-    private struct Response: Codable {
-      let name: String?
-      let username: String
-    }
-
-    let apiBaseURL: String
-
-    static var shared: ProfileNameResolver = .init()
-
-    private init() {
-        let environment = Bundle.getEnv()
-        switch environment {
-        case .production:
-            apiBaseURL = "https://api.convos-prod.convos-api.xyz"
-        case .development, .preview:
-            apiBaseURL = "https://api.convos-dev.convos-api.xyz"
-        }
-    }
-
-    func resolveProfileName(for inboxId: String) async -> String? {
-        do {
-            guard let url = URL(
-                string:
-                    "\(apiBaseURL)/api/v1/profiles/public/xmtpId/\(inboxId)"
-            ) else {
-                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to create API URL for inboxId \(inboxId)"))
-                return nil
-            }
-
-            let (data, response) = try await URLSession.shared.data(from: url)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to get HTTP response for inboxId \(inboxId)"))
-                return nil
-            }
-
-            guard httpResponse.statusCode == 200 else {
-                SentryManager.shared.trackError(ErrorFactory.create(domain: "ProfileNameResolver", description: "Failed to fetch username for inboxId \(inboxId). HTTP Status Code: \(httpResponse.statusCode)"))
-                return nil
-            }
-
-            // Parse the JSON response
-            let decoder = JSONDecoder()
-            let profile = try decoder.decode(Response.self, from: data)
-          return profile.name ?? profile.username
-        } catch {
-            SentryManager.shared.trackError(error, extras: ["info": "Failed to fetch username for inboxId \(inboxId)"])
-            return nil
-        }
-    }
-}
-
 extension Reaction {
     var emoji: String {
         switch schema {
@@ -98,6 +45,8 @@ class PushNotificationContentFactory {
   func notification(from originalNotification: UNNotificationContent,
                     with decodedMessage: DecodedMessage,
                     in conversation: Conversation) async throws -> UNNotificationContent? {
+        SentryManager.shared.addBreadcrumb("Attempting to create notification content from decrypted message")
+        
         let mutableNotification = originalNotification.mutableCopy() as? UNMutableNotificationContent ?? UNMutableNotificationContent()
         let decoder = XMTPContentDecoder()
         let content = try decoder.decode(message: decodedMessage)
@@ -235,14 +184,20 @@ class PushNotificationContentFactory {
                                                                   UNNotificationAttachmentOptionsTypeHintKey: UTType.image
                                                                  ])
             mutableNotification.attachments = [attachment]
+          } else {
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "PushNotificationContentFactory", description: "Failed to process remote attachment"))
           }
             mutableNotification.body = "Sent a photo"
         case .remoteURL(_):
           mutableNotification.body = "Sent a photo"
 
         case .unknown:
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "PushNotificationContentFactory", description: "Unknown message content type"))
             return nil
         }
+        
+        SentryManager.shared.addBreadcrumb("Successfully created notification content from decrypted message")
+
         return mutableNotification
     }
 }

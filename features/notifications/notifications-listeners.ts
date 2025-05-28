@@ -7,11 +7,7 @@ import {
   isConvosModifiedNotification,
   isNotificationExpoNewMessageNotification,
 } from "@/features/notifications/notifications-assertions"
-import {
-  addNotificationsToConversationCacheData,
-  getNotificationId,
-  getNotificationsForConversation,
-} from "@/features/notifications/notifications.service"
+import { addConversationNotificationMessageFromStorageInOurCache } from "@/features/notifications/notifications-storage"
 import { useNotificationsStore } from "@/features/notifications/notifications.store"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { navigate } from "@/navigation/navigation.utils"
@@ -19,8 +15,8 @@ import { useAppStore } from "@/stores/app.store"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
-import { measureTimeAsync } from "@/utils/perf/perf-timer"
 import { waitUntilPromise } from "@/utils/wait-until-promise"
+import { getNotificationId } from "./notification.model"
 
 export function useNotificationListeners() {
   const foregroundNotificationListenerRef = useRef<Notifications.Subscription>()
@@ -125,31 +121,19 @@ async function handleNotification(response: Notifications.NotificationResponse) 
       const tappedConversationTopic = tappedNotification.request.content.data.contentTopic
       const tappedXmtpConversationId = getXmtpConversationIdFromXmtpTopic(tappedConversationTopic)
 
-      // Also get all notifications in the tray to decrypt so that when you arrive in the conversation you see messages instantly
-      const { result: presentedNotifications, durationMs } = await measureTimeAsync(() =>
-        Notifications.getPresentedNotificationsAsync(),
-      )
-
-      notificationsLogger.debug(
-        `Found ${presentedNotifications.length} notifications present in tray in ${durationMs}ms`,
-      )
-
-      const notifications = getNotificationsForConversation({
+      await addConversationNotificationMessageFromStorageInOurCache({
         conversationId: tappedXmtpConversationId,
-        notifications: presentedNotifications,
-      })
+      }).catch(captureError)
 
       // Waiting for this might delay the navigation to the conversation.
       // But it's still better UX and anyway soon we will have notification messages in the local storage
       // so it will be instant.
-      await addNotificationsToConversationCacheData({
-        notifications: [
-          // Otherwise it's not found in the tray because we tapped on it!
-          tappedNotification,
-          ...notifications,
-        ],
-        clientInboxId: getSafeCurrentSender().inboxId,
-      })
+      // const presentedNotifications = await Notifications.getPresentedNotificationsAsync()
+      // await addNotificationsToConversationCacheData({
+      //   conversationId: tappedXmtpConversationId,
+      //   clientInboxId: getSafeCurrentSender().inboxId,
+      //   notifications: [tappedNotification, ...presentedNotifications],
+      // }).catch(captureError)
 
       // To make sure we don't navigate to a conversation that doesn't exist.
       // Happens because our notifications unsubscribing logic is not perfect.

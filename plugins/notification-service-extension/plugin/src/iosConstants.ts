@@ -21,6 +21,9 @@ export const NSE_SWIFT_SOURCE_FILES = [
   "Bundle+Helpers.swift",
   "SentryManager.swift",
   "AppError.swift",
+  "ConvosApiService.swift",
+  "ProfileNameResolver.swift",
+  "Xmtp+Helpers.swift",
 ]
 export const NSE_INFO_PLIST_FILE_NAME = `${NSE_TARGET_NAME}-Info.plist`
 export const NSE_EXT_FILES = [`${NSE_TARGET_NAME}.entitlements`, NSE_INFO_PLIST_FILE_NAME]

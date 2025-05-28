@@ -122,16 +122,6 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
           Log.log(`Setting 'Environment' in ${infoPlistFilename} to: ${env}`)
           infoPlistContents.Environment = env
 
-          // Set XMTP Environment
-          // const expoEnv =
-          //   process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
-          // let xmtpEnvironment = "local"
-          // if (expoEnv === "production") xmtpEnvironment = "production"
-          // else if (expoEnv === "preview") xmtpEnvironment = "dev"
-          // else if (expoEnv === "development") xmtpEnvironment = "local"
-          // Log.log(`Setting 'XmtpEnvironment' in ${infoPlistFilename} to: ${xmtpEnvironment}`)
-          // infoPlistContents.XmtpEnvironment = xmtpEnvironment
-
           // Set App Group Identifier
           Log.log(`Setting 'AppGroupIdentifier' in ${infoPlistFilename} to: ${appGroupId}`)
           infoPlistContents.AppGroupIdentifier = appGroupId

@@ -2,24 +2,24 @@ module.exports = {
   meta: {
     type: "problem",
     docs: {
-      description: "Enforce error handling for Promise-based function calls in React components",
+      description:
+        "Enforce error handling for Promise-based function calls in React components and hooks",
       category: "Best Practices",
       recommended: true,
     },
     schema: [],
     messages: {
       missingErrorHandling:
-        "Promise-based function calls in React components must be wrapped in try-catch or use .catch()",
+        "Promise-based function calls in React components and hooks must be wrapped in try-catch or use .catch()",
     },
   },
   create(context) {
     // Get the file extension
     const filename = context.getFilename()
     const isTsxFile = filename.endsWith(".tsx")
-    const isPureTsFile = filename.endsWith(".ts") && !isTsxFile
 
-    // Track if we're inside a React component
-    let insideComponent = false
+    // Track if we're inside a React component or hook
+    let insideReactContext = false
     // Track if we're inside a try block
     let insideTryBlock = 0
 
@@ -56,38 +56,66 @@ module.exports = {
       return hasJSX || hasHooks
     }
 
+    // Helper to check if we're inside a React hook callback
+    function isInsideReactHook(node) {
+      let current = node
+      while (current) {
+        if (
+          current.type === "CallExpression" &&
+          current.callee &&
+          current.callee.name &&
+          (current.callee.name.startsWith("use") ||
+            current.callee.name === "useEffect" ||
+            current.callee.name === "useCallback" ||
+            current.callee.name === "useMemo" ||
+            current.callee.name === "useLayoutEffect")
+        ) {
+          return true
+        }
+        current = current.parent
+      }
+      return false
+    }
+
     return {
+      // Only process .tsx files
+      Program(node) {
+        if (!isTsxFile) {
+          return
+        }
+      },
+
       // Detect React component function declarations
       FunctionDeclaration(node) {
         if (isTsxFile && isReactComponent(node)) {
-          insideComponent = true
+          insideReactContext = true
         }
       },
       // Detect React component arrow functions
       ArrowFunctionExpression(node) {
         if (isTsxFile && isReactComponent(node)) {
-          insideComponent = true
+          insideReactContext = true
         }
       },
       // Detect memo wrapped components
       "CallExpression[callee.name='memo']"(node) {
         if (isTsxFile) {
-          insideComponent = true
+          insideReactContext = true
         }
       },
       "FunctionDeclaration:exit"(node) {
         if (isTsxFile && isReactComponent(node)) {
-          insideComponent = false
+          insideReactContext = false
         }
       },
       "ArrowFunctionExpression:exit"(node) {
         if (isTsxFile && isReactComponent(node)) {
-          insideComponent = false
+          insideReactContext = false
         }
       },
       "CallExpression[callee.name='memo']:exit"(node) {
         if (isTsxFile) {
-          insideComponent = false
+          insideReactContext = false
         }
       },
       // Track try blocks
@@ -99,7 +127,12 @@ module.exports = {
       },
       // Check await expressions
       AwaitExpression(node) {
-        const shouldCheck = isPureTsFile || (isTsxFile && insideComponent)
+        if (!isTsxFile) {
+          return
+        }
+
+        // Only check if we're inside a React component or React hook
+        const shouldCheck = insideReactContext || isInsideReactHook(node)
         if (!shouldCheck) {
           return
         }
@@ -121,7 +154,12 @@ module.exports = {
       },
       // Check Promise.then() calls
       "CallExpression[callee.property.name='then']"(node) {
-        const shouldCheck = isPureTsFile || (isTsxFile && insideComponent)
+        if (!isTsxFile) {
+          return
+        }
+
+        // Only check if we're inside a React component or React hook
+        const shouldCheck = insideReactContext || isInsideReactHook(node)
         if (!shouldCheck) {
           return
         }

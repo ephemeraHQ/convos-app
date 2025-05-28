@@ -12,13 +12,13 @@ import { config } from "@/config"
 import { useCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
 import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
-import { requestNotificationsPermissions } from "@/features/notifications/notifications-permissions"
-import { registerPushNotifications } from "@/features/notifications/notifications-register"
-import { getDevicePushNotificationsToken } from "@/features/notifications/notifications-token"
 import {
   canAskForNotificationsPermissions,
+  requestNotificationsPermissions,
   userHasGrantedNotificationsPermissions,
-} from "@/features/notifications/notifications.service"
+} from "@/features/notifications/notifications-permissions"
+import { registerPushNotifications } from "@/features/notifications/notifications-register"
+import { getDevicePushNotificationsToken } from "@/features/notifications/notifications-token"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"

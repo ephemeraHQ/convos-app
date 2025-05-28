@@ -7,9 +7,9 @@ import {
   invalidateAllowedConsentConversationsQuery,
 } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
-import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { registerPushNotifications } from "@/features/notifications/notifications-register"
+import { addConversationNotificationMessageFromStorageInOurCache } from "@/features/notifications/notifications-storage"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
 import { useAppStateStore } from "@/stores/app-state-store/app-state.store"
 import { captureError } from "@/utils/capture-error"
@@ -131,6 +131,18 @@ export function startListeningToAppStateStore() {
           invalidateUnknownConsentConversationsQuery({
             inboxId: currentSender.inboxId,
           }).catch(captureError)
+
+          const allowedConversationIds = getAllowedConsentConversationsQueryData({
+            clientInboxId: currentSender.inboxId,
+          })
+
+          if (allowedConversationIds) {
+            for (const conversationId of allowedConversationIds) {
+              addConversationNotificationMessageFromStorageInOurCache({
+                conversationId,
+              }).catch(captureError)
+            }
+          }
         }
       }
 
