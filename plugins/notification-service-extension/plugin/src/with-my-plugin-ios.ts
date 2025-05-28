@@ -122,6 +122,16 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
           Log.log(`Setting 'Environment' in ${infoPlistFilename} to: ${env}`)
           infoPlistContents.Environment = env
 
+          // Set XMTP Environment
+          // const expoEnv =
+          //   process.env.EXPO_ENV?.toLowerCase() || config.extra?.expoEnv || "development"
+          // let xmtpEnvironment = "local"
+          // if (expoEnv === "production") xmtpEnvironment = "production"
+          // else if (expoEnv === "preview") xmtpEnvironment = "dev"
+          // else if (expoEnv === "development") xmtpEnvironment = "local"
+          // Log.log(`Setting 'XmtpEnvironment' in ${infoPlistFilename} to: ${xmtpEnvironment}`)
+          // infoPlistContents.XmtpEnvironment = xmtpEnvironment
+
           // Set App Group Identifier
           Log.log(`Setting 'AppGroupIdentifier' in ${infoPlistFilename} to: ${appGroupId}`)
           infoPlistContents.AppGroupIdentifier = appGroupId
@@ -249,7 +259,7 @@ const withPodfile: ConfigPlugin = (config) => {
 target '${NSE_TARGET_NAME}' do
   # Use the iOS XMTP version required by the installed @xmtp/react-native-sdk
   # Same value that we use in the react-native app
-  pod 'XMTP', '4.2.0-rc4', :modular_headers => true
+  pod 'XMTP', '4.2.0-dev.b10e719', :modular_headers => true
   # Same value that we use in the react-native app
   pod 'MMKV', '~> 2.2.1', :modular_headers => true
   pod 'Sentry/HybridSDK', '8.48.0'

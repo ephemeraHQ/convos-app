@@ -9056,9 +9056,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@xmtp/react-native-sdk@npm:4.2.0-rc4":
-  version: 4.2.0-rc4
-  resolution: "@xmtp/react-native-sdk@npm:4.2.0-rc4"
+"@xmtp/react-native-sdk@npm:4.2.0-dev.73f1217":
+  version: 4.2.0-dev.73f1217
+  resolution: "@xmtp/react-native-sdk@npm:4.2.0-dev.73f1217"
   dependencies:
     "@changesets/changelog-git": "npm:^0.2.0"
     "@changesets/cli": "npm:^2.27.10"
@@ -9067,12 +9067,13 @@ __metadata:
     "@noble/hashes": "npm:^1.3.3"
     "@xmtp/proto": "npm:3.54.0"
     buffer: "npm:^6.0.3"
+    react-native-performance: "npm:^5.1.2"
     text-encoding: "npm:^0.7.0"
   peerDependencies:
     expo: "*"
     react: "*"
     react-native: "*"
-  checksum: 10c0/157e373709d5ceb3f271083958d1837851bce7250fde5e24dfc30470a69dc3e0b8396a952decc1657e8ee47d4dd36a7f61181347e8d6aa03193dff8afe8972a8
+  checksum: 10c0/e889a618074076ad2c7df50fdc0cc068948662711af9fbb6042d676fcd11473579f5707c255080160a038430bc4a8de9ea727f5b38d27cbf80a8fda105685ded
   languageName: node
   linkType: hard
 
@@ -11064,7 +11065,7 @@ __metadata:
     "@walletconnect/react-native-compat": "npm:^2.19.0"
     "@welldone-software/why-did-you-render": "npm:^8.0.3"
     "@xmtp/content-type-primitives": "npm:^2.0.0"
-    "@xmtp/react-native-sdk": "npm:4.2.0-rc4"
+    "@xmtp/react-native-sdk": "npm:4.2.0-dev.73f1217"
     "@yornaath/batshit": "npm:^0.10.1"
     alchemy-sdk: "npm:^3.4.4"
     amazon-cognito-identity-js: "npm:6.3.12"
@@ -20104,6 +20105,15 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/8ee9a4a63546f92fabd513d38ad0aa02f1e20f3dddfdcafd9356331c0ea77b39e2abe4ca5a26fd5140958e50c10248578930ca21f7169ce702b0693f612eb6c4
+  languageName: node
+  linkType: hard
+
+"react-native-performance@npm:^5.1.2":
+  version: 5.1.2
+  resolution: "react-native-performance@npm:5.1.2"
+  peerDependencies:
+    react-native: "*"
+  checksum: 10c0/a23ad91c5547e0dc62fcdad0230ebd58c8dcfee236174fd2802da14ca3e97451afdba957a9d258e962cfbc4b1671d672547827e096a440ae36b4e967e4a49f50
   languageName: node
   linkType: hard
 
