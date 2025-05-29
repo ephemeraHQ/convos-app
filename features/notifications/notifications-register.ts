@@ -7,8 +7,12 @@ import {
   getDevicePushNotificationsToken,
   getExpoPushNotificationsToken,
 } from "@/features/notifications/notifications-token"
-import { registerNotificationInstallation } from "@/features/notifications/notifications.api"
+import {
+  registerNotificationInstallation,
+  unregisterNotificationInstallation,
+} from "@/features/notifications/notifications.api"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
+import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { NotificationError, UserCancelledError } from "@/utils/error"
 
 export async function registerPushNotifications() {
@@ -66,6 +70,25 @@ export async function registerPushNotifications() {
     throw new NotificationError({
       error,
       additionalMessage: "Failed to register push notifications",
+    })
+  }
+}
+
+export async function unregisterPushNotifications(args: { clientInboxId: IXmtpInboxId }) {
+  const { clientInboxId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    await unregisterNotificationInstallation({
+      installationId: client.installationId,
+    })
+  } catch (error) {
+    throw new NotificationError({
+      error,
+      additionalMessage: `Failed to unregister push notifications for inbox ${clientInboxId}`,
     })
   }
 }

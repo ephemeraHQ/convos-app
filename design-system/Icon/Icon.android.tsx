@@ -79,6 +79,7 @@ export const iconRegistry: Record<IIconName, keyof typeof MaterialIcons.glyphMap
   clock: "access-time",
   timer: "timer",
   "clock.fill": "access-time",
+  "bell-slash": "notifications-off",
 }
 
 export function Icon(props: IIconProps) {

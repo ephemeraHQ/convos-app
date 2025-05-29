@@ -1,5 +1,5 @@
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { queryOptions } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { getConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
 import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
@@ -60,6 +60,10 @@ export function getConversationMetadataQueryOptions({
   })
 }
 
+export function useConversationMetadataQuery(args: IArgs) {
+  return useQuery(getConversationMetadataQueryOptions(args))
+}
+
 export function prefetchConversationMetadataQuery(args: IArgs & { caller: string }) {
   const { xmtpConversationId, clientInboxId, caller } = args
   return reactQueryClient.prefetchQuery(
@@ -72,6 +76,10 @@ export const getConversationMetadataQueryData = (args: IArgs) => {
   return reactQueryClient.getQueryData(
     getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }).queryKey,
   )
+}
+
+export const ensureConversationMetadataQueryData = (args: IArgs & { caller: string }) => {
+  return reactQueryClient.ensureQueryData(getConversationMetadataQueryOptions(args))
 }
 
 export function updateConversationMetadataQueryData(

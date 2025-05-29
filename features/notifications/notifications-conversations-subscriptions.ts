@@ -1,4 +1,8 @@
-import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import {
+  ensureAllowedConsentConversationsQueryData,
+  getAllowedConsentConversationsQueryData,
+} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { ensureConversationMetadataQueryData } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { getXmtpConversationTopicFromXmtpId } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
@@ -12,21 +16,43 @@ import {
   unsubscribeFromNotificationTopics,
 } from "./notifications.api"
 
-export async function subscribeToAllAllowedConsentConversationsNotifications(args: {
+export async function subscribeToAllNonMutedAllowedConsentConversationsNotifications(args: {
   clientInboxId: IXmtpInboxId
 }) {
   const { clientInboxId } = args
 
-  const conversations = getAllowedConsentConversationsQueryData({
+  const conversations = await ensureAllowedConsentConversationsQueryData({
     clientInboxId,
+    caller: "subscribeToAllNonMutedAllowedConsentConversationsNotifications",
   })
 
   if (!conversations) {
-    return
+    throw new Error("No allowed consent conversations found")
   }
 
+  // Filter out muted conversations before subscribing
+  const unmutedConversations = await Promise.all(
+    conversations.map(async (conversationId) => {
+      const metadata = await ensureConversationMetadataQueryData({
+        xmtpConversationId: conversationId,
+        clientInboxId,
+        caller: "subscribeToAllNonMutedAllowedConsentConversationsNotifications",
+      })
+
+      // Only include conversations that aren't muted
+      if (!metadata?.muted) {
+        return conversationId
+      }
+
+      return null
+    }),
+  )
+
+  // Remove null values and get final list of unmuted conversations
+  const filteredConversationIds = unmutedConversations.filter(Boolean)
+
   await subscribeToConversationsNotifications({
-    conversationIds: conversations,
+    conversationIds: filteredConversationIds,
     clientInboxId,
   })
 }

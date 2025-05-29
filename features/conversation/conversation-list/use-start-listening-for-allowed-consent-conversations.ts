@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { getAllowedConsentConversationsQueryOptions } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { ensureConversationMetadataQueryData } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { IConversationId } from "@/features/conversation/conversation.types"
 import {
   getConversationQueryData,
@@ -13,6 +14,8 @@ import {
 import { addConversationNotificationMessageFromStorageInOurCache } from "@/features/notifications/notifications-storage"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
+import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { createQueryObserverWithPreviousData } from "@/utils/react-query/react-query.helpers"
 
 export function useStartListeningForAllowedConsentConversations() {
@@ -99,10 +102,41 @@ function createSenderAllowedConversationsObserver(args: { inboxId: IXmtpInboxId 
       )
 
       if (conversationIdsToSubscribe.length > 0) {
-        subscribeToConversationsNotifications({
-          conversationIds: conversationIdsToSubscribe,
-          clientInboxId: inboxId,
-        }).catch(captureError)
+        customPromiseAllSettled(
+          conversationIdsToSubscribe.map((id) =>
+            ensureConversationMetadataQueryData({
+              clientInboxId: inboxId,
+              xmtpConversationId: id,
+              caller: "useStartListeningForAllowedConsentConversations",
+            }),
+          ),
+        )
+          .then((results) => {
+            // Filter for successful metadata results that aren't muted
+            const unmutedConversationIds = conversationIdsToSubscribe.filter((id, index) => {
+              const result = results[index]
+
+              if (result.status === "rejected") {
+                captureError(
+                  new GenericError({
+                    error: result.reason,
+                    additionalMessage: `Failed to ensure conversation metadata for conversation ${id}`,
+                  }),
+                )
+                return false
+              }
+
+              return !result.value?.muted
+            })
+
+            if (unmutedConversationIds.length > 0) {
+              return subscribeToConversationsNotifications({
+                conversationIds: unmutedConversationIds,
+                clientInboxId: inboxId,
+              })
+            }
+          })
+          .catch(captureError)
       }
 
       // Unsubscribe from notifications for conversations that are no longer active

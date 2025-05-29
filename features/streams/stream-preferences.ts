@@ -1,4 +1,4 @@
-import { subscribeToAllAllowedConsentConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
+import { subscribeToAllNonMutedAllowedConsentConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
 import {
   startStreamingXmtpPreferences,
   stopStreamingXmtpPreferences,
@@ -14,7 +14,7 @@ export async function startStreamingPreferences(args: { clientInboxId: IXmtpInbo
     clientInboxId,
     onPreferenceUpdated: (preferences) => {
       streamLogger.debug("Preferences updated", preferences)
-      subscribeToAllAllowedConsentConversationsNotifications({
+      subscribeToAllNonMutedAllowedConsentConversationsNotifications({
         clientInboxId,
       }).catch(captureError)
     },
