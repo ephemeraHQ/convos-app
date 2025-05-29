@@ -112,7 +112,6 @@ final class NotificationService: UNNotificationServiceExtension {
         let encryptedMessage: String
         let topic: String
         let ethAddress: String
-        let installationId: String
 
         do {
             SentryManager.shared.addBreadcrumb("Attempting to decode notification payload")
@@ -123,7 +122,6 @@ final class NotificationService: UNNotificationServiceExtension {
             encryptedMessage = payload.body.encryptedMessage
             topic = payload.body.contentTopic
             ethAddress = payload.body.ethAddress.lowercased()
-            installationId = payload.body.installationId
             SentryManager.shared.addBreadcrumb("Successfully decoded notification payload")
 
         } catch {
@@ -297,7 +295,6 @@ extension NotificationService {
         let encryptedMessage: String
         let contentTopic: String
         let ethAddress: String
-        let installationId: String
     }
 
     struct NotificationPayload: Decodable {
