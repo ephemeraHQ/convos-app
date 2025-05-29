@@ -27,27 +27,24 @@ export async function getNotificationsForConversation(args: {
   const { conversationId, notifications } = args
 
   return notifications.filter((notification) => {
-    if (isConvosModifiedNotification(notification)) {
-      const notificationConversationId = getXmtpConversationIdFromXmtpTopic(
-        notification.request.content.data?.topic,
+    let topic = isConvosModifiedNotification(notification)
+      ? notification.request.content.data?.message.xmtpTopic
+      : isNotificationExpoNewMessageNotification(notification)
+        ? notification.request.content.data?.contentTopic
+        : null
+
+    if (!topic) {
+      captureError(
+        new NotificationError({
+          error: new Error("No topic found in notification"),
+          additionalMessage: `No topic found in notification: ${JSON.stringify(notification)}`,
+        }),
       )
-      return notificationConversationId === conversationId
+      return false
     }
 
-    if (isNotificationExpoNewMessageNotification(notification)) {
-      const notificationConversationId = getXmtpConversationIdFromXmtpTopic(
-        notification.request.content.data?.topic,
-      )
-      return notificationConversationId === conversationId
-    }
+    const notificationConversationId = getXmtpConversationIdFromXmtpTopic(topic)
 
-    captureError(
-      new NotificationError({
-        error: new Error("Unknown notification type"),
-        additionalMessage: `Unknown notification type: ${JSON.stringify(notification)}`,
-      }),
-    )
-
-    return false
+    return notificationConversationId === conversationId
   })
 }
