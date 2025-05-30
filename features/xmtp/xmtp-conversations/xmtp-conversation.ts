@@ -105,8 +105,9 @@ export const getXmtpConversationIdFromXmtpTopic = (xmtpTopic: IXmtpConversationT
     .replace("/proto", "") as IXmtpConversationId
 }
 
-export function getXmtpConversationTopicFromXmtpId(xmtpId: IXmtpConversationId) {
-  return `${CONVERSATION_TOPIC_PREFIX}/${xmtpId}/proto` as IXmtpConversationTopic
+// "/xmtp/mls/1/g-<conversationId>/proto"
+export function getXmtpConversationTopicFromXmtpId(xmtpConversationId: IXmtpConversationId) {
+  return `${CONVERSATION_TOPIC_PREFIX}${xmtpConversationId}/proto` as IXmtpConversationTopic
 }
 
 export const CONVERSATION_TOPIC_PREFIX = "/xmtp/mls/1/g-"

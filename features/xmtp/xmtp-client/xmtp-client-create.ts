@@ -3,13 +3,11 @@ import { Client as XmtpClient } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
 import { clientByEthAddress, clientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client-cache"
 import {
-  getBackupXmtpDbEncryptionKey,
-  getOrCreateXmtpDbEncryptionKey,
+  createXmtpDbEncryptionKey,
+  getXmtpDbEncryptionKey,
 } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
-import {
-  getSharedAppGroupDirectory,
-  getXmtpLocalUrl,
-} from "@/features/xmtp/xmtp-client/xmtp-client-utils"
+import { formatDbEncryptionKeyToUint8Array } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key.utils"
+import { getXmtpDbDirectory, getXmtpLocalUrl } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
 import { ISupportedXmtpCodecs, supportedXmtpCodecs } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { xmtpIdentityIsEthereumAddress } from "@/features/xmtp/xmtp-identifier/xmtp-identifier"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
@@ -26,7 +24,7 @@ async function _createXmtpClient(args: {
 }): Promise<IXmtpClientWithCodecs> {
   const { inboxSigner, dbEncryptionKey, operationName, ethAddress } = args
 
-  const dbDirectory = await getSharedAppGroupDirectory()
+  const dbDirectory = await getXmtpDbDirectory()
 
   if (!dbDirectory) {
     throw new XMTPError({
@@ -73,30 +71,49 @@ export async function createXmtpClient(args: {
   const ethAddress = lowercaseEthAddress(identity.identifier)
 
   try {
-    const dbEncryptionKey = await getOrCreateXmtpDbEncryptionKey({
+    let dbEncryptionKey = await getXmtpDbEncryptionKey({
       ethAddress,
     })
 
-    xmtpLogger.debug(`Creating XMTP client instance...`)
+    if (!dbEncryptionKey) {
+      dbEncryptionKey = await createXmtpDbEncryptionKey({
+        ethAddress,
+      })
+
+      if (!dbEncryptionKey) {
+        throw new XMTPError({
+          error: new Error("Failed to create DB encryption key while creating XMTP client"),
+        })
+      }
+    }
 
     try {
       return await _createXmtpClient({
         inboxSigner,
-        dbEncryptionKey,
+        dbEncryptionKey: formatDbEncryptionKeyToUint8Array(dbEncryptionKey),
         operationName: "createXmtpClient",
         ethAddress,
       })
     } catch (error) {
       if (isXmtpDbEncryptionKeyError(error)) {
+        // Weird error that we saw. It's like if there's a value in the keychain, we read it but the returned data is invalid.
+        // So we try getting the value from the backup storage instead.
         xmtpLogger.warn(`PRAGMA key error detected, trying with backup key...`)
 
-        const backupDbEncryptionKey = await getBackupXmtpDbEncryptionKey({
+        const backupDbEncryptionKey = await getXmtpDbEncryptionKey({
           ethAddress,
+          useBackupNumber: "first",
         })
+
+        if (!backupDbEncryptionKey) {
+          throw new XMTPError({
+            error: new Error("No backup DB encryption key found while creating XMTP client"),
+          })
+        }
 
         const client = await _createXmtpClient({
           inboxSigner,
-          dbEncryptionKey: backupDbEncryptionKey,
+          dbEncryptionKey: formatDbEncryptionKeyToUint8Array(backupDbEncryptionKey),
           operationName: "createXmtpClientWithBackupKey",
           ethAddress,
         })

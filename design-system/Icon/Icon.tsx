@@ -79,6 +79,8 @@ export const iconRegistry: Record<IIconName, SFSymbol> = {
   clock: "clock",
   "clock.fill": "clock.fill",
   timer: "timer",
+  "bell-slash": "bell.slash",
+  "bell-slash.fill": "bell.slash.fill",
 }
 
 export function Icon(props: IIconProps) {

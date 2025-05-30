@@ -11,6 +11,7 @@ import { useConversationIsUnread } from "@/features/conversation/conversation-li
 import { useDeleteGroup } from "@/features/conversation/conversation-list/hooks/use-delete-group"
 import { useMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
+import { useConversationIsMuted } from "@/features/conversation/conversation-metadata/use-conversation-is-muted"
 import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
@@ -43,6 +44,11 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   const { isUnread } = useConversationIsUnread({
     xmtpConversationId,
+  })
+
+  const { data: isMuted } = useConversationIsMuted({
+    xmtpConversationId,
+    caller: "ConversationListItemGroup",
   })
 
   const { groupName } = useGroupName({
@@ -151,6 +157,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
         title={title}
         subtitle={subtitle}
         isUnread={isUnread}
+        isMuted={isMuted}
       />
     </ConversationListItemSwipeable>
   )

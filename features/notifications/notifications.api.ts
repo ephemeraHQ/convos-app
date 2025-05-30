@@ -62,6 +62,21 @@ export const registerNotificationInstallation = async (args: IRegistrationReques
   }
 }
 
+/**
+ * Unregisters a device installation
+ */
+export const unregisterNotificationInstallation = async (args: {
+  installationId: IXmtpInstallationId
+}) => {
+  const { installationId } = args
+
+  try {
+    await convosApi.delete(`/api/v1/notifications/unregister/${installationId}`)
+  } catch (error) {
+    throw error
+  }
+}
+
 const HmacKeySchema = z.object({
   thirtyDayPeriodsSinceEpoch: z.number(),
   key: z.string(),
@@ -106,21 +121,6 @@ type IUnsubscribeRequest = z.infer<typeof UnsubscribeRequestSchema>
 export const unsubscribeFromNotificationTopics = async (args: IUnsubscribeRequest) => {
   try {
     await convosApi.post("/api/v1/notifications/unsubscribe", args)
-  } catch (error) {
-    throw error
-  }
-}
-
-/**
- * Unregisters a device installation
- */
-export const unregisterNotificationInstallation = async (args: {
-  installationId: IXmtpInstallationId
-}) => {
-  const { installationId } = args
-
-  try {
-    await convosApi.delete(`/api/v1/notifications/unregister/${installationId}`)
   } catch (error) {
     throw error
   }

@@ -2,14 +2,9 @@ import { IXmtpClientWithCodecs, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { PublicIdentity, Client as XmtpClient } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
 import { clientByEthAddress, clientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client-cache"
-import {
-  getBackupXmtpDbEncryptionKey,
-  getOrCreateXmtpDbEncryptionKey,
-} from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
-import {
-  getSharedAppGroupDirectory,
-  getXmtpLocalUrl,
-} from "@/features/xmtp/xmtp-client/xmtp-client-utils"
+import { getXmtpDbEncryptionKey } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
+import { formatDbEncryptionKeyToUint8Array } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key.utils"
+import { getXmtpDbDirectory, getXmtpLocalUrl } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
 import { ISupportedXmtpCodecs, supportedXmtpCodecs } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { isXmtpDbEncryptionKeyError } from "@/features/xmtp/xmtp-errors"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
@@ -25,7 +20,7 @@ async function _buildXmtpClient(args: {
 }): Promise<IXmtpClientWithCodecs> {
   const { ethereumAddress, inboxId, dbEncryptionKey, operationName } = args
 
-  const dbDirectory = await getSharedAppGroupDirectory()
+  const dbDirectory = await getXmtpDbDirectory()
 
   if (!dbDirectory) {
     throw new XMTPError({
@@ -65,29 +60,44 @@ async function createXmtpBuildPromise(args: {
 
   try {
     const ethAddress = lowercaseEthAddress(ethereumAddress)
-    const dbEncryptionKey = await getOrCreateXmtpDbEncryptionKey({
+    const dbEncryptionKey = await getXmtpDbEncryptionKey({
       ethAddress,
     })
+
+    if (!dbEncryptionKey) {
+      throw new XMTPError({
+        error: new Error("No DB encryption key found while building XMTP client"),
+      })
+    }
 
     try {
       return await _buildXmtpClient({
         ethereumAddress,
         inboxId,
-        dbEncryptionKey,
+        dbEncryptionKey: formatDbEncryptionKeyToUint8Array(dbEncryptionKey),
         operationName: "buildXmtpClient",
       })
     } catch (error) {
       if (isXmtpDbEncryptionKeyError(error)) {
+        // Weird error that we saw. It's like if there's a value in the keychain, we read it but the returned data is invalid.
+        // So we try getting the value from the backup storage instead.
         xmtpLogger.warn(`PRAGMA key error detected in build, trying with backup key...`)
 
-        const backupDbEncryptionKey = await getBackupXmtpDbEncryptionKey({
+        const backupDbEncryptionKey = await getXmtpDbEncryptionKey({
           ethAddress,
+          useBackupNumber: "second",
         })
+
+        if (!backupDbEncryptionKey) {
+          throw new XMTPError({
+            error: new Error("No backup DB encryption key found while building XMTP client"),
+          })
+        }
 
         const client = await _buildXmtpClient({
           ethereumAddress,
           inboxId,
-          dbEncryptionKey: backupDbEncryptionKey,
+          dbEncryptionKey: formatDbEncryptionKeyToUint8Array(backupDbEncryptionKey),
           operationName: "buildXmtpClientWithBackupKey",
         })
 

@@ -1,8 +1,6 @@
 import Constants from "expo-constants"
-import { Platform } from "react-native"
-import RNFS from "react-native-fs"
-import { config } from "@/config"
 import { XMTPError } from "@/utils/error"
+import { getSharedAppGroupDirectory } from "@/utils/ios-extension/ios-extensions"
 import { xmtpLogger } from "@/utils/logger/logger"
 
 export function getXmtpLocalUrl() {
@@ -24,23 +22,6 @@ export function getXmtpLocalUrl() {
  * Gets the path to the shared App Group container directory using react-native-fs.
  * Returns null if not on iOS or if the path cannot be determined.
  */
-export async function getSharedAppGroupDirectory() {
-  if (Platform.OS !== "ios") {
-    xmtpLogger.warn(
-      "getSharedAppGroupDirectory called on non-iOS platform. App Groups are not supported.",
-    )
-    return null
-  }
-
-  try {
-    const groupPath = await RNFS.pathForGroup(config.ios.appGroupId)
-
-    if (!groupPath) {
-      throw new Error("Failed to get App Group path via RNFS")
-    }
-
-    return groupPath
-  } catch (error) {
-    throw new XMTPError({ error, additionalMessage: "Failed to get App Group path via RNFS" })
-  }
+export async function getXmtpDbDirectory() {
+  return getSharedAppGroupDirectory()
 }

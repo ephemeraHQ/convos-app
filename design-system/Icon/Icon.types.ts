@@ -76,7 +76,8 @@ export type IIconName =
   | "clock"
   | "clock.fill"
   | "timer"
-
+  | "bell-slash"
+  | "bell-slash.fill"
 /**
  * Props for the Icon component.
  * @example

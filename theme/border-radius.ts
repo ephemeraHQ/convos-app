@@ -6,6 +6,7 @@ export const borderRadius = {
   lg: 32,
   xl: 40,
   xxl: 48,
+  full: 9999,
 
   message: {
     bubble: 16,

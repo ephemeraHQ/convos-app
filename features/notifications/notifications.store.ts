@@ -7,6 +7,7 @@ type INotificationsState = {
 }
 
 type INotificationsActions = {
+  reset: () => void
   setLastHandledNotificationId: (notificationId: string) => void
 }
 
@@ -18,17 +19,23 @@ const initialState: INotificationsState = {
   lastHandledNotificationId: null,
 }
 
+const STORE_NAME = "notifications-storage"
+
 export const useNotificationsStore = create<INotificationsStore>()(
   persist(
     (set, get) => ({
       ...initialState,
       actions: {
+        reset: () => {
+          set(initialState)
+          notificationsStoreStorage.removeItem(STORE_NAME)
+        },
         setLastHandledNotificationId: (notificationId: string) =>
           set({ lastHandledNotificationId: notificationId }),
       },
     }),
     {
-      name: "notifications-storage",
+      name: STORE_NAME,
       version: 2,
       storage: notificationsStoreStorage,
       partialize(state) {

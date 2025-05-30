@@ -12,6 +12,7 @@ const ConversationMetadataSchema = z.object({
   unread: z.boolean().optional(),
   readUntil: z.string().datetime().nullable().optional(),
   updatedAt: z.string().datetime(),
+  muted: z.boolean().optional(),
 })
 
 export type IConversationMetadata = z.infer<typeof ConversationMetadataSchema>
@@ -126,6 +127,32 @@ export async function deleteConversationMetadata(args: {
   })
 }
 
+export async function muteConversationMetadata(args: {
+  deviceIdentityId: IDeviceIdentityId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  return updateConversationMetadata({
+    deviceIdentityId: args.deviceIdentityId,
+    xmtpConversationId: args.xmtpConversationId,
+    updates: {
+      muted: true,
+    },
+  })
+}
+
+export async function unmuteConversationMetadata(args: {
+  deviceIdentityId: IDeviceIdentityId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  return updateConversationMetadata({
+    deviceIdentityId: args.deviceIdentityId,
+    xmtpConversationId: args.xmtpConversationId,
+    updates: {
+      muted: false,
+    },
+  })
+}
+
 async function updateConversationMetadata(args: {
   xmtpConversationId: IXmtpConversationId
   deviceIdentityId: IDeviceIdentityId
@@ -134,6 +161,7 @@ async function updateConversationMetadata(args: {
     unread?: boolean
     deleted?: boolean
     readUntil?: string
+    muted?: boolean
   }
 }) {
   const { xmtpConversationId, deviceIdentityId, updates } = args
