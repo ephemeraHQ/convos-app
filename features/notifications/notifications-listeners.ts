@@ -1,8 +1,6 @@
 import * as Notifications from "expo-notifications"
 import { useEffect, useRef } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import {
   isConvosModifiedNotification,
   isNotificationExpoNewMessageNotification,
@@ -125,11 +123,11 @@ async function handleNotification(response: Notifications.NotificationResponse) 
 
       // To make sure we don't navigate to a conversation that doesn't exist.
       // Happens because our notifications unsubscribing logic is not perfect.
-      await ensureConversationQueryData({
-        clientInboxId: getSafeCurrentSender().inboxId,
-        xmtpConversationId: tappedXmtpConversationId,
-        caller: "useNotificationListeners",
-      })
+      // await ensureConversationQueryData({
+      //   clientInboxId: getSafeCurrentSender().inboxId,
+      //   xmtpConversationId: tappedXmtpConversationId,
+      //   caller: "useNotificationListeners",
+      // })
 
       return navigate("Conversation", {
         xmtpConversationId: tappedXmtpConversationId,

@@ -8,6 +8,16 @@ import {
   StaticAttachmentCodec,
   TextCodec,
 } from "@xmtp/react-native-sdk"
+import {
+  IXmtpDecodedGroupUpdatedMessage,
+  IXmtpDecodedMessage,
+  IXmtpDecodedMultiRemoteAttachmentMessage,
+  IXmtpDecodedReactionMessage,
+  IXmtpDecodedRemoteAttachmentMessage,
+  IXmtpDecodedReplyMessage,
+  IXmtpDecodedStaticAttachmentMessage,
+  IXmtpDecodedTextMessage,
+} from "../xmtp.types"
 
 export const supportedXmtpCodecs = [
   new TextCodec(),
@@ -70,4 +80,113 @@ export function isXmtpGroupUpdatedContentType(contentType: string) {
 // Multi remote attachment content type
 export function isXmtpMultiRemoteAttachmentContentType(contentType: string) {
   return contentType.startsWith("xmtp.org/multiRemoteStaticAttachment:")
+}
+
+export function isXmtpTextMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedTextMessage {
+  return (
+    isXmtpTextContentType(message.contentTypeId) &&
+    message.nativeContent != null &&
+    typeof message.nativeContent.text === "string"
+  )
+}
+
+export function isXmtpReactionMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedReactionMessage {
+  return (
+    isXmtpReactionContentType(message.contentTypeId) &&
+    message.nativeContent != null &&
+    (message.nativeContent.reaction != null || message.nativeContent.reactionV2 != null)
+  )
+}
+
+export function isXmtpGroupUpdatedMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedGroupUpdatedMessage {
+  return (
+    isXmtpGroupUpdatedContentType(message.contentTypeId) &&
+    message.nativeContent != null &&
+    message.nativeContent.groupUpdated != null &&
+    typeof message.nativeContent.groupUpdated.initiatedByInboxId === "string" &&
+    Array.isArray(message.nativeContent.groupUpdated.membersAdded) &&
+    Array.isArray(message.nativeContent.groupUpdated.membersRemoved) &&
+    Array.isArray(message.nativeContent.groupUpdated.metadataFieldsChanged)
+  )
+}
+
+export function isXmtpReplyMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedReplyMessage {
+  return (
+    isXmtpReplyContentType(message.contentTypeId) &&
+    message.nativeContent != null &&
+    message.nativeContent.reply != null &&
+    typeof message.nativeContent.reply.reference === "string" &&
+    message.nativeContent.reply.content != null
+  )
+}
+
+export function isXmtpRemoteAttachmentMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedRemoteAttachmentMessage {
+  return (
+    isXmtpRemoteAttachmentContentType(message.contentTypeId) &&
+    message.nativeContent != null &&
+    message.nativeContent.remoteAttachment != null &&
+    typeof message.nativeContent.remoteAttachment.url === "string" &&
+    typeof message.nativeContent.remoteAttachment.contentDigest === "string" &&
+    typeof message.nativeContent.remoteAttachment.secret === "string" &&
+    typeof message.nativeContent.remoteAttachment.salt === "string" &&
+    typeof message.nativeContent.remoteAttachment.nonce === "string"
+  )
+}
+
+export function isXmtpStaticAttachmentMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedStaticAttachmentMessage {
+  return (
+    isXmtpStaticAttachmentContentType(message.contentTypeId) &&
+    message.nativeContent != null &&
+    message.nativeContent.attachment != null &&
+    typeof message.nativeContent.attachment.filename === "string" &&
+    typeof message.nativeContent.attachment.mimeType === "string" &&
+    typeof message.nativeContent.attachment.data === "string"
+  )
+}
+
+export function isXmtpMultiRemoteAttachmentMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedMultiRemoteAttachmentMessage {
+  return (
+    isXmtpMultiRemoteAttachmentContentType(message.contentTypeId) &&
+    message.nativeContent != null &&
+    message.nativeContent.multiRemoteAttachment != null &&
+    Array.isArray(message.nativeContent.multiRemoteAttachment.attachments) &&
+    message.nativeContent.multiRemoteAttachment.attachments.length > 0 &&
+    message.nativeContent.multiRemoteAttachment.attachments.every(
+      (attachment) =>
+        typeof attachment.url === "string" &&
+        typeof attachment.contentDigest === "string" &&
+        typeof attachment.secret === "string" &&
+        typeof attachment.salt === "string" &&
+        typeof attachment.nonce === "string" &&
+        typeof attachment.contentLength === "string",
+    )
+  )
+}
+
+export function isXmtpMessage(
+  message: Pick<IXmtpDecodedMessage, "contentTypeId" | "nativeContent">,
+): message is IXmtpDecodedMessage {
+  return (
+    isXmtpTextMessage(message) ||
+    isXmtpReactionMessage(message) ||
+    isXmtpGroupUpdatedMessage(message) ||
+    isXmtpReplyMessage(message) ||
+    isXmtpRemoteAttachmentMessage(message) ||
+    isXmtpStaticAttachmentMessage(message) ||
+    isXmtpMultiRemoteAttachmentMessage(message)
+  )
 }

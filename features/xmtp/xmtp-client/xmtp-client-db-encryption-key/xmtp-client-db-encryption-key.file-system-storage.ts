@@ -5,7 +5,7 @@ import { xmtpLogger } from "@/utils/logger/logger"
 import { getSharedAppGroupDirectory } from "../xmtp-client-utils"
 
 // NEVER CHANGE THIS PREFIX unless you know what you are doing
-const FILE_BACKUP_PREFIX = "FILE_BACKUP_XMTP_KEY_"
+const FILE_BACKUP_PREFIX = "FILE_BACKUP_XMTP_DB_ENCRYPTION_KEY_"
 
 export async function _saveToFileBackup(ethAddress: ILowercaseEthereumAddress, value: string) {
   if (Platform.OS !== "ios") {

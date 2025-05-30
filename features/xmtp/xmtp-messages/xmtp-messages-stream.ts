@@ -20,7 +20,7 @@ export const streamAllMessages = async (args: {
     // Not wrapping the stream initiation itself as it's long-running
     await wrapXmtpCallWithDuration("streamAllMessages", async () => {
       return client.conversations.streamAllMessages((newMessage) => {
-        if (!isSupportedXmtpMessage(newMessage)) {
+        if (!isSupportedXmtpMessage(newMessage as IXmtpDecodedMessage)) {
           xmtpLogger.debug(`Skipping message streamed because it's not supported`)
           return Promise.resolve()
         }
@@ -30,7 +30,7 @@ export const streamAllMessages = async (args: {
         } else {
           xmtpLogger.debug(`Received new message from messages stream`, newMessage)
         }
-        return onNewMessage(newMessage)
+        return onNewMessage(newMessage as IXmtpDecodedMessage)
       })
     })
   } catch (error) {

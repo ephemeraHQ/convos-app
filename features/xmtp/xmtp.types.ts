@@ -36,7 +36,11 @@ import {
   updateDisappearingMessageSettings,
 } from "@xmtp/react-native-sdk"
 import { InstallationId } from "@xmtp/react-native-sdk/build/lib/Client"
-import { ConversationSendPayload, MessageId } from "@xmtp/react-native-sdk/build/lib/types"
+import {
+  ConversationSendPayload,
+  MessageId,
+  MultiRemoteAttachmentContent,
+} from "@xmtp/react-native-sdk/build/lib/types"
 import { ISupportedXmtpCodecs } from "./xmtp-codecs/xmtp-codecs"
 
 // ===== Inbox Types =====
@@ -56,15 +60,35 @@ export type IXmtpGroupMember = Member
 export type IXmtpConsentState = ConsentState
 
 // Base message types for different content types
-export type IXmtpDecodedTextMessage = DecodedMessage<TextCodec>
-export type IXmtpDecodedReactionMessage = DecodedMessage<ReactionCodec>
-export type IXmtpDecodedGroupUpdatedMessage = DecodedMessage<GroupUpdatedCodec>
-export type IXmtpDecodedReplyMessage = DecodedMessage<ReplyCodec>
+export type IXmtpDecodedTextMessage = DecodedMessage<TextCodec> & {
+  nativeContent: Required<Pick<NativeMessageContent, "text">>
+}
+
+export type IXmtpDecodedReactionMessage = DecodedMessage<ReactionCodec> & {
+  nativeContent: Required<Pick<NativeMessageContent, "reaction" | "reactionV2">>
+}
+
+export type IXmtpDecodedGroupUpdatedMessage = DecodedMessage<GroupUpdatedCodec> & {
+  nativeContent: Required<Pick<NativeMessageContent, "groupUpdated">>
+}
+
+export type IXmtpDecodedReplyMessage = DecodedMessage<ReplyCodec> & {
+  nativeContent: Required<Pick<NativeMessageContent, "reply">>
+}
 
 // Attachment message types
-export type IXmtpDecodedRemoteAttachmentMessage = DecodedMessage<RemoteAttachmentCodec>
-export type IXmtpDecodedStaticAttachmentMessage = DecodedMessage<StaticAttachmentCodec>
-export type IXmtpDecodedMultiRemoteAttachmentMessage = DecodedMessage<MultiRemoteAttachmentCodec>
+export type IXmtpDecodedRemoteAttachmentMessage = DecodedMessage<RemoteAttachmentCodec> & {
+  nativeContent: Required<Pick<NativeMessageContent, "remoteAttachment">>
+}
+
+export type IXmtpDecodedStaticAttachmentMessage = DecodedMessage<StaticAttachmentCodec> & {
+  nativeContent: Required<Pick<NativeMessageContent, "attachment">>
+}
+
+export type IXmtpDecodedMultiRemoteAttachmentMessage =
+  DecodedMessage<MultiRemoteAttachmentCodec> & {
+    nativeContent: Required<Pick<NativeMessageContent, "multiRemoteAttachment">>
+  }
 
 // Union types for message handling
 export type IXmtpDecodedMessage =
@@ -81,7 +105,6 @@ export type IXmtpDecodedMessage =
  * NativeMessageContent is an object with specific fields for different content types
  * Used for message content that will be sent directly to the XMTP SDK
  */
-export type IXmtpDecodedMessageNativeContent = NativeMessageContent
 export type IXmtpTextContent = string
 export type IXmtpReactionContent = ReactionContent
 export type IXmtpGroupUpdatedContent = GroupUpdatedContent
@@ -89,6 +112,16 @@ export type IXmtpGroupUpdatedMetadataEntry = GroupUpdatedMetadatEntry
 export type IXmtpRemoteAttachmentContent = RemoteAttachmentContent
 export type IXmtpStaticAttachmentContent = StaticAttachmentContent
 export type IXmtpReplyContent = ReplyContent
+export type IXmtpMultiRemoteAttachmentContent = MultiRemoteAttachmentContent
+export type IXmtpDecodedMessageContent =
+  | IXmtpTextContent
+  | IXmtpReactionContent
+  | IXmtpGroupUpdatedContent
+  | IXmtpReplyContent
+  | IXmtpMultiRemoteAttachmentContent
+  | IXmtpRemoteAttachmentContent
+  | IXmtpStaticAttachmentContent
+export type IXmtpDecodedMessageNativeContent = NativeMessageContent
 
 // ===== Attachment Types =====
 export type IXmtpDecryptedLocalAttachment = DecryptedLocalAttachment

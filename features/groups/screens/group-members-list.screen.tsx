@@ -10,6 +10,7 @@ import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.stor
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
 import { GroupMemberDetailsBottomSheet } from "@/features/groups/components/group-member-details/group-member-details.bottom-sheet"
 import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
+import { useCurrentSenderGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
 import { useSortedGroupMembers } from "@/features/groups/queries/group-members-sorted.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
@@ -30,6 +31,10 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
     router.navigate("AddGroupMembers", { xmtpConversationId })
   }, [router, xmtpConversationId])
 
+  const { canAddMembers } = useCurrentSenderGroupPermissions({
+    xmtpConversationId,
+  })
+
   // Set up header
   useHeader(
     {
@@ -38,7 +43,7 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
       leftIcon: "chevron.left",
       onLeftPress: handleBackPress,
       rightIcon: "plus",
-      onRightPress: handleAddMembersPress,
+      onRightPress: canAddMembers ? handleAddMembersPress : undefined,
     },
     [handleBackPress, handleAddMembersPress],
   )

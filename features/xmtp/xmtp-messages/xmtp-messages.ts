@@ -1,27 +1,12 @@
 import { conversationMessages, processMessage } from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
-import {
-  isXmtpGroupUpdatedContentType,
-  isXmtpMultiRemoteAttachmentContentType,
-  isXmtpReactionContentType,
-  isXmtpRemoteAttachmentContentType,
-  isXmtpReplyContentType,
-  isXmtpStaticAttachmentContentType,
-  isXmtpTextContentType,
-} from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
+import { ISupportedXmtpCodecs } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import {
   IXmtpConversationId,
-  IXmtpDecodedGroupUpdatedMessage,
   IXmtpDecodedMessage,
-  IXmtpDecodedMultiRemoteAttachmentMessage,
-  IXmtpDecodedReactionMessage,
-  IXmtpDecodedRemoteAttachmentMessage,
-  IXmtpDecodedReplyMessage,
-  IXmtpDecodedStaticAttachmentMessage,
-  IXmtpDecodedTextMessage,
   IXmtpInboxId,
   IXmtpMessageId,
 } from "../xmtp.types"
@@ -52,8 +37,8 @@ export async function getXmtpConversationMessages(args: {
         inboxId: clientInboxId,
       })
 
-      const messages = await wrapXmtpCallWithDuration("conversationMessages", () =>
-        conversationMessages(
+      const messages = (await wrapXmtpCallWithDuration("conversationMessages", () =>
+        conversationMessages<ISupportedXmtpCodecs>(
           client.installationId,
           xmtpConversationId,
           limit,
@@ -61,7 +46,7 @@ export async function getXmtpConversationMessages(args: {
           afterNs,
           direction === "next" ? "DESCENDING" : "ASCENDING",
         ),
-      )
+      )) as unknown as IXmtpDecodedMessage[]
 
       return messages.filter(isSupportedXmtpMessage)
     } catch (error) {
@@ -100,7 +85,7 @@ export async function getXmtpConversationMessage(args: {
           client.conversations.findMessage(messageId),
         )) ?? null
 
-      return message
+      return message as unknown as IXmtpDecodedMessage | null
     } catch (error) {
       throw new XMTPError({
         error,
@@ -138,9 +123,13 @@ export async function decryptXmtpMessage(args: {
         inboxId: clientInboxId,
       })
 
-      const message = await wrapXmtpCallWithDuration("processMessage", () =>
-        processMessage(client.installationId, xmtpConversationId, encryptedMessage),
-      )
+      const message = (await wrapXmtpCallWithDuration("processMessage", () =>
+        processMessage<ISupportedXmtpCodecs>(
+          client.installationId,
+          xmtpConversationId,
+          encryptedMessage,
+        ),
+      )) as unknown as IXmtpDecodedMessage
 
       return message
     } catch (error) {
@@ -155,46 +144,4 @@ export async function decryptXmtpMessage(args: {
 
   activeDecryptPromises.set(promiseKey, promise)
   return promise
-}
-
-export function getXmtpMessageIsTextMessage(
-  message: IXmtpDecodedMessage,
-): message is IXmtpDecodedTextMessage {
-  return isXmtpTextContentType(message.contentTypeId)
-}
-
-export function getXmtpMessageIsReactionMessage(
-  message: IXmtpDecodedMessage,
-): message is IXmtpDecodedReactionMessage {
-  return isXmtpReactionContentType(message.contentTypeId)
-}
-
-export function getXmtpMessageIsReplyMessage(
-  message: IXmtpDecodedMessage,
-): message is IXmtpDecodedReplyMessage {
-  return isXmtpReplyContentType(message.contentTypeId)
-}
-
-export function getXmtpMessageIsGroupUpdatedMessage(
-  message: IXmtpDecodedMessage,
-): message is IXmtpDecodedGroupUpdatedMessage {
-  return isXmtpGroupUpdatedContentType(message.contentTypeId)
-}
-
-export function getXmtpMessageIsMultiRemoteAttachmentMessage(
-  message: IXmtpDecodedMessage,
-): message is IXmtpDecodedMultiRemoteAttachmentMessage {
-  return isXmtpMultiRemoteAttachmentContentType(message.contentTypeId)
-}
-
-export function getXmtpMessageIsStaticAttachmentMessage(
-  message: IXmtpDecodedMessage,
-): message is IXmtpDecodedStaticAttachmentMessage {
-  return isXmtpStaticAttachmentContentType(message.contentTypeId)
-}
-
-export function getXmtpMessageIsRemoteAttachmentMessage(
-  message: IXmtpDecodedMessage,
-): message is IXmtpDecodedRemoteAttachmentMessage {
-  return isXmtpRemoteAttachmentContentType(message.contentTypeId)
 }
