@@ -6,7 +6,6 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { ensureDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
@@ -290,10 +289,7 @@ export function getConversationMessagesInfiniteQueryOptions(
       }
       return { cursorNs: lastPage.nextCursorNs, direction: "next" } as IInfiniteMessagesPageParam
     },
-    enabled:
-      Boolean(clientInboxId) &&
-      Boolean(xmtpConversationId) &&
-      !isTmpConversation(xmtpConversationId),
+    enabled: Boolean(clientInboxId) && Boolean(xmtpConversationId),
   })
 }
 

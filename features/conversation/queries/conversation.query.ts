@@ -1,10 +1,9 @@
 import type { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@features/xmtp/xmtp.types"
-import { Query, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
+import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { isAnActualMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { messageWasSentAfter } from "@/features/conversation/conversation-chat/conversation-message/utils/message-was-sent-after"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
-import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { getXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
@@ -62,17 +61,11 @@ export function getConversationQueryOptions(
   args: Optional<IGetConversationArgsWithCaller, "caller">,
 ) {
   const { clientInboxId, xmtpConversationId, caller } = args
-  const enabled = !!xmtpConversationId && !!clientInboxId && !isTmpConversation(xmtpConversationId)
+  const enabled = !!xmtpConversationId && !!clientInboxId
   return queryOptions({
     meta: {
       caller,
-      persist: (query: Query) => {
-        const conversation = query.state.data as IConversationQueryData | undefined
-        if (!conversation) {
-          return true
-        }
-        return !isTmpConversation(conversation.xmtpId)
-      },
+      persist: true,
     },
     queryKey: getReactQueryKey({
       baseStr: "conversation",

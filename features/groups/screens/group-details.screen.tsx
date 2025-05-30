@@ -45,34 +45,34 @@ export const GroupDetailsScreen = memo(function GroupDetailsScreen(
     xmtpConversationId,
   })
 
-  const { isSuperAdmin } = useCurrentSenderGroupPermissions({
-    xmtpConversationId,
-  })
+  // const { isSuperAdmin } = useCurrentSenderGroupPermissions({
+  //   xmtpConversationId,
+  // })
 
   useGroupDetailsScreenHeader({ xmtpConversationId })
 
-  const handleExitPress = useCallback(() => {
-    Alert.alert(
-      "Exit Group",
-      isSuperAdmin
-        ? "You are the super admin of this group. If you exit, the group will lose its super admin."
-        : "Are you sure you want to exit this group?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Exit",
-          style: "destructive",
-          onPress: () => {
-            // Logic to exit group would go here
-            Alert.alert("Exit functionality not implemented yet")
-          },
-        },
-      ],
-    )
-  }, [isSuperAdmin])
+  // const handleExitPress = useCallback(() => {
+  //   Alert.alert(
+  //     "Exit Group",
+  //     isSuperAdmin
+  //       ? "You are the super admin of this group. If you exit, the group will lose its super admin."
+  //       : "Are you sure you want to exit this group?",
+  //     [
+  //       {
+  //         text: "Cancel",
+  //         style: "cancel",
+  //       },
+  //       {
+  //         text: "Exit",
+  //         style: "destructive",
+  //         onPress: () => {
+  //           // Logic to exit group would go here
+  //           Alert.alert("Exit functionality not implemented yet")
+  //         },
+  //       },
+  //     ],
+  //   )
+  // }, [isSuperAdmin])
 
   if (!group) {
     return (
@@ -116,7 +116,7 @@ export const GroupDetailsScreen = memo(function GroupDetailsScreen(
       <GroupDetailsMembersList xmtpConversationId={xmtpConversationId} />
       <Separator />
       {/* Exit Button */}
-      <Pressable
+      {/* <Pressable
         style={{
           alignItems: "center",
           backgroundColor: theme.colors.background.surface,
@@ -124,7 +124,7 @@ export const GroupDetailsScreen = memo(function GroupDetailsScreen(
         onPress={handleExitPress}
       >
         <ListItem title={<ListItemTitle color="caution">Exit</ListItemTitle>} />
-      </Pressable>
+      </Pressable> */}
 
       <Separator />
     </Screen>

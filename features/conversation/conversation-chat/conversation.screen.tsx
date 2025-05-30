@@ -24,6 +24,7 @@ import { clearNotificationsForConversation } from "@/features/notifications/noti
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
 import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 import { ConversationMessages } from "./conversation-messages"
 import {
   ConversationStoreProvider,
@@ -69,7 +70,11 @@ const Content = memo(function Content() {
     (state) => state.isCreatingNewConversation,
   )
 
-  const { data: conversation, isLoading: isLoadingConversation } = useQuery({
+  const {
+    data: conversation,
+    isLoading: isLoadingConversation,
+    error: conversationError,
+  } = useQuery({
     ...getConversationQueryOptions({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId: xmtpConversationId,
@@ -85,7 +90,15 @@ const Content = memo(function Content() {
     )
   }
 
-  if (!conversation && !isCreatingNewConversation) {
+  if ((!conversation && !isCreatingNewConversation) || conversationError) {
+    captureError(
+      new GenericError({
+        error:
+          conversationError ||
+          new Error(`Conversation not found for ${xmtpConversationId} in conversation screen`),
+        additionalMessage: `Conversation not found for ${xmtpConversationId} in conversation screen`,
+      }),
+    )
     return (
       <Center safeAreaInsets={["bottom"]} style={{ ...$globalStyles.flex1 }}>
         <EmptyState
