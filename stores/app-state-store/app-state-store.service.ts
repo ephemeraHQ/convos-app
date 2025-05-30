@@ -142,16 +142,18 @@ export function startListeningToAppStateStore() {
           if (allowedConsentConversations) {
             getXmtpClientOtherInstallations({
               clientInboxId: currentSender.inboxId,
-            }).then((otherInstallations) => {
-              if (otherInstallations.length > 0) {
-                for (const conversationId of allowedConsentConversations) {
-                  invalidateConversationMetadataQuery({
-                    clientInboxId: currentSender.inboxId,
-                    xmtpConversationId: conversationId,
-                  }).catch(captureError)
-                }
-              }
             })
+              .then((otherInstallations) => {
+                if (otherInstallations.length > 0) {
+                  for (const conversationId of allowedConsentConversations) {
+                    invalidateConversationMetadataQuery({
+                      clientInboxId: currentSender.inboxId,
+                      xmtpConversationId: conversationId,
+                    }).catch(captureError)
+                  }
+                }
+              })
+              .catch(captureError)
           }
         }
       }
