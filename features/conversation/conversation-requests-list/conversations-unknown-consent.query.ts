@@ -1,5 +1,6 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken } from "@tanstack/react-query"
+import { removeConversationFromAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
@@ -53,6 +54,12 @@ export function addConversationToUnknownConsentConversationsQuery(args: {
   conversationId: IXmtpConversationId
 }) {
   const { clientInboxId, conversationId } = args
+
+  // Just making sure we remove from allowed consent conversations first since we don't want it in both queries
+  removeConversationFromAllowedConsentConversationsQuery({
+    clientInboxId,
+    conversationId,
+  })
 
   return reactQueryClient.setQueryData(
     getUnknownConsentConversationsQueryOptions({

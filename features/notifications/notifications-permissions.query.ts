@@ -3,7 +3,7 @@ import * as Notifications from "expo-notifications"
 import { useEffect } from "react"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import {
-  subscribeToAllAllowedConsentConversationsNotifications,
+  subscribeToAllNonMutedAllowedConsentConversationsNotifications,
   unsubscribeFromAllConversationsNotifications,
 } from "@/features/notifications/notifications-conversations-subscriptions"
 import { captureError } from "@/utils/capture-error"
@@ -71,7 +71,7 @@ export function useStartListeningForNotificationsPermissionsQuery() {
           const senders = useMultiInboxStore.getState().senders
           Promise.all(
             senders.map((sender) =>
-              subscribeToAllAllowedConsentConversationsNotifications({
+              subscribeToAllNonMutedAllowedConsentConversationsNotifications({
                 clientInboxId: sender.inboxId,
               }),
             ),

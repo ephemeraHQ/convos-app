@@ -1,12 +1,14 @@
 import { useTurnkey } from "@turnkey/sdk-react-native"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
-import { getAllSenders, resetMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { getAllSenders, useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { unlinkIdentityFromDeviceMutation } from "@/features/convos-identities/convos-identities-remove.mutation"
 import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
 import { getCurrentUserQueryData } from "@/features/current-user/current-user.query"
 import { ensureUserDeviceQueryData } from "@/features/devices/user-device.query"
 import { unsubscribeFromAllConversationsNotifications } from "@/features/notifications/notifications-conversations-subscriptions"
+import { unregisterPushNotifications } from "@/features/notifications/notifications-register"
+import { useNotificationsStore } from "@/features/notifications/notifications.store"
 import { stopStreaming } from "@/features/streams/streams"
 import { logoutXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { useAppStore } from "@/stores/app.store"
@@ -32,46 +34,56 @@ export const useLogout = () => {
         const hasAtLeastOneSender = senders.length > 0
 
         if (hasAtLeastOneSender) {
-          const [unsubscribeNotificationsResults, streamingResult, unlinkIdentitiesResults] =
-            await customPromiseAllSettled([
-              // Unsubscribe from conversations notifications
-              Promise.all(
-                senders.map((sender) =>
-                  unsubscribeFromAllConversationsNotifications({
-                    clientInboxId: sender.inboxId,
-                  }),
-                ),
+          const [
+            unsubscribeNotificationsResults,
+            streamingResult,
+            unlinkIdentitiesResults,
+            unregisterPushNotificationsResults,
+          ] = await customPromiseAllSettled([
+            // Unsubscribe from conversations notifications
+            Promise.all(
+              senders.map((sender) =>
+                unsubscribeFromAllConversationsNotifications({
+                  clientInboxId: sender.inboxId,
+                }),
               ),
-              // Stop streaming
-              stopStreaming(senders.map((sender) => sender.inboxId)),
-              // Unlink identities from device
-              new Promise<void>(async (resolve, reject) => {
-                try {
-                  const currentUser = getCurrentUserQueryData()
-                  if (!currentUser) {
-                    // Ignore the flow if we don't have a current user
-                    return resolve()
-                  }
-                  const currentDevice = await ensureUserDeviceQueryData({
-                    userId: currentUser.id,
-                  })
-                  const currentUserIdentities = await ensureUserIdentitiesQueryData({
-                    userId: currentUser.id,
-                  })
-                  await Promise.all(
-                    currentUserIdentities.map((identity) =>
-                      unlinkIdentityFromDeviceMutation({
-                        identityId: identity.id,
-                        deviceId: currentDevice.id,
-                      }),
-                    ),
-                  )
-                  resolve()
-                } catch (error) {
-                  reject(error)
+            ),
+            // Stop streaming
+            stopStreaming(senders.map((sender) => sender.inboxId)),
+            // Unlink identities from device
+            new Promise<void>(async (resolve, reject) => {
+              try {
+                const currentUser = getCurrentUserQueryData()
+                if (!currentUser) {
+                  // Ignore the flow if we don't have a current user
+                  return resolve()
                 }
-              }),
-            ])
+                const currentDevice = await ensureUserDeviceQueryData({
+                  userId: currentUser.id,
+                })
+                const currentUserIdentities = await ensureUserIdentitiesQueryData({
+                  userId: currentUser.id,
+                })
+                await Promise.all(
+                  currentUserIdentities.map((identity) =>
+                    unlinkIdentityFromDeviceMutation({
+                      identityId: identity.id,
+                      deviceId: currentDevice.id,
+                    }),
+                  ),
+                )
+                resolve()
+              } catch (error) {
+                reject(error)
+              }
+            }),
+            // Unregister push notifications
+            Promise.all(
+              senders.map((sender) =>
+                unregisterPushNotifications({ clientInboxId: sender.inboxId }),
+              ),
+            ),
+          ])
 
           if (unsubscribeNotificationsResults.status === "rejected") {
             captureError(
@@ -95,6 +107,15 @@ export const useLogout = () => {
             captureError(
               new GenericError({
                 error: unlinkIdentitiesResults.reason,
+                additionalMessage: "Error unregistering push notifications",
+              }),
+            )
+          }
+
+          if (unregisterPushNotificationsResults.status === "rejected") {
+            captureError(
+              new GenericError({
+                error: unregisterPushNotificationsResults.reason,
                 additionalMessage: "Error unregistering push notifications",
               }),
             )
@@ -127,7 +148,9 @@ export const useLogout = () => {
         // This needs to be at the end because at many places we use useSafeCurrentSender()
         // and it will throw error if we reset the store too early
         // Need the setTimeout because for some reason the navigation is not updated immediately when we set auth status to signed out
-        resetMultiInboxStore()
+        useMultiInboxStore.getState().actions.reset()
+
+        useNotificationsStore.getState().actions.reset()
 
         // Might want to only clear certain queries later but okay for now
         // Put this last because otherwise some useQuery hook triggers even tho we're logging out
