@@ -21,7 +21,7 @@ import {
   _getFromSecondBackup,
   _saveToSecondBackup,
 } from "./xmtp-client-db-encryption-key.shared-defaults-storage"
-import { _formatKey, _generateKey } from "./xmtp-client-db-encryption-key.utils"
+import { generateXmtpDbEncryptionKey } from "./xmtp-client-db-encryption-key.utils"
 
 async function _saveKey(args: { ethAddress: ILowercaseEthereumAddress; key: string }) {
   const { ethAddress, key } = args
@@ -52,77 +52,84 @@ export async function cleanXmtpDbEncryptionKey(args: { ethAddress: ILowercaseEth
   await _deleteFromFileBackup(ethAddress)
 }
 
-export async function getOrCreateXmtpDbEncryptionKey(args: {
+export async function getXmtpDbEncryptionKey(args: {
   ethAddress: ILowercaseEthereumAddress
+  useBackupNumber?: "first" | "second" | "third" | "fourth"
 }) {
-  const { ethAddress } = args
+  const { ethAddress, useBackupNumber } = args
 
   xmtpLogger.debug(`Getting XMTP DB encryption key for ${ethAddress}`)
 
   try {
-    let existingKey = await _getFromSecureStorage(ethAddress)
-    if (existingKey) {
-      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in secure storage`)
-      _saveToBackup(ethAddress, existingKey)
-      _saveToSecondBackup(ethAddress, existingKey)
-      await _saveToFileBackup(ethAddress, existingKey)
-      return _formatKey(existingKey)
+    // Secure storage (primary)
+    if (!useBackupNumber) {
+      let existingKey = await _getFromSecureStorage(ethAddress)
+      if (existingKey) {
+        xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in secure storage`)
+        _saveToBackup(ethAddress, existingKey)
+        _saveToSecondBackup(ethAddress, existingKey)
+        await _saveToFileBackup(ethAddress, existingKey)
+        return existingKey
+      }
     }
 
-    existingKey = _getFromBackup(ethAddress)
-    if (existingKey) {
-      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in backup storage`)
-      await _saveToSecureStorage(ethAddress, existingKey)
-      _saveToSecondBackup(ethAddress, existingKey)
-      await _saveToFileBackup(ethAddress, existingKey)
-      return _formatKey(existingKey)
+    // First backup (MMKV)
+    if (!useBackupNumber || useBackupNumber === "first") {
+      let existingKey = _getFromBackup(ethAddress)
+      if (existingKey) {
+        xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in backup storage`)
+        await _saveToSecureStorage(ethAddress, existingKey)
+        _saveToSecondBackup(ethAddress, existingKey)
+        await _saveToFileBackup(ethAddress, existingKey)
+        return existingKey
+      }
     }
 
-    existingKey = _getFromSecondBackup(ethAddress)
-    if (existingKey) {
-      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in second backup`)
-      await _saveToSecureStorage(ethAddress, existingKey)
-      _saveToBackup(ethAddress, existingKey)
-      await _saveToFileBackup(ethAddress, existingKey)
-      return _formatKey(existingKey)
+    // Second backup (Shared Defaults)
+    if (!useBackupNumber || useBackupNumber === "second" || useBackupNumber === "first") {
+      let existingKey = _getFromSecondBackup(ethAddress)
+      if (existingKey) {
+        xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in second backup`)
+        await _saveToSecureStorage(ethAddress, existingKey)
+        _saveToBackup(ethAddress, existingKey)
+        await _saveToFileBackup(ethAddress, existingKey)
+        return existingKey
+      }
     }
 
-    existingKey = await _getFromFileBackup(ethAddress)
-    if (existingKey) {
-      xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in file backup`)
-      await _saveToSecureStorage(ethAddress, existingKey)
-      _saveToBackup(ethAddress, existingKey)
-      _saveToSecondBackup(ethAddress, existingKey)
-      return _formatKey(existingKey)
+    // Third backup (File System)
+    if (
+      !useBackupNumber ||
+      useBackupNumber === "third" ||
+      useBackupNumber === "second" ||
+      useBackupNumber === "first"
+    ) {
+      let existingKey = await _getFromFileBackup(ethAddress)
+      if (existingKey) {
+        xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in file backup`)
+        await _saveToSecureStorage(ethAddress, existingKey)
+        _saveToBackup(ethAddress, existingKey)
+        _saveToSecondBackup(ethAddress, existingKey)
+        return existingKey
+      }
     }
 
-    xmtpLogger.debug(`Creating new DB encryption key for ${ethAddress}`)
-    const newKey = await _generateKey()
-
-    await _saveKey({ ethAddress, key: newKey })
-
-    return _formatKey(newKey)
+    return null
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: "Failed to get or create DB encryption key",
+      additionalMessage: "Failed to get DB encryption key",
     })
   }
 }
 
-export async function getBackupXmtpDbEncryptionKey(args: {
-  ethAddress: ILowercaseEthereumAddress
-}) {
+export async function createXmtpDbEncryptionKey(args: { ethAddress: ILowercaseEthereumAddress }) {
   const { ethAddress } = args
-  xmtpLogger.debug(`Trying to get backup XMTP DB encryption key for ${ethAddress}`)
 
-  const backupKey = _getFromBackup(ethAddress)
-  if (!backupKey) {
-    throw new XMTPError({
-      error: new Error("No backup key found"),
-      additionalMessage: `No backup encryption key found for ${ethAddress}`,
-    })
-  }
+  xmtpLogger.debug(`Creating new DB encryption key for ${ethAddress}`)
+  const newKey = await generateXmtpDbEncryptionKey()
 
-  return _formatKey(backupKey)
+  await _saveKey({ ethAddress, key: newKey })
+
+  return newKey
 }

@@ -3,7 +3,7 @@ import { XMTPError } from "@/utils/error"
 
 const XMTP_KEY_LENGTH = 32
 
-export function _formatKey(base64Key: string): Uint8Array {
+export function formatDbEncryptionKeyToUint8Array(base64Key: string): Uint8Array {
   const keyArray = new Uint8Array(Buffer.from(base64Key, "base64"))
 
   if (keyArray.length !== XMTP_KEY_LENGTH) {
@@ -16,6 +16,6 @@ export function _formatKey(base64Key: string): Uint8Array {
   return keyArray
 }
 
-export async function _generateKey(): Promise<string> {
+export async function generateXmtpDbEncryptionKey(): Promise<string> {
   return Buffer.from(await getRandomBytesAsync(XMTP_KEY_LENGTH)).toString("base64")
 }

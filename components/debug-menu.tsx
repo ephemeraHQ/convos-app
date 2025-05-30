@@ -4,12 +4,13 @@ import * as Notifications from "expo-notifications"
 import * as Updates from "expo-updates"
 import { memo, useCallback, useMemo } from "react"
 import { Alert, Platform } from "react-native"
+import RNFS from "react-native-fs"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { runOnJS } from "react-native-reanimated"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { useXmtpLogFilesModalStore } from "@/components/xmtp-log-files-modal"
 import { config } from "@/config"
-import { useCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { getSafeCurrentSender, useCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useLogout } from "@/features/authentication/use-logout"
 import { currentUserIsDebugUser } from "@/features/authentication/utils/debug-user.utils"
 import {
@@ -19,6 +20,8 @@ import {
 } from "@/features/notifications/notifications-permissions"
 import { registerPushNotifications } from "@/features/notifications/notifications-register"
 import { getDevicePushNotificationsToken } from "@/features/notifications/notifications-token"
+import { getXmtpDbEncryptionKey } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
+import { getXmtpDbDirectory } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
@@ -33,8 +36,9 @@ import type { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
 import { navigate } from "@/navigation/navigation.utils"
 import { useAppStore } from "@/stores/app.store"
-import { captureError } from "@/utils/capture-error"
+import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { lowercaseEthAddress } from "@/utils/evm/address"
 import { getEnv, isProd } from "@/utils/getEnv"
 import { Haptics } from "@/utils/haptics"
 import { clearImageCache } from "@/utils/image"
@@ -243,13 +247,13 @@ function useShowDebugMenu() {
               .join("\n"),
           )
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error checking notification permissions",
             }),
+            { message: "Failed to check notification permissions" },
           )
-          Alert.alert("Error", "Failed to check notification permissions")
         }
       },
       "Request Notification Permissions": async () => {
@@ -258,13 +262,13 @@ function useShowDebugMenu() {
 
           Alert.alert("Permission Request Result", `Granted: ${result.granted ? "YES" : "NO"}`)
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error requesting notification permissions",
             }),
+            { message: "Failed to request notification permissions" },
           )
-          Alert.alert("Error", "Failed to request notification permissions")
         }
       },
       "Register Push Notifications": async () => {
@@ -287,26 +291,26 @@ function useShowDebugMenu() {
                       "Push notification registration process completed successfully.",
                     )
                   } catch (error) {
-                    captureError(
+                    captureErrorWithToast(
                       new GenericError({
                         error,
                         additionalMessage: "Error registering for push notifications",
                       }),
+                      { message: "Failed to register for push notifications" },
                     )
-                    Alert.alert("Error", "Failed to register for push notifications")
                   }
                 },
               },
             ],
           )
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error registering for push notifications",
             }),
+            { message: "Failed to register for push notifications" },
           )
-          Alert.alert("Error", "Failed to register for push notifications")
         }
       },
       "Get Badge Count": async () => {
@@ -333,13 +337,13 @@ function useShowDebugMenu() {
             },
           ])
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error getting badge count",
             }),
+            { message: "Failed to get badge count" },
           )
-          Alert.alert("Error", "Failed to get badge count")
         }
       },
       "Get Device Token": async () => {
@@ -361,13 +365,13 @@ function useShowDebugMenu() {
             },
           ])
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error getting device token",
             }),
+            { message: "Failed to get device token. Make sure permissions are granted." },
           )
-          Alert.alert("Error", "Failed to get device token. Make sure permissions are granted.")
         }
       },
       "Notification Categories": async () => {
@@ -386,13 +390,13 @@ function useShowDebugMenu() {
             Alert.alert("Notification Categories", categoryDetails)
           }
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error getting notification categories",
             }),
+            { message: "Failed to get notification categories" },
           )
-          Alert.alert("Error", "Failed to get notification categories")
         }
       },
       "Send Test Notification": async () => {
@@ -407,13 +411,13 @@ function useShowDebugMenu() {
           })
           Alert.alert("Notification Sent", "Test notification has been scheduled")
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error sending test notification",
             }),
+            { message: "Failed to schedule test notification" },
           )
-          Alert.alert("Error", "Failed to schedule test notification")
         }
       },
       Cancel: undefined,
@@ -453,7 +457,13 @@ function useShowDebugMenu() {
 
   const showXmtpMenu = useCallback(() => {
     if (!currentSenderInboxId) {
-      Alert.alert("Error", "Current user XMTP Inbox ID not found.")
+      captureErrorWithToast(
+        new GenericError({
+          error: new Error("Current user XMTP Inbox ID not found"),
+          additionalMessage: "Current user XMTP Inbox ID not found",
+        }),
+        { message: "Current user XMTP Inbox ID not found" },
+      )
       return
     }
     const clientInboxId = currentSenderInboxId as IXmtpInboxId
@@ -490,13 +500,13 @@ function useShowDebugMenu() {
             },
           ])
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error listing allowed XMTP conversations",
             }),
+            { message: "Failed to list allowed XMTP conversations" },
           )
-          Alert.alert("Error", "Failed to list allowed XMTP conversations.")
         } finally {
           useAppStore.getState().actions.setFullScreenLoaderOptions({
             isVisible: false,
@@ -534,13 +544,13 @@ function useShowDebugMenu() {
             },
           ])
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error listing denied XMTP conversations",
             }),
+            { message: "Failed to list denied XMTP conversations" },
           )
-          Alert.alert("Error", "Failed to list denied XMTP conversations.")
         } finally {
           useAppStore.getState().actions.setFullScreenLoaderOptions({
             isVisible: false,
@@ -578,17 +588,138 @@ function useShowDebugMenu() {
             },
           ])
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({
               error,
               additionalMessage: "Error listing unknown XMTP conversations",
             }),
+            { message: "Failed to list unknown XMTP conversations" },
           )
-          Alert.alert("Error", "Failed to list unknown XMTP conversations.")
         } finally {
           useAppStore.getState().actions.setFullScreenLoaderOptions({
             isVisible: false,
           })
+        }
+      },
+      "Export DB Encryption Key": async () => {
+        try {
+          const currentSender = getSafeCurrentSender()
+          const ethAddress = lowercaseEthAddress(currentSender.ethereumAddress)
+
+          const encryptionKey = await getXmtpDbEncryptionKey({ ethAddress })
+
+          if (!encryptionKey) {
+            captureErrorWithToast(
+              new GenericError({
+                error: new Error("No DB encryption key found"),
+                additionalMessage: "No DB encryption key found",
+              }),
+              { message: "No DB encryption key found" },
+            )
+            return
+          }
+
+          Alert.alert("XMTP DB Encryption Key", encryptionKey, [
+            { text: "Close" },
+            {
+              text: "Copy",
+              onPress: () => {
+                Clipboard.setString(encryptionKey)
+                Alert.alert("Copied", "Encryption key copied to clipboard")
+              },
+            },
+          ])
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error exporting DB encryption key",
+            }),
+            { message: "Failed to export DB encryption key" },
+          )
+        }
+      },
+      "Export user database files": async () => {
+        try {
+          const dbDirectory = await getXmtpDbDirectory()
+
+          if (!dbDirectory) {
+            captureErrorWithToast(
+              new GenericError({
+                error: new Error("Could not get shared app group directory"),
+                additionalMessage: "Could not get shared app group directory (iOS only feature)",
+              }),
+              { message: "Could not get shared app group directory (iOS only feature)" },
+            )
+            return
+          }
+
+          const files = await RNFS.readDir(dbDirectory)
+
+          // Filter for main database files (.db3) that contain the current user's inbox ID
+          const userDbFiles = files.filter(
+            (file) =>
+              file.isFile() && file.name.includes(clientInboxId) && file.name.endsWith(".db3"),
+          )
+
+          if (userDbFiles.length === 0) {
+            Alert.alert(
+              "No Database Files",
+              `No database files found for current user (${clientInboxId}).`,
+            )
+            return
+          }
+
+          // Create options for each database file
+          const fileOptions = userDbFiles.map((file) => {
+            const sizeKB = Math.round(file.size / 1024)
+            // Extract environment from filename (dev/production)
+            const envMatch = file.name.match(/xmtp-grpc\.(dev|production)\./)
+            const env = envMatch ? envMatch[1] : "unknown"
+            return `${env.toUpperCase()}: ${file.name} (${sizeKB}KB)`
+          })
+
+          fileOptions.push("Cancel")
+
+          showActionSheet({
+            options: {
+              title: `Export Database Files (${userDbFiles.length} files)`,
+              options: fileOptions,
+              cancelButtonIndex: fileOptions.indexOf("Cancel"),
+            },
+            callback: async (selectedIndex?: number) => {
+              if (selectedIndex === undefined || selectedIndex >= userDbFiles.length) {
+                return
+              }
+
+              const selectedFile = userDbFiles[selectedIndex]
+              const filePath = `${dbDirectory}/${selectedFile.name}`
+
+              try {
+                await shareContent({
+                  title: `XMTP Database: ${selectedFile.name}`,
+                  url: `file://${filePath}`,
+                  type: "application/octet-stream",
+                })
+              } catch (error) {
+                captureErrorWithToast(
+                  new GenericError({
+                    error,
+                    additionalMessage: "Error sharing database file",
+                  }),
+                  { message: "Failed to share database file" },
+                )
+              }
+            },
+          })
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error exporting user database files",
+            }),
+            { message: "Failed to export database files" },
+          )
         }
       },
       Cancel: undefined,
@@ -630,10 +761,10 @@ function useShowDebugMenu() {
           await new Promise((resolve) => setTimeout(resolve, 500))
           await Updates.reloadAsync()
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({ error, additionalMessage: "Error clearing React Query cache" }),
+            { message: "Failed to clear React Query cache" },
           )
-          Alert.alert("Error", "Failed to clear React Query cache.")
         } finally {
           useAppStore.getState().actions.setFullScreenLoaderOptions({
             isVisible: false,
@@ -651,10 +782,10 @@ function useShowDebugMenu() {
             message: "Expo image cache cleared",
           })
         } catch (error) {
-          captureError(
+          captureErrorWithToast(
             new GenericError({ error, additionalMessage: "Error clearing expo image cache" }),
+            { message: "Failed to clear expo image cache" },
           )
-          Alert.alert("Error", "Failed to clear expo image cache.")
         } finally {
           useAppStore.getState().actions.setFullScreenLoaderOptions({
             isVisible: false,
@@ -761,7 +892,13 @@ function useShowDebugMenu() {
             Alert.alert("No OTA updates available", "You are running the latest version")
           }
         } catch (error) {
-          Alert.alert("Error", JSON.stringify(error))
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error checking for OTA updates",
+            }),
+            { message: "Failed to check for updates" },
+          )
         }
       },
       "Cache Menu": () => showCacheMenu(),

@@ -2,7 +2,7 @@ import { Platform } from "react-native"
 import RNFS from "react-native-fs"
 import { ILowercaseEthereumAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
-import { getSharedAppGroupDirectory } from "../xmtp-client-utils"
+import { getXmtpDbDirectory } from "../xmtp-client-utils"
 
 // NEVER CHANGE THIS PREFIX unless you know what you are doing
 const FILE_BACKUP_PREFIX = "FILE_BACKUP_XMTP_DB_ENCRYPTION_KEY_"
@@ -14,7 +14,7 @@ export async function _saveToFileBackup(ethAddress: ILowercaseEthereumAddress, v
   }
 
   try {
-    const groupPath = await getSharedAppGroupDirectory()
+    const groupPath = await getXmtpDbDirectory()
     if (!groupPath) {
       xmtpLogger.warn("No app group path available for file backup")
       return
@@ -38,7 +38,7 @@ export async function _getFromFileBackup(
   }
 
   try {
-    const groupPath = await getSharedAppGroupDirectory()
+    const groupPath = await getXmtpDbDirectory()
     if (!groupPath) {
       return null
     }
@@ -65,7 +65,7 @@ export async function _deleteFromFileBackup(ethAddress: ILowercaseEthereumAddres
   }
 
   try {
-    const groupPath = await getSharedAppGroupDirectory()
+    const groupPath = await getXmtpDbDirectory()
     if (!groupPath) {
       return
     }
