@@ -102,6 +102,13 @@ export function updateConversationMetadataQueryData(
 
 export function refetchConversationMetadataQuery(args: IArgs) {
   const { xmtpConversationId, clientInboxId } = args
+  return reactQueryClient.refetchQueries({
+    queryKey: getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }).queryKey,
+  })
+}
+
+export function invalidateConversationMetadataQuery(args: IArgs) {
+  const { xmtpConversationId, clientInboxId } = args
   return reactQueryClient.invalidateQueries({
     queryKey: getConversationMetadataQueryOptions({ xmtpConversationId, clientInboxId }).queryKey,
   })

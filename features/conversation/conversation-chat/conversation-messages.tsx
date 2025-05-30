@@ -96,7 +96,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   useRefetchOnAppFocus()
   useRefetchOnMount()
   useScrollToHighlightedMessage({ messageIds, listRef: scrollRef })
-  useMarkAsReadOnMount({ messageIds })
+  useMarkAsRead({ messageIds })
   useHandleDisappearingMessagesSettings()
   const { scrollHandler } = useHandleSrolling({ fetchNextPage, hasNextPage })
 
@@ -322,7 +322,7 @@ function useHandleDisappearingMessagesSettings() {
   }, [currentSender.inboxId, xmtpConversationId])
 }
 
-function useMarkAsReadOnMount(props: { messageIds: IXmtpMessageId[] }) {
+function useMarkAsRead(props: { messageIds: IXmtpMessageId[] }) {
   const { messageIds } = props
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
   const { mutateAsync: markAsReadAsync } = useMarkConversationAsReadMutation({

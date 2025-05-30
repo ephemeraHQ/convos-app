@@ -312,10 +312,6 @@ export function isCurrentSender(sender: Partial<ISender>) {
   )
 }
 
-export function resetMultiInboxStore() {
-  useMultiInboxStore.getState().actions.reset()
-}
-
 export function getAllSenders() {
   return useMultiInboxStore.getState().senders
 }

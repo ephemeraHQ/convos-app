@@ -1,6 +1,7 @@
 import React, { memo } from "react"
 import { ViewStyle } from "react-native"
 import { AnimatedCenter, Center } from "@/design-system/Center"
+import { Icon } from "@/design-system/Icon/Icon"
 import { ITextProps, Text } from "@/design-system/Text"
 import { TouchableHighlight } from "@/design-system/touchable-highlight"
 import { IVStackProps, VStack } from "@/design-system/VStack"
@@ -15,6 +16,7 @@ export type IConversationListItemProps = {
   isUnread?: boolean
   showError?: boolean
   previewContainerProps?: IVStackProps
+  isMuted?: boolean
 }
 
 export const ConversationListItem = memo(function ConversationListItem({
@@ -25,6 +27,7 @@ export const ConversationListItem = memo(function ConversationListItem({
   avatarComponent,
   showError,
   previewContainerProps,
+  isMuted,
 }: IConversationListItemProps) {
   const { themed, theme } = useAppTheme()
   const { screenHorizontalPadding } = useConversationListStyles()
@@ -59,13 +62,19 @@ export const ConversationListItem = memo(function ConversationListItem({
             subtitle
           )}
         </VStack>
-        {(isUnread || showError) && (
+        {(isUnread || showError || isMuted) && (
           <AnimatedCenter
             entering={theme.animation.reanimatedFadeInScaleIn()}
             exiting={theme.animation.reanimatedFadeOutScaleOut()}
-            style={themed($unreadContainer)}
+            style={themed($indicatorContainer)}
           >
-            <Center style={[themed($unread), (!isUnread || showError) && themed($placeholder)]} />
+            {showError ? (
+              <Icon icon="exclamationmark.triangle" size={theme.iconSize.sm} />
+            ) : isUnread ? (
+              <Center style={themed($unreadDot)} />
+            ) : isMuted ? (
+              <Icon icon="bell-slash.fill" color={theme.colors.text.tertiary} />
+            ) : null}
           </AnimatedCenter>
         )}
       </>
@@ -95,20 +104,17 @@ const $messagePreviewContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   marginLeft: spacing.xs,
 })
 
-const $unreadContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
+const $indicatorContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({
   alignItems: "center",
   marginLeft: spacing.xs,
+  minWidth: spacing.sm, // Ensure consistent width for all indicators
 })
 
-const $unread: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
+const $unreadDot: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({
   width: spacing.sm,
   height: spacing.sm,
   borderRadius: spacing.xs,
   backgroundColor: colors.fill.primary,
-})
-
-const $placeholder: ThemedStyle<ViewStyle> = ({ colors }) => ({
-  backgroundColor: colors.global.transparent,
 })
 
 const $container: ThemedStyle<ViewStyle> = ({ spacing, colors }) => ({

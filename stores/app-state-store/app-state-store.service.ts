@@ -2,11 +2,16 @@ import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppStateStatus } from "react-native"
 import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { invalidateAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import {
+  getAllowedConsentConversationsQueryData,
+  invalidateAllowedConsentConversationsQuery,
+} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { invalidateConversationMetadataQuery } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { registerPushNotifications } from "@/features/notifications/notifications-register"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
+import { getXmtpClientOtherInstallations } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { useAppStateStore } from "@/stores/app-state-store/app-state.store"
 import { captureError } from "@/utils/capture-error"
 import { logger } from "@/utils/logger/logger"
@@ -127,6 +132,27 @@ export function startListeningToAppStateStore() {
           invalidateUnknownConsentConversationsQuery({
             inboxId: currentSender.inboxId,
           }).catch(captureError)
+
+          // Invalidating each conversation metadata can be heavy if you have many conversations
+          // so for now only do it if there are other installations
+          // so that both of your devices conversations metadata are in sync
+          const allowedConsentConversations = getAllowedConsentConversationsQueryData({
+            clientInboxId: currentSender.inboxId,
+          })
+          if (allowedConsentConversations) {
+            getXmtpClientOtherInstallations({
+              clientInboxId: currentSender.inboxId,
+            }).then((otherInstallations) => {
+              if (otherInstallations.length > 0) {
+                for (const conversationId of allowedConsentConversations) {
+                  invalidateConversationMetadataQuery({
+                    clientInboxId: currentSender.inboxId,
+                    xmtpConversationId: conversationId,
+                  }).catch(captureError)
+                }
+              }
+            })
+          }
         }
       }
 

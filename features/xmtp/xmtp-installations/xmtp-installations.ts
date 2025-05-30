@@ -3,15 +3,23 @@ import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpClientWithCodecs, IXmtpInboxId, IXmtpSigner } from "@/features/xmtp/xmtp.types"
 import { XMTPError } from "@/utils/error"
 
-export async function getOtherInstallations(args: { client: IXmtpClientWithCodecs }) {
-  const { client } = args
+export async function getXmtpClientOtherInstallations(args: { clientInboxId: IXmtpInboxId }) {
+  const { clientInboxId } = args
 
-  const inboxState = await client.inboxState(true)
-  const installationIds = inboxState.installations.map((i) => i.id)
-
-  const otherInstallations = installationIds.filter((id) => id !== client.installationId)
-
-  return otherInstallations
+  try {
+    const client = await getXmtpClientByInboxId({ inboxId: clientInboxId })
+    const inboxState = await wrapXmtpCallWithDuration("client.inboxState(true)", () =>
+      client.inboxState(true),
+    )
+    const installationIds = inboxState.installations.map((i) => i.id)
+    const otherInstallations = installationIds.filter((id) => id !== client.installationId)
+    return otherInstallations
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "Failed to get other XMTP installations",
+    })
+  }
 }
 
 export async function validateXmtpInstallation(args: { inboxId: IXmtpInboxId }) {

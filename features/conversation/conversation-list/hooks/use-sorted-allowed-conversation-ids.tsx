@@ -96,15 +96,14 @@ export function useSortedAllowedConversationIds() {
         }).queryKey,
       }),
       // Refetch all conversation metadata
-      // DON'T because it's not needed and heavy for nothing
-      // ...allowedConversationIds.map((conversationId) =>
-      //   refetchQueryIfNotAlreadyFetching(
-      //     getConversationMetadataQueryOptions({
-      //       xmtpConversationId: conversationId,
-      //       clientInboxId: currentSender.inboxId,
-      //     }),
-      //   ),
-      // ),
+      ...allowedConversationIds.map((conversationId) =>
+        refetchQueryIfNotAlreadyFetching(
+          getConversationMetadataQueryOptions({
+            xmtpConversationId: conversationId,
+            clientInboxId: currentSender.inboxId,
+          }),
+        ),
+      ),
     ]
 
     // eslint-disable-next-line custom-plugin/require-promise-error-handling
@@ -123,7 +122,7 @@ export function useSortedAllowedConversationIds() {
     })
 
     isRefetchingRef.current = false
-  }, [currentSender.inboxId])
+  }, [currentSender.inboxId, allowedConversationIds])
 
   const hasAnyConversationLoading = conversationQueries.some(
     (query) => query.isLoading && !query.data,
