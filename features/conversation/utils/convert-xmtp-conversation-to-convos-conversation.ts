@@ -9,6 +9,7 @@ import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-
 import {
   IXmtpConversationId,
   IXmtpConversationWithCodecs,
+  IXmtpDecodedMessage,
   IXmtpInboxId,
 } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -33,7 +34,7 @@ export async function convertXmtpConversationToConvosConversation(
 
     // TMP until we have lastMessage function available from the SDK
     const lastMessage = conversationXmtpLastMessage
-      ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage)
+      ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage as IXmtpDecodedMessage)
       : await getXmtpLastMessageFromMessages({
           clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
           xmtpConversationId: xmtpConversation.id,
@@ -70,7 +71,7 @@ export async function convertXmtpConversationToConvosConversation(
 
   // TMP until we have lastMessage function available from the SDK
   const lastMessage = conversationXmtpLastMessage
-    ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage)
+    ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage as IXmtpDecodedMessage)
     : await getXmtpLastMessageFromMessages({
         clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
         xmtpConversationId: xmtpConversation.id,

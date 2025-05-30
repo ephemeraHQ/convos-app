@@ -28,7 +28,11 @@ final class SentryManager {
   }
 
   func trackError(_ error: Error, extras: [String: Any]? = nil) {
-    log.debug("[Sentry] Tracking error with context:", [error, extras ?? [:]])
+    if(extras != nil) {
+      log.debug("[Sentry] Tracking error with context:", [error, extras ?? [:]])
+    } else {
+      log.debug("[Sentry] Tracking error with context:", [error])
+    }
     SentrySDK.capture(error: error) { scope in
       var extrasWithMessage: [String: Any] = [:]
       extras?.forEach { extrasWithMessage[$0] = $1 }

@@ -1,7 +1,18 @@
+import { MessageDeliveryStatus } from "@xmtp/react-native-sdk"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import {
+  ensureConversationMessageQueryData,
+  setConversationMessageQueryData,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import {
+  isSupportedXmtpContentType,
+  isXmtpMessage,
+  isXmtpTextContentType,
+} from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
+import { getXmtpConversationTopicFromXmtpId } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { IXmtpConversationId, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { NotificationError } from "@/utils/error"
 import { notificationsLogger } from "@/utils/logger/logger"
@@ -9,9 +20,13 @@ import { measureTimeAsync } from "@/utils/perf/perf-timer"
 import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 import { notificationExtensionSharedDataStorage } from "@/utils/storage/storages"
 
-// From NotificationService.swift we only pass the id for now
+// Update the type to match what we're now storing from Swift
 type INotificationMessage = {
   id: IXmtpMessageId
+  content: any // Assume any for now since XMTP ios SDK maybe doesn't have content the same way the RN SDK does
+  contentType: string
+  sentAtNs: number
+  senderInboxId: IXmtpInboxId
 }
 
 // IF YOU CHANGE THIS KEY, YOU MUST CHANGE THE KEY IN THE IOS NOTIFICATION EXTENSION TOO
@@ -63,50 +78,120 @@ export async function addConversationNotificationMessageFromStorageInOurCache(ar
       return
     }
 
-    // Delete the messages from storage so we don't add them again
-    notificationMessageStorage.deleteValue(conversationId)
-
     notificationsLogger.debug(
       `Found ${messages.length} messages in storage for conversationId ${conversationId}`,
     )
 
-    // Doing this so that when messages are added in the converastion they instantly show up and we're not waiting for them to load
-    const { result: results, durationMs: ensureMessagesDurationMs } = await measureTimeAsync(
-      async () =>
-        customPromiseAllSettled(
-          messages.map(async (message) =>
-            ensureConversationMessageQueryData({
-              clientInboxId: currentSender.inboxId,
-              xmtpConversationId: conversationId,
-              xmtpMessageId: message.id,
-              caller: "addConversationNotificationMessageFromStorageInOurCache",
-            }),
-          ),
-        ),
-    )
+    // Delete the messages from storage so we don't add them again
+    notificationMessageStorage.deleteValue(conversationId)
 
-    notificationsLogger.debug(
-      `Ensuring ${messages.length} messages found in storage took ${ensureMessagesDurationMs}ms`,
-    )
+    const recognizedMessages: IXmtpMessageId[] = []
+    const unknownMessages: INotificationMessage[] = []
 
-    // Capture errors
-    results.forEach((result) => {
-      if (result.status === "rejected") {
+    // Separate recognized vs unknown messages
+    for (const message of messages) {
+      // TMP fix because ios NSE put text message content directly in content
+      if (isXmtpTextContentType(message.contentType) && !message.content.text) {
+        message.content = {
+          text: message.content,
+        }
+      }
+
+      if (
+        !isSupportedXmtpContentType(message.contentType) ||
+        !isXmtpMessage({
+          contentTypeId: message.contentType,
+          nativeContent: message.content,
+        })
+      ) {
+        unknownMessages.push(message)
         captureError(
           new NotificationError({
-            error: result.reason,
-            additionalMessage: `Failed to add message ${result.reason} to conversation cache data`,
+            error: new Error(
+              `Unknown xmtp message from storage JSON string: ${JSON.stringify(message)}`,
+            ),
           }),
         )
+        continue
       }
-    })
 
-    // Add to cache
-    addMessagesToConversationMessagesInfiniteQueryData({
-      clientInboxId: getSafeCurrentSender().inboxId,
-      xmtpConversationId: conversationId,
-      messageIds: messages.map((message) => message.id),
-    })
+      // Store the quick message in cache immediately
+      setConversationMessageQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpMessageId: message.id,
+        xmtpConversationId: conversationId,
+        message: convertXmtpMessageToConvosMessage({
+          id: message.id,
+          nativeContent: message.content,
+          contentTypeId: message.contentType,
+          senderInboxId: message.senderInboxId,
+          sentNs: message.sentAtNs,
+          topic: getXmtpConversationTopicFromXmtpId(conversationId),
+          deliveryStatus: MessageDeliveryStatus.PUBLISHED,
+          fallback: "",
+          content: () => message.content,
+          childMessages: [],
+        }),
+      })
+      recognizedMessages.push(message.id)
+    }
+
+    // Add recognized messages to infinite query immediately for fast display
+    if (recognizedMessages.length > 0) {
+      addMessagesToConversationMessagesInfiniteQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+        messageIds: recognizedMessages,
+      })
+
+      notificationsLogger.debug(
+        `Immediately added ${recognizedMessages.length} recognized messages to cache`,
+      )
+    }
+
+    // Handle unknown messages by fetching full data
+    if (unknownMessages.length > 0) {
+      notificationsLogger.debug(
+        `Fetching full data for ${unknownMessages.length} unknown message types`,
+      )
+
+      const { result: results, durationMs: ensureMessagesDurationMs } = await measureTimeAsync(
+        async () =>
+          customPromiseAllSettled(
+            unknownMessages.map(async (message) =>
+              ensureConversationMessageQueryData({
+                clientInboxId: currentSender.inboxId,
+                xmtpConversationId: conversationId,
+                xmtpMessageId: message.id,
+                caller: "addConversationNotificationMessageFromStorageInOurCache-unknown",
+              }),
+            ),
+          ),
+      )
+
+      notificationsLogger.debug(
+        `Ensuring ${unknownMessages.length} unknown messages took ${ensureMessagesDurationMs}ms`,
+      )
+
+      // Capture errors
+      results.forEach((result) => {
+        if (result.status === "rejected") {
+          captureError(
+            new NotificationError({
+              error: result.reason,
+              additionalMessage: `Failed to add unknown message ${result.reason} to conversation cache data`,
+            }),
+          )
+        }
+      })
+
+      // Add unknown messages to cache after fetching
+      addMessagesToConversationMessagesInfiniteQueryData({
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId: conversationId,
+        messageIds: unknownMessages.map((message) => message.id),
+      })
+    }
   } catch (error) {
     captureError(
       new NotificationError({

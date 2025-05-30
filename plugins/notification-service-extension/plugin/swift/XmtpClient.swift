@@ -7,8 +7,8 @@ extension XMTP.Client {
   
   // Storage prefixes - NEVER CHANGE THESE! They must match the React Native app
   private static let mmkvKeyPrefix = "BACKUP_XMTP_KEY_"
-  private static let keychainKeyPrefix = "LIBXMTP_DB_ENCRYPTION_KEY"
-  private static let fileKeyPrefix = "FILE_BACKUP_PREFIX"
+  private static let keychainKeyPrefix = "KEYCHAIN_XMTP_DB_ENCRYPTION_KEY_"
+  private static let fileKeyPrefix = "FILE_BACKUP_XMTP_DB_ENCRYPTION_KEY_"
 
   enum ClientInitializationError: Error {
     case noEncryptionKey,

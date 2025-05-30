@@ -12,40 +12,128 @@ final class NotificationService: UNNotificationServiceExtension {
 
     private static func storeDecryptedMessage(_ message: DecodedMessage, forTopic topic: String) {
         SentryManager.shared.addBreadcrumb("Attempting to store decrypted message")
-
         let conversationId = XmtpHelpers.shared.getConversationIdFromTopic(topic)
+        SentryManager.shared.addBreadcrumb("Got conversation ID: \(conversationId)")
         
         // Get existing messages for this topic
         var existingMessages: [[String: Any]] = []
 
         let storageKey = "\(NotificationService.CONVERSATION_MESSAGES_KEY_PREFIX)\(conversationId)"
+        SentryManager.shared.addBreadcrumb("Attempting to retrieve existing messages for key: \(storageKey)")
+        
         if let existingData = MMKVHelper.shared.getString(forKey: storageKey),
            let data = existingData.data(using: .utf8),
            let jsonArray = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
             existingMessages = jsonArray
-        }
-        
-        // Create message dictionary. Don't need all the fields because the main app will handle the rest.
-        let messageDict: [String: Any] = [
-            "id": message.id,
-        ]
-        
-        // Add new message to the beginning of the array
-        existingMessages.insert(messageDict, at: 0)
-        
-        // Keep only the last 20 messages to prevent unlimited growth
-        if existingMessages.count > 20 {
-            existingMessages = Array(existingMessages.prefix(20))
-            SentryManager.shared.addBreadcrumb("Trimmed message history to 20 messages")
-        }
-        
-        // Convert back to JSON string and store
-        if let jsonData = try? JSONSerialization.data(withJSONObject: existingMessages),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            MMKVHelper.shared.setString(jsonString, forKey: storageKey)
-            SentryManager.shared.addBreadcrumb("Successfully stored decrypted message")
+            SentryManager.shared.addBreadcrumb("Successfully retrieved \(existingMessages.count) existing messages")
         } else {
-            SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to serialize message data for conversationId: \(conversationId)"))
+            SentryManager.shared.addBreadcrumb("No existing messages found or failed to parse")
+        }
+        
+        do {
+            SentryManager.shared.addBreadcrumb("Starting message content extraction")
+            let decoder = XMTPContentDecoder()
+            let decodedMessageType = try decoder.decode(message: message)
+            let messageContentType = try message.encodedContent.type.description
+
+            SentryManager.shared.addBreadcrumb("Successfully decoded message content with type \(messageContentType)")
+            
+            // Convert DecodedMessageType to serializable format that matches TypeScript types
+            let serializableContent: [String: Any]
+            switch decodedMessageType {
+            case .text(let text):
+                serializableContent = ["text": text]
+                
+            case .reply(let reply):
+                var replyContent: [String: Any] = [
+                    "reference": reply.reference
+                ]
+                
+                if let textContent = reply.content as? String {
+                    replyContent["content"] = ["text": textContent]
+                } else {
+                    replyContent["content"] = ["text": String(describing: reply.content)]
+                }
+                
+                serializableContent = ["reply": replyContent]
+                
+            case .reaction(let reaction):
+                let reactionContent: [String: Any] = [
+                    "reference": reaction.reference,
+                    "action": reaction.action.rawValue,
+                    "schema": reaction.schema.rawValue,
+                    "content": reaction.content
+                ]
+                serializableContent = ["reaction": reactionContent]
+                
+            case .attachment(let attachment):
+                let attachmentContent: [String: Any] = [
+                    "filename": attachment.filename,
+                    "mimeType": attachment.mimeType,
+                    "data": attachment.data.base64EncodedString()
+                ]
+                serializableContent = ["attachment": attachmentContent]
+                
+            case .remoteAttachment(let remoteAttachment):
+                var remoteAttachmentContent: [String: Any] = [
+                    "url": remoteAttachment.url,
+                    "secret": remoteAttachment.secret.base64EncodedString(),
+                    "salt": remoteAttachment.salt.base64EncodedString(),
+                    "nonce": remoteAttachment.nonce.base64EncodedString(),
+                    "contentDigest": remoteAttachment.contentDigest,
+                    "scheme": "https://"
+                ]
+                
+                if let filename = remoteAttachment.filename {
+                    remoteAttachmentContent["filename"] = filename
+                }
+                if let contentLength = remoteAttachment.contentLength {
+                    remoteAttachmentContent["contentLength"] = contentLength
+                }
+                
+                serializableContent = ["remoteAttachment": remoteAttachmentContent]
+                
+            case .remoteURL(let url):
+                serializableContent = ["remoteURL": url.absoluteString]
+                
+            case .unknown:
+                serializableContent = ["unknown": ["contentTypeId": "unknown"]]
+            }
+
+            SentryManager.shared.addBreadcrumb("Attempting to create message dictionary with content: \(serializableContent) and contentType: \(messageContentType)")
+            
+            let messageDict: [String: Any] = [
+                "id": message.id,
+                "content": serializableContent,
+                "contentType": messageContentType,
+                "sentAtNs": message.sentAtNs,
+                "senderInboxId": message.senderInboxId
+            ]
+            SentryManager.shared.addBreadcrumb("Created message dictionary")
+            
+            existingMessages.insert(messageDict, at: 0)
+            SentryManager.shared.addBreadcrumb("Inserted new message at beginning of array")
+            
+            if existingMessages.count > 20 {
+                existingMessages = Array(existingMessages.prefix(20))
+                SentryManager.shared.addBreadcrumb("Trimmed message history to 20 messages")
+            } else {
+                SentryManager.shared.addBreadcrumb("Message history is less than 20 messages, no need to trim")
+            }
+            
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: existingMessages)
+            let jsonString = String(data: jsonData, encoding: .utf8)
+            
+            if let jsonString = jsonString {
+                MMKVHelper.shared.setString(jsonString, forKey: storageKey)
+                SentryManager.shared.addBreadcrumb("Successfully stored decrypted message")
+            } else {
+                SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to convert JSON data to string for conversationId: \(conversationId)"))
+            }
+
+        } catch {
+            SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to extract and store message content: \(error)"))
         }
     }
     
@@ -160,8 +248,8 @@ final class NotificationService: UNNotificationServiceExtension {
                     
                     // Unsubscribe because this conversation doesn't exist for this client
                     await NotificationService.unsubscribeFromTopics(
-                        [topic], 
-                        ethAddress: ethAddress, 
+                        [topic],
+                        ethAddress: ethAddress,
                         reason: "Conversation not found for topic: \(topic)"
                     )
                     
@@ -198,8 +286,8 @@ final class NotificationService: UNNotificationServiceExtension {
                         SentryManager.shared.addBreadcrumb("User is no longer active in this group")
                         
                         await NotificationService.unsubscribeFromTopics(
-                            [topic], 
-                            ethAddress: ethAddress, 
+                            [topic],
+                            ethAddress: ethAddress,
                             reason: "User no longer active in group"
                         )
                         
@@ -212,8 +300,8 @@ final class NotificationService: UNNotificationServiceExtension {
                     
                     // This is a safety measure to prevent the user from receiving notifications for a group that they are no longer a member of
                     await NotificationService.unsubscribeFromTopics(
-                        [topic], 
-                        ethAddress: ethAddress, 
+                        [topic],
+                        ethAddress: ethAddress,
                         reason: "Failed to verify group membership"
                     )
                     

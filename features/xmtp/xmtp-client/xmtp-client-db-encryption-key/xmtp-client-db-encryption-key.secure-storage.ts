@@ -4,7 +4,7 @@ import { xmtpLogger } from "@/utils/logger/logger"
 import { xmtpDbEncryptionKeySecureStorage } from "@/utils/storage/storages"
 
 // NEVER CHANGE THIS PREFIX unless you know what you are doing
-const DB_ENCRYPTION_KEY_STORAGE_KEY_STRING = "LIBXMTP_DB_ENCRYPTION_KEY"
+const DB_ENCRYPTION_KEY_STORAGE_KEY_STRING = "KEYCHAIN_XMTP_DB_ENCRYPTION_KEY_"
 
 function _getSecureStorageKey(ethAddress: ILowercaseEthereumAddress) {
   return `${DB_ENCRYPTION_KEY_STORAGE_KEY_STRING}_${ethAddress}`

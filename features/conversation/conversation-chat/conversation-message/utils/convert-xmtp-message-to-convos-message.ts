@@ -9,18 +9,21 @@ import {
   IConversationMessageText,
   IGroupUpdatedMetadataEntryFieldName,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
-import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import {
-  getXmtpMessageIsGroupUpdatedMessage,
-  getXmtpMessageIsMultiRemoteAttachmentMessage,
-  getXmtpMessageIsReactionMessage,
-  getXmtpMessageIsRemoteAttachmentMessage,
-  getXmtpMessageIsReplyMessage,
-  getXmtpMessageIsStaticAttachmentMessage,
-  getXmtpMessageIsTextMessage,
-} from "@/features/xmtp/xmtp-messages/xmtp-messages"
+  isXmtpGroupUpdatedMessage,
+  isXmtpMessage,
+  isXmtpMultiRemoteAttachmentMessage,
+  isXmtpReactionMessage,
+  isXmtpRemoteAttachmentMessage,
+  isXmtpReplyMessage,
+  isXmtpStaticAttachmentMessage,
+  isXmtpTextMessage,
+} from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
+import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { IXmtpDecodedMessage, IXmtpInboxId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
+import { captureError } from "@/utils/capture-error"
 import { convertNanosecondsToMilliseconds } from "@/utils/date"
+import { GenericError } from "@/utils/error"
 import { convertXmtpReplyContentToConvosContent } from "./convert-xmtp-reply-content-to-convos-content"
 
 export function convertXmtpMessageToConvosMessage(
@@ -36,6 +39,16 @@ export function convertXmtpMessageToConvosMessage(
     sentMs: convertNanosecondsToMilliseconds(message.sentNs),
   } satisfies IConversationMessageBase
 
+  if (!isXmtpMessage(message)) {
+    captureError(
+      new GenericError({
+        error: new Error(
+          `Trying to convert a message that isn't an XMTP message to a ConvoMessage ${JSON.stringify(message)}`,
+        ),
+      }),
+    )
+  }
+
   // Handle fallback case
   if (!message.nativeContent) {
     const textMessage: IConversationMessageText = {
@@ -47,92 +60,92 @@ export function convertXmtpMessageToConvosMessage(
   }
 
   // Use type-checking functions to determine message type and create appropriate message
-  if (getXmtpMessageIsTextMessage(message)) {
-    const textContent = message.content()
+  if (isXmtpTextMessage(message)) {
     return {
       ...baseMessage,
       type: "text",
       content: {
-        text: textContent ?? "",
+        text:
+          message.nativeContent.text ||
+          // The message content coming from ios notification extension puts the text directly in the content
+          (message.nativeContent as unknown as string),
       },
     } satisfies IConversationMessageText
   }
 
-  if (getXmtpMessageIsReactionMessage(message)) {
-    const reactionContent = message.content()
+  if (isXmtpReactionMessage(message)) {
+    const reactionContent = message.nativeContent.reaction || message.nativeContent.reactionV2
     return {
       ...baseMessage,
       type: "reaction",
       content: {
-        reference: reactionContent.reference as unknown as IXmtpMessageId,
-        action: reactionContent.action ?? "unknown",
-        schema: reactionContent.schema ?? "unknown",
-        content: reactionContent.content ?? "",
+        reference: reactionContent!.reference as unknown as IXmtpMessageId,
+        action: reactionContent!.action ?? "unknown",
+        schema: reactionContent!.schema ?? "unknown",
+        content: reactionContent!.content ?? "",
       },
     } satisfies IConversationMessageReaction
   }
 
-  if (getXmtpMessageIsReplyMessage(message)) {
-    const replyContent = message.content()
+  if (isXmtpReplyMessage(message)) {
     return {
       ...baseMessage,
       type: "reply",
       content: {
-        reference: replyContent.reference as unknown as IXmtpMessageId,
-        content: convertXmtpReplyContentToConvosContent(replyContent.content),
+        reference: message.nativeContent.reply.reference as unknown as IXmtpMessageId,
+        content: convertXmtpReplyContentToConvosContent(message.nativeContent.reply.content),
       },
     } satisfies IConversationMessageReply
   }
 
-  if (getXmtpMessageIsGroupUpdatedMessage(message)) {
-    const groupUpdatedContent = message.content()
+  if (isXmtpGroupUpdatedMessage(message)) {
     return {
       ...baseMessage,
       type: "groupUpdated",
       content: {
-        initiatedByInboxId: groupUpdatedContent.initiatedByInboxId as unknown as IXmtpInboxId,
-        membersAdded: groupUpdatedContent.membersAdded.map((member) => ({
+        initiatedByInboxId: message.nativeContent.groupUpdated
+          .initiatedByInboxId as unknown as IXmtpInboxId,
+        membersAdded: message.nativeContent.groupUpdated.membersAdded.map((member) => ({
           inboxId: member.inboxId as unknown as IXmtpInboxId,
         })),
-        membersRemoved: groupUpdatedContent.membersRemoved.map((member) => ({
+        membersRemoved: message.nativeContent.groupUpdated.membersRemoved.map((member) => ({
           inboxId: member.inboxId as unknown as IXmtpInboxId,
         })),
-        metadataFieldsChanged: groupUpdatedContent.metadataFieldsChanged.map((field) => ({
-          oldValue: field.oldValue,
-          newValue: field.newValue,
-          fieldName: field.fieldName as IGroupUpdatedMetadataEntryFieldName,
-        })),
+        metadataFieldsChanged: message.nativeContent.groupUpdated.metadataFieldsChanged.map(
+          (field) => ({
+            oldValue: field.oldValue,
+            newValue: field.newValue,
+            fieldName: field.fieldName as IGroupUpdatedMetadataEntryFieldName,
+          }),
+        ),
       },
     } satisfies IConversationMessageGroupUpdated
   }
 
-  if (getXmtpMessageIsRemoteAttachmentMessage(message)) {
-    const remoteAttachmentContent = message.content()
+  if (isXmtpRemoteAttachmentMessage(message)) {
     return {
       ...baseMessage,
       type: "remoteAttachment",
       content: {
-        ...remoteAttachmentContent,
-        contentLength: remoteAttachmentContent.contentLength ?? "0",
+        ...message.nativeContent.remoteAttachment,
+        contentLength: message.nativeContent.remoteAttachment.contentLength ?? "0",
       },
     }
   }
 
-  if (getXmtpMessageIsStaticAttachmentMessage(message)) {
-    const staticAttachmentContent = message.content()
+  if (isXmtpStaticAttachmentMessage(message)) {
     return {
       ...baseMessage,
       type: "staticAttachment",
-      content: staticAttachmentContent,
+      content: message.nativeContent.attachment,
     }
   }
 
-  if (getXmtpMessageIsMultiRemoteAttachmentMessage(message)) {
-    const multiRemoteAttachmentContent = message.content()
+  if (isXmtpMultiRemoteAttachmentMessage(message)) {
     return {
       ...baseMessage,
       type: "multiRemoteAttachment",
-      content: multiRemoteAttachmentContent,
+      content: message.nativeContent.multiRemoteAttachment,
     }
   }
 
