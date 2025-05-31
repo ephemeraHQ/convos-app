@@ -1,14 +1,8 @@
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, useQuery } from "@tanstack/react-query"
-import { create, windowScheduler } from "@yornaath/batshit"
-import {
-  getConversationMetadata,
-  getConversationsMetadata,
-} from "@/features/conversation/conversation-metadata/conversation-metadata.api"
-import { IDeviceIdentityId } from "@/features/convos-identities/convos-identities.api"
+import { getConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
 import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
 import { ensureCurrentUserQueryData } from "@/features/current-user/current-user.query"
-import { ObjectTyped } from "@/utils/object-typed"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { TimeUtils } from "@/utils/time.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -40,7 +34,11 @@ async function getConversationMetadataQueryFn({ xmtpConversationId, clientInboxI
     throw new Error("No matching device identity found for the given inbox ID")
   }
 
-  return batcher.fetch({ xmtpConversationId, deviceIdentityId })
+  // return batcher.fetch({ xmtpConversationId, deviceIdentityId })
+  return getConversationMetadata({
+    xmtpConversationId,
+    deviceIdentityId,
+  })
 }
 
 export function getConversationMetadataQueryOptions({
@@ -119,58 +117,58 @@ export function invalidateConversationMetadataQuery(args: IArgs) {
   })
 }
 
-const batcher = create({
-  name: `conversation-metadata`,
-  fetcher: async (
-    requests: Array<{
-      xmtpConversationId: IXmtpConversationId
-      deviceIdentityId: IDeviceIdentityId
-    }>,
-  ) => {
-    const deviceIdentityGroups = requests.reduce(
-      (groups, request) => {
-        const { deviceIdentityId } = request
-        if (!groups[deviceIdentityId]) {
-          groups[deviceIdentityId] = []
-        }
-        groups[deviceIdentityId].push(request)
-        return groups
-      },
-      {} as Record<
-        IDeviceIdentityId,
-        Array<{ xmtpConversationId: IXmtpConversationId; deviceIdentityId: IDeviceIdentityId }>
-      >,
-    )
+// const batcher = create({
+//   name: `conversation-metadata`,
+//   fetcher: async (
+//     requests: Array<{
+//       xmtpConversationId: IXmtpConversationId
+//       deviceIdentityId: IDeviceIdentityId
+//     }>,
+//   ) => {
+//     const deviceIdentityGroups = requests.reduce(
+//       (groups, request) => {
+//         const { deviceIdentityId } = request
+//         if (!groups[deviceIdentityId]) {
+//           groups[deviceIdentityId] = []
+//         }
+//         groups[deviceIdentityId].push(request)
+//         return groups
+//       },
+//       {} as Record<
+//         IDeviceIdentityId,
+//         Array<{ xmtpConversationId: IXmtpConversationId; deviceIdentityId: IDeviceIdentityId }>
+//       >,
+//     )
 
-    const results = await Promise.all(
-      ObjectTyped.entries(deviceIdentityGroups).map(async ([deviceIdentityId, groupRequests]) => {
-        const xmtpConversationIds = groupRequests.map((req) => req.xmtpConversationId)
-        const metadataArray = await getConversationsMetadata({
-          deviceIdentityId,
-          xmtpConversationIds,
-        })
+//     const results = await Promise.all(
+//       ObjectTyped.entries(deviceIdentityGroups).map(async ([deviceIdentityId, groupRequests]) => {
+//         const xmtpConversationIds = groupRequests.map((req) => req.xmtpConversationId)
+//         const metadataArray = await getConversationsMetadata({
+//           deviceIdentityId,
+//           xmtpConversationIds,
+//         })
 
-        const metadataByConversationId: Record<
-          IXmtpConversationId,
-          IConversationMetadataQueryData
-        > = {}
-        xmtpConversationIds.forEach((conversationId, index) => {
-          metadataByConversationId[conversationId] = metadataArray[index] || null
-        })
+//         const metadataByConversationId: Record<
+//           IXmtpConversationId,
+//           IConversationMetadataQueryData
+//         > = {}
+//         xmtpConversationIds.forEach((conversationId, index) => {
+//           metadataByConversationId[conversationId] = metadataArray[index] || null
+//         })
 
-        return metadataByConversationId
-      }),
-    )
+//         return metadataByConversationId
+//       }),
+//     )
 
-    const combinedResults: Record<IXmtpConversationId, IConversationMetadataQueryData> = {}
-    results.forEach((result) => {
-      Object.assign(combinedResults, result)
-    })
+//     const combinedResults: Record<IXmtpConversationId, IConversationMetadataQueryData> = {}
+//     results.forEach((result) => {
+//       Object.assign(combinedResults, result)
+//     })
 
-    return combinedResults
-  },
-  scheduler: windowScheduler(100),
-  resolver: (metadataByConversationId, request) => {
-    return metadataByConversationId[request.xmtpConversationId] || null
-  },
-})
+//     return combinedResults
+//   },
+//   scheduler: windowScheduler(100),
+//   resolver: (metadataByConversationId, request) => {
+//     return metadataByConversationId[request.xmtpConversationId] || null
+//   },
+// })

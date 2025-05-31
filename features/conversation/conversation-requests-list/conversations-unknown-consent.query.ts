@@ -55,12 +55,6 @@ export function addConversationToUnknownConsentConversationsQuery(args: {
 }) {
   const { clientInboxId, conversationId } = args
 
-  // Just making sure we remove from allowed consent conversations first since we don't want it in both queries
-  removeConversationFromAllowedConsentConversationsQuery({
-    clientInboxId,
-    conversationId,
-  })
-
   return reactQueryClient.setQueryData(
     getUnknownConsentConversationsQueryOptions({
       inboxId: clientInboxId,
