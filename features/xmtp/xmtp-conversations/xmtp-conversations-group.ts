@@ -279,7 +279,7 @@ export async function addSuperAdminToXmtpGroup(args: {
   }
 }
 
-export async function getGroupPermissions(args: {
+export async function getXmtpGroupPermissions(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
 }) {

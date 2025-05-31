@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications"
 import { useEffect, useRef } from "react"
+import { Alert } from "react-native"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
@@ -125,11 +126,25 @@ async function handleNotification(response: Notifications.NotificationResponse) 
 
       // To make sure we don't navigate to a conversation that doesn't exist.
       // Might happens because our notifications unsubscribing logic is not perfect.
-      await ensureConversationQueryData({
-        clientInboxId: getSafeCurrentSender().inboxId,
-        xmtpConversationId: tappedXmtpConversationId,
-        caller: "useNotificationListeners",
-      })
+      try {
+        await ensureConversationQueryData({
+          clientInboxId: getSafeCurrentSender().inboxId,
+          xmtpConversationId: tappedXmtpConversationId,
+          caller: "useNotificationListeners",
+        })
+      } catch (error) {
+        captureError(
+          new NotificationError({
+            error,
+            additionalMessage: "Error ensuring conversation query data for notification",
+          }),
+        )
+        Alert.alert(
+          "Couldn't find conversation",
+          "We couldn't find the conversation related to this notification. You might have received it because you were not correctly unsubscribed from notifications for this conversation in another account.",
+        )
+        return
+      }
 
       return navigate("Conversation", {
         xmtpConversationId: tappedXmtpConversationId,

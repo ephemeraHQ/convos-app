@@ -236,6 +236,61 @@ class ConvosAPIService {
         let topics: [String]
     }
     
+    func unregisterNotificationInstallation(ethAddress: String, installationId: String) async throws {
+        guard let url = URL(string: "\(apiBaseURL)/api/v1/notifications/unregister/\(installationId)") else {
+            let error = ConvosAPIError.invalidURL
+            SentryManager.shared.trackError(error, extras: [
+                "operation": "unregisterNotificationInstallation",
+                "ethAddress": ethAddress,
+                "installationId": installationId
+            ])
+            throw error
+        }
+        
+        do {
+            // Get authenticated headers (JWT)
+            let authHeaders = try await getAuthenticatedHeaders(for: ethAddress)
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "DELETE"
+            
+            // Add JWT authentication header
+            for (key, value) in authHeaders {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+            
+            let (_, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                let error = ConvosAPIError.invalidResponse
+                SentryManager.shared.trackError(error, extras: [
+                    "operation": "unregisterNotificationInstallation",
+                    "ethAddress": ethAddress,
+                    "installationId": installationId
+                ])
+                throw error
+            }
+            
+            guard 200...299 ~= httpResponse.statusCode else {
+                let error = ConvosAPIError.httpError(statusCode: httpResponse.statusCode)
+                SentryManager.shared.trackError(error, extras: [
+                    "operation": "unregisterNotificationInstallation",
+                    "statusCode": httpResponse.statusCode,
+                    "installationId": installationId
+                ])
+                throw error
+            }
+            
+        } catch {
+            SentryManager.shared.trackError(error, extras: [
+                "operation": "unregisterNotificationInstallation",
+                "ethAddress": ethAddress,
+                "installationId": installationId
+            ])
+            throw error
+        }
+    }
+    
     func unsubscribeFromTopics(ethAddress: String, topics: [String]) async throws {
         guard let url = URL(string: "\(apiBaseURL)/api/v1/notifications/unsubscribe") else {
             let error = ConvosAPIError.invalidURL
