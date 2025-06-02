@@ -4,7 +4,7 @@ import { IEthereumAddress } from "@/utils/evm/address"
 
 export type IConvosProfileId = string & { readonly __brand: unique symbol }
 
-export const ConvosProfileSchema = z.object({
+export const CreateOrUpdateConvosProfileSchema = z.object({
   id: z.custom<IConvosProfileId>(),
   name: z
     .string()
@@ -30,4 +30,15 @@ export const ConvosProfileSchema = z.object({
   turnkeyAddress: z.custom<IEthereumAddress>(), // TODO: Maybe this should be changed to simply ethAddress? Let's check thing again once we add multi identity support
 })
 
-export type IConvosProfile = z.infer<typeof ConvosProfileSchema>
+// Schema for API responses - no validation rules, just structure
+export const ConvosProfileResponseSchema = z.object({
+  id: z.custom<IConvosProfileId>(),
+  name: z.string(),
+  username: z.string(),
+  description: z.string().nullable().optional(),
+  avatar: z.string().nullable().optional(),
+  xmtpId: z.custom<IXmtpInboxId>(),
+  turnkeyAddress: z.custom<IEthereumAddress>(),
+})
+
+export type IConvosProfile = z.infer<typeof ConvosProfileResponseSchema>

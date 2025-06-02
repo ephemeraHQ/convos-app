@@ -1,10 +1,13 @@
 import { useQueries, useQuery } from "@tanstack/react-query"
+import { useCallback } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { getConversationSpamQueryOptions } from "@/features/conversation/conversation-requests-list/conversation-spam.query"
 import { getUnknownConsentConversationsQueryOptions } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
+import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 
 export function useConversationRequestsListItem() {
   const currentSender = useSafeCurrentSender()
@@ -99,10 +102,33 @@ export function useConversationRequestsListItem() {
   const sortedLikelySpamConversationIds = likelySpamItems.map((item) => item.conversationId)
   const sortedLikelyNotSpamConversationIds = likelyNotSpamItems.map((item) => item.conversationId)
 
+  const handleRefetch = useCallback(async () => {
+    try {
+      await Promise.all([
+        refetchUnknownConsentConversationIds(),
+        ...spamQueries.map((q) => q.refetch()),
+        ...metadataQueries.map((q) => q.refetch()),
+      ])
+    } catch (error) {
+      captureError(
+        new GenericError({
+          error,
+          additionalMessage: "Error refreshing conversation requests list",
+        }),
+      )
+    }
+  }, [
+    refetchUnknownConsentConversationIds,
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
+    spamQueries,
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
+    metadataQueries,
+  ])
+
   return {
     likelyNotSpamConversationIds: sortedLikelyNotSpamConversationIds,
     likelySpamConversationIds: sortedLikelySpamConversationIds,
     isLoading,
-    refetch: refetchUnknownConsentConversationIds,
+    refetch: handleRefetch,
   }
 }

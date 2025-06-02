@@ -3,7 +3,10 @@ import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { createUserIdentitySchema, IConvosUserId } from "@/features/current-user/current-user.types"
 import { deviceSchema } from "@/features/devices/devices.types"
 import { getDeviceName, getDeviceOs } from "@/features/devices/devices.utils"
-import { ConvosProfileSchema, IConvosProfile } from "@/features/profiles/profiles.types"
+import {
+  CreateOrUpdateConvosProfileSchema,
+  IConvosProfile,
+} from "@/features/profiles/profiles.types"
 import { IXmtpInboxId, IXmtpInstallationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
 import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
@@ -22,7 +25,7 @@ const createUserApiRequestBodySchema = z
       xmtpId: true,
       xmtpInstallationId: true,
     }),
-    profile: ConvosProfileSchema.pick({
+    profile: CreateOrUpdateConvosProfileSchema.pick({
       name: true,
       username: true,
       avatar: true,
@@ -46,7 +49,7 @@ const createUserApiResponseSchema = z.object({
     turnkeyAddress: true,
     xmtpId: true,
   }),
-  profile: ConvosProfileSchema.pick({
+  profile: CreateOrUpdateConvosProfileSchema.pick({
     id: true,
     name: true,
     username: true,

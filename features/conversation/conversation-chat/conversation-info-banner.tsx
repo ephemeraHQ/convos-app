@@ -8,7 +8,7 @@ import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useDisappearingMessageSettingsQuery } from "@/features/disappearing-messages/disappearing-message-settings.query"
-import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
+import { getFormattedDisappearingDurationStr } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -34,7 +34,7 @@ export const ConversationInfoBanner = memo(function ConversationInfoBanner() {
 
   const { data: disappearingMessageSettings } = useDisappearingMessageSettingsQuery({
     clientInboxId: currentSender.inboxId,
-    conversationId: xmtpConversationId,
+    xmtpConversationId: xmtpConversationId,
     caller: "ConversationInfoBanner",
   })
 
@@ -58,8 +58,11 @@ export const ConversationInfoBanner = memo(function ConversationInfoBanner() {
         <HStack style={themed($bannerRow)}>
           <Icon icon="timer" size={16} color={theme.colors.global.green} />
           <Text preset="smaller" color="secondary">
-            Messages disappear after{" "}
-            {getFormattedDisappearingDuration(disappearingMessageSettings?.retentionDurationInNs)}
+            {disappearingMessageSettings?.retentionDurationInNs
+              ? `Messages disappear after ${getFormattedDisappearingDurationStr(
+                  disappearingMessageSettings?.retentionDurationInNs,
+                )}`
+              : "Messages disappear are off"}
           </Text>
         </HStack>
       </VStack>

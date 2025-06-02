@@ -29,9 +29,9 @@ export const defaultConversationDisappearingMessageSettings: IDisappearingMessag
 /**
  * Get a formatted display value for a disappearing message duration in nanoseconds
  */
-export function getFormattedDisappearingDuration(nanoseconds: number | undefined): string {
+export function getFormattedDisappearingDurationStr(nanoseconds: number | undefined): string {
   if (!nanoseconds || nanoseconds === 0) {
-    return "off";
+    return "off"
   }
 
   // First check if this matches one of our predefined durations

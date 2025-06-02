@@ -15,9 +15,9 @@ import { XMTPError } from "@/utils/error"
  */
 export async function getXmtpDisappearingMessageSettings(args: {
   clientInboxId: IXmtpInboxId
-  conversationId: IXmtpConversationId
+  xmtpConversationId: IXmtpConversationId
 }) {
-  const { clientInboxId, conversationId } = args
+  const { clientInboxId, xmtpConversationId } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -25,14 +25,14 @@ export async function getXmtpDisappearingMessageSettings(args: {
     })
 
     const settings = await wrapXmtpCallWithDuration("getDisappearingMessageSettings", async () => {
-      return disappearingMessageSettings(client.installationId, conversationId)
+      return disappearingMessageSettings(client.installationId, xmtpConversationId)
     })
 
     return settings || null
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: `Failed to get disappearing message settings for conversation: ${conversationId}`,
+      additionalMessage: `Failed to get disappearing message settings for conversation: ${xmtpConversationId}`,
     })
   }
 }
@@ -42,9 +42,9 @@ export async function getXmtpDisappearingMessageSettings(args: {
  */
 export async function isXmtpDisappearingMessagesEnabled(args: {
   clientInboxId: IXmtpInboxId
-  conversationId: IXmtpConversationId
+  xmtpConversationId: IXmtpConversationId
 }) {
-  const { clientInboxId, conversationId } = args
+  const { clientInboxId, xmtpConversationId } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -52,12 +52,12 @@ export async function isXmtpDisappearingMessagesEnabled(args: {
     })
 
     return wrapXmtpCallWithDuration("isDisappearingMessagesEnabled", async () => {
-      return isDisappearingMessagesEnabled(client.installationId, conversationId)
+      return isDisappearingMessagesEnabled(client.installationId, xmtpConversationId)
     })
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: `Failed to check if disappearing messages are enabled for conversation: ${conversationId}`,
+      additionalMessage: `Failed to check if disappearing messages are enabled for conversation: ${xmtpConversationId}`,
     })
   }
 }
@@ -67,10 +67,10 @@ export async function isXmtpDisappearingMessagesEnabled(args: {
  */
 export async function updateXmtpDisappearingMessageSettings(args: {
   clientInboxId: IXmtpInboxId
-  conversationId: IXmtpConversationId
+  xmtpConversationId: IXmtpConversationId
   retentionDurationInNs: number
 }) {
-  const { clientInboxId, conversationId, retentionDurationInNs } = args
+  const { clientInboxId, xmtpConversationId, retentionDurationInNs } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -80,7 +80,7 @@ export async function updateXmtpDisappearingMessageSettings(args: {
     await wrapXmtpCallWithDuration("updateDisappearingMessageSettings", async () => {
       return updateDisappearingMessageSettings(
         client.installationId,
-        conversationId,
+        xmtpConversationId,
         getTodayNs(),
         retentionDurationInNs,
       )
@@ -88,16 +88,16 @@ export async function updateXmtpDisappearingMessageSettings(args: {
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: `Failed to update disappearing message settings for conversation: ${conversationId}`,
+      additionalMessage: `Failed to update disappearing message settings for conversation: ${xmtpConversationId}`,
     })
   }
 }
 
 export async function clearXmtpDisappearingMessageSettings(args: {
   clientInboxId: IXmtpInboxId
-  conversationId: IXmtpConversationId
+  xmtpConversationId: IXmtpConversationId
 }) {
-  const { clientInboxId, conversationId } = args
+  const { clientInboxId, xmtpConversationId } = args
 
   try {
     const client = await getXmtpClientByInboxId({
@@ -105,12 +105,12 @@ export async function clearXmtpDisappearingMessageSettings(args: {
     })
 
     await wrapXmtpCallWithDuration("clearDisappearingMessageSettings", async () => {
-      return clearDisappearingMessageSettings(client.installationId, conversationId)
+      return clearDisappearingMessageSettings(client.installationId, xmtpConversationId)
     })
   } catch (error) {
     throw new XMTPError({
       error,
-      additionalMessage: `Failed to clear disappearing message settings for conversation: ${conversationId}`,
+      additionalMessage: `Failed to clear disappearing message settings for conversation: ${xmtpConversationId}`,
     })
   }
 }

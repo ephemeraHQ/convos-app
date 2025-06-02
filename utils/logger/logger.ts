@@ -121,6 +121,7 @@ export const persistLogger = baseLogger.extend("PERSIST")
 export const queryLogger = baseLogger.extend("QUERY")
 export const deepLinkLogger = baseLogger.extend("DEEPLINK")
 export const navigationLogger = baseLogger.extend("NAVIGATION")
+export const appStateLogger = baseLogger.extend("APP_STATE")
 
 // Pretty print JSON for terminal output
 export function logJson(label: string, json: any) {

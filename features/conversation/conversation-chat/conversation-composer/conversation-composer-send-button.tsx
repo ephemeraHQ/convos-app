@@ -4,9 +4,11 @@ import React, { memo } from "react"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { useConversationComposerStoreContext } from "./conversation-composer.store-context"
 
-export const SendButton = memo(function SendButton(props: { onPress: () => void }) {
-  const { onPress } = props
-
+export const ConversationComposerSendButton = memo(function ConversationComposerSendButton(props: {
+  isLoading: boolean
+  onPress: () => void
+}) {
+  const { isLoading, onPress } = props
   const { theme } = useAppTheme()
 
   const canSend = useConversationComposerStoreContext((state) => {
@@ -34,6 +36,7 @@ export const SendButton = memo(function SendButton(props: { onPress: () => void 
         disabled={!canSend}
         iconName="arrow.up"
         iconWeight="medium"
+        isLoading={isLoading}
       />
     </VStack>
   )

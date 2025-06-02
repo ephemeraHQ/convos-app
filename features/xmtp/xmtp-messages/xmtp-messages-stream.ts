@@ -19,19 +19,24 @@ export const streamAllMessages = async (args: {
   try {
     // Not wrapping the stream initiation itself as it's long-running
     await wrapXmtpCallWithDuration("streamAllMessages", async () => {
-      return client.conversations.streamAllMessages((newMessage) => {
-        if (!isSupportedXmtpMessage(newMessage as IXmtpDecodedMessage)) {
-          xmtpLogger.debug(`Skipping message streamed because it's not supported`)
-          return Promise.resolve()
-        }
+      return client.conversations.streamAllMessages(
+        (newMessage) => {
+          if (!isSupportedXmtpMessage(newMessage as IXmtpDecodedMessage)) {
+            xmtpLogger.debug(`Skipping message streamed because it's not supported`)
+            return Promise.resolve()
+          }
 
-        if (getEnv() === "production") {
-          xmtpLogger.debug(`Received new message from messages stream: ${newMessage.id}`)
-        } else {
-          xmtpLogger.debug(`Received new message from messages stream`, newMessage)
-        }
-        return onNewMessage(newMessage as IXmtpDecodedMessage)
-      })
+          if (getEnv() === "production") {
+            xmtpLogger.debug(`Received new message from messages stream: ${newMessage.id}`)
+          } else {
+            xmtpLogger.debug(`Received new message from messages stream`, newMessage)
+          }
+          return onNewMessage(newMessage as IXmtpDecodedMessage)
+        },
+        "all",
+        // ONLY stream messages from allowed conversations
+        ["allowed"],
+      )
     })
   } catch (error) {
     throw new XMTPError({

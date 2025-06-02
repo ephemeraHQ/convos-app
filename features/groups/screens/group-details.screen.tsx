@@ -1,13 +1,11 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { memo, useCallback } from "react"
-import { Alert } from "react-native"
 import { GroupAvatar } from "@/components/group-avatar"
 import { Screen } from "@/components/screen/screen"
 import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
 import { Icon } from "@/design-system/Icon/Icon"
 import { ListItem, ListItemTitle } from "@/design-system/list-item"
-import { Pressable } from "@/design-system/Pressable"
 import { Switch } from "@/design-system/switch"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
@@ -17,7 +15,6 @@ import { useMuteConversationMutation } from "@/features/conversation/conversatio
 import { useUnmuteConversationMutation } from "@/features/conversation/conversation-metadata/unmute-conversation.mutation"
 import { GroupDetailsMembersList } from "@/features/groups/components/group-details-members-list.component"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
-import { useCurrentSenderGroupPermissions } from "@/features/groups/hooks/use-group-permissions.hook"
 import { useGroupQuery } from "@/features/groups/queries/group.query"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useRouteParams } from "@/navigation/use-navigation"
@@ -187,6 +184,7 @@ const GroupDetailsScreenMuteButton = memo(function GroupDetailsScreenMuteButton(
 
   return (
     <ListItem
+      style={{ backgroundColor: theme.colors.background.surface }}
       avatar={
         <Center
           style={{

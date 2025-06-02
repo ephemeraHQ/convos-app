@@ -290,7 +290,7 @@ function useHandleDisappearingMessagesSettings() {
 
     const { unsubscribe } = listenForDisappearingMessageSettingsQueryChanges({
       clientInboxId: currentSender.inboxId,
-      conversationId: xmtpConversationId,
+      xmtpConversationId: xmtpConversationId,
       caller: "useHandleDisappearingMessagesSettings",
       onChanges: (result) => {
         if (result.data?.retentionDurationInNs) {

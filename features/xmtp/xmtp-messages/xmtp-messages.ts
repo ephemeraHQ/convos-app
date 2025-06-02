@@ -37,15 +37,17 @@ export async function getXmtpConversationMessages(args: {
         inboxId: clientInboxId,
       })
 
-      const messages = (await wrapXmtpCallWithDuration("conversationMessages", () =>
-        conversationMessages<ISupportedXmtpCodecs>(
-          client.installationId,
-          xmtpConversationId,
-          limit,
-          beforeNs,
-          afterNs,
-          direction === "next" ? "DESCENDING" : "ASCENDING",
-        ),
+      const messages = (await wrapXmtpCallWithDuration(
+        `conversationMessages ${xmtpConversationId}`,
+        () =>
+          conversationMessages<ISupportedXmtpCodecs>(
+            client.installationId,
+            xmtpConversationId,
+            limit,
+            beforeNs,
+            afterNs,
+            direction === "next" ? "DESCENDING" : "ASCENDING",
+          ),
       )) as unknown as IXmtpDecodedMessage[]
 
       return messages.filter(isSupportedXmtpMessage)

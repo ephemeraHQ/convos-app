@@ -8,6 +8,7 @@ import {
 } from "react-native"
 import { useAppTheme } from "../../theme/use-app-theme"
 import { Icon } from "../Icon/Icon"
+import { Loader } from "../loader"
 import { Pressable } from "../Pressable"
 import { IIconButtonProps } from "./IconButton.props"
 import { getIconButtonViewStyle, getIconProps } from "./IconButton.styles"
@@ -25,6 +26,7 @@ export const IconButton = React.forwardRef(function IconButton(props: IIconButto
     pressedStyle: pressedStyleOverride,
     disabledStyle: disabledStyleOverride,
     disabled,
+    isLoading = false,
     withHaptics = true,
     preventDoubleTap = false,
     onPress,
@@ -41,12 +43,12 @@ export const IconButton = React.forwardRef(function IconButton(props: IIconButto
           size,
           action,
           pressed,
-          disabled,
+          disabled: disabled || isLoading,
         }),
       ),
       styleOverride,
       pressed && pressedStyleOverride,
-      disabled && disabledStyleOverride,
+      (disabled || isLoading) && disabledStyleOverride,
     ],
     [
       themed,
@@ -54,6 +56,7 @@ export const IconButton = React.forwardRef(function IconButton(props: IIconButto
       size,
       action,
       disabled,
+      isLoading,
       styleOverride,
       pressedStyleOverride,
       disabledStyleOverride,
@@ -68,15 +71,25 @@ export const IconButton = React.forwardRef(function IconButton(props: IIconButto
           size,
           action,
           pressed,
-          disabled,
+          disabled: disabled || isLoading,
         }),
       ),
-    [themed, variant, size, action, disabled],
+    [themed, variant, size, action, disabled, isLoading],
   )
+
+  const getLoaderSize = useCallback(() => {
+    const sizeMap = {
+      sm: "xs" as const,
+      md: "sm" as const,
+      lg: "md" as const,
+      xl: "lg" as const,
+    }
+    return sizeMap[size]
+  }, [size])
 
   const handlePress = useCallback(
     (e: GestureResponderEvent) => {
-      if (disabled) {
+      if (disabled || isLoading) {
         return
       }
 
@@ -85,21 +98,26 @@ export const IconButton = React.forwardRef(function IconButton(props: IIconButto
       }
       onPress?.(e)
     },
-    [withHaptics, onPress, disabled],
+    [withHaptics, onPress, disabled, isLoading],
   )
 
   return (
     <Pressable
       style={viewStyle}
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: !!(disabled || isLoading) }}
+      disabled={disabled || isLoading}
       onPress={handlePress}
-      hitSlop={theme.spacing.xxs} // By default let's assume we want a small hitSlop
+      hitSlop={theme.spacing.xxs}
       preventDoubleTap={preventDoubleTap}
       {...rest}
     >
       {({ pressed }) => {
+        if (isLoading) {
+          const { color } = iconProps({ pressed })
+          return <Loader size={getLoaderSize()} color={color} />
+        }
+
         if (iconName) {
           const { size, weight, color } = iconProps({ pressed })
           return (

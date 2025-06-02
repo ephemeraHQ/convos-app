@@ -13,13 +13,13 @@ export const useClearDisappearingMessageSettings = () => {
 
       return clearXmtpDisappearingMessageSettings({
         clientInboxId,
-        conversationId,
+        xmtpConversationId: conversationId,
       })
     },
     onSettled: (data, error, variables) => {
       invalidateDisappearingMessageSettings({
         clientInboxId: variables.clientInboxId,
-        conversationId: variables.conversationId,
+        xmtpConversationId: variables.conversationId,
         caller: "useClearDisappearingMessageSettings",
       })
     },

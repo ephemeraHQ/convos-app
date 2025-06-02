@@ -35,7 +35,7 @@ async function getConversation(args: IGetConversationArgs) {
 
   await syncOneXmtpConversation({
     clientInboxId,
-    conversationId: xmtpConversationId,
+    xmtpConversationId: xmtpConversationId,
     caller: "getConversation",
   })
 
@@ -193,4 +193,8 @@ export async function maybeUpdateConversationQueryLastMessage(args: {
       }),
     )
   }
+}
+
+export function removeConversationQueryData(args: IGetConversationArgs) {
+  return reactQueryClient.removeQueries(getConversationQueryOptions(args))
 }
