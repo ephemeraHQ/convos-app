@@ -76,4 +76,9 @@ export type IIconButtonProps = {
    * Prevent double tap
    */
   preventDoubleTap?: boolean
+
+  /**
+   * Whether the button is loading
+   */
+  isLoading?: boolean
 } & RNPressableProps

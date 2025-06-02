@@ -1,6 +1,6 @@
 import { HStack } from "@design-system/HStack"
 import { VStack } from "@design-system/VStack"
-import React, { memo, useCallback, useMemo } from "react"
+import React, { memo, useCallback, useMemo, useState } from "react"
 import { ViewStyle } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ConversationComposerReplyPreview } from "@/features/conversation/conversation-chat/conversation-composer/conversation-composer-reply-preview"
@@ -8,13 +8,16 @@ import {
   useCreateConversationAndSend,
   useSendToExistingConversation,
 } from "@/features/conversation/conversation-chat/conversation-composer/hooks/use-conversation-composer-send"
-import { useConversationStore } from "@/features/conversation/conversation-chat/conversation.store-context"
+import {
+  useConversationStore,
+  useConversationStoreContext,
+} from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { ConversationComposerAddAttachmentButton } from "./conversation-composer-add-attachment-button"
 import { ConversationComposerAttachmentPreview } from "./conversation-composer-attachment-preview"
-import { SendButton } from "./conversation-composer-send-button"
+import { ConversationComposerSendButton } from "./conversation-composer-send-button"
 import { ConversationComposerTextInput } from "./conversation-composer-text-input"
 
 export const ConversationComposer = memo(function ConversationComposer() {
@@ -22,6 +25,10 @@ export const ConversationComposer = memo(function ConversationComposer() {
   const conversationStore = useConversationStore()
   const sendToExistingConversation = useSendToExistingConversation()
   const createConversationAndSend = useCreateConversationAndSend()
+  const [isCreatingNewConversationLocal, setIsCreatingNewConversationLocal] = useState(false)
+  const isCreatingNewConversation = useConversationStoreContext(
+    (state) => state.isCreatingNewConversation,
+  )
 
   const handleSend = useCallback(async () => {
     const { xmtpConversationId } = conversationStore.getState()
@@ -29,17 +36,25 @@ export const ConversationComposer = memo(function ConversationComposer() {
       if (xmtpConversationId) {
         await sendToExistingConversation()
       } else {
+        setIsCreatingNewConversationLocal(true)
         await createConversationAndSend()
       }
     } catch (error) {
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Failed to send message" }),
         {
-          message: "Failed to send message"
-        }
+          message: "Failed to send message",
+        },
       )
+    } finally {
+      setIsCreatingNewConversationLocal(false)
     }
-  }, [sendToExistingConversation, createConversationAndSend, conversationStore])
+  }, [
+    sendToExistingConversation,
+    createConversationAndSend,
+    conversationStore,
+    setIsCreatingNewConversationLocal,
+  ])
 
   return (
     <VStack style={styles.container}>
@@ -51,7 +66,11 @@ export const ConversationComposer = memo(function ConversationComposer() {
             <ConversationComposerAttachmentPreview />
             <HStack style={styles.inputRow}>
               <ConversationComposerTextInput onSubmitEditing={handleSend} />
-              <SendButton onPress={handleSend} />
+              <ConversationComposerSendButton
+                // For now only show loading if we are creating a new conversation because it's not optimistic yet
+                isLoading={isCreatingNewConversationLocal && isCreatingNewConversation}
+                onPress={handleSend}
+              />
             </HStack>
           </VStack>
         </HStack>

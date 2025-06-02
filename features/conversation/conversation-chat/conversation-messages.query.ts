@@ -6,7 +6,6 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query"
 import { isReactionMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { ensureDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { syncOneXmtpConversation } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
@@ -18,12 +17,10 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { DEFAULT_GC_TIME_MS } from "@/utils/react-query/react-query.constants"
 import { refetchQueryIfNotAlreadyFetching } from "@/utils/react-query/react-query.helpers"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import {
-  ensureConversationQueryData,
-  maybeUpdateConversationQueryLastMessage,
-} from "../queries/conversation.query"
+import { maybeUpdateConversationQueryLastMessage } from "../queries/conversation.query"
 import { processReactionConversationMessages } from "./conversation-message/conversation-message-reactions.query"
 import {
+  ensureConversationMessageQueryData,
   getConversationMessageQueryData,
   setConversationMessageQueryData,
 } from "./conversation-message/conversation-message.query"
@@ -86,39 +83,29 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("xmtpConversationId is required")
   }
 
-  const conversation = await ensureConversationQueryData({
+  await syncOneXmtpConversation({
     clientInboxId,
     xmtpConversationId,
     caller: "conversationMessagesInfiniteQueryFn",
   })
 
-  if (!conversation) {
-    throw new Error("Conversation not found")
-  }
-
   const disappearingMessagesSettings = await ensureDisappearingMessageSettings({
     clientInboxId,
-    conversationId: conversation.xmtpId,
+    xmtpConversationId: xmtpConversationId,
     caller: "conversationMessagesInfiniteQueryFn",
   })
 
   const priotorizeServerResponse =
     disappearingMessagesSettings?.retentionDurationInNs &&
     disappearingMessagesSettings?.retentionDurationInNs > 0 &&
-    // Don't priotorize server response if the retention duration is less than the default GC time
+    // Priotorize server response if the retention duration is less than the default GC time.
     // Messages will get deleted from the cache after the default GC time anyway
     convertNanosecondsToMilliseconds(disappearingMessagesSettings?.retentionDurationInNs) <=
       DEFAULT_GC_TIME_MS
 
-  await syncOneXmtpConversation({
-    clientInboxId,
-    conversationId: conversation.xmtpId,
-    caller: "conversationMessagesInfiniteQueryFn",
-  })
-
   const xmtpMessages = await getXmtpConversationMessages({
     clientInboxId,
-    xmtpConversationId: conversation.xmtpId,
+    xmtpConversationId,
     limit: resolvedLimit,
     ...(direction === "next" && cursorNs ? { beforeNs: cursorNs } : {}),
     ...(direction === "prev" && cursorNs ? { afterNs: cursorNs } : {}),
@@ -140,41 +127,90 @@ const conversationMessagesInfiniteQueryFn = async (
       const serverMessageIdsSet = new Set(convosMessagesFromServer.map((m) => m.xmtpId))
       const messagesToConsider: IConversationMessage[] = []
 
+      /*
+       * RACE CONDITION HANDLING FOR MESSAGE SYNCHRONIZATION
+       *
+       * This logic handles complex race conditions that occur when messages arrive from multiple sources:
+       * 1. Push notifications (when app is backgrounded)
+       * 2. Real-time streams (when app is active)
+       * 3. Server fetches (periodic syncing)
+       *
+       * THE PROBLEM:
+       * Messages can appear and disappear from the UI due to timing issues between these sources.
+       *
+       * EXAMPLE SCENARIO:
+       * 1. User receives notification while app is backgrounded
+       * 2. Notification handler adds message to cache via addMessagesToConversationMessagesInfiniteQueryData
+       * 3. User opens app, triggering a refetch that takes 5+ minutes due to slow network
+       * 4. Server response doesn't include the recent message (sync delay)
+       * 5. Our cache merge logic removes the "newer" cached message, thinking server is authoritative
+       * 6. User sees message disappear from UI
+       * 7. Later, when server catches up, message reappears
+       *
+       * THE SOLUTION:
+       * We use different strategies based on whether disappearing messages are enabled:
+       *
+       * - prioritizeServerResponse = true (disappearing messages enabled):
+       *   Server is more authoritative for message retention, but we protect recent messages
+       *   from being removed by using dynamic grace periods and age checks.
+       *
+       * - prioritizeServerResponse = false (normal conversations):
+       *   We trust our cache more and merge all cached messages with server response.
+       */
+
       if (priotorizeServerResponse) {
-        // Only consider messages newer than the fetch timestamp
-        for (const cachedMsgId of cachedFirstPageMessageIds) {
-          if (!serverMessageIdsSet.has(cachedMsgId)) {
-            const cachedMsgData = getConversationMessageQueryData({
+        const cachedMessagePromises = cachedFirstPageMessageIds
+          .filter((id) => !serverMessageIdsSet.has(id))
+          .map(async (cachedMsgId) => {
+            const cachedMsgData = await ensureConversationMessageQueryData({
               clientInboxId,
               xmtpMessageId: cachedMsgId,
               xmtpConversationId,
+              caller: "conversationMessagesInfiniteQueryFn",
             })
-            if (cachedMsgData) {
-              const OPTIMISTIC_GRACE_PERIOD = 5000 // 5 seconds
-              if (cachedMsgData.sentMs >= timestampBeforeXmtpFetchMs - OPTIMISTIC_GRACE_PERIOD) {
-                messagesToConsider.push(cachedMsgData)
-              } else if (cachedMsgData.sentMs < timestampBeforeXmtpFetchMs) {
-                queryLogger.debug(
-                  `Removing cached message ${cachedMsgId} because it's older than fetch start and it's not in server response and we priotorize server response`,
-                )
-              }
+            return { id: cachedMsgId, data: cachedMsgData }
+          })
+
+        const cachedMessageResults = await Promise.all(cachedMessagePromises)
+
+        for (const { id: cachedMsgId, data: cachedMsgData } of cachedMessageResults) {
+          if (cachedMsgData) {
+            // Dynamic grace period that accounts for slow fetches
+            // If fetch took 5 minutes, we extend grace period accordingly
+            const fetchDurationMs = Date.now() - timestampBeforeXmtpFetchMs
+            const DYNAMIC_GRACE_PERIOD = Math.max(5000, fetchDurationMs + 5000)
+
+            // Don't prioritize server response for very recent messages (< 10 seconds old)
+            // These are likely from notifications/streams and server might not have them yet
+            // We use 10 seconds to balance protection vs respecting short disappearing message settings
+            if (cachedMsgData.sentMs < timestampBeforeXmtpFetchMs - 10000) {
+              // Only prioritize server response for messages older than 10 seconds
+              continue
+            } else if (cachedMsgData.sentMs >= timestampBeforeXmtpFetchMs - DYNAMIC_GRACE_PERIOD) {
+              messagesToConsider.push(cachedMsgData)
+            } else if (cachedMsgData.sentMs < timestampBeforeXmtpFetchMs) {
+              queryLogger.debug(
+                `Removing cached message ${cachedMsgId} because it's older than fetch start and it's not in server response and we priotorize server response`,
+              )
             }
           }
         }
       } else {
         // Consider all cached messages from the first page that are not already in the server response.
-        for (const cachedMsgId of cachedFirstPageMessageIds) {
-          if (!serverMessageIdsSet.has(cachedMsgId)) {
-            const cachedMsgData = getConversationMessageQueryData({
+        const cachedMessagePromises = cachedFirstPageMessageIds
+          .filter((id) => !serverMessageIdsSet.has(id))
+          .map(async (cachedMsgId) => {
+            const cachedMsgData = await ensureConversationMessageQueryData({
               clientInboxId,
               xmtpMessageId: cachedMsgId,
               xmtpConversationId,
+              caller: "conversationMessagesInfiniteQueryFn",
             })
-            if (cachedMsgData) {
-              messagesToConsider.push(cachedMsgData)
-            }
-          }
-        }
+            return cachedMsgData
+          })
+
+        const cachedMessageResults = await Promise.all(cachedMessagePromises)
+        messagesToConsider.push(...cachedMessageResults.filter(Boolean))
       }
 
       // Make sure unique and sorted messages
@@ -187,10 +223,13 @@ const conversationMessagesInfiniteQueryFn = async (
             uniqueMessagesMap.set(msg.xmtpId, msg)
           }
         }
-        combinedMessagesForPage = Array.from(uniqueMessagesMap.values()).sort(
-          (a, b) => b.sentMs - a.sentMs,
+        const effectiveLimit = Math.min(
+          resolvedLimit + messagesToConsider.length,
+          resolvedLimit * 2, // Don't exceed 2x the original limit
         )
-        combinedMessagesForPage = combinedMessagesForPage.slice(0, resolvedLimit)
+        combinedMessagesForPage = Array.from(uniqueMessagesMap.values())
+          .slice(0, effectiveLimit)
+          .sort((a, b) => b.sentMs - a.sentMs)
       }
     }
   }
@@ -225,15 +264,14 @@ const conversationMessagesInfiniteQueryFn = async (
   let finalNextCursorNs: number | null = null
   let finalPrevCursorNs: number | null = null
 
-  if (combinedMessagesForPage.length > 0) {
+  if (convosMessagesFromServer.length > 0) {
     if (direction === "next") {
-      // If we fetched a full page (or more, pre-slice), there might be older messages.
-      // Cursor is based on the oldest item in the *returned* `combinedMessagesForPage` for this page.
-      if (combinedMessagesForPage.length >= resolvedLimit) {
+      // If we fetched a full page from the server, there might be older messages.
+      if (convosMessagesFromServer.length >= resolvedLimit) {
         finalNextCursorNs =
           combinedMessagesForPage[combinedMessagesForPage.length - 1].sentNs - 1000
       } else {
-        // Less than a full page returned means no more older messages from this point.
+        // Less than a full page from server means no more older messages.
         finalNextCursorNs = null
       }
     } else if (direction === "prev") {
@@ -290,10 +328,7 @@ export function getConversationMessagesInfiniteQueryOptions(
       }
       return { cursorNs: lastPage.nextCursorNs, direction: "next" } as IInfiniteMessagesPageParam
     },
-    enabled:
-      Boolean(clientInboxId) &&
-      Boolean(xmtpConversationId) &&
-      !isTmpConversation(xmtpConversationId),
+    enabled: Boolean(clientInboxId) && Boolean(xmtpConversationId),
   })
 }
 

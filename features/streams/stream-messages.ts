@@ -167,7 +167,7 @@ function handleNewGroupUpdatedMessage(args: {
     if (disappearingMessageFields.length > 0) {
       invalidateDisappearingMessageSettings({
         clientInboxId,
-        conversationId: message.xmtpConversationId,
+        xmtpConversationId: message.xmtpConversationId,
         caller: "handleNewGroupUpdatedMessage",
       }).catch(captureError)
     }

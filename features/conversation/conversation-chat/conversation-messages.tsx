@@ -45,7 +45,6 @@ import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
-import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
 import { listenForDisappearingMessageSettingsQueryChanges } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { refetchGroupQuery } from "@/features/groups/queries/group.query"
 import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
@@ -291,7 +290,7 @@ function useHandleDisappearingMessagesSettings() {
 
     const { unsubscribe } = listenForDisappearingMessageSettingsQueryChanges({
       clientInboxId: currentSender.inboxId,
-      conversationId: xmtpConversationId,
+      xmtpConversationId: xmtpConversationId,
       caller: "useHandleDisappearingMessagesSettings",
       onChanges: (result) => {
         if (result.data?.retentionDurationInNs) {
@@ -332,9 +331,6 @@ function useMarkAsRead(props: { messageIds: IXmtpMessageId[] }) {
 
   // Safer to just mark as read every time messages change
   useEffect(() => {
-    if (isTmpConversation(xmtpConversationId)) {
-      return
-    }
     if (messageIds.length === 0) {
       return
     }

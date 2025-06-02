@@ -11,24 +11,22 @@ type Actions = {
   handleAppStateChange: (nextAppState: AppStateStatus) => void
 }
 
-export const useAppStateStore = create<State & { actions: Actions }>()(
+type AppStateStore = State & { actions: Actions }
+
+export const useAppStateStore = create<AppStateStore>()(
   subscribeWithSelector((set) => ({
     currentState: AppState.currentState,
     previousState: null,
 
     actions: {
-      handleAppStateChange: (nextAppState) =>
+      handleAppStateChange: (nextAppState) => {
         set((state) => {
           return {
             previousState: state.currentState,
             currentState: nextAppState,
           }
-        }),
+        })
+      },
     },
   })),
 )
-
-// Update the store when the app state changes
-AppState.addEventListener("change", (nextAppState) => {
-  useAppStateStore.getState().actions.handleAppStateChange(nextAppState)
-})

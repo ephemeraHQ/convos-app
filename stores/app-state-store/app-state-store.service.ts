@@ -1,9 +1,9 @@
 import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
-import { AppStateStatus } from "react-native"
+import { AppState, AppStateStatus, NativeEventSubscription } from "react-native"
 import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
-  getAllowedConsentConversationsQueryData,
+  ensureAllowedConsentConversationsQueryData,
   invalidateAllowedConsentConversationsQuery,
 } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { invalidateConversationMetadataQuery } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
@@ -14,7 +14,8 @@ import { startStreaming, stopStreaming } from "@/features/streams/streams"
 import { getXmtpClientOtherInstallations } from "@/features/xmtp/xmtp-installations/xmtp-installations"
 import { useAppStateStore } from "@/stores/app-state-store/app-state.store"
 import { captureError } from "@/utils/capture-error"
-import { logger } from "@/utils/logger/logger"
+import { GenericError } from "@/utils/error"
+import { appStateLogger } from "@/utils/logger/logger"
 
 export function getCurrentAppState() {
   return useAppStateStore.getState().currentState
@@ -74,7 +75,7 @@ export const waitUntilAppActive = async () => {
     return
   }
 
-  logger.debug(`Waiting until app is back into active state...`)
+  appStateLogger.debug(`Waiting until app is back into active state...`)
 
   return new Promise<void>((resolve) => {
     const unsubscribe = useAppStateStore.subscribe(
@@ -90,94 +91,122 @@ export const waitUntilAppActive = async () => {
 }
 
 let unsubscribedFromAppStateStore: (() => void) | undefined
+let appStateListener: NativeEventSubscription | undefined
 
 export function startListeningToAppStateStore() {
   if (unsubscribedFromAppStateStore) {
     unsubscribedFromAppStateStore()
   }
 
+  if (appStateListener) {
+    appStateListener.remove()
+    appStateListener = undefined
+  }
+
   unsubscribedFromAppStateStore = useAppStateStore.subscribe(
     (state) => state.currentState,
-    (currentState, previousState) => {
-      logger.debug(`App state changed from '${previousState}' to '${currentState}'`)
+    async (currentState) => {
+      try {
+        // Use the store's actual previousState because with "fireImmediately" it's the same as the current state!
+        const storePreviousState = useAppStateStore.getState().previousState
 
-      const isOpenFromClosed =
-        currentState === "active" && (!previousState || previousState === "active")
-      const isOpenFromBackground = currentState === "active" && previousState === "background"
-      const isGoingToBackground = currentState === "background" && previousState === "inactive"
+        appStateLogger.debug(`App state changed from '${storePreviousState}' to '${currentState}'`)
 
-      const senders = getAllSenders()
-      const currentSender = getCurrentSender()
+        const isOpenFromClosed = currentState === "active" && storePreviousState === null
+        const isOpenFromBackground =
+          currentState === "active" && storePreviousState === "background"
+        const isGoingToBackground =
+          currentState === "background" && storePreviousState === "inactive"
 
-      if (isOpenFromClosed || isOpenFromBackground) {
-        // Tell react query we're now on "window focused" state
-        reactQueryFocusManager.setFocused(true)
+        if (isOpenFromClosed) {
+          appStateLogger.debug("App is open from closed")
+        } else if (isOpenFromBackground) {
+          appStateLogger.debug("App is open from background")
+        } else if (isGoingToBackground) {
+          appStateLogger.debug("App is going to background")
+        }
 
-        // Start streaming
-        startStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
+        const senders = getAllSenders()
+        const currentSender = getCurrentSender()
 
-        // Refresh notifications permissions in case they disabled them in their settings or something
-        fetchOrRefetchNotificationsPermissions().catch(captureError)
+        if (isOpenFromClosed || isOpenFromBackground) {
+          // Tell react query we're now on "window focused" state
+          reactQueryFocusManager.setFocused(true)
 
-        // Register push notifications to make sure it's always up-to-date
-        registerPushNotifications().catch(captureError)
+          // Start streaming
+          startStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
 
-        if (currentSender) {
-          // Invalidate known consent conversations to make sure we refetch them with the lastMessage property
-          invalidateAllowedConsentConversationsQuery({
-            clientInboxId: currentSender.inboxId,
-          }).catch(captureError)
+          // Refresh notifications permissions in case they disabled them in their settings or something
+          fetchOrRefetchNotificationsPermissions().catch(captureError)
 
-          // Invalidate unknown consent conversations to make sure we're not missing any unknown chat requests
-          invalidateUnknownConsentConversationsQuery({
-            inboxId: currentSender.inboxId,
-          }).catch(captureError)
+          // Register push notifications to make sure it's always up-to-date
+          registerPushNotifications().catch(captureError)
 
-          // Invalidating each conversation metadata can be heavy if you have many conversations
-          // so for now only do it if there are other installations
-          // so that both of your devices conversations metadata are in sync
-          const allowedConsentConversations = getAllowedConsentConversationsQueryData({
-            clientInboxId: currentSender.inboxId,
-          })
-          if (allowedConsentConversations) {
-            getXmtpClientOtherInstallations({
+          if (currentSender) {
+            // Invalidate known consent conversations to make sure we refetch them with the lastMessage property
+            invalidateAllowedConsentConversationsQuery({
               clientInboxId: currentSender.inboxId,
+            }).catch(captureError)
+
+            // Invalidate unknown consent conversations to make sure we're not missing any unknown chat requests
+            invalidateUnknownConsentConversationsQuery({
+              inboxId: currentSender.inboxId,
+            }).catch(captureError)
+
+            // Invalidating each conversation metadata can be heavy if you have many conversations
+            // so for now only do it if there are other installations
+            // so that both of your devices conversations metadata are in sync
+            const allowedConsentConversations = await ensureAllowedConsentConversationsQueryData({
+              clientInboxId: currentSender.inboxId,
+              caller: "appStateStoreHandler",
             })
-              .then((otherInstallations) => {
-                if (otherInstallations.length > 0) {
-                  for (const conversationId of allowedConsentConversations) {
-                    invalidateConversationMetadataQuery({
-                      clientInboxId: currentSender.inboxId,
-                      xmtpConversationId: conversationId,
-                    }).catch(captureError)
-                  }
-                }
+
+            if (allowedConsentConversations) {
+              getXmtpClientOtherInstallations({
+                clientInboxId: currentSender.inboxId,
               })
-              .catch(captureError)
+                .then((otherInstallations) => {
+                  if (otherInstallations.length > 0) {
+                    for (const conversationId of allowedConsentConversations) {
+                      invalidateConversationMetadataQuery({
+                        clientInboxId: currentSender.inboxId,
+                        xmtpConversationId: conversationId,
+                      }).catch(captureError)
+                    }
+                  }
+                })
+                .catch(captureError)
+            }
           }
         }
-      }
 
-      if (isGoingToBackground) {
-        stopStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
+        if (isGoingToBackground) {
+          stopStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
 
-        // Try this logic later
-        // useXmtpActivityStore.getState().actions.cancelAllActiveOperations(
-        //   new ExternalCancellationError({
-        //     error: new Error("App state changed to inactive or background"),
-        //   }),
-        // )
+          // Try this logic later
+          // useXmtpActivityStore.getState().actions.cancelAllActiveOperations(
+          //   new ExternalCancellationError({
+          //     error: new Error("App state changed to inactive or background"),
+          //   }),
+          // )
+        }
+      } catch (error) {
+        captureError(
+          new GenericError({
+            error,
+            additionalMessage: "Error in app state store handler",
+          }),
+        )
       }
     },
     {
       fireImmediately: true,
     },
   )
-}
 
-export function subscribeToAppStateStore(args: {
-  callback: (currentState: AppStateStatus, previousState: AppStateStatus | null) => void
-}) {
-  const { callback } = args
-  return useAppStateStore.subscribe((state) => state.currentState, callback)
+  // Update the store when the app state changes
+  appStateListener = AppState.addEventListener("change", (nextAppState) => {
+    appStateLogger.debug(`App state changed to '${nextAppState}'`)
+    useAppStateStore.getState().actions.handleAppStateChange(nextAppState)
+  })
 }

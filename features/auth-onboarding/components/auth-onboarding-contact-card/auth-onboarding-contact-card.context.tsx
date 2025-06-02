@@ -7,7 +7,7 @@ import { ITurnkeyUserId } from "@/features/authentication/authentication.types"
 import { useHydrateAuth } from "@/features/authentication/hydrate-auth"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { useCreateUserMutation } from "@/features/current-user/create-user.mutation"
-import { ConvosProfileSchema } from "@/features/profiles/profiles.types"
+import { CreateOrUpdateConvosProfileSchema } from "@/features/profiles/profiles.types"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -15,7 +15,7 @@ import { waitUntilPromise } from "@/utils/wait-until-promise"
 import { getFirstZodValidationError, isZodValidationError } from "@/utils/zod"
 
 const createProfileSchema = z.object({
-  name: ConvosProfileSchema.shape.name,
+  name: CreateOrUpdateConvosProfileSchema.shape.name,
 })
 
 type IAuthOnboardingContactCardContextValue = {

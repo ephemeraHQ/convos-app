@@ -31,6 +31,40 @@ const defaultCreateGroupPermissionPolicySet: PermissionPolicySet = {
   removeAdminPolicy: "superAdmin",
 }
 
+export async function createXmtpGroupOptimistically(args: {
+  clientInboxId: IXmtpInboxId
+  groupName?: string
+  groupPhoto?: string
+  groupDescription?: string
+  disappearingMessageSettings?: IXmtpDisappearingMessageSettings
+}) {
+  try {
+    const { clientInboxId, groupName, groupPhoto, groupDescription, disappearingMessageSettings } =
+      args
+
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    const group = await wrapXmtpCallWithDuration("newGroupOptimistic", () =>
+      client.conversations.newGroupOptimistic({
+        permissionLevel: "admin_only",
+        name: groupName,
+        imageUrl: groupPhoto,
+        description: groupDescription,
+        disappearingMessageSettings,
+      }),
+    )
+
+    return group
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "failed to create XMTP group optimistically",
+    })
+  }
+}
+
 export async function createXmtpGroup(args: {
   clientInboxId: IXmtpInboxId
   inboxIds: IXmtpInboxId[]
@@ -279,7 +313,7 @@ export async function addSuperAdminToXmtpGroup(args: {
   }
 }
 
-export async function getGroupPermissions(args: {
+export async function getXmtpGroupPermissions(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
 }) {

@@ -16,6 +16,8 @@ import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
+export const CONVERSATION_TOPIC_PREFIX = "/xmtp/mls/1/g-"
+
 export async function getXmtpConversation(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
@@ -109,5 +111,3 @@ export const getXmtpConversationIdFromXmtpTopic = (xmtpTopic: IXmtpConversationT
 export function getXmtpConversationTopicFromXmtpId(xmtpConversationId: IXmtpConversationId) {
   return `${CONVERSATION_TOPIC_PREFIX}${xmtpConversationId}/proto` as IXmtpConversationTopic
 }
-
-export const CONVERSATION_TOPIC_PREFIX = "/xmtp/mls/1/g-"

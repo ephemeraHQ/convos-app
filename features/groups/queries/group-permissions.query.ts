@@ -1,7 +1,7 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { IGroupPermissionPolicySet } from "@/features/groups/group.types"
-import { getGroupPermissions } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
+import { getXmtpGroupPermissions } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 
@@ -30,7 +30,7 @@ export const getGroupPermissionsQueryConfig = (args: IArgsWithCaller) => {
     }),
     queryFn: enabled
       ? async () => {
-          return getGroupPermissions({
+          return getXmtpGroupPermissions({
             clientInboxId,
             conversationId: xmtpConversationId,
           })

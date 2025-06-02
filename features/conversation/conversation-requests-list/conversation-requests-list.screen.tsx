@@ -19,15 +19,33 @@ import { useConversationRequestsListScreenHeader } from "@/features/conversation
 import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 import { useConversationRequestsListItem } from "./use-conversation-requests-list-items"
 
 export const ConversationRequestsListScreen = memo(function () {
   useConversationRequestsListScreenHeader()
 
-  const { likelyNotSpamConversationIds, likelySpamConversationIds } =
-    useConversationRequestsListItem()
+  const {
+    likelyNotSpamConversationIds,
+    likelySpamConversationIds,
+    refetch: refetchConversationRequestsListItem,
+  } = useConversationRequestsListItem()
 
   const insets = useSafeAreaInsets()
+
+  const handleRefresh = useCallback(async () => {
+    try {
+      await refetchConversationRequestsListItem()
+    } catch (error) {
+      captureError(
+        new GenericError({
+          error,
+          additionalMessage: "Error refreshing conversation requests list",
+        }),
+      )
+    }
+  }, [refetchConversationRequestsListItem])
 
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
@@ -35,6 +53,7 @@ export const ConversationRequestsListScreen = memo(function () {
         contentContainerStyle={{
           paddingBottom: insets.bottom,
         }}
+        onRefetch={handleRefresh}
         ListHeaderComponent={<ListHeader />}
         ListFooterComponent={
           likelySpamConversationIds.length > 0 ? (

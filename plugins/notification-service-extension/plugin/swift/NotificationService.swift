@@ -200,6 +200,7 @@ final class NotificationService: UNNotificationServiceExtension {
         let encryptedMessage: String
         let topic: String
         let ethAddress: String
+        let installationId: String?
 
         do {
             SentryManager.shared.addBreadcrumb("Attempting to decode notification payload")
@@ -210,6 +211,7 @@ final class NotificationService: UNNotificationServiceExtension {
             encryptedMessage = payload.body.encryptedMessage
             topic = payload.body.contentTopic
             ethAddress = payload.body.ethAddress.lowercased()
+            installationId = payload.body.installationId
             SentryManager.shared.addBreadcrumb("Successfully decoded notification payload")
 
         } catch {
@@ -234,6 +236,31 @@ final class NotificationService: UNNotificationServiceExtension {
                 client = try await Client.client(for: ethAddress)
                 SentryManager.shared.addBreadcrumb("Successfully created XMTP client")
             } catch {
+                // Check if this is a no encryption key error and we have an installation ID
+                if let clientError = error as? Client.ClientInitializationError,
+                   clientError == .noEncryptionKey,
+                   let installationId = installationId {
+                    
+                    SentryManager.shared.addBreadcrumb("No encryption key found, attempting to unregister notification installation")
+                    
+                    do {
+                        try await ConvosAPIService.shared.unregisterNotificationInstallation(
+                            ethAddress: ethAddress,
+                            installationId: installationId
+                        )
+                        SentryManager.shared.addBreadcrumb("Successfully unregistered notification installation for \(ethAddress)")
+                    } catch {
+                        SentryManager.shared.trackError(error, extras: [
+                            "operation": "unregisterNotificationInstallation",
+                            "ethAddress": ethAddress,
+                            "installationId": installationId,
+                            "originalError": "noEncryptionKey"
+                        ])
+                    }
+                } else if installationId == nil {
+                    SentryManager.shared.addBreadcrumb("No encryption key found but no installation ID available to unregister")
+                }
+                
                 SentryManager.shared.trackError(error, extras: ["info": "Failed to create XMTP client for address: \(ethAddress)"])
                 contentHandler?(currentBestAttempt)
                 return
@@ -383,6 +410,7 @@ extension NotificationService {
         let encryptedMessage: String
         let contentTopic: String
         let ethAddress: String
+        let installationId: String?
     }
 
     struct NotificationPayload: Decodable {

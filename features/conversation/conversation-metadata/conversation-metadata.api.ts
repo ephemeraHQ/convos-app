@@ -190,3 +190,26 @@ async function updateConversationMetadata(args: {
 
   return data
 }
+
+export async function getConversationsMetadata(args: {
+  deviceIdentityId: IDeviceIdentityId
+  xmtpConversationIds: IXmtpConversationId[]
+}) {
+  const { deviceIdentityId, xmtpConversationIds } = args
+
+  const { data } = await convosApi.get<IConversationMetadata[]>(
+    `/api/v1/metadata/conversation/${deviceIdentityId}?conversationIds=${xmtpConversationIds.join(",")}`,
+  )
+
+  const parseResult = z.array(ConversationMetadataSchema).safeParse(data)
+
+  if (!parseResult.success) {
+    captureError(
+      new ValidationError({
+        error: parseResult.error,
+      }),
+    )
+  }
+
+  return data
+}

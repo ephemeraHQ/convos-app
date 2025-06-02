@@ -76,6 +76,12 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
     [onSearchTextChange],
   )
 
+  const handlePressOnChip = useCallback((inboxId: IXmtpInboxId) => {
+    Haptics.softImpactAsync()
+    useSearchUsersInputStore.getState().actions.setSelectedChipInboxId(inboxId)
+    localInputRef.current?.focus() // In case we are focused on the composer input for example
+  }, [])
+
   const handlePressOnTextInput = useCallback(() => {
     useSearchUsersInputStore.getState().actions.setSelectedChipInboxId(null)
   }, [])
@@ -99,7 +105,7 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
         </Center>
         <HStack style={styles.$chipContainer}>
           {searchSelectedUserInboxIds.map((inboxId) => (
-            <SearchUsersInputChip key={inboxId} inboxId={inboxId} />
+            <SearchUsersInputChip key={inboxId} inboxId={inboxId} onPress={handlePressOnChip} />
           ))}
           <TextInput
             onPress={handlePressOnTextInput}
@@ -108,9 +114,7 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
             style={styles.$input}
             defaultValue={defaultSearchTextValue}
             onChangeText={handleChangeText}
-            placeholder={
-              searchSelectedUserInboxIds.length === 0 ? "Name, ENS, Base…" : ""
-            }
+            placeholder={searchSelectedUserInboxIds.length === 0 ? "Name, ENS, Base…" : ""}
             onKeyPress={handleKeyPress}
             autoCapitalize="none"
             autoCorrect={false}

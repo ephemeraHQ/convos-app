@@ -8,7 +8,7 @@ import { Center } from "@/design-system/Center"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
-import { getFormattedDisappearingDuration } from "@/features/disappearing-messages/disappearing-messages.constants"
+import { getFormattedDisappearingDurationStr } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { navigate } from "@/navigation/navigation.utils"
@@ -219,7 +219,7 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
         return `changed the group description to ${metadataEntry.newValue}`
       case "message_disappear_in_ns": {
         const newValue = parseInt(metadataEntry.newValue, 10)
-        const newTime = getFormattedDisappearingDuration(newValue)
+        const newTime = getFormattedDisappearingDurationStr(newValue)
 
         if (newValue === 0) {
           return `disabled disappearing messages`
@@ -227,7 +227,7 @@ const ChatGroupMetadataUpdate = memo(function ChatGroupMetadataUpdate({
           return `set messages to disappear in ${newTime}`
         } else {
           const oldValue = parseInt(metadataEntry.oldValue, 10)
-          const oldTime = getFormattedDisappearingDuration(oldValue)
+          const oldTime = getFormattedDisappearingDurationStr(oldValue)
           return `changed disappearing messages from ${oldTime} to ${newTime}`
         }
       }

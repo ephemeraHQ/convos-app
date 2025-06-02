@@ -1,4 +1,4 @@
-import { ConsentState, syncAllConversations, syncConversation } from "@xmtp/react-native-sdk"
+import { syncAllConversations, syncConversation } from "@xmtp/react-native-sdk"
 import { create, windowScheduler } from "@yornaath/batshit"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
@@ -81,18 +81,18 @@ function getConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
 
 export async function syncOneXmtpConversation(args: {
   clientInboxId: IXmtpInboxId
-  conversationId: IXmtpConversationId
+  xmtpConversationId: IXmtpConversationId
   caller: string
 }) {
-  const { clientInboxId, conversationId, caller } = args
-  const promiseKey = `${clientInboxId}-${conversationId}` as const
+  const { clientInboxId, xmtpConversationId, caller } = args
+  const promiseKey = `${clientInboxId}-${xmtpConversationId}` as const
   const existingActivePromise = activeSyncOnePromises.get(promiseKey)
   if (existingActivePromise) {
     return existingActivePromise
   }
 
   const batcher = getConversationSyncBatcher(clientInboxId)
-  const promise = batcher.fetch({ conversationId, caller })
+  const promise = batcher.fetch({ conversationId: xmtpConversationId, caller })
   activeSyncOnePromises.set(promiseKey, promise)
 
   return promise.finally(() => {

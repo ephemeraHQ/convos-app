@@ -4,7 +4,11 @@ import { captureError } from "@/utils/capture-error"
 import { ConvosApiError } from "@/utils/convos-api/convos-api-error"
 import { convosApi } from "@/utils/convos-api/convos-api-instance"
 import { ValidationError } from "@/utils/error"
-import { ConvosProfileSchema, type IConvosProfile } from "./profiles.types"
+import {
+  ConvosProfileResponseSchema,
+  CreateOrUpdateConvosProfileSchema,
+  type IConvosProfile,
+} from "./profiles.types"
 
 export async function fetchProfile(args: { xmtpId: IXmtpInboxId; signal?: AbortSignal }) {
   const { xmtpId, signal } = args
@@ -14,7 +18,7 @@ export async function fetchProfile(args: { xmtpId: IXmtpInboxId; signal?: AbortS
       signal,
     })
 
-    const result = ConvosProfileSchema.safeParse(data)
+    const result = ConvosProfileResponseSchema.safeParse(data)
 
     if (!result.success) {
       captureError(
@@ -32,7 +36,7 @@ export async function fetchProfile(args: { xmtpId: IXmtpInboxId; signal?: AbortS
 }
 
 const fetchProfilesResponseSchema = z.object({
-  profiles: z.record(z.custom<IXmtpInboxId>(), ConvosProfileSchema),
+  profiles: z.record(z.custom<IXmtpInboxId>(), ConvosProfileResponseSchema),
 })
 
 type IFetchProfilesResponse = z.infer<typeof fetchProfilesResponseSchema>
@@ -51,7 +55,7 @@ export async function fetchProfiles(args: { xmtpIds: IXmtpInboxId[] }) {
       captureError(
         new ValidationError({
           error: result.error,
-          additionalMessage: `Error fetching profiles for xmtpIds ${xmtpIds}`,
+          additionalMessage: `Validation error fetching profiles for xmtpIds ${xmtpIds}`,
         }),
       )
     }
@@ -63,7 +67,10 @@ export async function fetchProfiles(args: { xmtpIds: IXmtpInboxId[] }) {
 }
 
 export type ISaveProfileUpdates = Partial<
-  Pick<z.infer<typeof ConvosProfileSchema>, "name" | "username" | "description" | "avatar">
+  Pick<
+    z.infer<typeof CreateOrUpdateConvosProfileSchema>,
+    "name" | "username" | "description" | "avatar"
+  >
 >
 
 // Main save profile function
@@ -78,7 +85,7 @@ export async function saveProfile(args: {
     profileUpdates,
   )
 
-  const result = ConvosProfileSchema.safeParse(data)
+  const result = ConvosProfileResponseSchema.safeParse(data)
 
   if (!result.success) {
     captureError(

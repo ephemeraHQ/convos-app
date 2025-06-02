@@ -63,7 +63,7 @@ export const DisappearingMessagesHeaderAction = ({
 
   const { data: disappearingMessageSettings } = useDisappearingMessageSettingsQuery({
     clientInboxId: currentSender.inboxId,
-    conversationId: xmtpConversationId,
+    xmtpConversationId: xmtpConversationId,
     caller: "DisappearingMessagesHeaderAction",
   })
 

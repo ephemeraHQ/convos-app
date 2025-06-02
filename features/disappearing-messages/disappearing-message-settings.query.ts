@@ -11,26 +11,26 @@ import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 
 type IArgs = {
   clientInboxId: IXmtpInboxId | undefined
-  conversationId: IXmtpConversationId | undefined
+  xmtpConversationId: IXmtpConversationId | undefined
   caller: string
 }
 
 export const getDisappearingMessageSettingsQueryOptions = (args: IArgs) => {
-  const { clientInboxId, conversationId } = args
+  const { clientInboxId, xmtpConversationId } = args
 
   return {
     queryKey: getReactQueryKey({
       baseStr: "xmtp-disappearing-message-settings",
       clientInboxId,
-      conversationId,
+      conversationId: xmtpConversationId,
     }),
     queryFn: () => {
       return getXmtpDisappearingMessageSettings({
         clientInboxId: clientInboxId!,
-        conversationId: conversationId!,
+        xmtpConversationId: xmtpConversationId!,
       })
     },
-    enabled: Boolean(clientInboxId && conversationId),
+    enabled: Boolean(clientInboxId && xmtpConversationId),
   }
 }
 

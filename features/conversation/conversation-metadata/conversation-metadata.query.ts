@@ -1,9 +1,14 @@
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, useQuery } from "@tanstack/react-query"
-import { getConversationMetadata } from "@/features/conversation/conversation-metadata/conversation-metadata.api"
-import { isTmpConversation } from "@/features/conversation/utils/tmp-conversation"
+import { create, windowScheduler } from "@yornaath/batshit"
+import {
+  getConversationMetadata,
+  getConversationsMetadata,
+} from "@/features/conversation/conversation-metadata/conversation-metadata.api"
+import { IDeviceIdentityId } from "@/features/convos-identities/convos-identities.api"
 import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
 import { ensureCurrentUserQueryData } from "@/features/current-user/current-user.query"
+import { ObjectTyped } from "@/utils/object-typed"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { TimeUtils } from "@/utils/time.utils"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
@@ -35,7 +40,7 @@ async function getConversationMetadataQueryFn({ xmtpConversationId, clientInboxI
     throw new Error("No matching device identity found for the given inbox ID")
   }
 
-  return getConversationMetadata({ xmtpConversationId, deviceIdentityId })
+  return batcher.fetch({ xmtpConversationId, deviceIdentityId })
 }
 
 export function getConversationMetadataQueryOptions({
@@ -43,7 +48,7 @@ export function getConversationMetadataQueryOptions({
   clientInboxId,
   caller,
 }: IArgs & { caller?: string }) {
-  const enabled = !!xmtpConversationId && !isTmpConversation(xmtpConversationId)
+  const enabled = !!xmtpConversationId
   return queryOptions({
     queryKey: getReactQueryKey({
       baseStr: "conversation-metadata",
@@ -55,8 +60,8 @@ export function getConversationMetadataQueryOptions({
     },
     queryFn: () => getConversationMetadataQueryFn({ xmtpConversationId, clientInboxId }),
     enabled,
-    gcTime: TimeUtils.days(30).toMilliseconds(), // Because the current user is the only one that can make changes to their conversation metadata
-    staleTime: Infinity, // Because the current user is the only one that can make changes to their conversation metadata
+    gcTime: TimeUtils.days(30).toMilliseconds(),
+    staleTime: Infinity,
   })
 }
 
@@ -114,52 +119,58 @@ export function invalidateConversationMetadataQuery(args: IArgs) {
   })
 }
 
-// TODO: Add back later when we're back at optimizing queries
-// Was used to batch the requests so we can make 1 request to get all the conversation metadata
-// const batchedGetConversationMetadata = create({
-//   scheduler: windowScheduler(50),
-//   resolver: (items, query) => {
-//     const match = items.find(
-//       (item) =>
-//         conversationMetadataQueryKey(query.account, query.topic).join("-") ===
-//         conversationMetadataQueryKey(item.account, item.topic).join("-")
-//     );
-//     if (!match) {
-//       return null;
-//     }
+const batcher = create({
+  name: `conversation-metadata`,
+  fetcher: async (
+    requests: Array<{
+      xmtpConversationId: IXmtpConversationId
+      deviceIdentityId: IDeviceIdentityId
+    }>,
+  ) => {
+    const deviceIdentityGroups = requests.reduce(
+      (groups, request) => {
+        const { deviceIdentityId } = request
+        if (!groups[deviceIdentityId]) {
+          groups[deviceIdentityId] = []
+        }
+        groups[deviceIdentityId].push(request)
+        return groups
+      },
+      {} as Record<
+        IDeviceIdentityId,
+        Array<{ xmtpConversationId: IXmtpConversationId; deviceIdentityId: IDeviceIdentityId }>
+      >,
+    )
 
-//     const { account, topic, ...backendProperties } = match;
+    const results = await Promise.all(
+      ObjectTyped.entries(deviceIdentityGroups).map(async ([deviceIdentityId, groupRequests]) => {
+        const xmtpConversationIds = groupRequests.map((req) => req.xmtpConversationId)
+        const metadataArray = await getConversationsMetadata({
+          deviceIdentityId,
+          xmtpConversationIds,
+        })
 
-//     // If we don't have any data for this conversation, we return null
-//     if (Object.keys(backendProperties).length === 0) {
-//       return null;
-//     }
+        const metadataByConversationId: Record<
+          IXmtpConversationId,
+          IConversationMetadataQueryData
+        > = {}
+        xmtpConversationIds.forEach((conversationId, index) => {
+          metadataByConversationId[conversationId] = metadataArray[index] || null
+        })
 
-//     return match;
-//   },
-//   fetcher: async (args: IArgs[]) => {
-//     const accountGroups = args.reduce((groups, arg) => {
-//       groups[arg.account] = groups[arg.account] || [];
-//       groups[arg.account].push(arg);
-//       return groups;
-//     }, {} as Record<string, IArgs[]>);
+        return metadataByConversationId
+      }),
+    )
 
-//     const results = await Promise.all(
-//       Object.entries(accountGroups).map(async ([account, groupArgs]) => {
-//         const conversationsData = await getConversationMetadatas({
-//           account,
-//           topics: groupArgs.map((arg) => arg.topic),
-//         });
+    const combinedResults: Record<IXmtpConversationId, IConversationMetadataQueryData> = {}
+    results.forEach((result) => {
+      Object.assign(combinedResults, result)
+    })
 
-//         // Include topic in each item for resolver matching
-//         return groupArgs.map((arg) => ({
-//           ...conversationsData[arg.topic],
-//           account,
-//           topic: arg.topic,
-//         }));
-//       })
-//     );
-
-//     return results.flat();
-//   },
-// });
+    return combinedResults
+  },
+  scheduler: windowScheduler(100),
+  resolver: (metadataByConversationId, request) => {
+    return metadataByConversationId[request.xmtpConversationId] || null
+  },
+})
