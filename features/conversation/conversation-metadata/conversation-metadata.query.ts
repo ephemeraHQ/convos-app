@@ -154,8 +154,11 @@ const batcher = create({
           IXmtpConversationId,
           IConversationMetadataQueryData
         > = {}
-        xmtpConversationIds.forEach((conversationId, index) => {
-          metadataByConversationId[conversationId] = metadataArray[index] || null
+
+        metadataArray.forEach((metadata) => {
+          if (metadata.conversationId) {
+            metadataByConversationId[metadata.conversationId] = metadata
+          }
         })
 
         return metadataByConversationId

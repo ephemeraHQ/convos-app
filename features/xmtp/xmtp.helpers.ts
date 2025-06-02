@@ -77,14 +77,19 @@ export async function wrapXmtpCallWithDuration<T>(
 
     totalActiveDurationMs = Date.now() - segmentStartTime
 
-    xmtpLogger.debug(
-      `Operation [${operationId}] "${xmtpFunctionName}" finished successfully in ${totalActiveDurationMs}ms`,
-    )
-
-    logErrorIfXmtpRequestTookTooLong({
-      durationMs: totalActiveDurationMs,
-      xmtpFunctionName,
-    })
+    if (totalActiveDurationMs > config.xmtp.maxMsUntilLogError) {
+      captureError(
+        new XMTPError({
+          error: new Error(
+            `Calling "${xmtpFunctionName}" took ${Math.round(totalActiveDurationMs / 1000)}s`,
+          ),
+        }),
+      )
+    } else {
+      xmtpLogger.debug(
+        `Operation [${operationId}] "${xmtpFunctionName}" finished successfully in ${totalActiveDurationMs}ms`,
+      )
+    }
 
     return result
   } catch (error) {
@@ -99,17 +104,5 @@ export async function wrapXmtpCallWithDuration<T>(
     // if (storeUnsubscribe) {
     //   storeUnsubscribe()
     // }
-  }
-}
-
-function logErrorIfXmtpRequestTookTooLong(args: { durationMs: number; xmtpFunctionName: string }) {
-  const { durationMs, xmtpFunctionName } = args
-
-  if (durationMs > config.xmtp.maxMsUntilLogError) {
-    captureError(
-      new XMTPError({
-        error: new Error(`Calling "${xmtpFunctionName}" took ${Math.round(durationMs / 1000)}s`),
-      }),
-    )
   }
 }

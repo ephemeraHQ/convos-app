@@ -5,12 +5,15 @@ import {
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
-import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
+import {
+  getConversationQueryData,
+  invalidateConversationQuery,
+} from "@/features/conversation/queries/conversation.query"
+import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { invalidateDisappearingMessageSettings } from "@/features/disappearing-messages/disappearing-message-settings.query"
 import { IGroup } from "@/features/groups/group.types"
 import {
   addGroupMemberToGroupQueryData,
-  invalidateGroupQuery,
   removeGroupMemberToGroupQuery,
   updateGroupQueryData,
 } from "@/features/groups/queries/group.query"
@@ -64,7 +67,7 @@ async function handleNewMessage(args: {
   // Handle group update messages
   if (isGroupUpdatedMessage(message)) {
     try {
-      handleNewGroupUpdatedMessage({
+      handleNewConversationUpdatedMessage({
         clientInboxId,
         message,
       })
@@ -112,53 +115,60 @@ const METADATA_FIELD_NAME_MAP_TO_GROUP_PROPERTY_NAME: Record<
   message_disappear_in_ns: null, // For now there is no group property for this in XMTP
 } as const
 
-function handleNewGroupUpdatedMessage(args: {
+function handleNewConversationUpdatedMessage(args: {
   clientInboxId: IXmtpInboxId
   message: IConversationMessageGroupUpdated
 }) {
   const { clientInboxId, message } = args
 
+  const conversation = getConversationQueryData({
+    clientInboxId,
+    xmtpConversationId: message.xmtpConversationId,
+  })
+
   // If no changes, just invalidate the group query data
   if (isEmptyGroupUpdatedMessage(message)) {
-    invalidateGroupQuery({
+    invalidateConversationQuery({
       clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
     }).catch(captureError)
     return
   }
 
-  // Add new members
-  for (const member of message.content.membersAdded) {
-    addGroupMemberToGroupQueryData({
-      clientInboxId,
-      xmtpConversationId: message.xmtpConversationId,
-      member: {
-        inboxId: member.inboxId,
-        consentState: "unknown",
-        permission: "member",
-      },
-    }).catch(captureError)
-  }
-
-  // Remove members
-  for (const member of message.content.membersRemoved) {
-    removeGroupMemberToGroupQuery({
-      clientInboxId,
-      xmtpConversationId: message.xmtpConversationId,
-      memberInboxId: member.inboxId,
-    }).catch(captureError)
-
-    // If the removed member is the current user
-    if (member.inboxId === clientInboxId) {
-      // To make sure we refetch the right conversation state
-      invalidateConversationQuery({
+  // Add/Remove group members
+  if (conversation && isConversationGroup(conversation)) {
+    for (const member of message.content.membersAdded) {
+      addGroupMemberToGroupQueryData({
         clientInboxId,
         xmtpConversationId: message.xmtpConversationId,
+        member: {
+          inboxId: member.inboxId,
+          consentState: "unknown",
+          permission: "member",
+        },
       }).catch(captureError)
+    }
+
+    // Remove members
+    for (const member of message.content.membersRemoved) {
+      removeGroupMemberToGroupQuery({
+        clientInboxId,
+        xmtpConversationId: message.xmtpConversationId,
+        memberInboxId: member.inboxId,
+      }).catch(captureError)
+
+      // If the removed member is the current user
+      if (member.inboxId === clientInboxId) {
+        // To make sure we refetch the right conversation state
+        invalidateConversationQuery({
+          clientInboxId,
+          xmtpConversationId: message.xmtpConversationId,
+        }).catch(captureError)
+      }
     }
   }
 
-  // Process metadata changes (e.g., group name, image, description)
+  // Process metadata changes (e.g., group name, image, description, disappearing messages)
   if (message.content.metadataFieldsChanged.length > 0) {
     const disappearingMessageFields = message.content.metadataFieldsChanged.filter(
       (field) => field.fieldName === "message_disappear_in_ns",
@@ -172,41 +182,44 @@ function handleNewGroupUpdatedMessage(args: {
       }).catch(captureError)
     }
 
-    const groupUpdateFields = message.content.metadataFieldsChanged.filter(
-      (field) => field.fieldName !== "message_disappear_in_ns",
-    )
+    // Group metadata changes
+    if (conversation && isConversationGroup(conversation)) {
+      const groupUpdateFields = message.content.metadataFieldsChanged.filter(
+        (field) => field.fieldName !== "message_disappear_in_ns",
+      )
 
-    const groupUpdates: Partial<IGroup> = {}
+      const groupUpdates: Partial<IGroup> = {}
 
-    groupUpdateFields.forEach((field) => {
-      // Check if field is supported in our mapping
-      const groupPropertyName = METADATA_FIELD_NAME_MAP_TO_GROUP_PROPERTY_NAME[field.fieldName]
+      groupUpdateFields.forEach((field) => {
+        // Check if field is supported in our mapping
+        const groupPropertyName = METADATA_FIELD_NAME_MAP_TO_GROUP_PROPERTY_NAME[field.fieldName]
 
-      if (groupPropertyName === undefined) {
-        captureError(
-          new StreamError({
-            error: new Error(`Unsupported metadata field name: ${field.fieldName}`),
-          }),
-        )
-        return
-      }
+        if (groupPropertyName === undefined) {
+          captureError(
+            new StreamError({
+              error: new Error(`Unsupported metadata field name: ${field.fieldName}`),
+            }),
+          )
+          return
+        }
 
-      if (groupPropertyName === null) {
-        // Not handling for now
-        return
-      }
+        if (groupPropertyName === null) {
+          // Not handling for now
+          return
+        }
 
-      // Update group data with the new field value
-      // @ts-ignore
-      groupUpdates[groupPropertyName] = field.newValue
-    })
-
-    if (Object.keys(groupUpdates).length > 0) {
-      updateGroupQueryData({
-        clientInboxId,
-        xmtpConversationId: message.xmtpConversationId,
-        updates: groupUpdates,
+        // Update group data with the new field value
+        // @ts-ignore
+        groupUpdates[groupPropertyName] = field.newValue
       })
+
+      if (Object.keys(groupUpdates).length > 0) {
+        updateGroupQueryData({
+          clientInboxId,
+          xmtpConversationId: message.xmtpConversationId,
+          updates: groupUpdates,
+        })
+      }
     }
   }
 }
