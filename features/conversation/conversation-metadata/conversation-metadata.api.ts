@@ -13,6 +13,8 @@ const ConversationMetadataSchema = z.object({
   readUntil: z.string().datetime().nullable().optional(),
   updatedAt: z.string().datetime(),
   muted: z.boolean().optional(),
+  conversationId: z.custom<IXmtpConversationId>().optional(),
+  deviceIdentityId: z.custom<IDeviceIdentityId>().optional(),
 })
 
 export type IConversationMetadata = z.infer<typeof ConversationMetadataSchema>
