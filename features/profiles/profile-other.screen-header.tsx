@@ -1,21 +1,22 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { Share, ViewStyle } from "react-native"
+import { IExtendedEdge } from "@/components/screen/screen.helpers"
 import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { HStack } from "@/design-system/HStack"
 import { iconRegistry } from "@/design-system/Icon/Icon"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { generateProfileUrl } from "@/features/profiles/utils/profile-url"
 import { translate } from "@/i18n"
 import { useHeader } from "@/navigation/use-header"
 import { useRouter } from "@/navigation/use-navigation"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
-import { Haptics } from "@/utils/haptics"
-import { findConversationByInboxIds } from "@/features/conversation/utils/find-conversations-by-inbox-ids"
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
+import { Haptics } from "@/utils/haptics"
 
 export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId }) {
   const { theme, themed } = useAppTheme()
@@ -30,21 +31,23 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
     try {
       const clientInboxId = getSafeCurrentSender().inboxId
       const conversation = await findConversationByInboxIds({ inboxIds: [inboxId], clientInboxId })
-      
+
       if (conversation) {
-        router.navigate("Conversation", { 
-          xmtpConversationId: conversation.xmtpId, 
+        router.navigate("Conversation", {
+          xmtpConversationId: conversation.xmtpId,
           isNew: false,
         })
         return
       }
     } catch (error) {
-      captureError(new GenericError({ error, additionalMessage: "Profile: Error checking conversation" }))
+      captureError(
+        new GenericError({ error, additionalMessage: "Profile: Error checking conversation" }),
+      )
     }
 
     // If no existing conversation found or on error, create a new one
-    router.navigate("Conversation", { 
-      searchSelectedUserInboxIds: [inboxId], 
+    router.navigate("Conversation", {
+      searchSelectedUserInboxIds: [inboxId],
       isNew: true,
     })
   }, [router, inboxId])
@@ -105,10 +108,10 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
     [inboxId, username],
   )
 
-  useHeader(
-    {
+  const headerOptions = useMemo(() => {
+    return {
       backgroundColor: theme.colors.background.surface,
-      safeAreaEdges: ["top"],
+      safeAreaEdges: ["top"] as IExtendedEdge[],
       title: displayName,
       LeftActionComponent: (
         <HeaderAction
@@ -153,9 +156,10 @@ export function useProfileOtherScreenHeader({ inboxId }: { inboxId: IXmtpInboxId
           </DropdownMenu>
         </HStack>
       ),
-    },
-    [router, theme, handleChatPress, handleContextMenuAction],
-  )
+    }
+  }, [theme, displayName, router, themed, handleChatPress, handleContextMenuAction])
+
+  useHeader(headerOptions, [headerOptions])
 }
 
 const $headerRightContainer: ThemedStyle<ViewStyle> = ({ spacing }) => ({

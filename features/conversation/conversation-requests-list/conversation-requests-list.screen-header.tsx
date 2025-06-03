@@ -1,4 +1,6 @@
+import { useCallback, useMemo } from "react"
 import { Alert } from "react-native"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { useDeleteConversationsMutation } from "@/features/conversation/conversation-requests-list/delete-conversations.mutation"
 import { useConversationRequestsListItem } from "@/features/conversation/conversation-requests-list/use-conversation-requests-list-items"
@@ -15,7 +17,7 @@ export function useConversationRequestsListScreenHeader() {
   const { likelyNotSpamConversationIds, likelySpamConversationIds } =
     useConversationRequestsListItem()
 
-  const handleDeleteAll = () => {
+  const handleDeleteAll = useCallback(() => {
     Alert.alert(
       translate("Delete all requests"),
       translate("Would you like to delete all requests?"),
@@ -48,16 +50,20 @@ export function useConversationRequestsListScreenHeader() {
         },
       ],
     )
-  }
+  }, [deleteConversationsAsync, likelyNotSpamConversationIds, likelySpamConversationIds])
 
-  useHeader({
-    safeAreaEdges: ["top"],
-    onBack: () => {
-      router.goBack()
-    },
-    title: "Security line",
-    RightActionComponent: (
-      <HeaderAction icon="trash" onPress={handleDeleteAll} disabled={isPending} />
-    ),
-  })
+  const headerOptions = useMemo(() => {
+    return {
+      safeAreaEdges: ["top"],
+      onBack: () => {
+        router.goBack()
+      },
+      title: "Security line",
+      RightActionComponent: (
+        <HeaderAction icon="trash" onPress={handleDeleteAll} disabled={isPending} />
+      ),
+    } satisfies IHeaderProps
+  }, [router, handleDeleteAll, isPending])
+
+  useHeader(headerOptions, [headerOptions])
 }

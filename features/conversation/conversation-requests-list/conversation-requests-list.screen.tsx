@@ -6,9 +6,11 @@ import {
   BannerSubtitle,
   BannerTitle,
 } from "@/components/banner"
+import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { Icon } from "@/design-system/Icon/Icon"
 import { IVStackProps, VStack } from "@/design-system/VStack"
+import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import {
   ConversationListItem,
   ConversationListItemSubtitle,
@@ -16,6 +18,8 @@ import {
 } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
 import { useConversationRequestsListScreenHeader } from "@/features/conversation/conversation-requests-list/conversation-requests-list.screen-header"
+import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { useEffectOnce } from "@/hooks/use-effect-once"
 import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
@@ -47,21 +51,29 @@ export const ConversationRequestsListScreen = memo(function () {
     }
   }, [refetchConversationRequestsListItem])
 
+  useEffectOnce(() => {
+    invalidateUnknownConsentConversationsQuery({ inboxId: getSafeCurrentSender().inboxId }).catch(
+      captureError,
+    )
+  })
+
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
-      <ConversationList
-        contentContainerStyle={{
-          paddingBottom: insets.bottom,
-        }}
-        onRefetch={handleRefresh}
-        ListHeaderComponent={<ListHeader />}
-        ListFooterComponent={
-          likelySpamConversationIds.length > 0 ? (
-            <ListFooter likelySpamCount={likelySpamConversationIds.length} />
-          ) : undefined
-        }
-        conversationsIds={likelyNotSpamConversationIds}
-      />
+      <IsReadyWrapper>
+        <ConversationList
+          contentContainerStyle={{
+            paddingBottom: insets.bottom,
+          }}
+          onRefetch={handleRefresh}
+          ListHeaderComponent={<ListHeader />}
+          ListFooterComponent={
+            likelySpamConversationIds.length > 0 ? (
+              <ListFooter likelySpamCount={likelySpamConversationIds.length} />
+            ) : undefined
+          }
+          conversationsIds={likelyNotSpamConversationIds}
+        />
+      </IsReadyWrapper>
     </Screen>
   )
 })

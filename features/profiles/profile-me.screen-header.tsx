@@ -1,6 +1,7 @@
 import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import React, { memo, useCallback } from "react"
+import React, { memo, useCallback, useMemo } from "react"
 import { ViewStyle } from "react-native"
+import { IExtendedEdge } from "@/components/screen/screen.helpers"
 import { Button } from "@/design-system/Button/Button"
 import { DropdownMenu } from "@/design-system/dropdown-menu/dropdown-menu"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
@@ -63,10 +64,10 @@ export function useProfileMeScreenHeader(args: { inboxId: IXmtpInboxId }) {
     profileMeStore.getState().actions.setEditMode(false)
   }, [profileMeStore])
 
-  useHeader(
-    {
+  const headerOptions = useMemo(() => {
+    return {
       backgroundColor: theme.colors.background.surface,
-      safeAreaEdges: ["top"],
+      safeAreaEdges: ["top"] as IExtendedEdge[],
       titleComponent: editMode ? undefined : <AccountSwitcher noAvatar />,
       LeftActionComponent: editMode ? (
         // Show Cancel button when in edit mode
@@ -114,9 +115,10 @@ export function useProfileMeScreenHeader(args: { inboxId: IXmtpInboxId }) {
           )}
         </HStack>
       ),
-    },
-    [router, theme, editMode, handleContextMenuAction, inboxId, handleCancelEdit],
-  )
+    }
+  }, [theme, themed, editMode, handleCancelEdit, inboxId, handleContextMenuAction, router])
+
+  useHeader(headerOptions, [headerOptions])
 }
 
 const DoneAction = memo(function DoneAction({ inboxId }: { inboxId: IXmtpInboxId }) {

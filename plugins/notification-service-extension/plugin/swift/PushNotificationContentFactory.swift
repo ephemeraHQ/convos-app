@@ -176,6 +176,10 @@ class PushNotificationContentFactory {
             SentryManager.shared.trackError(ErrorFactory.create(domain: "PushNotificationContentFactory", description: "Failed to process remote attachment"))
           }
             mutableNotification.body = "Sent a photo"
+
+        case .multiRemoteAttachment(_):
+            mutableNotification.body = "Sent photos"
+
         case .remoteURL(_):
           mutableNotification.body = "Sent a photo"
 

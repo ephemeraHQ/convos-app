@@ -24,7 +24,7 @@ export const ConversationMessageRepliable = memo(function ConversationMessageRep
 }: IProps) {
   const { theme } = useAppTheme()
 
-  const { messageContainerSidePadding } = useConversationMessageStyles()
+  const { messageContainerSidePadding, senderAvatarSize } = useConversationMessageStyles()
 
   const composerStore = useConversationComposerStore()
   const conversationMessageStore = useConversationMessageStore()
@@ -46,13 +46,7 @@ export const ConversationMessageRepliable = memo(function ConversationMessageRep
       closeOnOpen
       overshootFriction={10} // 10 feels like the iMessage reply swipe so we like it!
       // Prevent swipe conflict with back gesture for other users' messages
-      leftHitSlop={
-        -messageContainerSidePadding
-        // Adding senderAvatarSize makes the sender avatar not pressable
-        //  - senderAvatarSize)
-        // Allow swipe to trigger when starting a few pixels left of message. So don't add spaceBetweenSenderAvatarAndMessage
-        // + spaceBetweenSenderAvatarAndMessage
-      }
+      leftHitSlop={-messageContainerSidePadding - senderAvatarSize}
       dragOffsetFromLeftEdge={theme.spacing.xs}
       onLeftSwipe={handleLeftSwipe}
       renderLeftActions={renderLeftActions}

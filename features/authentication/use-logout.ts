@@ -2,6 +2,7 @@ import { useTurnkey } from "@turnkey/sdk-react-native"
 import { useCallback } from "react"
 import { useAuthenticationStore } from "@/features/authentication/authentication.store"
 import { getAllSenders, useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
+import { unregisterBackgroundSyncTask } from "@/features/background-sync/background-sync"
 import { unlinkIdentityFromDeviceMutation } from "@/features/convos-identities/convos-identities-remove.mutation"
 import { ensureUserIdentitiesQueryData } from "@/features/convos-identities/convos-identities.query"
 import { getCurrentUserQueryData } from "@/features/current-user/current-user.query"
@@ -39,6 +40,7 @@ export const useLogout = () => {
             streamingResult,
             unlinkIdentitiesResults,
             unregisterPushNotificationsResults,
+            unregisterBackgroundTaskResult,
           ] = await customPromiseAllSettled([
             // Unsubscribe from conversations notifications
             Promise.all(
@@ -83,6 +85,8 @@ export const useLogout = () => {
                 unregisterPushNotifications({ clientInboxId: sender.inboxId }),
               ),
             ),
+            // Unregister background sync task
+            unregisterBackgroundSyncTask(),
           ])
 
           if (unsubscribeNotificationsResults.status === "rejected") {
@@ -117,6 +121,15 @@ export const useLogout = () => {
               new GenericError({
                 error: unregisterPushNotificationsResults.reason,
                 additionalMessage: "Error unregistering push notifications",
+              }),
+            )
+          }
+
+          if (unregisterBackgroundTaskResult.status === "rejected") {
+            captureError(
+              new GenericError({
+                error: unregisterBackgroundTaskResult.reason,
+                additionalMessage: "Error unregistering background sync task",
               }),
             )
           }

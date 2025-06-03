@@ -1,5 +1,5 @@
 import { ScrollViewProps, StyleProp, ViewStyle } from "react-native"
-import { ExtendedEdge } from "./screen.helpers"
+import { IExtendedEdge } from "./screen.helpers"
 
 type BaseScreenProps = {
   /**
@@ -17,7 +17,7 @@ type BaseScreenProps = {
   /**
    * Override the default edges for the safe area.
    */
-  safeAreaEdges?: ExtendedEdge[]
+  safeAreaEdges?: IExtendedEdge[]
   /**
    * Background color
    */

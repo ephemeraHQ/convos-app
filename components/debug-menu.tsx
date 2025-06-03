@@ -22,19 +22,27 @@ import { registerPushNotifications } from "@/features/notifications/notification
 import { getDevicePushNotificationsToken } from "@/features/notifications/notifications-token"
 import { getXmtpDbEncryptionKey } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
 import { getXmtpDbDirectory } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
-import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import {
+  getXmtpConversationIdFromXmtpTopic,
+  getXmtpDebugInformationConversation,
+  getXmtpDebugInformationNetwork,
+} from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import { uploadXmtpDebugInformation } from "@/features/xmtp/xmtp-debug"
 import {
   clearXmtpLogFiles,
   clearXmtpLogs,
+  getXmtpFilePaths,
   getXmtpLogFile,
+  getXmtpLoggingStatus,
+  readXmtpLogFile,
   startXmtpFileLogging,
   stopXmtpFileLogging,
 } from "@/features/xmtp/xmtp-logs"
 import type { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
-import { navigate } from "@/navigation/navigation.utils"
+import { getCurrentRouteParams, navigate } from "@/navigation/navigation.utils"
 import { useAppStore } from "@/stores/app.store"
 import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -157,6 +165,121 @@ function useShowDebugMenu() {
           navigate("WebviewPreview", { uri: logFilePath })
         } catch (error) {
           captureError(new GenericError({ error, additionalMessage: "Error displaying XMTP logs" }))
+        }
+      },
+      "Check XMTP Logging Status": async () => {
+        try {
+          const status = getXmtpLoggingStatus()
+          const statusMessage = [
+            `Logging Active: ${status.isActive ? "YES" : "NO"}`,
+            `Log Level: ${status.logLevel}`,
+            `Rotation Policy: ${status.rotationPolicy}`,
+            `Max Log Files: ${status.maxLogFiles}`,
+            `Current Log Files: ${status.filePaths.length}`,
+            status.filePaths.length > 0
+              ? `Files: ${status.filePaths.map((p) => p.split("/").pop()).join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n")
+
+          Alert.alert("XMTP Logging Status", statusMessage)
+        } catch (error) {
+          captureError(
+            new GenericError({ error, additionalMessage: "Error checking XMTP logging status" }),
+          )
+        }
+      },
+      "Read Specific XMTP Log File": async () => {
+        try {
+          const filePaths = getXmtpFilePaths()
+          if (filePaths.length === 0) {
+            Alert.alert("No Log Files", "No XMTP log files found. Try starting file logging first.")
+            return
+          }
+
+          const fileOptions = filePaths.map((path) => path.split("/").pop() || path)
+          fileOptions.push("Cancel")
+
+          showActionSheet({
+            options: {
+              title: "Select Log File to Read",
+              options: fileOptions,
+              cancelButtonIndex: fileOptions.indexOf("Cancel"),
+            },
+            callback: async (selectedIndex?: number) => {
+              if (selectedIndex === undefined || selectedIndex >= filePaths.length) {
+                return
+              }
+
+              try {
+                const selectedPath = filePaths[selectedIndex]
+                const content = await readXmtpLogFile(selectedPath)
+
+                if (content.length === 0) {
+                  Alert.alert("Empty Log File", "This log file is empty.")
+                  return
+                }
+
+                // Create a temporary file and display it
+                const tempFilePath = `${RNFS.TemporaryDirectoryPath}/xmtp-log-${Date.now()}.txt`
+                await RNFS.writeFile(tempFilePath, content, "utf8")
+                navigate("WebviewPreview", { uri: tempFilePath })
+              } catch (error) {
+                captureError(
+                  new GenericError({ error, additionalMessage: "Error reading XMTP log file" }),
+                )
+              }
+            },
+          })
+        } catch (error) {
+          captureError(
+            new GenericError({ error, additionalMessage: "Error reading XMTP log file" }),
+          )
+        }
+      },
+      "Share Specific XMTP Log File": async () => {
+        try {
+          const filePaths = getXmtpFilePaths()
+          if (filePaths.length === 0) {
+            Alert.alert("No Log Files", "No XMTP log files found. Try starting file logging first.")
+            return
+          }
+
+          const fileOptions = filePaths.map((path) => path.split("/").pop() || path)
+          fileOptions.push("Cancel")
+
+          showActionSheet({
+            options: {
+              title: "Select Log File to Share",
+              options: fileOptions,
+              cancelButtonIndex: fileOptions.indexOf("Cancel"),
+            },
+            callback: async (selectedIndex?: number) => {
+              if (selectedIndex === undefined || selectedIndex >= filePaths.length) {
+                return
+              }
+
+              try {
+                const selectedPath = filePaths[selectedIndex]
+                const fileName = selectedPath.split("/").pop() || "xmtp-log.txt"
+
+                shareContent({
+                  title: `XMTP Log: ${fileName}`,
+                  url: `file://${selectedPath}`,
+                  type: "text/plain",
+                }).catch(captureError)
+              } catch (error) {
+                captureError(
+                  new GenericError({ error, additionalMessage: "Error sharing XMTP log file" }),
+                )
+              }
+            },
+          })
+        } catch (error) {
+          captureError(
+            new GenericError({ error, additionalMessage: "Error sharing XMTP log file" }),
+          )
         }
       },
       Cancel: undefined,
@@ -720,6 +843,184 @@ function useShowDebugMenu() {
             }),
             { message: "Failed to export database files" },
           )
+        }
+      },
+      "Get Conversation Debug Info": async () => {
+        try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Getting conversation debug information..."],
+          })
+
+          const params = getCurrentRouteParams<"Conversation">()
+          const conversationId = params?.xmtpConversationId
+
+          if (!conversationId) {
+            Alert.alert("Error", "Select this debug option in a conversation")
+            return
+          }
+
+          const debugInfo = await getXmtpDebugInformationConversation({
+            clientInboxId,
+            xmtpConversationId: conversationId,
+          })
+
+          const debugInfoString = JSON.stringify(debugInfo, null, 2)
+
+          Alert.alert(
+            `Conversation Debug Info`,
+            debugInfoString.length > 1000
+              ? `${debugInfoString.substring(0, 1000)}...\n\n(Truncated - full info copied to clipboard)`
+              : debugInfoString,
+            [
+              { text: "OK" },
+              {
+                text: "Copy Full Info",
+                onPress: () => {
+                  Clipboard.setString(debugInfoString)
+                  Alert.alert("Copied", "Debug information copied to clipboard")
+                },
+              },
+              {
+                text: "Share",
+                onPress: async () => {
+                  try {
+                    const tempFilePath = `${RNFS.TemporaryDirectoryPath}/conversation-debug-${Date.now()}.json`
+                    await RNFS.writeFile(tempFilePath, debugInfoString, "utf8")
+
+                    shareContent({
+                      title: `XMTP Conversation Debug Info: ${conversationId}`,
+                      url: `file://${tempFilePath}`,
+                      type: "application/json",
+                    }).catch(captureError)
+                  } catch (error) {
+                    captureError(
+                      new GenericError({
+                        error,
+                        additionalMessage: "Error sharing debug info",
+                      }),
+                    )
+                  }
+                },
+              },
+            ],
+          )
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error getting conversation debug information",
+            }),
+            { message: "Failed to get conversation debug information" },
+          )
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
+        }
+      },
+      "Get Network Debug Info": async () => {
+        try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Getting network debug information..."],
+          })
+
+          const debugInfo = await getXmtpDebugInformationNetwork({
+            clientInboxId,
+          })
+
+          const debugInfoString = JSON.stringify(debugInfo, null, 2)
+
+          Alert.alert(
+            "XMTP Network Debug Info",
+            debugInfoString.length > 1000
+              ? `${debugInfoString.substring(0, 1000)}...\n\n(Truncated - full info copied to clipboard)`
+              : debugInfoString,
+            [
+              { text: "OK" },
+              {
+                text: "Copy Full Info",
+                onPress: () => {
+                  Clipboard.setString(debugInfoString)
+                  Alert.alert("Copied", "Network debug information copied to clipboard")
+                },
+              },
+              {
+                text: "Share",
+                onPress: async () => {
+                  try {
+                    const tempFilePath = `${RNFS.TemporaryDirectoryPath}/network-debug-${Date.now()}.json`
+                    await RNFS.writeFile(tempFilePath, debugInfoString, "utf8")
+
+                    shareContent({
+                      title: "XMTP Network Debug Info",
+                      url: `file://${tempFilePath}`,
+                      type: "application/json",
+                    }).catch(captureError)
+                  } catch (error) {
+                    captureError(
+                      new GenericError({
+                        error,
+                        additionalMessage: "Error sharing network debug info",
+                      }),
+                    )
+                  }
+                },
+              },
+            ],
+          )
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error getting network debug information",
+            }),
+            { message: "Failed to get network debug information" },
+          )
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
+        }
+      },
+      "Upload Debug Information": async () => {
+        try {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: true,
+            texts: ["Uploading debug information..."],
+          })
+
+          const result = await uploadXmtpDebugInformation({ clientInboxId })
+
+          Alert.alert(
+            "Debug Information Uploaded",
+            `Debug information uploaded successfully.\n\nUpload ID: ${result || "N/A"}`,
+            [
+              { text: "OK" },
+              {
+                text: "Copy Upload ID",
+                onPress: () => {
+                  if (result) {
+                    Clipboard.setString(result)
+                    Alert.alert("Copied", "Upload ID copied to clipboard")
+                  }
+                },
+              },
+            ],
+          )
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error uploading debug information",
+            }),
+            { message: "Failed to upload debug information" },
+          )
+        } finally {
+          useAppStore.getState().actions.setFullScreenLoaderOptions({
+            isVisible: false,
+          })
         }
       },
       Cancel: undefined,

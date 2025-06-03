@@ -156,27 +156,27 @@ export function startListeningToAppStateStore() {
             // Invalidating each conversation metadata can be heavy if you have many conversations
             // so for now only do it if there are other installations
             // so that both of your devices conversations metadata are in sync
-            const allowedConsentConversations = await ensureAllowedConsentConversationsQueryData({
-              clientInboxId: currentSender.inboxId,
-              caller: "appStateStoreHandler",
-            })
+            // const allowedConsentConversations = await ensureAllowedConsentConversationsQueryData({
+            //   clientInboxId: currentSender.inboxId,
+            //   caller: "appStateStoreHandler",
+            // })
 
-            if (allowedConsentConversations) {
-              getXmtpClientOtherInstallations({
-                clientInboxId: currentSender.inboxId,
-              })
-                .then((otherInstallations) => {
-                  if (otherInstallations.length > 0) {
-                    for (const conversationId of allowedConsentConversations) {
-                      invalidateConversationMetadataQuery({
-                        clientInboxId: currentSender.inboxId,
-                        xmtpConversationId: conversationId,
-                      }).catch(captureError)
-                    }
-                  }
-                })
-                .catch(captureError)
-            }
+            // if (allowedConsentConversations) {
+            //   getXmtpClientOtherInstallations({
+            //     clientInboxId: currentSender.inboxId,
+            //   })
+            //     .then((otherInstallations) => {
+            //       if (otherInstallations.length > 0) {
+            //         for (const conversationId of allowedConsentConversations) {
+            //           invalidateConversationMetadataQuery({
+            //             clientInboxId: currentSender.inboxId,
+            //             xmtpConversationId: conversationId,
+            //           }).catch(captureError)
+            //         }
+            //       }
+            //     })
+            //     .catch(captureError)
+            // }
           }
         }
 

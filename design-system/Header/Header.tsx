@@ -2,7 +2,7 @@ import { ReactElement } from "react"
 import { StyleProp, TextStyle, ViewStyle } from "react-native"
 import { DebugMenuWrapper } from "@/components/debug-menu"
 import { IPicto } from "@/components/Picto/Picto.types"
-import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
+import { IExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
 import { useHeaderHeight } from "@/design-system/Header/Header.utils"
 import { translate } from "@/i18n"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -12,7 +12,7 @@ import { ITouchableOpacityProps } from "../TouchableOpacity"
 import { AnimatedVStack, VStack } from "../VStack"
 import { HeaderAction } from "./HeaderAction"
 
-export type HeaderProps = {
+export type IHeaderProps = {
   titleStyle?: StyleProp<TextStyle>
   titleContainerStyle?: StyleProp<ViewStyle>
   style?: StyleProp<ViewStyle>
@@ -37,12 +37,12 @@ export type HeaderProps = {
   RightActionComponent?: ReactElement
   rightTxOptions?: ITextProps["txOptions"]
   onRightPress?: ITouchableOpacityProps["onPress"]
-  safeAreaEdges?: ExtendedEdge[]
+  safeAreaEdges?: IExtendedEdge[]
   isCollapsible?: boolean
   onBack?: () => void
 }
 
-export function Header(props: HeaderProps) {
+export function Header(props: IHeaderProps) {
   const { theme, themed } = useAppTheme()
 
   const {

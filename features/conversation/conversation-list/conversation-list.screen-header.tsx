@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native"
-import React from "react"
+import React, { useMemo } from "react"
 import { ViewStyle } from "react-native"
+import { IExtendedEdge } from "@/components/screen/screen.helpers"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { HStack } from "@/design-system/HStack"
 import { useHeader } from "@/navigation/use-header"
@@ -10,17 +11,18 @@ import { AccountSwitcher } from "../../authentication/components/account-switche
 export function useConversationListScreenHeader() {
   const { theme } = useAppTheme()
 
-  useHeader(
-    {
-      safeAreaEdges: ["top"],
+  const headerOptions = useMemo(() => {
+    return {
+      safeAreaEdges: ["top"] as IExtendedEdge[],
       style: {
         paddingHorizontal: theme.spacing.sm, // In Figma, for the conversation list, the header has bigger horizontal padding
       },
       RightActionComponent: <HeaderRightActions />,
       titleComponent: <AccountSwitcher />,
-    },
-    [theme],
-  )
+    }
+  }, [theme])
+
+  useHeader(headerOptions, [headerOptions])
 }
 
 function HeaderRightActions() {

@@ -3,8 +3,8 @@ import React, { memo, useCallback, useMemo } from "react"
 // import { useGroupPendingRequests } from "@/hooks/useGroupPendingRequests";
 import { Avatar } from "@/components/avatar"
 import { GroupAvatar } from "@/components/group-avatar"
-import { ExtendedEdge } from "@/components/screen/screen.helpers"
-import { HeaderProps } from "@/design-system/Header/Header"
+import { IExtendedEdge } from "@/components/screen/screen.helpers"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { HStack } from "@/design-system/HStack"
 import { Pressable } from "@/design-system/Pressable"
 import { Text } from "@/design-system/Text"
@@ -84,10 +84,10 @@ export function useConversationScreenHeader() {
 
   const onBack = useCallback(() => navigation.goBack(), [navigation])
 
-  const headerConfig = useMemo((): HeaderProps => {
-    const baseConfig: HeaderProps = {
+  const headerConfig = useMemo((): IHeaderProps => {
+    const baseConfig: IHeaderProps = {
       onBack,
-      safeAreaEdges: ["top" as ExtendedEdge],
+      safeAreaEdges: ["top" as IExtendedEdge],
     }
 
     if (isCreatingNewConversation) {

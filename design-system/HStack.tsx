@@ -1,10 +1,10 @@
 import React, { ForwardedRef, forwardRef, memo } from "react"
 import { View, ViewProps } from "react-native"
 import Animated, { AnimatedProps } from "react-native-reanimated"
-import { ExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
+import { IExtendedEdge, useSafeAreaInsetsStyle } from "@/components/screen/screen.helpers"
 
 export type IHStackProps = ViewProps & {
-  safeAreaInsets?: ExtendedEdge[]
+  safeAreaInsets?: IExtendedEdge[]
 }
 
 export const HStack = memo(

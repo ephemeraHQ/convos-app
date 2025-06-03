@@ -1,6 +1,6 @@
 import { useIsFocused, useNavigation } from "@react-navigation/native"
 import { useLayoutEffect } from "react"
-import { Header, HeaderProps } from "@/design-system/Header/Header"
+import { Header, IHeaderProps } from "@/design-system/Header/Header"
 
 /**
  * A hook that can be used to easily set the Header of a react-navigation screen from within the screen's component.
@@ -10,11 +10,11 @@ import { Header, HeaderProps } from "@/design-system/Header/Header"
  * - For settings-like screens (Profile, AppSettings, etc.) that use a 'surface' background,
  *   explicitly set backgroundColor: theme.colors.background.surface in the header config
  * @see [Documentation and Examples]{@link https://docs.infinite.red/ignite-cli/boilerplate/utility/useHeader/}
- * @param {HeaderProps} headerProps - The props for the `Header` component.
+ * @param {IHeaderProps} headerProps - The props for the `Header` component.
  * @param {any[]} deps - The dependencies to watch for changes to update the header.
  */
 export function useHeader(
-  headerProps: HeaderProps,
+  headerProps: IHeaderProps,
   deps: Parameters<typeof useLayoutEffect>[1] = [],
 ) {
   const navigation = useNavigation()

@@ -35,6 +35,7 @@ import { configureForegroundNotificationBehavior } from "./features/notification
 import "./utils/ignore-logs"
 import { FullScreenLoader } from "@/components/full-screen-loader"
 import { FullScreenOverlay } from "@/components/full-screen-overlay"
+import { defineBackgroundSyncTask } from "@/features/background-sync/background-sync"
 import { sentryInit } from "./utils/sentry/sentry-init"
 import { preventSplashScreenAutoHide } from "./utils/splash/splash"
 
@@ -44,6 +45,7 @@ configureForegroundNotificationBehavior()
 setupConvosApi()
 startListeningToAppStateStore()
 startListeningToAuthenticationStore()
+defineBackgroundSyncTask()
 
 export const App = Sentry.wrap(function App() {
   useMonitorNetworkConnectivity()

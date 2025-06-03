@@ -3,7 +3,7 @@ import { LayoutChangeEvent } from "react-native"
 import { Edge, useSafeAreaInsets } from "react-native-safe-area-context"
 import { AutoScreenProps } from "./screen.props"
 
-export type ExtendedEdge = Edge | "start" | "end"
+export type IExtendedEdge = Edge | "start" | "end"
 
 const propertySuffixMap = {
   top: "Top",
@@ -21,7 +21,7 @@ const edgeInsetMap: Record<string, Edge> = {
 
 export type SafeAreaInsetsStyle<
   Property extends "padding" | "margin" = "padding",
-  Edges extends ExtendedEdge[] = ExtendedEdge[],
+  Edges extends IExtendedEdge[] = IExtendedEdge[],
 > = {
   [K in Edges[number] as `${Property}${Capitalize<K>}`]: number
 }
@@ -32,7 +32,7 @@ export type SafeAreaInsetsStyle<
 
 export function useSafeAreaInsetsStyle<
   Property extends "padding" | "margin" = "padding",
-  Edges extends ExtendedEdge[] = [],
+  Edges extends IExtendedEdge[] = [],
 >(
   safeAreaEdges: Edges = [] as unknown as Edges,
   property: Property = "padding" as Property,

@@ -1,4 +1,4 @@
-import { memo } from "react"
+import { memo, useCallback, useMemo } from "react"
 import { Alert } from "react-native"
 import {
   BannerContainer,
@@ -7,6 +7,7 @@ import {
   BannerTitle,
 } from "@/components/banner"
 import { Screen } from "@/components/screen/screen"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
 import { useDeleteConversationsMutation } from "@/features/conversation/conversation-requests-list/delete-conversations.mutation"
@@ -59,7 +60,7 @@ export function useConversationUnclearedRequestsScreenHeader() {
   const { mutateAsync: deleteConversationsAsync, isPending } = useDeleteConversationsMutation()
   const { likelySpamConversationIds } = useConversationRequestsListItem()
 
-  const handleDeleteAll = () => {
+  const handleDeleteAll = useCallback(() => {
     Alert.alert(
       translate("Delete all unclear requests"),
       translate("Would you like to delete all requests?"),
@@ -89,16 +90,20 @@ export function useConversationUnclearedRequestsScreenHeader() {
         },
       ],
     )
-  }
+  }, [deleteConversationsAsync, likelySpamConversationIds])
 
-  useHeader({
-    safeAreaEdges: ["top"],
-    onBack: () => {
-      router.goBack()
-    },
-    title: "Uncleared chats",
-    RightActionComponent: (
-      <HeaderAction icon="trash" onPress={handleDeleteAll} disabled={isPending} />
-    ),
-  })
+  const headerOptions = useMemo(() => {
+    return {
+      safeAreaEdges: ["top"],
+      onBack: () => {
+        router.goBack()
+      },
+      title: "Uncleared chats",
+      RightActionComponent: (
+        <HeaderAction icon="trash" onPress={handleDeleteAll} disabled={isPending} />
+      ),
+    } satisfies IHeaderProps
+  }, [router, handleDeleteAll, isPending])
+
+  useHeader(headerOptions, [headerOptions])
 }

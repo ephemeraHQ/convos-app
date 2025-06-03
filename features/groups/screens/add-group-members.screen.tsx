@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { memo, useEffect } from "react"
+import { memo, useEffect, useMemo } from "react"
 import { Screen } from "@/components/screen/screen"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { useAddGroupMembersStore } from "@/features/groups/stores/add-group-members.store"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { useHeader } from "@/navigation/use-header"
@@ -15,16 +16,17 @@ export const AddGroupMembersScreen = memo(function AddGroupMembersScreen(
 ) {
   const router = useRouter()
 
-  useHeader(
-    {
+  const headerOptions = useMemo(() => {
+    return {
       safeAreaEdges: ["top"],
       title: "Invite Members",
       leftIcon: "chevron.left",
       onBack: router.goBack,
       withBottomBorder: true,
-    },
-    [],
-  )
+    } satisfies IHeaderProps
+  }, [router.goBack])
+
+  useHeader(headerOptions, [headerOptions])
 
   useEffect(() => {
     return () => {

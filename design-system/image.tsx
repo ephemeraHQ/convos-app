@@ -4,6 +4,12 @@ import { StyleSheet } from "react-native"
 
 export type IImageProps = ExpoImageProps
 
+function getCacheVersion() {
+  const now = new Date()
+  const weekly = Math.floor(now.getTime() / (7 * 24 * 60 * 60 * 1000))
+  return `v${weekly}`
+}
+
 function useImageSource({
   source,
   numericWidth,
@@ -41,12 +47,8 @@ function useImageSource({
       "uri" in source &&
       typeof source.uri === "string"
     ) {
-      // Handles ImageSource-like objects with a 'uri' string property
       uri = source.uri
     }
-    // Other source types (number for static assets, array of sources, SharedRef) won't have a simple URI
-    // for this logic. Expo Image handles their caching internally. We won't generate a custom
-    // dimension-based cacheKey for them to keep this logic targeted.
 
     if (!uri) {
       return source
@@ -57,7 +59,9 @@ function useImageSource({
       numericWidth && numericWidth > 0 && numericHeight && numericHeight > 0
         ? `_w${numericWidth}_h${numericHeight}`
         : ""
-    const cacheKey = `${uri}${dimensionKey}`
+
+    const cacheVersion = getCacheVersion()
+    const cacheKey = `${uri}${dimensionKey}_${cacheVersion}`
 
     // Transform the source with the new cacheKey
     if (typeof source === "string") {

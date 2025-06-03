@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
-import { memo, useCallback, useEffect } from "react"
+import { memo, useCallback, useEffect, useMemo } from "react"
 import { create } from "zustand"
 import { Avatar } from "@/components/avatar"
 import { GroupAvatar } from "@/components/group-avatar"
@@ -7,6 +7,7 @@ import { Screen } from "@/components/screen/screen"
 import { showSnackbar } from "@/components/snackbar/snackbar.service"
 import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { Icon } from "@/design-system/Icon/Icon"
 import { Pressable } from "@/design-system/Pressable"
 import { Text } from "@/design-system/Text"
@@ -80,19 +81,26 @@ export const EditGroupScreen = memo(function EditGroupScreen(
 
       router.goBack()
     } catch (error) {
-      captureErrorWithToast(new GenericError({ error, additionalMessage: "Error updating group" }), {
-        message: "Error updating group"
-      })
+      captureErrorWithToast(
+        new GenericError({ error, additionalMessage: "Error updating group" }),
+        {
+          message: "Error updating group",
+        },
+      )
     }
   }, [router, updateGroupAsync, group])
 
-  useHeader({
-    safeAreaEdges: ["top"],
-    leftText: "Cancel",
-    rightText: "Done",
-    onLeftPress: handleCancelPress,
-    onRightPress: handleDonePress,
-  })
+  const headerOptions = useMemo(() => {
+    return {
+      safeAreaEdges: ["top"],
+      leftText: "Cancel",
+      rightText: "Done",
+      onLeftPress: handleCancelPress,
+      onRightPress: handleDonePress,
+    } satisfies IHeaderProps
+  }, [handleCancelPress, handleDonePress])
+
+  useHeader(headerOptions, [headerOptions])
 
   if (isGroupLoading) {
     return null
@@ -173,8 +181,8 @@ const GroupAvatarEditor = memo(function GroupAvatarEditor() {
       captureErrorWithToast(
         new GenericError({ error, additionalMessage: "Error adding group avatar" }),
         {
-          message: "Error adding group avatar"
-        }
+          message: "Error adding group avatar",
+        },
       )
     }
   }, [addPFP])

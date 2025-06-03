@@ -196,6 +196,7 @@ export default () => {
         // Related to https://github.com/mrousavy/react-native-mmkv/pull/703
         AppGroup: `group.${config.ios.bundleIdentifier}`,
         AppGroupName: `group.${config.ios.bundleIdentifier}`,
+        UIBackgroundModes: ["processing"],
       },
     },
     android: {
@@ -246,6 +247,7 @@ export default () => {
       },
     },
     plugins: [
+      "expo-background-task",
       ["expo-notifications"],
       "./plugins/notification-service-extension/app.plugin.js",
       ["expo-secure-store"],
