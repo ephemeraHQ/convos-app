@@ -2,16 +2,12 @@ import { focusManager as reactQueryFocusManager } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { AppState, AppStateStatus, NativeEventSubscription } from "react-native"
 import { getAllSenders, getCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  ensureAllowedConsentConversationsQueryData,
-  invalidateAllowedConsentConversationsQuery,
-} from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
-import { invalidateConversationMetadataQuery } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
+import { invalidateAllowedConsentConversationsQuery } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
 import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { fetchOrRefetchNotificationsPermissions } from "@/features/notifications/notifications-permissions.query"
 import { registerPushNotifications } from "@/features/notifications/notifications-register"
 import { startStreaming, stopStreaming } from "@/features/streams/streams"
-import { getXmtpClientOtherInstallations } from "@/features/xmtp/xmtp-installations/xmtp-installations"
+import { dropXmtpClient, getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { useAppStateStore } from "@/stores/app-state-store/app-state.store"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
@@ -181,7 +177,16 @@ export function startListeningToAppStateStore() {
         }
 
         if (isGoingToBackground) {
+          // Stop XMTP streaming
           stopStreaming(senders.map((sender) => sender.inboxId)).catch(captureError)
+
+          // Drop all XMTP clients
+          for (const sender of senders) {
+            dropXmtpClient({
+              xmtpClient: await getXmtpClientByInboxId({ inboxId: sender.inboxId }),
+              ethAddress: sender.ethereumAddress,
+            }).catch(captureError)
+          }
 
           // Try this logic later
           // useXmtpActivityStore.getState().actions.cancelAllActiveOperations(

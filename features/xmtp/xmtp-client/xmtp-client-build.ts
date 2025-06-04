@@ -1,7 +1,11 @@
 import { IXmtpClientWithCodecs, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { PublicIdentity, Client as XmtpClient } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
-import { clientByEthAddress, clientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client-cache"
+import {
+  cacheClientUnderBothKeys,
+  getEthAddressCacheKey,
+  xmtpClientCache,
+} from "@/features/xmtp/xmtp-client/xmtp-client-cache"
 import { getXmtpDbEncryptionKey } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
 import { formatDbEncryptionKeyToUint8Array } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key.utils"
 import { getXmtpDbDirectory, getXmtpLocalUrl } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
@@ -47,7 +51,11 @@ async function _buildXmtpClient(args: {
 
   const typedClient = client as IXmtpClientWithCodecs
 
-  clientByInboxId.set(typedClient.inboxId, Promise.resolve(typedClient))
+  // Cache under both keys using the helper
+  cacheClientUnderBothKeys({
+    client: typedClient,
+    ethAddress: ethereumAddress,
+  })
 
   return typedClient
 }
@@ -71,12 +79,14 @@ async function createXmtpBuildPromise(args: {
     }
 
     try {
-      return await _buildXmtpClient({
+      const client = await _buildXmtpClient({
         ethereumAddress,
         inboxId,
         dbEncryptionKey: formatDbEncryptionKeyToUint8Array(dbEncryptionKey),
         operationName: "buildXmtpClient",
       })
+
+      return client
     } catch (error) {
       if (isXmtpDbEncryptionKeyError(error)) {
         // Weird error that we saw. It's like if there's a value in the keychain, we read it but the returned data is invalid.
@@ -111,7 +121,6 @@ async function createXmtpBuildPromise(args: {
       throw error
     }
   } catch (error) {
-    clientByEthAddress.delete(ethereumAddress)
     throw new XMTPError({
       error,
       additionalMessage: `Failed to build XMTP client for address: ${ethereumAddress}`,
@@ -125,25 +134,8 @@ export async function buildXmtpClient(args: {
 }): Promise<IXmtpClientWithCodecs> {
   const { ethereumAddress, inboxId } = args
 
-  const existingPromise = clientByEthAddress.get(ethereumAddress)
-  if (existingPromise) {
-    return existingPromise
-  }
-
-  const buildPromise: Promise<IXmtpClientWithCodecs> = createXmtpBuildPromise({
-    ethereumAddress,
-    inboxId,
+  return xmtpClientCache.getOrCreate({
+    key: getEthAddressCacheKey(ethereumAddress),
+    fn: () => createXmtpBuildPromise({ ethereumAddress, inboxId }),
   })
-
-  clientByEthAddress.set(ethereumAddress, buildPromise)
-  clientByInboxId.set(inboxId, buildPromise)
-
-  try {
-    const client = await buildPromise
-    return client
-  } catch (error) {
-    clientByEthAddress.delete(ethereumAddress)
-    clientByInboxId.delete(inboxId)
-    throw error
-  }
 }

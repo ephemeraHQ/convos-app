@@ -14,9 +14,9 @@ import {
 import { timing } from "./timing"
 
 export const SICK_EASE_OUT = Easing.out(Easing.cubic)
-export const SICK_DAMPING = 65
-export const SICK_STIFFNESS = 400
-export const SICK_MASS = 1.03
+export const SICK_DAMPING = 30
+export const SICK_STIFFNESS = 250
+export const SICK_MASS = 1
 
 export const SICK_SPRING_CONFIG: WithSpringConfig = {
   damping: SICK_DAMPING,

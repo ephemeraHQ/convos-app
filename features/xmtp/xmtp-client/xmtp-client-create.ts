@@ -1,7 +1,11 @@
 import { IXmtpClientWithCodecs, IXmtpSigner } from "@features/xmtp/xmtp.types"
 import { Client as XmtpClient } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
-import { clientByEthAddress, clientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client-cache"
+import {
+  cacheClientUnderBothKeys,
+  getEthAddressCacheKey,
+  xmtpClientCache,
+} from "@/features/xmtp/xmtp-client/xmtp-client-cache"
 import {
   createXmtpDbEncryptionKey,
   getXmtpDbEncryptionKey,
@@ -46,11 +50,12 @@ async function _createXmtpClient(args: {
   )
 
   const typedClient = xmtpClientResult as IXmtpClientWithCodecs
-  const resolvedClientPromise = Promise.resolve(typedClient)
 
-  // Cache the client by both Ethereum address and inbox ID
-  clientByEthAddress.set(ethAddress, resolvedClientPromise)
-  clientByInboxId.set(typedClient.inboxId, resolvedClientPromise)
+  // Cache under both keys using the helper
+  cacheClientUnderBothKeys({
+    client: typedClient,
+    ethAddress,
+  })
 
   return typedClient
 }
@@ -96,8 +101,6 @@ export async function createXmtpClient(args: {
       })
     } catch (error) {
       if (isXmtpDbEncryptionKeyError(error)) {
-        // Weird error that we saw. It's like if there's a value in the keychain, we read it but the returned data is invalid.
-        // So we try getting the value from the backup storage instead.
         xmtpLogger.warn(`PRAGMA key error detected, trying with backup key...`)
 
         const backupDbEncryptionKey = await getXmtpDbEncryptionKey({
@@ -125,7 +128,8 @@ export async function createXmtpClient(args: {
       throw error
     }
   } catch (error) {
-    clientByEthAddress.delete(ethAddress)
+    // Clean up cache on failure
+    xmtpClientCache.delete(getEthAddressCacheKey(ethAddress))
 
     throw new XMTPError({
       error,

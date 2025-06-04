@@ -17,6 +17,7 @@ import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { DEFAULT_GC_TIME_MS } from "@/utils/react-query/react-query.constants"
 import { refetchQueryIfNotAlreadyFetching } from "@/utils/react-query/react-query.helpers"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
+import { wait } from "@/utils/wait"
 import { maybeUpdateConversationQueryLastMessage } from "../queries/conversation.query"
 import { processReactionConversationMessages } from "./conversation-message/conversation-message-reactions.query"
 import {
@@ -602,4 +603,8 @@ export function getConversationMessagesInfiniteQueryObserver(args: IArgs) {
 
   observersCache.set(cacheKey, observer)
   return observer
+}
+
+export async function fetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
+  return reactQueryClient.fetchInfiniteQuery(getConversationMessagesInfiniteQueryOptions(args))
 }
