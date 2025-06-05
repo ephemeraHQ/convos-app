@@ -11107,6 +11107,7 @@ __metadata:
     expo-image: "npm:^2.1.7"
     expo-image-manipulator: "npm:~13.0.5"
     expo-image-picker: "npm:~16.0.3"
+    expo-insights: "npm:~0.8.2"
     expo-linear-gradient: "npm:~14.0.1"
     expo-linking: "npm:~7.0.5"
     expo-local-authentication: "npm:~15.0.2"
@@ -13167,7 +13168,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expo-eas-client@npm:~0.13.3":
+"expo-eas-client@npm:~0.13.2, expo-eas-client@npm:~0.13.3":
   version: 0.13.3
   resolution: "expo-eas-client@npm:0.13.3"
   checksum: 10c0/6b24ce7afd4f69ccd2d7bb367047945749ddff46543420083e30a633b22e97ece94966d69450c5e82e94e6e70af11ad265725b5ec6030bb4d74473803e1f9b5b
@@ -13250,6 +13251,17 @@ __metadata:
     react-native-web:
       optional: true
   checksum: 10c0/19f1025b031b3ec344cdf7939334063c3a0487bd604bf7c8c7620e9fd6ddde9192749a759e4e2ba59e3a75ffcbfa897ced27faa6af7240cdc855c1681c097945
+  languageName: node
+  linkType: hard
+
+"expo-insights@npm:~0.8.2":
+  version: 0.8.2
+  resolution: "expo-insights@npm:0.8.2"
+  dependencies:
+    expo-eas-client: "npm:~0.13.2"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/792bb73ef21d7b5f0467479fd770833875418beb23f650df5b87c333e96213a9fefa65f6a88ad0c50053216edf9e34e4dc9c55c43894a01c5a810fd5b122c425
   languageName: node
   linkType: hard
 
