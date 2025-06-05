@@ -87,7 +87,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     } satisfies IVStackProps
   }, [])
 
-  if (numberOfRequests === 0 && !isLoadingUnknownConversations && !isFetchingUnknownConversations) {
+  if (numberOfRequests === 0 && (isLoadingUnknownConversations || isFetchingUnknownConversations)) {
     return null
   }
 
