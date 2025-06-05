@@ -67,7 +67,7 @@ export const ConversationListItem = memo(function ConversationListItem({
             subtitle
           )}
         </VStack>
-        {/* {(isUnread || showError || isMuted) && (
+        {(isUnread || showError || isMuted) && (
           <AnimatedCenter
             entering={theme.animation.reanimatedFadeInScaleIn()}
             exiting={theme.animation.reanimatedFadeOutScaleOut()}
@@ -81,7 +81,7 @@ export const ConversationListItem = memo(function ConversationListItem({
               <Icon icon="bell-slash.fill" color={theme.colors.text.tertiary} />
             ) : null}
           </AnimatedCenter>
-        )} */}
+        )}
       </>
     </TouchableHighlight>
   )
