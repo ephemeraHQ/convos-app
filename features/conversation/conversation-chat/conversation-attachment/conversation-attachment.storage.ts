@@ -111,7 +111,7 @@ export async function storeRemoteAttachment(args: {
   const { xmtpMessageId: messageId, decryptedAttachment } = args
   const { fileUri, filename: originalFilename, mimeType } = decryptedAttachment
 
-  const filename = originalFilename || fileUri.split("/").slice(-1)[0]
+  const filename = originalFilename || fileUri.split("/").pop() || `attachment_${Date.now()}`
 
   const attachmentDir = await getAttachmentDirectory()
   const { metadataFileName, attachmentFileName } = getAttachmentPaths({ messageId, filename })

@@ -57,7 +57,7 @@ type ISingleAttachmentDisplayProps = {
 }
 
 const SingleAttachmentDisplay = memo(function SingleAttachmentDisplay({
-  attachment: attachment,
+  attachment,
   xmtpMessageId,
   senderInboxId,
   sentMs,
