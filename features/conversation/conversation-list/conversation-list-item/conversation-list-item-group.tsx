@@ -71,6 +71,8 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   useEffect(() => {
     if (!isLoadingLastMessage && !lastMessage) {
+      let isMounted = true
+
       const fetchInviterInfo = async () => {
         try {
           const group = await ensureGroupQueryData({
@@ -86,7 +88,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
               saveToNotificationExtension: true,
             })
 
-            if (displayName) {
+            if (displayName && isMounted) {
               setInviterDisplayName(displayName)
             }
           }
@@ -101,6 +103,10 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
       }
 
       fetchInviterInfo()
+
+      return () => {
+        isMounted = false
+      }
     }
   }, [isLoadingLastMessage, lastMessage, currentSender.inboxId, xmtpConversationId])
 

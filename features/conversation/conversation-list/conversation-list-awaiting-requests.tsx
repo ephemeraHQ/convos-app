@@ -19,8 +19,8 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
   const {
     likelyNotSpamConversationIds,
     likelySpamConversationIds,
-    isLoading: isLoadingUknownConversations,
-    isFetching: isFetchingUknownConversations,
+    isLoading: isLoadingUnknownConversations,
+    isFetching: isFetchingUnknownConversations,
   } = useConversationRequestsListItem()
 
   const numberOfRequests = likelyNotSpamConversationIds.length + likelySpamConversationIds.length
@@ -40,7 +40,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
 
   const subtitle = useMemo(() => {
     const getSubtitleText = () => {
-      if (isLoadingUknownConversations) {
+      if (isLoadingUnknownConversations) {
         return "Checking for invites"
       }
       return `${numberOfRequests} chat${numberOfRequests > 1 ? "s" : ""}`
@@ -57,7 +57,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
         <ConversationListItemSubtitle>{text}</ConversationListItemSubtitle>
       </AnimatedHStack>
     )
-  }, [isLoadingUknownConversations, numberOfRequests, theme])
+  }, [isLoadingUnknownConversations, numberOfRequests, theme])
 
   const AvatarComponent = useMemo(() => {
     return (
@@ -87,7 +87,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     } satisfies IVStackProps
   }, [])
 
-  if (numberOfRequests === 0 && !isLoadingUknownConversations && !isFetchingUknownConversations) {
+  if (numberOfRequests === 0 && !isLoadingUnknownConversations && !isFetchingUnknownConversations) {
     return null
   }
 

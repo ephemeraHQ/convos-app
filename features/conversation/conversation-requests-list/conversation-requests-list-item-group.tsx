@@ -51,9 +51,10 @@ export const ConversationRequestsListItemGroup = memo(function ConversationReque
   const [inviterDisplayName, setInviterDisplayName] = useState("")
 
   const { mutateAsync: deleteConversationsAsync } = useDeleteConversationsMutation()
-
   useEffect(() => {
     if (!isLoadingLastMessage && !lastMessage) {
+      let isMounted = true
+
       const fetchInviterInfo = async () => {
         try {
           const group = await ensureGroupQueryData({
@@ -68,7 +69,7 @@ export const ConversationRequestsListItemGroup = memo(function ConversationReque
               caller: "ConversationRequestsListItemGroup",
             })
 
-            if (displayName) {
+            if (displayName && isMounted) {
               setInviterDisplayName(displayName)
             }
           }
@@ -83,6 +84,10 @@ export const ConversationRequestsListItemGroup = memo(function ConversationReque
       }
 
       fetchInviterInfo()
+
+      return () => {
+        isMounted = false
+      }
     }
   }, [isLoadingLastMessage, lastMessage, currentSender.inboxId, xmtpConversationId])
 

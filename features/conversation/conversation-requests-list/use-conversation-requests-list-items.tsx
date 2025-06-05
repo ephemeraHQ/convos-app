@@ -32,6 +32,8 @@ export function useConversationRequestsListItem() {
     ),
   })
 
+  // Removing metadata queries for now because this can be heavy and for unknown consent conversations,
+  // we don't need them. We want to keep those requests very minimal.
   // const metadataQueries = useQueries({
   //   queries: (unknownConsentConversationIds ?? []).map((conversationId) =>
   //     getConversationMetadataQueryOptions({
