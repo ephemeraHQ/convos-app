@@ -22,6 +22,7 @@ export function getConversationSpamQueryOptions(args: IArgs) {
       clientInboxId,
     }),
     queryFn: async () => {
+      return true
       const conversation = await ensureConversationQueryData({
         clientInboxId,
         xmtpConversationId,

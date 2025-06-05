@@ -10,7 +10,6 @@ export const multiInboxStoreStorage = getZustandStorageFromSharedDefaults()
 // Don't change, this is temporary until all users migrated to new app which will use new storage
 export const oldMultiInboxStoreStorage = getZustandMmkvStorage({ id: "mmkv.default" })
 
-export const createProfileStoreStorage = getZustandMmkvStorage({ id: "profile-me" })
 export const notificationsStoreStorage = getZustandMmkvStorage({ id: "notifications" })
 
 export const reactQueryPersistingStorage = createMmkvStorage({

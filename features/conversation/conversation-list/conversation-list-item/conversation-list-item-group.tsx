@@ -63,6 +63,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     inboxId: lastMessage?.senderInboxId,
     caller: "ConversationListItemGroup",
     enabled: !isLoadingLastMessage && !!lastMessage,
+    saveToNotificationExtension: true,
   })
 
   // Putting this in a useState because we might not care about it if we have a last message
@@ -82,6 +83,7 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
             const { displayName } = await ensurePreferredDisplayInfo({
               inboxId: group.addedByInboxId,
               caller: "ConversationListItemGroup",
+              saveToNotificationExtension: true,
             })
 
             if (displayName) {

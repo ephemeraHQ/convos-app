@@ -182,10 +182,12 @@ const ListHeader = React.memo(function ListHeader() {
     pinnedConversations &&
     pinnedConversations.length === 0
 
+  if (hasNoConversations) {
+    return <ConversationListStartNewConvoBanner />
+  }
+
   return (
     <AnimatedVStack layout={theme.animation.reanimatedLayoutSpringTransition}>
-      {/* {ephemeralAccount && <EphemeralAccountBanner />} */}
-      {hasNoConversations && <ConversationListStartNewConvoBanner />}
       <ConversationListPinnedConversations />
       <ConversationListAwaitingRequests />
     </AnimatedVStack>

@@ -14,6 +14,7 @@ export function useConversationRequestsListItem() {
   const {
     data: unknownConsentConversationIds = [],
     isLoading: isLoadingUnknownConsentConversationIds,
+    isFetching: isFetchingUnknownConsentConversationIds,
     refetch: refetchUnknownConsentConversationIds,
   } = useQuery({
     ...getUnknownConsentConversationsQueryOptions({
@@ -56,6 +57,12 @@ export function useConversationRequestsListItem() {
     spamQueries.some((q) => q.isLoading) ||
     // metadataQueries.some((q) => q.isLoading) ||
     conversationQueries.some((q) => q.isLoading)
+
+  const isFetching =
+    isFetchingUnknownConsentConversationIds ||
+    spamQueries.some((q) => q.isFetching) ||
+    // metadataQueries.some((q) => q.isFetching) ||
+    conversationQueries.some((q) => q.isFetching)
 
   const likelySpamItems: Array<{
     conversationId: IXmtpConversationId
@@ -133,5 +140,6 @@ export function useConversationRequestsListItem() {
     likelySpamConversationIds: sortedLikelySpamConversationIds,
     isLoading,
     refetch: handleRefetch,
+    isFetching,
   }
 }

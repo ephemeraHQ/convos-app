@@ -53,6 +53,7 @@ import { clearImageCache } from "@/utils/image"
 import { clearLogFile, LOG_FILE_PATH } from "@/utils/logger/logger"
 import { clearReacyQueryQueriesAndCache } from "@/utils/react-query/react-query.utils"
 import { shareContent } from "@/utils/share"
+import { wait } from "@/utils/wait"
 import { showActionSheet } from "./action-sheet"
 
 export const DebugMenuWrapper = memo(function DebugWrapper(props: { children: React.ReactNode }) {
@@ -1057,9 +1058,9 @@ function useShowDebugMenu() {
             isVisible: true,
             texts: ["Clearing React Query cache..."],
           })
+          // Give time for loader to render until the thread is blocked
+          await wait(100)
           clearReacyQueryQueriesAndCache()
-          // Give some time for the cache to clear before reloading
-          await new Promise((resolve) => setTimeout(resolve, 500))
           await Updates.reloadAsync()
         } catch (error) {
           captureErrorWithToast(

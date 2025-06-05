@@ -49,6 +49,7 @@ export const ConversationListItemDm = memo(function ConversationListItemDm({
   const { displayName, avatarUrl } = usePreferredDisplayInfo({
     inboxId: peerInboxId,
     caller: "ConversationListItemDm",
+    saveToNotificationExtension: true,
   })
 
   const { isUnread } = useConversationIsUnread({ xmtpConversationId })
