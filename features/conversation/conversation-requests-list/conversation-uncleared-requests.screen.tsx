@@ -6,6 +6,7 @@ import {
   BannerSubtitle,
   BannerTitle,
 } from "@/components/banner"
+import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { IHeaderProps } from "@/design-system/Header/Header"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
@@ -33,13 +34,15 @@ export const ConversationUnclearedRequestsScreen = memo(
 
     return (
       <Screen contentContainerStyle={$globalStyles.flex1}>
-        <ConversationList
-          ListHeaderComponent={<ListHeader />}
-          conversationsIds={likelySpamConversationIds}
-          renderConversation={({ item }) => {
-            return <ConversationRequestsListItem xmtpConversationId={item} />
-          }}
-        />
+        <IsReadyWrapper>
+          <ConversationList
+            ListHeaderComponent={<ListHeader />}
+            conversationsIds={likelySpamConversationIds}
+            renderConversation={({ item }) => {
+              return <ConversationRequestsListItem xmtpConversationId={item} />
+            }}
+          />
+        </IsReadyWrapper>
       </Screen>
     )
   },
