@@ -1,9 +1,9 @@
 import { Text } from "@design-system/Text"
-import { translate } from "@i18n"
 import React, { memo } from "react"
 import { IImageProps, Image } from "@/design-system/image"
+import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { AttachmentLoading } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-loading"
+import { ConversationAttachmentLoading } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-loading.component"
 import { useRemoteAttachmentQuery } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.query"
 import { useConversationAttachmentStyles } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.styles"
 import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
@@ -15,8 +15,6 @@ import {
   ConversationMessageAttachmentContainer,
   IConversationMessageAttachmentContainerProps,
 } from "./conversation-message-attachment-container"
-import { VStack } from "@/design-system/VStack"
-import { Icon } from "@/design-system/Icon/Icon"
 
 type IConversationAttachmentRemoteImageProps = {
   imageUrl: Nullable<string>
@@ -31,22 +29,15 @@ type IConversationAttachmentRemoteImageProps = {
 export const ConversationAttachmentRemoteImage = memo(function ConversationAttachmentRemoteImage(
   props: IConversationAttachmentRemoteImageProps,
 ) {
-  const { 
-    imageUrl, 
-    isLoading, 
-    error, 
-    fitAspectRatio, 
-    containerProps, 
-    imageProps, 
-    imageSize
-  } = props
+  const { imageUrl, isLoading, error, fitAspectRatio, containerProps, imageProps, imageSize } =
+    props
 
   const { borderRadius } = useConversationAttachmentStyles()
 
   if (isLoading) {
     return (
       <ConversationMessageAttachmentContainer {...containerProps}>
-        <AttachmentLoading />
+        <ConversationAttachmentLoading />
       </ConversationMessageAttachmentContainer>
     )
   }
@@ -104,17 +95,16 @@ export const ConversationAttachmentRemoteImageSmart = memo(
       caller: "ConversationAttachmentRemoteImageSmart",
     })
 
-    const { url, ...metadata } =
-      (conversationMessage?.content as IConversationMessageRemoteAttachmentContent) || {}
-
     const {
       data: attachment,
       error: attachmentError,
-      isLoading: attachmentLoading
+      isLoading: attachmentLoading,
     } = useRemoteAttachmentQuery({
       xmtpMessageId,
-      url,
-      metadata,
+      encryptedRemoteAttachmentContent:
+        conversationMessage?.content as IConversationMessageRemoteAttachmentContent,
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
     })
 
     return (

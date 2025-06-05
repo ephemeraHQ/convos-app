@@ -1,6 +1,7 @@
 import { memo, useCallback } from "react"
 import { useGlobalMediaViewerStore } from "@/components/global-media-viewer/global-media-viewer.store"
 import { VStack } from "@/design-system/VStack"
+import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationAttachmentRemoteImage } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-remote-image"
 import { useRemoteAttachmentQuery } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.query"
 import { ConversationMessageGestures } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures"
@@ -18,13 +19,12 @@ export const ConversationMessageRemoteAttachment = memo(
     const { theme } = useAppTheme()
 
     const fromMe = messageIsFromCurrentSenderInboxId({ message })
+    const currentSender = useSafeCurrentSender()
 
     const { displayName } = usePreferredDisplayInfo({
       inboxId: message.senderInboxId,
       caller: "ConversationMessageRemoteAttachment",
     })
-
-    const { url, ...metadata } = message.content
 
     const {
       data: attachment,
@@ -33,8 +33,9 @@ export const ConversationMessageRemoteAttachment = memo(
       refetch: refetchAttachment,
     } = useRemoteAttachmentQuery({
       xmtpMessageId: message.xmtpId,
-      url,
-      metadata,
+      encryptedRemoteAttachmentContent: message.content,
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId: message.xmtpConversationId,
     })
 
     const handleTap = useCallback(() => {

@@ -1,6 +1,6 @@
 import { memo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { MessageMultiRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-message-multi-remote-attachments"
+import { ConversationMessageMultiRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-message-multi-remote-attachments"
 import { ConversationMessageRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-message-remote-attachment"
 import { ConversationMessageStaticAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-message-static-attachment"
 import { ConversationMessageGroupUpdate } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-group-update"
@@ -67,7 +67,7 @@ export const ConversationMessage = memo(function ConversationMessage(props: {}) 
   }
 
   if (isMultiRemoteAttachmentMessage(message)) {
-    return <MessageMultiRemoteAttachment message={message} />
+    return <ConversationMessageMultiRemoteAttachment message={message} />
   }
 
   const _ensureNever: never = message
