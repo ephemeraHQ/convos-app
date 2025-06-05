@@ -1,7 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { getConversationMetadataQueryOptions } from "@/features/conversation/conversation-metadata/conversation-metadata.query"
 import { getConversationSpamQueryOptions } from "@/features/conversation/conversation-requests-list/conversation-spam.query"
 import { getUnknownConsentConversationsQueryOptions } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
@@ -32,15 +31,15 @@ export function useConversationRequestsListItem() {
     ),
   })
 
-  const metadataQueries = useQueries({
-    queries: (unknownConsentConversationIds ?? []).map((conversationId) =>
-      getConversationMetadataQueryOptions({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-        caller: "useConversationRequestsListItem",
-      }),
-    ),
-  })
+  // const metadataQueries = useQueries({
+  //   queries: (unknownConsentConversationIds ?? []).map((conversationId) =>
+  //     getConversationMetadataQueryOptions({
+  //       clientInboxId: currentSender.inboxId,
+  //       xmtpConversationId: conversationId,
+  //       caller: "useConversationRequestsListItem",
+  //     }),
+  //   ),
+  // })
 
   const conversationQueries = useQueries({
     queries: (unknownConsentConversationIds ?? []).map((conversationId) =>
@@ -55,7 +54,7 @@ export function useConversationRequestsListItem() {
   const isLoading =
     isLoadingUnknownConsentConversationIds ||
     spamQueries.some((q) => q.isLoading) ||
-    metadataQueries.some((q) => q.isLoading) ||
+    // metadataQueries.some((q) => q.isLoading) ||
     conversationQueries.some((q) => q.isLoading)
 
   const likelySpamItems: Array<{
@@ -69,16 +68,20 @@ export function useConversationRequestsListItem() {
 
   unknownConsentConversationIds.map((conversationId, i) => {
     const spamQuery = spamQueries[i]
-    const metadataQuery = metadataQueries[i]
+    // const metadataQuery = metadataQueries[i]
     const conversationQuery = conversationQueries[i]
 
-    if (metadataQuery.isLoading || spamQuery.isLoading || conversationQuery.isLoading) {
+    if (
+      // metadataQuery.isLoading
+      spamQuery.isLoading ||
+      conversationQuery.isLoading
+    ) {
       return
     }
 
-    if (metadataQuery.data?.deleted) {
-      return
-    }
+    // if (metadataQuery.data?.deleted) {
+    //   return
+    // }
 
     if (!conversationQuery.data) {
       // Skip if conversation data is not available
@@ -106,8 +109,8 @@ export function useConversationRequestsListItem() {
     try {
       await Promise.all([
         refetchUnknownConsentConversationIds(),
-        ...spamQueries.map((q) => q.refetch()),
-        ...metadataQueries.map((q) => q.refetch()),
+        // ...spamQueries.map((q) => q.refetch()),
+        // ...metadataQueries.map((q) => q.refetch()),
       ])
     } catch (error) {
       captureError(
@@ -120,9 +123,9 @@ export function useConversationRequestsListItem() {
   }, [
     refetchUnknownConsentConversationIds,
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
-    spamQueries,
+    // spamQueries,
     // eslint-disable-next-line @tanstack/query/no-unstable-deps
-    metadataQueries,
+    // metadataQueries,
   ])
 
   return {

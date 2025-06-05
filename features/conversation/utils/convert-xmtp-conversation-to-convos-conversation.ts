@@ -32,13 +32,18 @@ export async function convertXmtpConversationToConvosConversation(
         xmtpConversation.isActive(),
       ])
 
+    const conversationConsentState = await convertConsentStateToXmtpConsentState(consentState)
+
     // TMP until we have lastMessage function available from the SDK
     const lastMessage = conversationXmtpLastMessage
       ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage as IXmtpDecodedMessage)
-      : await getXmtpLastMessageFromMessages({
-          clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
-          xmtpConversationId: xmtpConversation.id,
-        })
+      : // Allowed are the most important. The rest we don't really care if no last message
+        conversationConsentState === "allowed"
+        ? await getXmtpLastMessageFromMessages({
+            clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
+            xmtpConversationId: xmtpConversation.id,
+          })
+        : undefined
 
     const addedByInboxId = xmtpConversation.addedByInboxId as unknown as IXmtpInboxId
 
@@ -49,7 +54,7 @@ export async function convertXmtpConversationToConvosConversation(
       addedByInboxId,
       xmtpId: xmtpConversation.id,
       xmtpTopic: xmtpConversation.topic,
-      consentState: convertConsentStateToXmtpConsentState(consentState),
+      consentState: conversationConsentState,
       name: xmtpConversation.groupName,
       description: xmtpConversation.groupDescription,
       imageUrl: xmtpConversation.groupImageUrl,
@@ -69,13 +74,18 @@ export async function convertXmtpConversationToConvosConversation(
     xmtpConversation.lastMessage,
   ])
 
+  const conversationConsentState = await convertConsentStateToXmtpConsentState(consentState)
+
   // TMP until we have lastMessage function available from the SDK
   const lastMessage = conversationXmtpLastMessage
     ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage as IXmtpDecodedMessage)
-    : await getXmtpLastMessageFromMessages({
-        clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
-        xmtpConversationId: xmtpConversation.id,
-      })
+    : // Only fetch fallback if it's allowed. We don't care if it's denied
+      conversationConsentState === "allowed"
+      ? await getXmtpLastMessageFromMessages({
+          clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
+          xmtpConversationId: xmtpConversation.id,
+        })
+      : undefined
 
   return {
     type: "dm",
@@ -84,7 +94,7 @@ export async function convertXmtpConversationToConvosConversation(
     xmtpId: xmtpConversation.id,
     createdAt: xmtpConversation.createdAt,
     xmtpTopic: xmtpConversation.topic,
-    consentState: convertConsentStateToXmtpConsentState(consentState),
+    consentState: conversationConsentState,
     isActive: true,
   } satisfies IDm
 }

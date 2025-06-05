@@ -9,6 +9,7 @@ import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
+import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { textSizeStyles } from "@/design-system/Text/Text.styles"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -502,9 +503,11 @@ const ListFooterComponent = memo(function ListFooterComponent() {
 
   if ((hasLessThanOnePageOfMessages || hasNoMoreMessages) && isGroup && isNotLoading) {
     return (
-      <AnimatedVStack entering={theme.animation.reanimatedFadeInSpring}>
-        <ConversationInfoBanner />
-      </AnimatedVStack>
+      <IsReadyWrapper>
+        <AnimatedVStack entering={theme.animation.reanimatedFadeInUpSpring}>
+          <ConversationInfoBanner />
+        </AnimatedVStack>
+      </IsReadyWrapper>
     )
   }
 

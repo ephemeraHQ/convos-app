@@ -43,8 +43,8 @@ export async function getXmtpClientByInboxId(args: { inboxId: IXmtpInboxId }) {
 }
 
 export async function logoutXmtpClient(args: {
-  inboxId?: IXmtpInboxId
-  ethAddress?: IEthereumAddress
+  inboxId: IXmtpInboxId
+  ethAddress: IEthereumAddress
   deleteDatabase?: boolean
 }) {
   const { inboxId, ethAddress, deleteDatabase = false } = args
@@ -89,16 +89,7 @@ export async function logoutXmtpClient(args: {
 
     // Drop the client from XMTP
     xmtpLogger.debug(`Dropping client: ${lookupId}`)
-    await dropXmtpClient({ xmtpClient })
-
-    // Remove from cache (both keys)
-    if (ethAddress) {
-      xmtpClientCache.delete(getEthAddressCacheKey(ethAddress))
-      xmtpClientCache.delete(getInboxIdCacheKey(xmtpClient.inboxId))
-    } else if (inboxId) {
-      xmtpClientCache.delete(getInboxIdCacheKey(inboxId))
-      // We don't have ethAddress here, so we can't clean up that key
-    }
+    await dropXmtpClient({ xmtpClient, ethAddress })
 
     // Always clean up encryption key if we're deleting the database
     if (deleteDatabase && ethAddress) {
@@ -120,6 +111,7 @@ export async function dropXmtpClient(args: {
   ethAddress: IEthereumAddress
 }) {
   const { xmtpClient, ethAddress } = args
+  xmtpLogger.debug(`Dropping XMTP client for ethAddress: ${ethAddress}`)
   await XmtpClient.dropClient(xmtpClient.installationId)
   xmtpClientCache.delete(getEthAddressCacheKey(ethAddress))
   xmtpClientCache.delete(getInboxIdCacheKey(xmtpClient.inboxId))

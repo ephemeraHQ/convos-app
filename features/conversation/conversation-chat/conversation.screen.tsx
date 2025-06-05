@@ -92,7 +92,10 @@ const Content = memo(function Content() {
     )
   }
 
-  if ((!conversation && !isCreatingNewConversation) || conversationError) {
+  // Show error state if:
+  // - No conversation exists and we're not creating a new one
+  // - Or if there was an error loading the conversation and we don't have a conversation yet
+  if ((!conversation && !isCreatingNewConversation) || (conversationError && !conversation)) {
     captureError(
       new GenericError({
         error:

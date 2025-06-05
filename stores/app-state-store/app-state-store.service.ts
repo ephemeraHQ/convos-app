@@ -113,6 +113,7 @@ export function startListeningToAppStateStore() {
           currentState === "active" && storePreviousState === "background"
         const isGoingToBackground =
           currentState === "background" && storePreviousState === "inactive"
+        const isGoingToInactive = currentState === "inactive" && storePreviousState === "active"
 
         if (isOpenFromClosed) {
           appStateLogger.debug("App is open from closed")
@@ -120,6 +121,10 @@ export function startListeningToAppStateStore() {
           appStateLogger.debug("App is open from background")
         } else if (isGoingToBackground) {
           appStateLogger.debug("App is going to background")
+        } else if (isGoingToInactive) {
+          appStateLogger.debug("App is going to inactive")
+        } else {
+          appStateLogger.warn("No state change detected this might be a bug")
         }
 
         const senders = getAllSenders()

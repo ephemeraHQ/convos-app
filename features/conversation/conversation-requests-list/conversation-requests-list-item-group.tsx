@@ -5,12 +5,11 @@ import { ISwipeableRenderActionsArgs } from "@/components/swipeable"
 import { MIDDLE_DOT } from "@/design-system/middle-dot"
 import { isCurrentSender, useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
+import { ConversationListItem } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
 import { ConversationListItemSwipeable } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable"
-import { useConversationIsUnread } from "@/features/conversation/conversation-list/hooks/use-conversation-is-unread"
-import { useDeleteGroup } from "@/features/conversation/conversation-list/hooks/use-delete-group"
+import { DeleteSwipeableAction } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-swipeable/conversation-list-item-swipeable-delete-action"
 import { useMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
-import { useToggleReadStatus } from "@/features/conversation/conversation-list/hooks/use-toggle-read-status"
-import { useConversationIsMuted } from "@/features/conversation/conversation-metadata/use-conversation-is-muted"
+import { useDeleteConversationsMutation } from "@/features/conversation/conversation-requests-list/delete-conversations.mutation"
 import { useConversationLastMessage } from "@/features/conversation/hooks/use-conversation-last-message"
 import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { ensureGroupQueryData } from "@/features/groups/queries/group.query"
@@ -19,40 +18,24 @@ import {
   usePreferredDisplayInfo,
 } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useFocusRerender } from "@/hooks/use-focus-rerender"
+import { EDGE_BACK_GESTURE_HIT_SLOP } from "@/navigation/navigation.utils"
 import { useRouter } from "@/navigation/use-navigation"
-import { captureError } from "@/utils/capture-error"
+import { captureError, captureErrorWithToast } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { ConversationListItem } from "./conversation-list-item"
-import { DeleteSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-delete-action"
-import { ToggleUnreadSwipeableAction } from "./conversation-list-item-swipeable/conversation-list-item-swipeable-toggle-read-action"
 
-type IConversationListItemGroupProps = {
+type IConversationRequestsListItemGroupProps = {
   xmtpConversationId: IXmtpConversationId
 }
 
-export const ConversationListItemGroup = memo(function ConversationListItemGroup({
+export const ConversationRequestsListItemGroup = memo(function ConversationRequestsListItemGroup({
   xmtpConversationId,
-}: IConversationListItemGroupProps) {
+}: IConversationRequestsListItemGroupProps) {
   const router = useRouter()
-
   const currentSender = useSafeCurrentSender()
-
-  // To update the timestamp when the screen comes into focus
-  useFocusRerender()
 
   const { data: lastMessage, isLoading: isLoadingLastMessage } = useConversationLastMessage({
     xmtpConversationId,
-    caller: "ConversationListItemGroup",
-  })
-
-  const { isUnread } = useConversationIsUnread({
-    xmtpConversationId,
-  })
-
-  const { data: isMuted } = useConversationIsMuted({
-    xmtpConversationId,
-    caller: "ConversationListItemGroup",
+    caller: "ConversationRequestsListItemGroup",
   })
 
   const { groupName } = useGroupName({
@@ -61,12 +44,13 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
 
   const { displayName: senderDisplayName } = usePreferredDisplayInfo({
     inboxId: lastMessage?.senderInboxId,
-    caller: "ConversationListItemGroup",
+    caller: "ConversationRequestsListItemGroup",
     enabled: !isLoadingLastMessage && !!lastMessage,
   })
 
-  // Putting this in a useState because we might not care about it if we have a last message
   const [inviterDisplayName, setInviterDisplayName] = useState("")
+
+  const { mutateAsync: deleteConversationsAsync } = useDeleteConversationsMutation()
 
   useEffect(() => {
     if (!isLoadingLastMessage && !lastMessage) {
@@ -75,13 +59,13 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
           const group = await ensureGroupQueryData({
             clientInboxId: currentSender.inboxId,
             xmtpConversationId,
-            caller: "ConversationListItemGroup",
+            caller: "ConversationRequestsListItemGroup",
           })
 
           if (group?.addedByInboxId) {
             const { displayName } = await ensurePreferredDisplayInfo({
               inboxId: group.addedByInboxId,
-              caller: "ConversationListItemGroup",
+              caller: "ConversationRequestsListItemGroup",
             })
 
             if (displayName) {
@@ -108,13 +92,10 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     })
   }, [xmtpConversationId, router])
 
-  // Title
   const title = groupName
-
   const messageText = useMessageContentStringValue(lastMessage)
 
-  // Not in useMemo because we want to change the timestamp when we rerender
-  const subtitle = (() => {
+  const subtitle = useMemo(() => {
     if (!lastMessage) {
       if (inviterDisplayName) {
         return `${inviterDisplayName} invited you`
@@ -128,7 +109,6 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
       return ""
     }
 
-    // We already put the sender name in group update messages
     if (isGroupUpdatedMessage(lastMessage)) {
       return `${timeToShow} ${MIDDLE_DOT} ${messageText.trim()}`
     }
@@ -144,26 +124,24 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
     }
 
     return `${timeToShow} ${MIDDLE_DOT} ${senderPrefix}${messageText.trim()}`
-  })()
+  }, [inviterDisplayName, lastMessage, messageText, senderDisplayName])
 
-  const { toggleReadStatusAsync } = useToggleReadStatus({
-    xmtpConversationId,
-  })
+  const onLeftSwipe = useCallback(async () => {
+    try {
+      await deleteConversationsAsync([xmtpConversationId])
+    } catch (error) {
+      captureErrorWithToast(
+        new GenericError({ error, additionalMessage: "Error deleting group request" }),
+        {
+          message: "Error deleting request",
+        },
+      )
+    }
+  }, [deleteConversationsAsync, xmtpConversationId])
 
   const renderLeftActions = useCallback((args: ISwipeableRenderActionsArgs) => {
     return <DeleteSwipeableAction {...args} />
   }, [])
-
-  const renderRightActions = useCallback(
-    (args: ISwipeableRenderActionsArgs) => {
-      return <ToggleUnreadSwipeableAction {...args} xmtpConversationId={xmtpConversationId} />
-    },
-    [xmtpConversationId],
-  )
-
-  const onDeleteGroup = useDeleteGroup({
-    xmtpConversationId,
-  })
 
   const AvatarComponent = useMemo(() => {
     return <GroupAvatar size="lg" xmtpConversationId={xmtpConversationId} />
@@ -177,19 +155,16 @@ export const ConversationListItemGroup = memo(function ConversationListItemGroup
         avatarComponent={AvatarComponent}
         title={title}
         subtitle={subtitle}
-        isUnread={isUnread}
-        isMuted={isMuted}
       />
     ),
-    [onPress, AvatarComponent, title, subtitle, isUnread, isMuted],
+    [onPress, AvatarComponent, title, subtitle],
   )
 
   return (
     <ConversationListItemSwipeable
-      renderRightActions={renderRightActions}
+      leftHitSlop={-EDGE_BACK_GESTURE_HIT_SLOP}
       renderLeftActions={renderLeftActions}
-      onLeftSwipe={onDeleteGroup}
-      onRightSwipe={toggleReadStatusAsync}
+      onLeftSwipe={onLeftSwipe}
     >
       {ChildrenComponent}
     </ConversationListItemSwipeable>

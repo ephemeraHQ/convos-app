@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/react-native"
 import { config } from "@/config"
-import { xmtpClientCache } from "@/features/xmtp/xmtp-client/xmtp-client-cache"
 // import {
 //   appCameBackFromBackground,
 //   appHasGoneToBackground,
@@ -60,8 +59,8 @@ export async function wrapXmtpCallWithDuration<T>(
 
         const { promise: timedPromise } = withTimeout({
           promise: xmtpSpanCall,
-          timeoutMs: 20000,
-          errorMessage: `Operation [${operationId}] "${xmtpFunctionName}" timed out after 20 seconds`,
+          timeoutMs: 15000, // If it takes longer than this, it's probably a bug...
+          errorMessage: `Operation [${operationId}] "${xmtpFunctionName}" timed out after 15 seconds`,
         })
 
         return await timedPromise

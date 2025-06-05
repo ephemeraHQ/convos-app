@@ -139,6 +139,7 @@ export const useLogout = () => {
               senders.map((sender) =>
                 logoutXmtpClient({
                   inboxId: sender.inboxId,
+                  ethAddress: sender.ethereumAddress,
                 }),
               ),
             )
