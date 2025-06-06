@@ -41,9 +41,11 @@ export async function searchExistingGroupsByGroupMembers(args: { searchQuery: st
       try {
         // const otherMembersInboxIds = group.members.ids.filter((id) => id !== searcherInboxId)
         // For now only search for members that we allowed otherwise we're doing too many requests!
-        const otherMemberInboxIdsWithAllowedConsent = Object.values(group.members.byId)
-          .filter((member) => member.consentState === "allowed")
-          .map((member) => member.inboxId)
+        const otherMemberInboxIdsWithAllowedConsent = group.members?.byId
+          ? Object.values(group.members.byId)
+              .filter((member) => member.consentState === "allowed")
+              .map((member) => member.inboxId)
+          : []
 
         if (otherMemberInboxIdsWithAllowedConsent.length === 0) {
           return
