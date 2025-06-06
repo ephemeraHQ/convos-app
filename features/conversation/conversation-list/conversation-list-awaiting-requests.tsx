@@ -40,7 +40,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
 
   const subtitle = useMemo(() => {
     const getSubtitleText = () => {
-      if (isLoadingUnknownConversations) {
+      if (isLoadingUnknownConversations || isFetchingUnknownConversations) {
         return "Checking for invites"
       }
       return `${numberOfRequests} chat${numberOfRequests > 1 ? "s" : ""}`
@@ -57,7 +57,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
         <ConversationListItemSubtitle>{text}</ConversationListItemSubtitle>
       </AnimatedHStack>
     )
-  }, [isLoadingUnknownConversations, numberOfRequests, theme])
+  }, [isLoadingUnknownConversations, isFetchingUnknownConversations, numberOfRequests, theme])
 
   const AvatarComponent = useMemo(() => {
     return (
@@ -87,7 +87,7 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
     } satisfies IVStackProps
   }, [])
 
-  if (numberOfRequests === 0 && (isLoadingUnknownConversations || isFetchingUnknownConversations)) {
+  if (numberOfRequests === 0) {
     return null
   }
 
