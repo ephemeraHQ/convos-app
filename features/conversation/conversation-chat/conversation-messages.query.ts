@@ -603,3 +603,7 @@ export function getConversationMessagesInfiniteQueryObserver(args: IArgs) {
   observersCache.set(cacheKey, observer)
   return observer
 }
+
+export async function fetchConversationMessagesInfiniteQuery(args: IArgsWithCaller) {
+  return reactQueryClient.fetchInfiniteQuery(getConversationMessagesInfiniteQueryOptions(args))
+}

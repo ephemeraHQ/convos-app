@@ -12,6 +12,7 @@ import { XMTPError } from "@/utils/error"
 import { getRandomId } from "@/utils/general"
 import { xmtpLogger } from "@/utils/logger/logger"
 import { withTimeout } from "@/utils/promise-timeout"
+import { retryWithBackoff } from "@/utils/retryWithBackoff"
 
 /**
  * Wraps an async XMTP SDK call using the modified withTimeout.
@@ -50,25 +51,25 @@ export async function wrapXmtpCallWithDuration<T>(
   try {
     xmtpLogger.debug(`Operation [${operationId}] "${xmtpFunctionName}" started...`)
 
-    const xmtpSpanCall = Sentry.startSpan({ name: xmtpFunctionName, op: "XMTP" }, async () => {
-      return await xmtpCall()
+    const result = await retryWithBackoff({
+      fn: async () => {
+        const xmtpSpanCall = Sentry.startSpan({ name: xmtpFunctionName, op: "XMTP" }, async () => {
+          return await xmtpCall()
+        })
+
+        const { promise: timedPromise } = withTimeout({
+          promise: xmtpSpanCall,
+          timeoutMs: 15000, // If it takes longer than this, it's probably a bug...
+          errorMessage: `Operation [${operationId}] "${xmtpFunctionName}" timed out after 15 seconds`,
+        })
+
+        return await timedPromise
+      },
+      retries: 3,
+      delay: 1000,
+      maxDelay: 10000,
+      context: `XMTP ${xmtpFunctionName}`,
     })
-
-    const { promise: timedPromise } = withTimeout({
-      promise: xmtpSpanCall,
-      timeoutMs: 15000, // Timeout remains as a safety net (wall-clock time)
-      errorMessage: `Operation [${operationId}] "${xmtpFunctionName}" timed out after 15 seconds`,
-    })
-
-    // // NOW add the operation to the store
-    // addOperation({
-    //   id: operationId,
-    //   name: xmtpFunctionName,
-    //   startTime: segmentStartTime, // Date.now() at this point
-    //   cancel, // from withTimeout if you were to use its cancel
-    // })
-
-    const result = await timedPromise
 
     // Add duration of the last active segment if app is currently active
     // if (currentAppState === "active") {

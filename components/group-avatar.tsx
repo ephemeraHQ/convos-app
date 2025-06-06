@@ -197,47 +197,45 @@ const GroupAvatarUI = memo(function GroupAvatarUI(props: GroupAvatarUIProps) {
 
   return (
     <Center style={[{ width: size, height: size }, $container, style]}>
-      <Center style={[{ width: size, height: size }, $container]}>
-        <VStack style={themed($background)} />
-        <Center style={$content}>
-          {positions.map((pos, index) => {
-            // Render member avatars (up to maxVisibleAvatars)
-            if (index < maxVisibleAvatars && index < memberCount) {
-              return (
-                <Avatar
-                  key={`avatar-${index}`}
-                  uri={members[index].uri}
-                  name={members[index].name}
-                  sizeNumber={(pos.size / 100) * size}
-                  style={{
-                    left: (pos.x / 100) * size,
-                    top: (pos.y / 100) * size,
-                    position: "absolute",
-                  }}
-                />
-              )
-            }
+      <VStack style={themed($background)} />
+      <Center style={$content}>
+        {positions.map((pos, index) => {
+          // Render member avatars (up to maxVisibleAvatars)
+          if (index < maxVisibleAvatars && index < memberCount) {
+            return (
+              <Avatar
+                key={`avatar-${index}`}
+                uri={members[index].uri}
+                name={members[index].name}
+                sizeNumber={(pos.size / 100) * size}
+                style={{
+                  left: (pos.x / 100) * size,
+                  top: (pos.y / 100) * size,
+                  position: "absolute",
+                }}
+              />
+            )
+          }
 
-            // Render "+N" indicator if there are more members than can be shown
-            // Only show if the avatar is large enough
-            if (
-              index === MAX_VISIBLE_MEMBERS &&
-              memberCount > maxVisibleAvatars &&
-              shouldShowExtraIndicator
-            ) {
-              return (
-                <ExtraMembersIndicator
-                  key={`extra-${index}`}
-                  pos={pos}
-                  extraMembersCount={memberCount - maxVisibleAvatars}
-                  size={size}
-                />
-              )
-            }
+          // Render "+N" indicator if there are more members than can be shown
+          // Only show if the avatar is large enough
+          if (
+            index === MAX_VISIBLE_MEMBERS &&
+            memberCount > maxVisibleAvatars &&
+            shouldShowExtraIndicator
+          ) {
+            return (
+              <ExtraMembersIndicator
+                key={`extra-${index}`}
+                pos={pos}
+                extraMembersCount={memberCount - maxVisibleAvatars}
+                size={size}
+              />
+            )
+          }
 
-            return null
-          })}
-        </Center>
+          return null
+        })}
       </Center>
     </Center>
   )

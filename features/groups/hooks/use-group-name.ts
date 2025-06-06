@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { queryOptions, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getGroupQueryOptions } from "@/features/groups/queries/group.query"
@@ -26,17 +26,21 @@ export const useGroupName = (args: { xmtpConversationId: IXmtpConversationId }) 
 
   const currentSenderInboxId = useSafeCurrentSender().inboxId
 
-  const { data: group, isLoading: isLoadingGroup } = useQuery({
-    ...getGroupQueryOptions({
-      clientInboxId: currentSenderInboxId,
-      xmtpConversationId,
-      caller: "useGroupName",
-    }),
-    select: (data) => ({
-      name: data?.name,
-      memberIds: data?.members?.ids ?? [],
-    }),
-  })
+  const options = useMemo(() => {
+    return queryOptions({
+      ...getGroupQueryOptions({
+        clientInboxId: currentSenderInboxId,
+        xmtpConversationId,
+        caller: "useGroupName",
+      }),
+      select: (data) => ({
+        name: data?.name,
+        memberIds: data?.members?.ids ?? [],
+      }),
+    })
+  }, [currentSenderInboxId, xmtpConversationId])
+
+  const { data: group, isLoading: isLoadingGroup } = useQuery(options)
 
   const memberProfiles = usePreferredDisplayInfoBatch({
     // For now just showing first 4 members
@@ -45,21 +49,17 @@ export const useGroupName = (args: { xmtpConversationId: IXmtpConversationId }) 
   })
 
   // Create a fallback name based on member profiles
-  // This will only recalculate when memberProfiles actually changes
-  const fallbackGroupName = useMemo(() => {
+  const fallbackGroupName = (() => {
     if (!memberProfiles?.length) {
       return ""
     }
 
     const displayNames = memberProfiles.map((profile) => profile?.displayName || "")
     return getGroupNameForMemberNames({ names: displayNames })
-  }, [memberProfiles])
+  })()
 
-  const isLoading = useMemo(() => {
-    return isLoadingGroup || memberProfiles.some((profile) => profile.isLoading)
-  }, [isLoadingGroup, memberProfiles])
+  const isLoading = isLoadingGroup || memberProfiles.some((profile) => profile.isLoading)
 
-  // Simple selection between group name and fallback
   const groupName = group?.name || fallbackGroupName
 
   return {

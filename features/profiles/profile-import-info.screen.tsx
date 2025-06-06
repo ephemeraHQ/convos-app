@@ -1,13 +1,10 @@
 import { memo, useCallback } from "react"
 import { Snackbars } from "@/components/snackbar/snackbars"
-import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useProfileMeStore } from "@/features/profiles/profile-me.store"
+import { useProfileMeStore } from "@/features/profiles/profile-me.store-context"
 import { ConnectWallet } from "@/features/wallets/connect-wallet/connect-wallet"
 
 export const ProfileImportInfoScreen = memo(function ProfileImportInfoScreen() {
-  const currentSender = useSafeCurrentSender()
-
-  const profileMeStore = useProfileMeStore(currentSender.inboxId)
+  const profileMeStore = useProfileMeStore()
 
   const handleSelectName = useCallback(
     (info: { name: string; avatar: string | undefined }) => {

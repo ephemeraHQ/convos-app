@@ -14,13 +14,14 @@ import {
 import { timing } from "./timing"
 
 export const SICK_EASE_OUT = Easing.out(Easing.cubic)
-export const SICK_DAMPING = 65
-export const SICK_STIFFNESS = 400
-export const SICK_MASS = 1.03
+export const SICK_DAMPING = 30
+export const SICK_STIFFNESS = 250
+export const SICK_MASS = 1
 
 export const SICK_SPRING_CONFIG: WithSpringConfig = {
   damping: SICK_DAMPING,
   stiffness: SICK_STIFFNESS,
+  mass: SICK_MASS,
 }
 
 // From https://animations.dev/
@@ -76,6 +77,7 @@ export const animation = {
   spring: {
     damping: SICK_DAMPING,
     stiffness: SICK_STIFFNESS,
+    mass: SICK_MASS,
   },
 
   easings,
@@ -90,23 +92,41 @@ export const animation = {
 
   reanimatedLayoutSpringTransition: LinearTransition.springify()
     .damping(SICK_DAMPING)
-    .stiffness(SICK_STIFFNESS),
+    .stiffness(SICK_STIFFNESS)
+    .mass(SICK_MASS),
 
   reanimatedFadeInDownSpring: FadeInDown.easing(SICK_EASE_OUT)
     .stiffness(SICK_STIFFNESS)
-    .damping(SICK_DAMPING),
+    .damping(SICK_DAMPING)
+    .mass(SICK_MASS),
+
+  reanimatedFadeInUpSpring: FadeInUp.easing(SICK_EASE_OUT)
+    .stiffness(SICK_STIFFNESS)
+    .damping(SICK_DAMPING)
+    .mass(SICK_MASS),
 
   fadeInUpSpring: () =>
-    FadeInUp.easing(SICK_EASE_OUT).stiffness(SICK_STIFFNESS).damping(SICK_DAMPING),
+    FadeInUp.easing(SICK_EASE_OUT).stiffness(SICK_STIFFNESS).damping(SICK_DAMPING).mass(SICK_MASS),
 
-  fadeInDownSpring: () => FadeInDown.springify().stiffness(SICK_STIFFNESS).damping(SICK_DAMPING),
+  fadeInDownSpring: () =>
+    FadeInDown.springify().stiffness(SICK_STIFFNESS).damping(SICK_DAMPING).mass(SICK_MASS),
 
-  reanimatedFadeInSpring: FadeIn.springify().stiffness(SICK_STIFFNESS).damping(SICK_DAMPING),
+  reanimatedFadeInSpring: FadeIn.springify()
+    .stiffness(SICK_STIFFNESS)
+    .damping(SICK_DAMPING)
+    .mass(SICK_MASS),
 
   reanimatedFadeInSpringSlow: () =>
-    FadeIn.springify().stiffness(SICK_STIFFNESS).damping(SICK_DAMPING).duration(timing.slow),
+    FadeIn.springify()
+      .stiffness(SICK_STIFFNESS)
+      .damping(SICK_DAMPING)
+      .mass(SICK_MASS)
+      .duration(timing.slow),
 
-  reanimatedFadeOutSpring: FadeOut.springify().stiffness(SICK_STIFFNESS).damping(SICK_DAMPING),
+  reanimatedFadeOutSpring: FadeOut.springify()
+    .stiffness(SICK_STIFFNESS)
+    .damping(SICK_DAMPING)
+    .mass(SICK_MASS),
 
   fadeInUpSlow: () => FadeInUp.duration(timing.slow).easing(SICK_EASE_OUT),
 
@@ -120,6 +140,7 @@ export const animation = {
       const springConfig = {
         damping,
         stiffness,
+        mass: SICK_MASS,
       }
 
       const animations = {
@@ -154,6 +175,7 @@ export const animation = {
       const springConfig = {
         damping,
         stiffness,
+        mass: SICK_MASS,
       }
 
       const animations = {

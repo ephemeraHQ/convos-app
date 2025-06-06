@@ -10,15 +10,23 @@ import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
 import { Icon } from "@/design-system/Icon/Icon"
 import { IVStackProps, VStack } from "@/design-system/VStack"
-import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
+import {
+  getSafeCurrentSender,
+  useSafeCurrentSender,
+} from "@/features/authentication/multi-inbox.store"
 import {
   ConversationListItem,
   ConversationListItemSubtitle,
   ConversationListItemTitle,
 } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
+import { ConversationRequestsListItemDm } from "@/features/conversation/conversation-requests-list/conversation-requests-list-item-dm"
+import { ConversationRequestsListItemGroup } from "@/features/conversation/conversation-requests-list/conversation-requests-list-item-group"
 import { useConversationRequestsListScreenHeader } from "@/features/conversation/conversation-requests-list/conversation-requests-list.screen-header"
 import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
+import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
+import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useEffectOnce } from "@/hooks/use-effect-once"
 import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
@@ -72,10 +80,37 @@ export const ConversationRequestsListScreen = memo(function () {
             ) : undefined
           }
           conversationsIds={likelyNotSpamConversationIds}
+          renderConversation={({ item }) => {
+            return <ConversationRequestsListItem xmtpConversationId={item} />
+          }}
         />
       </IsReadyWrapper>
     </Screen>
   )
+})
+
+const ConversationRequestsListItem = memo(function ConversationRequestsListItem(props: {
+  xmtpConversationId: IXmtpConversationId
+}) {
+  const { xmtpConversationId } = props
+
+  const currentSender = useSafeCurrentSender()
+
+  const { data: conversation } = useConversationQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "ConversationRequestsListItem",
+  })
+
+  if (!conversation) {
+    return null
+  }
+
+  if (isConversationGroup(conversation)) {
+    return <ConversationRequestsListItemGroup xmtpConversationId={conversation.xmtpId} />
+  }
+
+  return <ConversationRequestsListItemDm xmtpConversationId={conversation.xmtpId} />
 })
 
 const ListFooter = memo(function ListFooter({ likelySpamCount }: { likelySpamCount: number }) {
@@ -144,7 +179,7 @@ const ListHeader = memo(function ListHeader() {
   return (
     <BannerContainer
       style={{
-        marginTop: theme.spacing.xs + theme.spacing.xs, // The Figma as an additional margin top
+        marginTop: theme.spacing.xs + theme.spacing.xs,
         marginBottom: theme.spacing.xs,
         marginHorizontal: theme.spacing.lg,
       }}

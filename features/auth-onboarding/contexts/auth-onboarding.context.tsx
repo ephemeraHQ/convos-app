@@ -224,9 +224,9 @@ export const AuthOnboardingContextProvider = (props: IAuthOnboardingContextProps
 
       const httpClient = new TurnkeyClient({ baseUrl: config.turnkey.turnkeyApiUrl }, stamper)
 
-      authLogger.debug("Creating embedded key")
+      authLogger.debug("Creating turnkey embedded key")
       const targetPublicKey = await createEmbeddedKey()
-      authLogger.debug("Embedded key created")
+      authLogger.debug("Turnkey embedded key created")
 
       authLogger.debug("Creating read-write session")
       const sessionResponse = await httpClient.createReadWriteSession({
