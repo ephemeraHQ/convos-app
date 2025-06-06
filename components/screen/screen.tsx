@@ -1,5 +1,5 @@
 import { useScrollToTop } from "@react-navigation/native"
-import React, { useRef } from "react"
+import React, { memo, useRef } from "react"
 import { ScrollView, View, ViewStyle } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -8,16 +8,16 @@ import { useAppTheme } from "../../theme/use-app-theme"
 import { isNonScrolling, useAutoPreset, useSafeAreaInsetsStyle } from "./screen.helpers"
 import { AutoScreenProps, IScreenProps, ScrollScreenProps } from "./screen.props"
 
-function ScreenWithoutScrolling(props: IScreenProps) {
+const ScreenWithoutScrolling = memo(function ScreenWithoutScrolling(props: IScreenProps) {
   const { style, contentContainerStyle, children } = props
   return (
     <View style={[$outerStyle, style]}>
       <View style={[$innerStyle, contentContainerStyle]}>{children}</View>
     </View>
   )
-}
+})
 
-function ScreenWithScrolling(props: IScreenProps) {
+const ScreenWithScrolling = memo(function ScreenWithScrolling(props: IScreenProps) {
   const insets = useSafeAreaInsets()
   const { theme } = useAppTheme()
 
@@ -64,7 +64,7 @@ function ScreenWithScrolling(props: IScreenProps) {
       {children}
     </KeyboardAwareScrollView>
   )
-}
+})
 
 /**
  * Represents a screen component that provides a consistent layout and behavior for different screen presets.
@@ -72,7 +72,7 @@ function ScreenWithScrolling(props: IScreenProps) {
  * It handles safe area insets, keyboard avoiding behavior, and scrollability based on the preset.
  * @see [Documentation and Examples]{@link https://docs.infinite.red/ignite-cli/boilerplate/app/components/Screen/}
  */
-export function Screen(props: IScreenProps) {
+export const Screen = memo(function Screen(props: IScreenProps) {
   const { theme } = useAppTheme()
   const { backgroundColor = theme.colors.background.surfaceless, safeAreaEdges } = props
 
@@ -87,7 +87,7 @@ export function Screen(props: IScreenProps) {
       )}
     </VStack>
   )
-}
+})
 
 const $containerStyle: ViewStyle = {
   flex: 1,

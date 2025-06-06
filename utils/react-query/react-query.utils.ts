@@ -1,3 +1,4 @@
+import { QueryKey } from "@tanstack/react-query"
 import { queryLogger } from "@/utils/logger/logger"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { reactQueryPersistingStorage } from "../storage/storages"
@@ -7,7 +8,7 @@ type DisallowedKey = "caller"
 
 export function getReactQueryKey<T extends Record<string, string | undefined>>(
   args: { baseStr: string } & { [K in Exclude<keyof T, DisallowedKey>]?: string },
-): string[] {
+): QueryKey {
   const { baseStr, ...rest } = args
   const filteredEntries = Object.entries(rest).filter(([key]) => key !== "caller")
   return [baseStr, ...filteredEntries.map(([key, value]) => `${key}: ${value}`)]

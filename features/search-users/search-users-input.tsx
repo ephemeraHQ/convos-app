@@ -13,6 +13,7 @@ import { Text } from "@/design-system/Text"
 import { TextInput } from "@/design-system/text-input"
 import { VStack } from "@/design-system/VStack"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { useEffectAfterInteractions } from "@/hooks/use-effect-after-interactions"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { Haptics } from "@/utils/haptics"
 import { SearchUsersInputChip } from "./search-users-input-chip"
@@ -86,6 +87,13 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
     useSearchUsersInputStore.getState().actions.setSelectedChipInboxId(null)
   }, [])
 
+  useEffectAfterInteractions(() => {
+    setTimeout(() => {
+      localInputRef.current?.focus()
+      // Cleaner to wait for animation to finish until we focus the input
+    }, 450)
+  }, [])
+
   useImperativeHandle(inputRefProp, () => {
     return {
       ...(localInputRef.current || {}),
@@ -109,7 +117,6 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
           ))}
           <TextInput
             onPress={handlePressOnTextInput}
-            autoFocus
             ref={localInputRef}
             style={styles.$input}
             defaultValue={defaultSearchTextValue}
@@ -117,7 +124,7 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
             placeholder={searchSelectedUserInboxIds.length === 0 ? "Name, ENS, Base…" : ""}
             onKeyPress={handleKeyPress}
             autoCapitalize="none"
-            autoCorrect={false}
+            autoCorrect={true}
             cursorColor={selectedChipInboxId ? "transparent" : undefined}
             caretHidden={Boolean(selectedChipInboxId)}
           />

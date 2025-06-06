@@ -1,27 +1,29 @@
 import { memo } from "react"
-import { ClickableText } from "@/components/clickable-text"
-import { useAppTheme } from "@/theme/use-app-theme"
-import { createVanityUrlParser } from "./conversation-message-parsers"
+import {
+  BubbleContainer,
+  BubbleContentContainer,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message-bubble"
+import { ConversationMessageGestures } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures"
+import { ConversationMessageSimpleText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-simple-text"
+import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
+import { IConversationMessageText } from "./conversation-message.types"
 
-export const ConversationMessageText = memo(function ConversationMessageText({
-  children,
-  inverted,
-}: {
-  children: string
-  inverted?: boolean
+export const ConversationMessageText = memo(function ConversationMessageText(props: {
+  message: IConversationMessageText
 }) {
-  const { theme } = useAppTheme()
-  
-  const vanityUrlParser = createVanityUrlParser(theme.colors.global.orange)
-  
+  const { message } = props
+
+  const fromMe = useConversationMessageContextSelector((state) => state.fromMe)
+
   return (
-    <ClickableText
-      additionalParsers={[vanityUrlParser]}
-      style={{
-        color: inverted ? theme.colors.text.inverted.primary : theme.colors.text.primary,
-      }}
-    >
-      {children}
-    </ClickableText>
+    <BubbleContainer>
+      <ConversationMessageGestures>
+        <BubbleContentContainer>
+          <ConversationMessageSimpleText inverted={fromMe}>
+            {message.content.text}
+          </ConversationMessageSimpleText>
+        </BubbleContentContainer>
+      </ConversationMessageGestures>
+    </BubbleContainer>
   )
 })

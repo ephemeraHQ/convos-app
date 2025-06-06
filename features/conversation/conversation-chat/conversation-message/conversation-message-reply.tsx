@@ -11,7 +11,7 @@ import {
   BubbleContentContainer,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-bubble"
 import { ConversationMessageGestures } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-gestures"
-import { ConversationMessageText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text"
+import { ConversationMessageSimpleText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-simple-text"
 import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import {
@@ -126,9 +126,9 @@ const MessageReplyContent = memo(function MessageReplyContent(props: {
 
   if (messageContentIsText(replyMessageContent.content)) {
     return (
-      <ConversationMessageText inverted={fromMe}>
+      <ConversationMessageSimpleText inverted={fromMe}>
         {replyMessageContent.content.text}
-      </ConversationMessageText>
+      </ConversationMessageSimpleText>
     )
   }
 

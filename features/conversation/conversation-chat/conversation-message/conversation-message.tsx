@@ -1,3 +1,4 @@
+import emojiRegex from "emoji-regex"
 import { memo } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { ConversationMessageMultiRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-message-multi-remote-attachments"
@@ -5,7 +6,8 @@ import { ConversationMessageRemoteAttachment } from "@/features/conversation/con
 import { ConversationMessageStaticAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-message-static-attachment"
 import { ConversationMessageGroupUpdate } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-group-update"
 import { MessageReply } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reply"
-import { ConversationMessageSimpleText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-simple-text"
+import { ConversationMessageText } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text"
+import { ConversationMessageTextEmojis } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-text-emojis"
 import { useConversationMessageQuery } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import {
@@ -37,7 +39,11 @@ export const ConversationMessage = memo(function ConversationMessage(props: {}) 
   }
 
   if (isTextMessage(message)) {
-    return <ConversationMessageSimpleText message={message} />
+    if (shouldRenderBigEmoji(message.content.text)) {
+      return <ConversationMessageTextEmojis message={message} />
+    } else {
+      return <ConversationMessageText message={message} />
+    }
   }
 
   if (isGroupUpdatedMessage(message)) {
@@ -74,3 +80,17 @@ export const ConversationMessage = memo(function ConversationMessage(props: {}) 
 
   return null
 })
+
+// Compile emoji regex once
+const compiledEmojiRegex = emojiRegex()
+
+const shouldRenderBigEmoji = (text: string) => {
+  const trimmedContent = text.trim()
+  const emojis = trimmedContent.match(compiledEmojiRegex) || []
+
+  const hasEmojis = emojis.length > 0
+  const hasFewerThanFourEmojis = emojis.length < 4
+  const containsOnlyEmojis = emojis.join("") === trimmedContent
+
+  return hasEmojis && hasFewerThanFourEmojis && containsOnlyEmojis
+}
