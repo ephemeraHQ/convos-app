@@ -1,7 +1,7 @@
 /**
  * TODO: Maybe delete this and just use the conversation query instead and add a "peer" argument?
  */
-import { queryOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
+import { QueryKey, queryOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { IDm } from "@/features/dm/dm.types"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import { getConversationQueryOptions } from "../conversation/queries/conversation.query"
@@ -19,7 +19,7 @@ export function getDmQueryOptions(args: IDmQueryArgs & { caller?: string }) {
       clientInboxId,
       xmtpConversationId,
       caller,
-    }) as UseQueryOptions<IDm | null, Error, IDm | null, string[]>),
+    }) as UseQueryOptions<IDm | null, Error, IDm | null, QueryKey>),
   })
 }
 

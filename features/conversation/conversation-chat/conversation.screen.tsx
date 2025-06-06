@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
-import React, { memo, useEffect } from "react"
+import React, { memo } from "react"
 import { GlobalMediaViewerPortal } from "@/components/global-media-viewer/global-media-viewer"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
@@ -20,6 +20,7 @@ import { ConversationCreateSearchInput } from "@/features/conversation/conversat
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { clearNotificationsForConversation } from "@/features/notifications/notifications-clear"
+import { useEffectAfterInteractions } from "@/hooks/use-effect-after-interactions"
 import { usePrevious } from "@/hooks/use-previous-value"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
@@ -153,7 +154,7 @@ const Content = memo(function Content() {
 function useClearNotificationsForConversationOnMount() {
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
-  useEffect(() => {
+  useEffectAfterInteractions(() => {
     if (xmtpConversationId) {
       clearNotificationsForConversation({
         xmtpConversationId,

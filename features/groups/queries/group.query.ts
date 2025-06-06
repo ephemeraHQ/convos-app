@@ -2,7 +2,7 @@
  * This is derived from conversation.query.ts.
  */
 import type { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { queryOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
+import { QueryKey, queryOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import {
   ensureConversationQueryData,
   getConversationQueryData,
@@ -58,7 +58,7 @@ export function getGroupQueryOptions(args: IArgsWithCaller) {
       clientInboxId,
       xmtpConversationId,
       caller,
-    }) as UseQueryOptions<IGroup | null, Error, IGroup | null, string[]>),
+    }) as UseQueryOptions<IGroup | null, Error, IGroup | null, QueryKey>),
   })
 }
 

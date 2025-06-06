@@ -68,6 +68,7 @@ const conversationMessagesInfiniteQueryFn = async (
   const timestampBeforeXmtpFetchMs = Date.now()
 
   const { clientInboxId, xmtpConversationId, pageParam, limit: argLimit } = args
+
   const { cursorNs, direction } = pageParam || {
     cursorNs: undefined,
     direction: "next",
@@ -266,12 +267,11 @@ const conversationMessagesInfiniteQueryFn = async (
 
   if (convosMessagesFromServer.length > 0) {
     if (direction === "next") {
-      // If we fetched a full page from the server, there might be older messages.
-      if (convosMessagesFromServer.length >= resolvedLimit) {
+      // Only set cursor if we have a full page of REGULAR messages (excluding reactions)
+      if (regularMessages.length >= resolvedLimit) {
         finalNextCursorNs =
           combinedMessagesForPage[combinedMessagesForPage.length - 1].sentNs - 1000
       } else {
-        // Less than a full page from server means no more older messages.
         finalNextCursorNs = null
       }
     } else if (direction === "prev") {
@@ -283,11 +283,13 @@ const conversationMessagesInfiniteQueryFn = async (
     }
   }
 
-  return {
+  const result = {
     messageIds: regularMessages.map((message) => message.xmtpId),
     nextCursorNs: finalNextCursorNs,
     prevCursorNs: finalPrevCursorNs,
   }
+
+  return result
 }
 
 export function getConversationMessagesInfiniteQueryOptions(

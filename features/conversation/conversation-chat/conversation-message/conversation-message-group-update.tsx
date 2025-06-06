@@ -6,8 +6,7 @@ import { ViewStyle } from "react-native"
 import { Avatar } from "@/components/avatar"
 import { Center } from "@/design-system/Center"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
-import { isConversationDm } from "@/features/conversation/utils/is-conversation-dm"
+import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { getFormattedDisappearingDurationStr } from "@/features/disappearing-messages/disappearing-messages.constants"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
@@ -127,16 +126,10 @@ const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({
 
   const currentSender = useSafeCurrentSender()
 
-  const memberDisplayInfoParams = useMemo(
-    () => ({
-      inboxId,
-      caller: "ChatGroupMemberJoined" as const,
-    }),
-    [inboxId],
-  )
-
-  const { displayName: memberDisplayName, avatarUrl: memberAvatarUrl } =
-    usePreferredDisplayInfo(memberDisplayInfoParams)
+  const { displayName: memberDisplayName, avatarUrl: memberAvatarUrl } = usePreferredDisplayInfo({
+    inboxId,
+    caller: "ChatGroupMemberJoined",
+  })
 
   const { displayName: initiatorDisplayName, avatarUrl: initiatorAvatarUrl } =
     usePreferredDisplayInfo({
@@ -153,13 +146,13 @@ const ChatGroupMemberJoined = memo(function ChatGroupMemberJoined({
   }, [initiatedByInboxId])
 
   // Get the current conversation to check if it's a DM or a group
-  const { data: conversation } = useConversationQuery({
+  const { data: type } = useConversationType({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "ChatGroupMemberJoined",
   })
 
-  const isDm = conversation ? isConversationDm(conversation) : false
+  const isDm = type === "dm"
 
   return (
     <HStack style={themed($memberContainer)}>

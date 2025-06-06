@@ -140,14 +140,7 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
     } satisfies StyleProp<ViewStyle>
   }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage, fromMe, isGroupUpdate])
 
-  return (
-    <AnimatedVStack
-      layout={theme.animation.reanimatedLayoutSpringTransition}
-      style={containerStyle}
-    >
-      {children}
-    </AnimatedVStack>
-  )
+  return <VStack style={containerStyle}>{children}</VStack>
 })
 
 function useConversationMessageLayoutStyles() {
