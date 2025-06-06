@@ -2,12 +2,11 @@ import { queryOptions, useQuery } from "@tanstack/react-query"
 import { memo } from "react"
 import { Image } from "@/design-system/image"
 import { Text } from "@/design-system/Text"
-import { AttachmentLoading } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-loading"
-import { getAttachmentPaths } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachments.utils"
+import { ConversationAttachmentLoading } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment-loading.component"
+import { storeRemoteAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-attachment.storage"
 import { ConversationMessageAttachmentContainer } from "@/features/conversation/conversation-chat/conversation-attachment/conversation-message-attachment-container"
-import { processAndSaveLocalAttachment } from "@/features/conversation/conversation-chat/conversation-attachment/process-and-save-local-attachment"
+import { IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 import { translate } from "@/i18n"
-import { createFolderIfNotExists, saveFile } from "@/utils/file-system/file-system"
 import {
   IConversationMessageStaticAttachment,
   IConversationMessageStaticAttachmentContent,
@@ -31,7 +30,7 @@ export const ConversationMessageStaticAttachment = memo(
 )
 
 const Content = memo(function Content(props: {
-  messageId: string
+  messageId: IXmtpMessageId
   staticAttachment: IConversationMessageStaticAttachmentContent
 }) {
   const { messageId, staticAttachment } = props
@@ -45,7 +44,7 @@ const Content = memo(function Content(props: {
   if (!attachment && attachmentLoading) {
     return (
       <ConversationMessageAttachmentContainer>
-        <AttachmentLoading />
+        <ConversationAttachmentLoading />
       </ConversationMessageAttachmentContainer>
     )
   }
@@ -77,7 +76,7 @@ const Content = memo(function Content(props: {
 })
 
 function getStaticAttachmentQueryOptions(args: {
-  messageId: string
+  messageId: IXmtpMessageId
   staticAttachment: IConversationMessageStaticAttachmentContent
 }) {
   const { messageId, staticAttachment } = args
@@ -86,25 +85,14 @@ function getStaticAttachmentQueryOptions(args: {
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ["static-attachment", messageId],
     queryFn: async () => {
-      const paths = getAttachmentPaths({ messageId })
-
-      await createFolderIfNotExists({
-        path: paths.folder,
-        options: {
-          NSURLIsExcludedFromBackupKey: true,
+      // TODO
+      return storeRemoteAttachment({
+        xmtpMessageId: messageId,
+        decryptedAttachment: {
+          fileUri: staticAttachment.data,
+          filename: staticAttachment.filename,
+          mimeType: staticAttachment.mimeType || "application/octet-stream",
         },
-      })
-
-      await saveFile({
-        path: paths.file,
-        data: staticAttachment.data,
-        encodingOrOptions: "base64",
-      })
-
-      return processAndSaveLocalAttachment({
-        messageId,
-        filename: staticAttachment.filename,
-        mimeType: staticAttachment.mimeType,
       })
     },
   })

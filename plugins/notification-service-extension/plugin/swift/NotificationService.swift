@@ -10,7 +10,7 @@ final class NotificationService: UNNotificationServiceExtension {
     // IF YOU CHANGE THIS KEY, YOU MUST CHANGE THE KEY IN THE MAIN APP TOO
     private static let CONVERSATION_MESSAGES_KEY_PREFIX = "conversation_messages_"
 
-    private static func storeDecryptedMessage(_ message: DecodedMessage, forTopic topic: String) {
+    private static func storeDecryptedMessage(_ message: DecodedMessage, forTopic topic: String) async {
         SentryManager.shared.addBreadcrumb("Attempting to store decrypted message")
         let conversationId = XmtpHelpers.shared.getConversationIdFromTopic(topic)
         SentryManager.shared.addBreadcrumb("Got conversation ID: \(conversationId)")
@@ -151,6 +151,18 @@ final class NotificationService: UNNotificationServiceExtension {
                 }
                 if let contentLength = remoteAttachment.contentLength {
                     remoteAttachmentContent["contentLength"] = contentLength
+                }
+                
+                // Wait for attachment storage to complete
+                do {
+                    SentryManager.shared.addBreadcrumb("Attempting to store remote attachment")
+                    try await SharedAttachmentStorage.shared.storeRemoteAttachment(
+                        messageId: message.id,
+                        remoteAttachment: remoteAttachment
+                    )
+                    SentryManager.shared.addBreadcrumb("Successfully stored remote attachment")
+                } catch {
+                    SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to store remote attachment"))
                 }
                 
                 serializableContent = ["remoteAttachment": remoteAttachmentContent]
@@ -437,7 +449,11 @@ final class NotificationService: UNNotificationServiceExtension {
                 SentryManager.shared.addBreadcrumb("Successfully decrypted message")
                 
                 // Store the decrypted message so that the main app can display it faster
-                NotificationService.storeDecryptedMessage(decodedMessage, forTopic: topic)
+                do {
+                    try await NotificationService.storeDecryptedMessage(decodedMessage, forTopic: topic)
+                } catch {
+                    SentryManager.shared.trackError(error, extras: ["info": "Failed to store decrypted message"])
+                }
                 
             } catch {
                 SentryManager.shared.trackError(error, extras: ["info": "Unexpected error during message processing"])

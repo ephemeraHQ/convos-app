@@ -26,6 +26,7 @@ export const NSE_SWIFT_SOURCE_FILES = [
   "Xmtp+Helpers.swift",
   "AppGroupFileManager.swift",
   "RetryUtils.swift",
+  "SharedAttachmentStorage.swift",
 ]
 
 export const NSE_INFO_PLIST_FILE_NAME = `${NSE_TARGET_NAME}-Info.plist`
