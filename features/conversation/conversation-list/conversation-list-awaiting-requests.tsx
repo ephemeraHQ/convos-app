@@ -9,7 +9,7 @@ import {
   ConversationListItemSubtitle,
   ConversationListItemTitle,
 } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
-import { useConversationRequestsListItem } from "@/features/conversation/conversation-requests-list/use-conversation-requests-list-items"
+import { useConversationRequestsCount } from "@/features/conversation/conversation-requests-list/use-conversation-requests-count"
 import { useAppTheme } from "@/theme/use-app-theme"
 
 export const ConversationListAwaitingRequests = memo(function ConversationListAwaitingRequests() {
@@ -17,13 +17,10 @@ export const ConversationListAwaitingRequests = memo(function ConversationListAw
   const navigation = useNavigation()
 
   const {
-    likelyNotSpamConversationIds,
-    likelySpamConversationIds,
+    data: numberOfRequests,
     isLoading: isLoadingUnknownConversations,
     isFetching: isFetchingUnknownConversations,
-  } = useConversationRequestsListItem()
-
-  const numberOfRequests = likelyNotSpamConversationIds.length + likelySpamConversationIds.length
+  } = useConversationRequestsCount()
 
   const title = useMemo(() => {
     return (

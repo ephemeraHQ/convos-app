@@ -31,7 +31,7 @@ export async function findConversationByInboxIds(args: {
 
   // Check if we have a group with all the selected inboxIds
   const matchingGroup = groups.find((group) => {
-    const groupMembersInboxIds = group.members.ids
+    const groupMembersInboxIds = group.members?.ids ?? []
     if (!groupMembersInboxIds) return false
 
     // Need only groups with exactly the same number of members as inboxIds

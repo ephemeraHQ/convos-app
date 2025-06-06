@@ -1,5 +1,6 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
+import { IGroup } from "@/features/groups/group.types"
 import {
   getGroupQueryData,
   refetchGroupQuery,
@@ -43,18 +44,18 @@ export const useRemoveGroupMembersFromGroupMutation = (args: {
       }
 
       // Create a new group object with the members removed
-      const updatedGroup = {
+      const updatedGroup: IGroup = {
         ...previousGroup,
         members: {
-          ...previousGroup.members,
-          byId: { ...previousGroup.members.byId },
-          ids: previousGroup.members.ids.filter((id) => !inboxIds.includes(id)),
+          ...(previousGroup.members ?? { byId: {}, ids: [] }),
+          byId: { ...(previousGroup.members?.byId ?? {}) },
+          ids: (previousGroup.members?.ids ?? []).filter((id) => !inboxIds.includes(id)),
         },
       }
 
       // Remove the members from the byId object
       inboxIds.forEach((id) => {
-        delete updatedGroup.members.byId[id]
+        delete updatedGroup.members?.byId[id]
       })
 
       // Update the group data

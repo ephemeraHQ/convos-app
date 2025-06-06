@@ -1,12 +1,13 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
+import { IGroup } from "@/features/groups/group.types"
+import { invalidateGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import {
   getGroupQueryData,
   invalidateGroupQuery,
   setGroupQueryData,
   useGroupQuery,
 } from "@/features/groups/queries/group.query"
-import { invalidateGroupPermissionsQuery } from "@/features/groups/queries/group-permissions.query"
 import { removeAdminFromXmtpGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 
 export const useRevokeAdminMutation = (args: {
@@ -44,14 +45,14 @@ export const useRevokeAdminMutation = (args: {
       }
 
       // Create a new group object with the updated member permission
-      const updatedGroup = {
+      const updatedGroup: IGroup = {
         ...previousGroup,
         members: {
-          ...previousGroup.members,
+          ...(previousGroup.members ?? { byId: {}, ids: [] }),
           byId: {
-            ...previousGroup.members.byId,
+            ...(previousGroup.members?.byId ?? {}),
             [inboxId]: {
-              ...previousGroup.members.byId[inboxId],
+              ...(previousGroup.members?.byId?.[inboxId] ?? {}),
               permission: "member",
             },
           },
@@ -81,10 +82,10 @@ export const useRevokeAdminMutation = (args: {
     },
     onSuccess: () => {
       invalidateGroupQuery({ clientInboxId, xmtpConversationId })
-      invalidateGroupPermissionsQuery({ 
-        clientInboxId, 
-        xmtpConversationId, 
-        caller: "revokeAdminMutation" 
+      invalidateGroupPermissionsQuery({
+        clientInboxId,
+        xmtpConversationId,
+        caller: "revokeAdminMutation",
       })
     },
   })

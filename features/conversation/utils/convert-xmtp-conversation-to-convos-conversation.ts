@@ -4,7 +4,16 @@ import { IConversation } from "@/features/conversation/conversation.types"
 import { IDm } from "@/features/dm/dm.types"
 import { IGroup } from "@/features/groups/group.types"
 import { convertXmtpGroupMemberToConvosMember } from "@/features/groups/utils/convert-xmtp-group-member-to-convos-member"
-import { isXmtpConversationGroup } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { getXmtpConsentStateForConversation } from "@/features/xmtp/xmtp-consent/xmtp-consent"
+import {
+  getXmtpCreatorInboxId,
+  isXmtpConversationGroup,
+} from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
+import { getXmtpDmPeerInboxId } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-dm"
+import {
+  getIsXmtpGroupActive,
+  getXmtpGroupMembers,
+} from "@/features/xmtp/xmtp-conversations/xmtp-conversations-group"
 import { getXmtpConversationMessages } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import {
   IXmtpConversationId,
@@ -21,30 +30,42 @@ import { measureTimeAsync } from "@/utils/perf/perf-timer"
 export async function convertXmtpConversationToConvosConversation(
   xmtpConversation: IXmtpConversationWithCodecs,
 ): Promise<IConversation> {
+  const conversationClientInboxId = xmtpConversation.client.inboxId as unknown as IXmtpInboxId
+
   // Group conversation
   if (isXmtpConversationGroup(xmtpConversation)) {
-    const [members, creatorInboxId, consentState, conversationXmtpLastMessage, isActive] =
-      await Promise.all([
-        xmtpConversation.members(),
-        xmtpConversation.creatorInboxId() as unknown as IXmtpInboxId,
-        xmtpConversation.consentState(),
-        xmtpConversation.lastMessage,
-        xmtpConversation.isActive(),
-      ])
-
-    const conversationConsentState = await convertConsentStateToXmtpConsentState(consentState)
-
-    // TMP until we have lastMessage function available from the SDK
-    const lastMessage = conversationXmtpLastMessage
-      ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage as IXmtpDecodedMessage)
-      : // Allowed are the most important. The rest we don't really care if no last message
-        conversationConsentState === "allowed"
-        ? await getXmtpLastMessageFromMessages({
-            clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
+    const [lastMessage, members, creatorInboxId, consentState, isActive] = await Promise.all([
+      getLastMessageForConversation({
+        xmtpConversation,
+        clientInboxId: conversationClientInboxId,
+      }),
+      // For now don't fetch members if the conversation is not allowed. It's too heavy for nothing
+      xmtpConversation.state === "allowed"
+        ? getXmtpGroupMembers({
+            clientInboxId: conversationClientInboxId,
             xmtpConversationId: xmtpConversation.id,
           })
-        : undefined
+        : Promise.resolve(undefined),
+      // For now don't fetch creator if the conversation is not allowed. It's too heavy for nothing
+      xmtpConversation.state === "allowed"
+        ? getXmtpCreatorInboxId({
+            clientInboxId: conversationClientInboxId,
+            xmtpConversationId: xmtpConversation.id,
+          })
+        : Promise.resolve(undefined),
+      xmtpConversation.state ??
+        getXmtpConsentStateForConversation({
+          clientInboxId: conversationClientInboxId,
+          xmtpConversationId: xmtpConversation.id,
+        }),
+      xmtpConversation.isGroupActive ??
+        getIsXmtpGroupActive({
+          clientInboxId: conversationClientInboxId,
+          xmtpConversationId: xmtpConversation.id,
+        }),
+    ])
 
+    const conversationConsentState = convertConsentStateToXmtpConsentState(consentState)
     const addedByInboxId = xmtpConversation.addedByInboxId as unknown as IXmtpInboxId
 
     return {
@@ -58,34 +79,32 @@ export async function convertXmtpConversationToConvosConversation(
       name: xmtpConversation.groupName,
       description: xmtpConversation.groupDescription,
       imageUrl: xmtpConversation.groupImageUrl,
-      members: entify(
-        members.map(convertXmtpGroupMemberToConvosMember),
-        (member) => member.inboxId,
-      ),
+      members: members
+        ? entify(members.map(convertXmtpGroupMemberToConvosMember), (member) => member.inboxId)
+        : undefined,
       createdAt: xmtpConversation.createdAt,
       isActive: isActive,
     } satisfies IGroup
   }
 
   // DM conversations
-  const [peerInboxId, consentState, conversationXmtpLastMessage] = await Promise.all([
-    xmtpConversation.peerInboxId() as unknown as IXmtpInboxId,
-    xmtpConversation.consentState(),
-    xmtpConversation.lastMessage,
+  const [lastMessage, peerInboxId, consentState] = await Promise.all([
+    getLastMessageForConversation({
+      xmtpConversation,
+      clientInboxId: conversationClientInboxId,
+    }),
+    getXmtpDmPeerInboxId({
+      clientInboxId: conversationClientInboxId,
+      xmtpConversationId: xmtpConversation.id,
+    }),
+    xmtpConversation.state ??
+      getXmtpConsentStateForConversation({
+        clientInboxId: conversationClientInboxId,
+        xmtpConversationId: xmtpConversation.id,
+      }),
   ])
 
-  const conversationConsentState = await convertConsentStateToXmtpConsentState(consentState)
-
-  // TMP until we have lastMessage function available from the SDK
-  const lastMessage = conversationXmtpLastMessage
-    ? convertXmtpMessageToConvosMessage(conversationXmtpLastMessage as IXmtpDecodedMessage)
-    : // Only fetch fallback if it's allowed. We don't care if it's denied
-      conversationConsentState === "allowed"
-      ? await getXmtpLastMessageFromMessages({
-          clientInboxId: xmtpConversation.client.inboxId as unknown as IXmtpInboxId,
-          xmtpConversationId: xmtpConversation.id,
-        })
-      : undefined
+  const conversationConsentState = convertConsentStateToXmtpConsentState(consentState)
 
   return {
     type: "dm",
@@ -97,6 +116,29 @@ export async function convertXmtpConversationToConvosConversation(
     consentState: conversationConsentState,
     isActive: true,
   } satisfies IDm
+}
+
+async function getLastMessageForConversation(args: {
+  xmtpConversation: IXmtpConversationWithCodecs
+  clientInboxId: IXmtpInboxId
+}) {
+  const { xmtpConversation, clientInboxId } = args
+
+  const conversationXmtpLastMessage = xmtpConversation.lastMessage
+
+  if (conversationXmtpLastMessage) {
+    return convertXmtpMessageToConvosMessage(conversationXmtpLastMessage as IXmtpDecodedMessage)
+  }
+
+  // Only fetch fallback if the conversation is allowed
+  if (xmtpConversation.state === "allowed") {
+    return getXmtpLastMessageFromMessages({
+      clientInboxId,
+      xmtpConversationId: xmtpConversation.id,
+    })
+  }
+
+  return undefined
 }
 
 async function getXmtpLastMessageFromMessages(args: {

@@ -1,10 +1,10 @@
 import { FlashList, FlashListProps } from "@shopify/flash-list"
-import { memo, useCallback, useRef } from "react"
+import { memo, useCallback, useMemo, useRef } from "react"
 import { NativeScrollEvent, NativeSyntheticEvent, Platform } from "react-native"
 import { useHeaderHeight } from "@/design-system/Header/Header.utils"
-import { AnimatedVStack } from "@/design-system/VStack"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { useAppTheme } from "@/theme/use-app-theme"
+import { useConversationListItemStyle } from "./conversation-list-item/conversation-list-item.styles"
 
 type IConversationListProps = Omit<FlashListProps<IXmtpConversationId>, "data" | "renderItem"> & {
   conversationsIds: IXmtpConversationId[]
@@ -17,31 +17,27 @@ export const ConversationList = memo(function ConversationList(props: IConversat
 
   const { theme } = useAppTheme()
   const headerHeight = useHeaderHeight()
+  const { listItemHeight } = useConversationListItemStyle()
 
   const { onScroll } = useRefreshHandler({
     onRefetch,
   })
+
+  const estimatedItemListSize = useMemo(() => {
+    return {
+      height: theme.layout.screen.height - headerHeight,
+      width: theme.layout.screen.width,
+    }
+  }, [theme.layout.screen.height, theme.layout.screen.width, headerHeight])
 
   return (
     <FlashList
       onScroll={onScroll}
       data={conversationsIds}
       keyExtractor={keyExtractor}
-      estimatedItemSize={80}
-      estimatedListSize={{
-        height: theme.layout.screen.height - 80 - headerHeight,
-        width: theme.layout.screen.width,
-      }}
-      renderItem={(args) => {
-        return (
-          <AnimatedVStack
-            entering={theme.animation.reanimatedFadeInSpring}
-            exiting={theme.animation.reanimatedFadeOutSpring}
-          >
-            {renderConversation?.(args)}
-          </AnimatedVStack>
-        )
-      }}
+      estimatedItemSize={listItemHeight}
+      estimatedListSize={estimatedItemListSize}
+      renderItem={renderConversation}
       {...rest}
     />
   )

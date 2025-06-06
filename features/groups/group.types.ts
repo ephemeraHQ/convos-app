@@ -34,6 +34,6 @@ export type IGroup = IConversationBase & {
   imageUrl?: string
   messageDisappearFromNs?: number
   addedByInboxId: IXmtpInboxId
-  creatorInboxId: IXmtpInboxId
-  members: EntityObject<IGroupMember, IXmtpInboxId>
+  creatorInboxId: IXmtpInboxId | undefined // Undefined because sometimes we're not fetching it for lighter converastion items
+  members: EntityObject<IGroupMember, IXmtpInboxId> | undefined
 }

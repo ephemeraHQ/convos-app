@@ -9,8 +9,10 @@ import {
 } from "@features/xmtp/xmtp.types"
 import {
   ConversationVersion,
+  creatorInboxId,
   getDebugInformation,
   getNetworkDebugInformation,
+  isGroupActive,
   prepareMessage,
   publishPreparedMessages,
 } from "@xmtp/react-native-sdk"
@@ -154,6 +156,30 @@ export async function getXmtpDebugInformationNetwork(args: { clientInboxId: IXmt
     throw new XMTPError({
       error,
       additionalMessage: `Failed to get network debug information for inbox ${clientInboxId}`,
+    })
+  }
+}
+
+export async function getXmtpCreatorInboxId(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  const { clientInboxId, xmtpConversationId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    const inboxId = await wrapXmtpCallWithDuration("creatorInboxId", () =>
+      creatorInboxId(client.installationId, xmtpConversationId),
+    )
+
+    return inboxId as unknown as IXmtpInboxId
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to get creator inbox ID for conversation ${xmtpConversationId}`,
     })
   }
 }
