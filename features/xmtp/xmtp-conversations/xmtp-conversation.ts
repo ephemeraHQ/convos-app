@@ -9,6 +9,8 @@ import {
 } from "@features/xmtp/xmtp.types"
 import {
   ConversationVersion,
+  getDebugInformation,
+  getNetworkDebugInformation,
   prepareMessage,
   publishPreparedMessages,
 } from "@xmtp/react-native-sdk"
@@ -110,4 +112,48 @@ export const getXmtpConversationIdFromXmtpTopic = (xmtpTopic: IXmtpConversationT
 // "/xmtp/mls/1/g-<conversationId>/proto"
 export function getXmtpConversationTopicFromXmtpId(xmtpConversationId: IXmtpConversationId) {
   return `${CONVERSATION_TOPIC_PREFIX}${xmtpConversationId}/proto` as IXmtpConversationTopic
+}
+
+export async function getXmtpDebugInformationConversation(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  const { clientInboxId, xmtpConversationId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    const conversationDebugInformation = await getDebugInformation(
+      client.installationId,
+      xmtpConversationId,
+    )
+
+    return conversationDebugInformation
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to get conversation debug information for inbox ${clientInboxId}`,
+    })
+  }
+}
+
+export async function getXmtpDebugInformationNetwork(args: { clientInboxId: IXmtpInboxId }) {
+  const { clientInboxId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    const networkDebugInformation = await getNetworkDebugInformation(client.installationId)
+
+    return networkDebugInformation
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to get network debug information for inbox ${clientInboxId}`,
+    })
+  }
 }

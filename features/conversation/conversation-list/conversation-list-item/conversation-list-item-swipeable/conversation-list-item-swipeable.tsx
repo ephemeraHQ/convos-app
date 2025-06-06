@@ -15,6 +15,7 @@ export const ConversationListItemSwipeable = memo(({ children, ...props }: ISwip
       rightThreshold={swipeThreshold}
       leftActionsBackgroundColor={theme.colors.fill.caution}
       rightActionsBackgroundColor={theme.colors.fill.secondary}
+      overshootFriction={1}
       {...props}
     >
       {children}

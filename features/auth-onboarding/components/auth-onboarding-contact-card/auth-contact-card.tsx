@@ -1,7 +1,8 @@
-import React, { memo, useCallback } from "react"
+import React, { memo, useCallback, useMemo } from "react"
 import { TextStyle, ViewStyle } from "react-native"
 import { interpolate, useAnimatedStyle, useSharedValue } from "react-native-reanimated"
 import { Screen } from "@/components/screen/screen"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { Text } from "@/design-system/Text"
 import { AnimatedVStack, VStack } from "@/design-system/VStack"
 import { OnboardingSubtitle } from "@/features/auth-onboarding/components/onboarding-subtitle"
@@ -34,11 +35,15 @@ const AuthOnboardingContactCardContent = memo(function AuthOnboardingContactCard
     useAuthOnboardingStore.getState().actions.setUserFriendlyError(null)
   }, [])
 
-  useHeader({
-    safeAreaEdges: ["top"],
-    leftText: "Cancel",
-    onLeftPress: () => useAuthOnboardingStore.getState().actions.setPage("welcome"),
-  })
+  const headerOptions = useMemo(() => {
+    return {
+      safeAreaEdges: ["top"],
+      leftText: "Cancel",
+      onLeftPress: () => useAuthOnboardingStore.getState().actions.setPage("welcome"),
+    } satisfies IHeaderProps
+  }, [])
+
+  useHeader(headerOptions, [headerOptions])
 
   const { progressAV: keyboardProgressAV } = useAnimatedKeyboard()
 

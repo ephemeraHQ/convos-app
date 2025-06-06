@@ -8,6 +8,8 @@ import { config } from "../config"
 import { navigationLogger } from "../utils/logger/logger"
 import { NavigationParamList } from "./navigation.types"
 
+export const EDGE_BACK_GESTURE_HIT_SLOP = 20
+
 // https://reactnavigation.org/docs/navigating-without-navigation-prop/#usage
 export const navigationRef = createNavigationContainerRef<NavigationParamList>()
 
@@ -165,4 +167,12 @@ RNLinking.openURL = (url: string) => {
 
 export function getCurrentRoute() {
   return navigationRef.getCurrentRoute()
+}
+
+export function getCurrentRouteParams<T extends keyof NavigationParamList>():
+  | NavigationParamList[T]
+  | undefined {
+  const currentRoute = navigationRef.getCurrentRoute()
+  if (!currentRoute) return undefined
+  return currentRoute.params as NavigationParamList[T]
 }

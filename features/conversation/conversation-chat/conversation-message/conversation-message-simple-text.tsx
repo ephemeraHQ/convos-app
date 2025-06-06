@@ -37,7 +37,9 @@ export const ConversationMessageSimpleText = memo(function ConversationMessageSi
     <BubbleContainer>
       <ConversationMessageGestures>
         <BubbleContentContainer>
-          <ConversationMessageText inverted={fromMe}>{message.content.text}</ConversationMessageText>
+          <ConversationMessageText inverted={fromMe}>
+            {message.content.text}
+          </ConversationMessageText>
         </BubbleContentContainer>
       </ConversationMessageGestures>
     </BubbleContainer>

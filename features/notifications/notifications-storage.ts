@@ -74,7 +74,6 @@ export async function addConversationNotificationMessageFromStorageInOurCache(ar
     const messages = notificationMessageStorage.getValue(conversationId)
 
     if (!messages) {
-      notificationsLogger.debug(`No messages found in storage for conversation ${conversationId}`)
       return
     }
 

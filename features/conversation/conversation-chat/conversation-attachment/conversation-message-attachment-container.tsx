@@ -28,9 +28,14 @@ export const ConversationMessageAttachmentContainer = memo(
             justifyContent: "center",
             alignItems: "center",
             backgroundColor: theme.colors.fill.tertiary,
-            aspectRatio: 1.5, // Default aspect ratio for attachments
+            aspectRatio: 3 / 4, // Vertical images by default
             borderWidth: theme.borderWidth.sm,
             borderColor: inverted ? theme.colors.border.inverted.subtle : theme.colors.border.edge,
+            shadowColor: theme.colors.global.black,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
           },
           style,
         ]}

@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react"
 import { Alert } from "react-native"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { HStack } from "@/design-system/HStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -65,22 +66,22 @@ export function useGroupDetailsScreenHeader(args: { xmtpConversationId: IXmtpCon
     router.goBack()
   }, [router])
 
-  const handleSharePress = useCallback(() => {
-    // TODO: Implement share functionality
-    Alert.alert("Share pressed")
-  }, [])
+  // const handleSharePress = useCallback(() => {
+  //   // TODO: Implement share functionality
+  //   Alert.alert("Share pressed")
+  // }, [])
 
   const handleEditPress = useCallback(() => {
     router.navigate("EditGroup", { xmtpConversationId })
   }, [router, xmtpConversationId])
 
-  const handleMenuPress = useCallback(() => {
-    // TODO: Implement menu functionality
-    Alert.alert("Menu pressed")
-  }, [])
+  // const handleMenuPress = useCallback(() => {
+  //   // TODO: Implement menu functionality
+  //   Alert.alert("Menu pressed")
+  // }, [])
 
-  useHeader(
-    {
+  const headerOptions = useMemo(() => {
+    return {
       safeAreaEdges: ["top"],
       title: "Info",
       leftIcon: "chevron.left",
@@ -93,7 +94,8 @@ export function useGroupDetailsScreenHeader(args: { xmtpConversationId: IXmtpCon
           {/* <HeaderAction icon="more_vert" onPress={handleMenuPress} /> */}
         </HStack>
       ),
-    },
-    [handleBackPress, handleSharePress, handleEditPress, handleMenuPress, theme, canEditGroup],
-  )
+    } satisfies IHeaderProps
+  }, [handleBackPress, handleEditPress, theme, canEditGroup])
+
+  useHeader(headerOptions, [headerOptions])
 }

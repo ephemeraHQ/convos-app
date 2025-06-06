@@ -16,7 +16,11 @@ import { ProfileContactCardLayout } from "@/features/profiles/components/profile
 import { ProfileSection } from "@/features/profiles/components/profile-section"
 import { ProfileSocialsNames } from "@/features/profiles/components/profile-social-names"
 import { useProfileMeScreenHeader } from "@/features/profiles/profile-me.screen-header"
-import { useProfileMeStore, useProfileMeStoreValue } from "@/features/profiles/profile-me.store"
+import {
+  ProfileMeStoreProvider,
+  useProfileMeStore,
+  useProfileMeStoreValue,
+} from "@/features/profiles/profile-me.store-context"
 import { useProfileQuery } from "@/features/profiles/profiles.query"
 import { useAddOrRemovePfp } from "@/hooks/use-add-pfp"
 import { translate } from "@/i18n"
@@ -29,6 +33,14 @@ import { getFirstDefined } from "@/utils/general"
 import { useCurrentSender } from "../authentication/multi-inbox.store"
 
 export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
+  return (
+    <ProfileMeStoreProvider inboxId={props.inboxId}>
+      <ProfileMeContent inboxId={props.inboxId} />
+    </ProfileMeStoreProvider>
+  )
+}
+
+function ProfileMeContent(props: { inboxId: IXmtpInboxId }) {
   const { inboxId } = props
 
   const { theme } = useAppTheme()
@@ -38,7 +50,7 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
   const insets = useSafeAreaInsets()
 
   // Get the edit mode state from the store
-  const editMode = useProfileMeStoreValue(inboxId, (state) => state.editMode)
+  const editMode = useProfileMeStoreValue((state) => state.editMode)
 
   const isMyProfile = useCurrentSender()?.inboxId === inboxId
 
@@ -64,7 +76,7 @@ export function ProfileMe(props: { inboxId: IXmtpInboxId }) {
         {editMode ? (
           <ProfileContactCardLayout
             avatar={<EditableProfileContactCardAvatar inboxId={inboxId} />}
-            name={<EditableProfileContactCardNameInput inboxId={inboxId} />}
+            name={<EditableProfileContactCardNameInput />}
             additionalOptions={<EditableProfileContactCardImportName inboxId={inboxId} />}
           />
         ) : (
@@ -154,18 +166,12 @@ const LogoutListItem = memo(function LogoutListItem() {
   )
 })
 
-const EditableProfileContactCardNameInput = memo(function EditableProfileContactCardNameInput({
-  inboxId,
-}: {
-  inboxId: IXmtpInboxId
-}) {
-  const profileMeStore = useProfileMeStore(inboxId)
+const EditableProfileContactCardNameInput = memo(function EditableProfileContactCardNameInput() {
+  const profileMeStore = useProfileMeStore()
 
   const nameDefaultTextValue = profileMeStore.getState().nameTextValue
 
-  const isOnChainName = useProfileMeStoreValue(inboxId, (state) =>
-    state.nameTextValue?.includes("."),
-  )
+  const isOnChainName = useProfileMeStoreValue((state) => state.nameTextValue?.includes("."))
 
   const [nameValidationError, setNameValidationError] = useState<string>()
 
@@ -199,7 +205,7 @@ const EditableUsernameInput = memo(function EditableUsernameInput({
   inboxId: IXmtpInboxId
 }) {
   const { theme } = useAppTheme()
-  const profileMeStore = useProfileMeStore(inboxId)
+  const profileMeStore = useProfileMeStore()
   const { data: profile } = useProfileQuery({ xmtpId: inboxId, caller: "ProfileMe" })
 
   const usernameDefaultTextValue = profile?.username || ""
@@ -245,7 +251,7 @@ const EditableDescriptionInput = memo(function EditableDescriptionInput({
   inboxId: IXmtpInboxId
 }) {
   const { theme } = useAppTheme()
-  const profileMeStore = useProfileMeStore(inboxId)
+  const profileMeStore = useProfileMeStore()
   const { data: profile } = useProfileQuery({ xmtpId: inboxId, caller: "ProfileMe" })
 
   const descriptionDefaultTextValue = profile?.description || ""
@@ -275,9 +281,9 @@ const EditableProfileContactCardAvatar = memo(function EditableProfileContactCar
 }: {
   inboxId: IXmtpInboxId
 }) {
-  const profileMeStore = useProfileMeStore(inboxId)
+  const profileMeStore = useProfileMeStore()
   const { data: profile } = useProfileQuery({ xmtpId: inboxId, caller: "ProfileMe" })
-  const storeAvatar = useProfileMeStoreValue(inboxId, (state) => state.avatarUri)
+  const storeAvatar = useProfileMeStoreValue((state) => state.avatarUri)
 
   // Get current avatar URI to pass to the hook
   const currentAvatarUri = getFirstDefined([storeAvatar, profile?.avatar])

@@ -41,6 +41,7 @@ type PreferredDisplayInfoArgs = {
   ethAddress?: IEthereumAddress
   freshData?: boolean
   enabled?: boolean
+  saveToNotificationExtension?: boolean
 }
 
 export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { caller: string }) {
@@ -50,6 +51,7 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
     freshData,
     caller: callerArg,
     enabled,
+    saveToNotificationExtension,
   } = args
   const currentSender = useSafeCurrentSender()
   const caller = `${callerArg}:usePreferredDisplayInfo`
@@ -136,13 +138,13 @@ export function usePreferredDisplayInfo(args: PreferredDisplayInfoArgs & { calle
   const preferredUsername = profile?.username
 
   useEffect(() => {
-    if (displayName && inboxId) {
+    if (displayName && inboxId && saveToNotificationExtension) {
       saveProfileDisplayNameForNotificationExtension({
         inboxId,
         displayName,
       })
     }
-  }, [displayName, inboxId])
+  }, [displayName, inboxId, saveToNotificationExtension])
 
   return {
     displayName,
@@ -232,7 +234,12 @@ export function getPreferredDisplayInfo(args: PreferredDisplayInfoArgs) {
 export async function ensurePreferredDisplayInfo(
   args: PreferredDisplayInfoArgs & { caller: string },
 ) {
-  const { inboxId: inboxIdArg, ethAddress: ethAddressArg, caller: callerArg } = args
+  const {
+    inboxId: inboxIdArg,
+    ethAddress: ethAddressArg,
+    caller: callerArg,
+    saveToNotificationExtension,
+  } = args
 
   const currentSender = getSafeCurrentSender()
 
@@ -287,7 +294,7 @@ export async function ensurePreferredDisplayInfo(
 
   const preferredUsername = profile?.username
 
-  if (displayName && inboxId) {
+  if (displayName && inboxId && saveToNotificationExtension) {
     saveProfileDisplayNameForNotificationExtension({
       inboxId,
       displayName,

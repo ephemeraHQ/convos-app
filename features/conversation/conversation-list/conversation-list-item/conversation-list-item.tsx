@@ -1,4 +1,4 @@
-import React, { memo } from "react"
+import React, { memo, useCallback } from "react"
 import { ViewStyle } from "react-native"
 import { AnimatedCenter, Center } from "@/design-system/Center"
 import { Icon } from "@/design-system/Icon/Icon"
@@ -34,6 +34,11 @@ export const ConversationListItem = memo(function ConversationListItem({
 
   const { style: previewContainerStyle, ...restPreviewContainerProps } = previewContainerProps ?? {}
 
+  // https://github.com/dominicstop/react-native-ios-context-menu/issues/9#issuecomment-1047058781
+  // Need this to prevent a crash since this component is wrapped by context menu in conversation list screen.
+  // Temporary fix until we migrate to new architecture.
+  const handleLongPress = useCallback(() => {}, [])
+
   return (
     <TouchableHighlight
       disabled={!onPress}
@@ -42,7 +47,7 @@ export const ConversationListItem = memo(function ConversationListItem({
       // Need this to prevent a crash since this component is wrapped by context menu in conversation list screen.
       // Temporary fix until we migrate to new architecture.
       delayLongPress={200}
-      onLongPress={() => {}}
+      onLongPress={handleLongPress}
       style={[themed($container), { paddingHorizontal: screenHorizontalPadding }]}
     >
       <>

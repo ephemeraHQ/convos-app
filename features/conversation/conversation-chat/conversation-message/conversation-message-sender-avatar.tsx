@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import { Avatar } from "@/components/avatar"
-import { Pressable } from "@/design-system/Pressable"
+import { TouchableOpacity } from "@/design-system/TouchableOpacity"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
 import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-preferred-display-info"
@@ -27,8 +27,12 @@ export function ConversationSenderAvatar() {
   }, [currentMessageSenderInboxId, router])
 
   return (
-    <Pressable onPress={openProfile} hitSlop={theme.spacing.xxxs}>
+    <TouchableOpacity
+      onPress={openProfile}
+      // Need to be big because otherwise it's under the swipeable gesture
+      hitSlop={theme.spacing.xxl}
+    >
       <Avatar sizeNumber={senderAvatarSize} uri={avatarUrl} name={displayName ?? ""} />
-    </Pressable>
+    </TouchableOpacity>
   )
 }

@@ -4,21 +4,28 @@ import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { IXmtpConversationId, IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { getUniqueItemsByKey } from "@/utils/array"
 import { XMTPError } from "@/utils/error"
+import { createPromiseCache } from "@/utils/promise-cache"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
 const DEBOUNCE_MS = 100
 const SYNC_ALL_THRESHOLD = 5
-
-// Cache to prevent multiple syncAll operations for the same inbox
-const syncAllConversationsPromisesCache = new Map<IXmtpInboxId, Promise<void>>()
-// Cache to deduplicate identical, concurrent calls to syncOneXmtpConversation
-const activeSyncOnePromises = new Map<`${IXmtpInboxId}-${IXmtpConversationId}`, Promise<void>>()
 
 // Store for batcher instances, one per clientInboxId
 const conversationSyncBatchersByInboxId = new Map<
   IXmtpInboxId,
   ReturnType<typeof createConversationSyncBatcher>
 >()
+
+// Create caches for different types of operations
+const syncOneConversationCache = createPromiseCache<void>({
+  maxSize: 50,
+  ttlMs: 0, // Because if we call it, it means we want to sync it now, so we don't want to cache it
+})
+
+const syncAllConversationsCache = createPromiseCache<void>({
+  maxSize: 50,
+  ttlMs: 0, // Because if we call it, it means we want to sync it now, so we don't want to cache it
+})
 
 function createConversationSyncBatcher(clientInboxId: IXmtpInboxId) {
   return create({
@@ -85,18 +92,14 @@ export async function syncOneXmtpConversation(args: {
   caller: string
 }) {
   const { clientInboxId, xmtpConversationId, caller } = args
-  const promiseKey = `${clientInboxId}-${xmtpConversationId}` as const
-  const existingActivePromise = activeSyncOnePromises.get(promiseKey)
-  if (existingActivePromise) {
-    return existingActivePromise
-  }
+  const key = `${clientInboxId}-${xmtpConversationId}`
 
-  const batcher = getConversationSyncBatcher(clientInboxId)
-  const promise = batcher.fetch({ conversationId: xmtpConversationId, caller })
-  activeSyncOnePromises.set(promiseKey, promise)
-
-  return promise.finally(() => {
-    activeSyncOnePromises.delete(promiseKey)
+  return syncOneConversationCache.getOrCreate({
+    key,
+    fn: async () => {
+      const batcher = getConversationSyncBatcher(clientInboxId)
+      return batcher.fetch({ conversationId: xmtpConversationId, caller })
+    },
   })
 }
 
@@ -106,13 +109,9 @@ export async function syncAllXmtpConversations(args: {
 }) {
   const { clientInboxId, caller } = args
 
-  const existingSyncPromise = syncAllConversationsPromisesCache.get(clientInboxId)
-  if (existingSyncPromise) {
-    return existingSyncPromise
-  }
-
-  const syncPromise = (async () => {
-    try {
+  return syncAllConversationsCache.getOrCreate({
+    key: clientInboxId,
+    fn: async () => {
       const client = await getXmtpClientByInboxId({
         inboxId: clientInboxId,
       })
@@ -125,18 +124,8 @@ export async function syncAllXmtpConversations(args: {
           ["allowed"],
         ),
       )
-    } catch (error) {
-      throw new XMTPError({
-        error,
-        additionalMessage: `Failed to sync all conversations for inbox: ${clientInboxId}`,
-      })
-    } finally {
-      syncAllConversationsPromisesCache.delete(clientInboxId)
-    }
-  })()
-
-  syncAllConversationsPromisesCache.set(clientInboxId, syncPromise)
-  return syncPromise
+    },
+  })
 }
 
 export async function syncNewXmtpConversations(args: {

@@ -9,6 +9,7 @@ import Animated, {
   useAnimatedScrollHandler,
 } from "react-native-reanimated"
 import { ConditionalWrapper } from "@/components/conditional-wrapper"
+import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { textSizeStyles } from "@/design-system/Text/Text.styles"
 import { AnimatedVStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
@@ -37,7 +38,7 @@ import {
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import {
   DEFAULT_PAGE_SIZE,
-  refetchConversationMessagesInfiniteQuery,
+  fetchConversationMessagesInfiniteQuery,
   useConversationMessagesInfiniteQueryAllMessageIds,
 } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
@@ -250,7 +251,7 @@ function useRefetchOnAppFocus() {
   useAppStateHandler({
     onForeground: () => {
       logger.debug("Conversation Messages came to foreground, refetching messages...")
-      refetchConversationMessagesInfiniteQuery({
+      fetchConversationMessagesInfiniteQuery({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId,
         caller: "Conversation Messages refetch on foreground",
@@ -269,7 +270,7 @@ function useRefetchOnMount() {
 
   useEffectOnce(() => {
     logger.debug("Conversation Messages mounted, refetching messages...")
-    refetchConversationMessagesInfiniteQuery({
+    fetchConversationMessagesInfiniteQuery({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
       caller: "Conversation Messages refetch on mount",
@@ -290,7 +291,7 @@ function useHandleDisappearingMessagesSettings() {
 
     const { unsubscribe } = listenForDisappearingMessageSettingsQueryChanges({
       clientInboxId: currentSender.inboxId,
-      xmtpConversationId: xmtpConversationId,
+      xmtpConversationId,
       caller: "useHandleDisappearingMessagesSettings",
       onChanges: (result) => {
         if (result.data?.retentionDurationInNs) {
@@ -298,7 +299,7 @@ function useHandleDisappearingMessagesSettings() {
             clearInterval(interval)
           }
           interval = setInterval(() => {
-            refetchConversationMessagesInfiniteQuery({
+            fetchConversationMessagesInfiniteQuery({
               clientInboxId: currentSender.inboxId,
               xmtpConversationId,
               caller: "useHandleDisappearingMessagesSettings refetch on retention duration change",
@@ -396,7 +397,7 @@ function useHandleSrolling(props: {
     isRefreshingRef.current = true
 
     logger.debug("Refetching newest messages because we're scrolled past the bottom...")
-    refetchConversationMessagesInfiniteQuery({
+    fetchConversationMessagesInfiniteQuery({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
       caller: "Conversation Messages refetch on scroll past bottom",
@@ -502,9 +503,11 @@ const ListFooterComponent = memo(function ListFooterComponent() {
 
   if ((hasLessThanOnePageOfMessages || hasNoMoreMessages) && isGroup && isNotLoading) {
     return (
-      <AnimatedVStack entering={theme.animation.reanimatedFadeInSpring}>
-        <ConversationInfoBanner />
-      </AnimatedVStack>
+      <IsReadyWrapper>
+        <AnimatedVStack entering={theme.animation.reanimatedFadeInUpSpring}>
+          <ConversationInfoBanner />
+        </AnimatedVStack>
+      </IsReadyWrapper>
     )
   }
 

@@ -1,10 +1,13 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { FlashList } from "@shopify/flash-list"
-import React, { memo, useCallback } from "react"
+import React, { memo, useCallback, useMemo } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
+import { IExtendedEdge } from "@/components/screen/screen.helpers"
 import { Center } from "@/design-system/Center"
 import { EmptyState } from "@/design-system/empty-state"
+import { IHeaderProps } from "@/design-system/Header/Header"
+import { IIconName } from "@/design-system/Icon/Icon.types"
 import { Loader } from "@/design-system/loader"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { MemberListItem } from "@/features/groups/components/group-details-members-list-item.component"
@@ -35,18 +38,18 @@ export const GroupMembersListScreen = memo(function GroupMembersListScreen(
     xmtpConversationId,
   })
 
-  // Set up header
-  useHeader(
-    {
-      safeAreaEdges: ["top"],
+  const headerOptions = useMemo(() => {
+    return {
+      safeAreaEdges: ["top"] as IExtendedEdge[],
       title: "Members",
-      leftIcon: "chevron.left",
+      leftIcon: "chevron.left" as IIconName,
       onLeftPress: handleBackPress,
-      rightIcon: "plus",
+      rightIcon: "plus" as IIconName,
       onRightPress: canAddMembers ? handleAddMembersPress : undefined,
-    },
-    [handleBackPress, handleAddMembersPress],
-  )
+    } satisfies IHeaderProps
+  }, [handleBackPress, handleAddMembersPress, canAddMembers])
+
+  useHeader(headerOptions, [headerOptions])
 
   return (
     <>

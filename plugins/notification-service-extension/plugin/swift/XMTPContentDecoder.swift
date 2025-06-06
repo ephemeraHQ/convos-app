@@ -41,6 +41,17 @@ extension RemoteAttachment: @retroactive Equatable {
     }
 }
 
+extension MultiRemoteAttachment: @retroactive Equatable {
+    public static func == (lhs: MultiRemoteAttachment, rhs: MultiRemoteAttachment) -> Bool {
+        return lhs.remoteAttachments.count == rhs.remoteAttachments.count &&
+               zip(lhs.remoteAttachments, rhs.remoteAttachments).allSatisfy { lhsAttachment, rhsAttachment in
+                   lhsAttachment.url == rhsAttachment.url &&
+                   lhsAttachment.contentDigest == rhsAttachment.contentDigest &&
+                   lhsAttachment.filename == rhsAttachment.filename
+               }
+    }
+}
+
 class XMTPContentDecoder {
     enum XMTPDecoderError: Error {
         case missingContentType(String)
@@ -53,6 +64,7 @@ class XMTPContentDecoder {
              reaction(Reaction),
              attachment(Attachment),
              remoteAttachment(RemoteAttachment),
+             multiRemoteAttachment(MultiRemoteAttachment),
              remoteURL(URL),
              unknown
     }
@@ -90,6 +102,11 @@ class XMTPContentDecoder {
           } else {
             fallthrough
           }
+        case ContentTypeMultiRemoteAttachment:
+            guard let multiRemoteAttachment = content as? MultiRemoteAttachment else {
+                throw XMTPDecoderError.mismatchedContentType("Could not decode content as multi remote attachment")
+            }
+            return .multiRemoteAttachment(multiRemoteAttachment)
         default:
             return .unknown
         }

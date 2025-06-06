@@ -1,7 +1,8 @@
-import { memo } from "react"
+import { memo, useMemo } from "react"
 import { ImageStyle, TextStyle, ViewStyle } from "react-native"
 import { Screen } from "@/components/screen/screen"
 import { AnimatedCenter, Center } from "@/design-system/Center"
+import { IHeaderProps } from "@/design-system/Header/Header"
 import { HeaderAction } from "@/design-system/Header/HeaderAction"
 import { HStack } from "@/design-system/HStack"
 import { Image } from "@/design-system/image"
@@ -121,8 +122,8 @@ function useHeaderWrapper() {
   const isSigningIn = useAuthOnboardingStore((s) => s.isSigningIn)
   const isSigningUp = useAuthOnboardingStore((s) => s.isSigningUp)
 
-  return useHeader(
-    {
+  const headerOptions = useMemo(() => {
+    return {
       safeAreaEdges: ["top"],
       RightActionComponent: (
         <AnimatedCenter
@@ -162,9 +163,10 @@ function useHeaderWrapper() {
           </HStack>
         </AnimatedCenter>
       ),
-    },
-    [isSigningIn],
-  )
+    } satisfies IHeaderProps
+  }, [isSigningIn, isSigningUp, login, themed, theme])
+
+  return useHeader(headerOptions, [headerOptions])
 }
 
 const $termsContainer: ThemedStyle<ViewStyle> = ({ spacing, borderRadius, colors }) => ({

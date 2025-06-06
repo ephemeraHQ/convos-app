@@ -2,11 +2,15 @@ import { IXmtpClientWithCodecs, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { Client as XmtpClient } from "@xmtp/react-native-sdk"
 import { useMultiInboxStore } from "@/features/authentication/multi-inbox.store"
 import { buildXmtpClient } from "@/features/xmtp/xmtp-client/xmtp-client-build"
+import {
+  getEthAddressCacheKey,
+  getInboxIdCacheKey,
+  xmtpClientCache,
+} from "@/features/xmtp/xmtp-client/xmtp-client-cache"
 import { cleanXmtpDbEncryptionKey } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
 import { XMTPError } from "@/utils/error"
 import { IEthereumAddress, lowercaseEthAddress } from "@/utils/evm/address"
 import { xmtpLogger } from "@/utils/logger/logger"
-import { clientByEthAddress, clientByInboxId } from "./xmtp-client-cache"
 
 export { buildXmtpClient as buildXmtpClientInstance } from "./xmtp-client-build"
 export { createXmtpClient } from "./xmtp-client-create"
@@ -15,27 +19,21 @@ export async function getXmtpClientByInboxId(args: { inboxId: IXmtpInboxId }) {
   const { inboxId } = args
 
   try {
-    // Check cache first
-    const cachedClient = clientByInboxId.get(inboxId)
-    if (cachedClient) {
-      return cachedClient
-    }
+    return await xmtpClientCache.getOrCreate({
+      key: getInboxIdCacheKey(inboxId),
+      fn: async () => {
+        // If not in cache, build it
+        const sender = useMultiInboxStore.getState().senders.find((s) => s.inboxId === inboxId)
+        if (!sender) {
+          throw new Error(`No sender found for inboxId: ${inboxId}`)
+        }
 
-    // Try to get from store
-    const sender = useMultiInboxStore.getState().senders.find((s) => s.inboxId === inboxId)
-    if (!sender) {
-      throw new Error(`No sender found for inboxId: ${inboxId}`)
-    }
-
-    const client = await buildXmtpClient({
-      ethereumAddress: sender.ethereumAddress,
-      inboxId,
+        return buildXmtpClient({
+          ethereumAddress: sender.ethereumAddress,
+          inboxId,
+        })
+      },
     })
-
-    // Store in cache
-    clientByInboxId.set(inboxId, Promise.resolve(client))
-
-    return client
   } catch (error) {
     throw new XMTPError({
       error,
@@ -45,8 +43,8 @@ export async function getXmtpClientByInboxId(args: { inboxId: IXmtpInboxId }) {
 }
 
 export async function logoutXmtpClient(args: {
-  inboxId?: IXmtpInboxId
-  ethAddress?: IEthereumAddress
+  inboxId: IXmtpInboxId
+  ethAddress: IEthereumAddress
   deleteDatabase?: boolean
 }) {
   const { inboxId, ethAddress, deleteDatabase = false } = args
@@ -58,23 +56,30 @@ export async function logoutXmtpClient(args: {
   }
 
   try {
-    // Get client from appropriate cache
-    let clientPromise: Promise<IXmtpClientWithCodecs> | undefined
     let lookupId = ethAddress ? String(ethAddress) : String(inboxId)
+    let cacheKey: string
 
     if (ethAddress) {
-      clientPromise = clientByEthAddress.get(ethAddress)
+      cacheKey = getEthAddressCacheKey(ethAddress)
     } else if (inboxId) {
-      clientPromise = clientByInboxId.get(inboxId)
+      cacheKey = getInboxIdCacheKey(inboxId)
+    } else {
+      throw new Error("No valid lookup key")
     }
 
-    if (!clientPromise) {
+    // Try to get client from cache
+    let xmtpClient: IXmtpClientWithCodecs | undefined
+    try {
+      xmtpClient = await xmtpClientCache.getOrCreate({
+        key: cacheKey,
+        fn: async () => {
+          throw new Error("Client not found in cache")
+        },
+      })
+    } catch (error) {
       xmtpLogger.debug(`No client found in cache for: ${lookupId}`)
       return
     }
-
-    // Wait for client to resolve
-    const xmtpClient = await clientPromise
 
     // If requested, delete the local database
     if (deleteDatabase) {
@@ -84,15 +89,7 @@ export async function logoutXmtpClient(args: {
 
     // Drop the client from XMTP
     xmtpLogger.debug(`Dropping client: ${lookupId}`)
-    await XmtpClient.dropClient(xmtpClient.installationId)
-
-    // Remove from caches
-    if (ethAddress) {
-      clientByEthAddress.delete(ethAddress)
-    }
-    if (inboxId) {
-      clientByInboxId.delete(inboxId)
-    }
+    await dropXmtpClient({ xmtpClient, ethAddress })
 
     // Always clean up encryption key if we're deleting the database
     if (deleteDatabase && ethAddress) {
@@ -107,4 +104,15 @@ export async function logoutXmtpClient(args: {
       additionalMessage: `Failed to properly logout XMTP client`,
     })
   }
+}
+
+export async function dropXmtpClient(args: {
+  xmtpClient: IXmtpClientWithCodecs
+  ethAddress: IEthereumAddress
+}) {
+  const { xmtpClient, ethAddress } = args
+  xmtpLogger.debug(`Dropping XMTP client for ethAddress: ${ethAddress}`)
+  await XmtpClient.dropClient(xmtpClient.installationId)
+  xmtpClientCache.delete(getEthAddressCacheKey(ethAddress))
+  xmtpClientCache.delete(getInboxIdCacheKey(xmtpClient.inboxId))
 }

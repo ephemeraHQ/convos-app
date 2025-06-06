@@ -21,7 +21,6 @@ export const downloadRemoteAttachment = async (args: { url: string }) => {
     }
 
     const exists = await fileExists(localFileUri)
-
     if (!exists) {
       throw new Error("Downloaded file not found")
     }

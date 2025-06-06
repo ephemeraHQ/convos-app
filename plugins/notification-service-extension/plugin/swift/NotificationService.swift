@@ -10,7 +10,7 @@ final class NotificationService: UNNotificationServiceExtension {
     // IF YOU CHANGE THIS KEY, YOU MUST CHANGE THE KEY IN THE MAIN APP TOO
     private static let CONVERSATION_MESSAGES_KEY_PREFIX = "conversation_messages_"
 
-    private static func storeDecryptedMessage(_ message: DecodedMessage, forTopic topic: String) {
+    private static func storeDecryptedMessage(_ message: DecodedMessage, forTopic topic: String) async {
         SentryManager.shared.addBreadcrumb("Attempting to store decrypted message")
         let conversationId = XmtpHelpers.shared.getConversationIdFromTopic(topic)
         SentryManager.shared.addBreadcrumb("Got conversation ID: \(conversationId)")
@@ -49,9 +49,71 @@ final class NotificationService: UNNotificationServiceExtension {
                     "reference": reply.reference
                 ]
                 
-                if let textContent = reply.content as? String {
-                    replyContent["content"] = ["text": textContent]
-                } else {
+                // Use the contentType to determine how to handle the content
+                switch reply.contentType {
+                case ContentTypeText:
+                    if let textContent = reply.content as? String {
+                        replyContent["content"] = ["text": textContent]
+                    } else {
+                        replyContent["content"] = ["text": String(describing: reply.content)]
+                    }
+                    
+                case ContentTypeRemoteAttachment:
+                    if let remoteAttachment = reply.content as? RemoteAttachment {
+                        var remoteAttachmentContent: [String: Any] = [
+                            "url": remoteAttachment.url,
+                            "secret": remoteAttachment.secret.base64EncodedString(),
+                            "salt": remoteAttachment.salt.base64EncodedString(),
+                            "nonce": remoteAttachment.nonce.base64EncodedString(),
+                            "contentDigest": remoteAttachment.contentDigest,
+                            "scheme": "https://"
+                        ]
+                        
+                        if let filename = remoteAttachment.filename {
+                            remoteAttachmentContent["filename"] = filename
+                        }
+                        if let contentLength = remoteAttachment.contentLength {
+                            remoteAttachmentContent["contentLength"] = String(contentLength)
+                        }
+                        
+                        replyContent["content"] = remoteAttachmentContent
+                    } else {
+                        replyContent["content"] = ["text": String(describing: reply.content)]
+                    }
+                    
+                case ContentTypeAttachment:
+                    if let attachment = reply.content as? Attachment {
+                        let attachmentContent: [String: Any] = [
+                            "filename": attachment.filename,
+                            "mimeType": attachment.mimeType,
+                            "data": attachment.data.base64EncodedString()
+                        ]
+                        replyContent["content"] = attachmentContent
+                    } else {
+                        replyContent["content"] = ["text": String(describing: reply.content)]
+                    }
+                    
+                case ContentTypeMultiRemoteAttachment:
+                    if let multiRemoteAttachment = reply.content as? MultiRemoteAttachment {
+                        let attachments = multiRemoteAttachment.remoteAttachments.map { attachment in
+                            [
+                                "url": attachment.url,
+                                "secret": attachment.secret.base64EncodedString(),
+                                "salt": attachment.salt.base64EncodedString(),
+                                "nonce": attachment.nonce.base64EncodedString(),
+                                "contentDigest": attachment.contentDigest,
+                                "scheme": attachment.scheme,
+                                "filename": attachment.filename,
+                                "contentLength": String(attachment.contentLength)
+                            ] as [String: Any]
+                        }
+                        replyContent["content"] = ["attachments": attachments]
+                    } else {
+                        replyContent["content"] = ["text": String(describing: reply.content)]
+                    }
+                    
+                default:
+                    // Fallback for unknown content types
                     replyContent["content"] = ["text": String(describing: reply.content)]
                 }
                 
@@ -91,10 +153,37 @@ final class NotificationService: UNNotificationServiceExtension {
                     remoteAttachmentContent["contentLength"] = contentLength
                 }
                 
+                // Wait for attachment storage to complete
+                do {
+                    SentryManager.shared.addBreadcrumb("Attempting to store remote attachment")
+                    try await SharedAttachmentStorage.shared.storeRemoteAttachment(
+                        messageId: message.id,
+                        remoteAttachment: remoteAttachment
+                    )
+                    SentryManager.shared.addBreadcrumb("Successfully stored remote attachment")
+                } catch {
+                    SentryManager.shared.trackError(ErrorFactory.create(domain: "NotificationService", description: "Failed to store remote attachment"))
+                }
+                
                 serializableContent = ["remoteAttachment": remoteAttachmentContent]
                 
             case .remoteURL(let url):
                 serializableContent = ["remoteURL": url.absoluteString]
+                
+            case .multiRemoteAttachment(let multiRemoteAttachment):
+                let attachments = multiRemoteAttachment.remoteAttachments.map { attachment in
+                    [
+                        "url": attachment.url,
+                        "secret": attachment.secret.base64EncodedString(),
+                        "salt": attachment.salt.base64EncodedString(),
+                        "nonce": attachment.nonce.base64EncodedString(),
+                        "contentDigest": attachment.contentDigest,
+                        "scheme": attachment.scheme,
+                        "filename": attachment.filename,
+                        "contentLength": String(attachment.contentLength)
+                    ] as [String: Any]
+                }
+                serializableContent = ["multiRemoteAttachment": ["attachments": attachments]]
                 
             case .unknown:
                 serializableContent = ["unknown": ["contentTypeId": "unknown"]]
@@ -232,9 +321,9 @@ final class NotificationService: UNNotificationServiceExtension {
             // Create XMTP client
             let client: Client
             do {
-                SentryManager.shared.addBreadcrumb("Attempting to create XMTP client for address: \(ethAddress)")
+                SentryManager.shared.addBreadcrumb("Attempting to create/get XMTP client for address: \(ethAddress)")
                 client = try await Client.client(for: ethAddress)
-                SentryManager.shared.addBreadcrumb("Successfully created XMTP client")
+                SentryManager.shared.addBreadcrumb("Successfully created/got XMTP client for address: \(ethAddress)")
             } catch {
                 // Check if this is a no encryption key error and we have an installation ID
                 if let clientError = error as? Client.ClientInitializationError,
@@ -360,7 +449,11 @@ final class NotificationService: UNNotificationServiceExtension {
                 SentryManager.shared.addBreadcrumb("Successfully decrypted message")
                 
                 // Store the decrypted message so that the main app can display it faster
-                NotificationService.storeDecryptedMessage(decodedMessage, forTopic: topic)
+                do {
+                    try await NotificationService.storeDecryptedMessage(decodedMessage, forTopic: topic)
+                } catch {
+                    SentryManager.shared.trackError(error, extras: ["info": "Failed to store decrypted message"])
+                }
                 
             } catch {
                 SentryManager.shared.trackError(error, extras: ["info": "Unexpected error during message processing"])

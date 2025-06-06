@@ -1,6 +1,4 @@
 import { queryOptions } from "@tanstack/react-query"
-import { ensureConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { ensureConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { getMessageSpamScore } from "@/features/conversation/conversation-requests-list/utils/get-message-spam-score"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
@@ -44,26 +42,8 @@ export function getConversationSpamQueryOptions(args: IArgs) {
         }
       }
 
-      const messageQueryData = await ensureConversationMessagesInfiniteQueryData({
-        clientInboxId,
-        xmtpConversationId,
-        caller: "getConversationSpamQueryOptions",
-      })
-      const firstMessageId = messageQueryData.pages[0]?.messageIds[0]
+      const lastMessage = conversation.lastMessage
 
-      // For now to make it easier, no last message isn't spam
-      if (!firstMessageId) {
-        return false
-      }
-
-      const lastMessage = await ensureConversationMessageQueryData({
-        clientInboxId,
-        xmtpMessageId: firstMessageId,
-        xmtpConversationId,
-        caller: "getConversationSpamQueryOptions",
-      })
-
-      // For now to make it easier, no last message isn't spam
       if (!lastMessage) {
         return false
       }

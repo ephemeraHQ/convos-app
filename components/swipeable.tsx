@@ -55,7 +55,7 @@ export function Swipeable({
   onRightSwipe,
   leftThreshold,
   rightThreshold,
-  overshootFriction = 1,
+  overshootFriction,
   dragOffsetFromLeftEdge,
   dragOffsetFromRightEdge,
   overshootLeft,

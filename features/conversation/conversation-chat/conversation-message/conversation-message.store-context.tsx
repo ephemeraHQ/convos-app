@@ -6,7 +6,10 @@ import { IXmtpMessageId } from "@features/xmtp/xmtp.types"
 import { createContext, memo, useContext, useMemo } from "react"
 import { createStore, useStore } from "zustand"
 import { subscribeWithSelector } from "zustand/middleware"
-import { IConversationMessage } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
+import {
+  IConversationMessage,
+  IConversationMessageContentType,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { isGroupUpdatedMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { getHasNextMessageInSeries } from "@/features/conversation/utils/has-next-message-in-serie"
 import { hasPreviousMessageInSeries } from "@/features/conversation/utils/has-previous-message-in-serie"
@@ -31,6 +34,7 @@ type IConversationContextStoreState = IConversationMessageContextStoreProps & {
   showDateChange: boolean
   isLastMessage: boolean
   isGroupUpdateMessage: boolean
+  messageType: IConversationMessageContentType
 }
 
 // Function to calculate derived state from props
@@ -63,6 +67,7 @@ function getCalculatedState(
     }),
     isLastMessage: !props.nextMessage,
     isGroupUpdateMessage: isGroupUpdatedMessage(props.currentMessage),
+    messageType: props.currentMessage.type,
   }
 }
 
