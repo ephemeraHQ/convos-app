@@ -117,6 +117,8 @@ async function getXmtpConversationsUnbatched(args: IGetXmtpConversationsArgs) {
             imageUrl: true,
             description: true,
             lastMessage: true,
+            consentState: true,
+            isActive: true,
             // isActive: true,
             // consentState: true, // We already get it when we convert to convos conversations
           },

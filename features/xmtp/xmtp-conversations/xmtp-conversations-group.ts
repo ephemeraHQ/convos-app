@@ -7,6 +7,8 @@ import {
   addAdmin,
   addGroupMembers,
   addSuperAdmin,
+  isGroupActive,
+  listConversationMembers,
   permissionPolicySet,
   removeAdmin,
   removeGroupMembers,
@@ -175,6 +177,28 @@ export async function updateXmtpGroupDescription(args: {
   }
 }
 
+export async function getXmtpGroupMembers(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  const { clientInboxId, xmtpConversationId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    return await wrapXmtpCallWithDuration("listConversationMembers", () =>
+      listConversationMembers(client.installationId, xmtpConversationId),
+    )
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "failed to get group members",
+    })
+  }
+}
+
 export async function updateXmtpGroupImage(args: {
   clientInboxId: IXmtpInboxId
   xmtpConversationId: IXmtpConversationId
@@ -331,6 +355,30 @@ export async function getXmtpGroupPermissions(args: {
     throw new XMTPError({
       error,
       additionalMessage: "Failed to get group permissions",
+    })
+  }
+}
+
+export async function getIsXmtpGroupActive(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  const { clientInboxId, xmtpConversationId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    const isActive = await wrapXmtpCallWithDuration("isActive", () =>
+      isGroupActive(client.installationId, xmtpConversationId),
+    )
+
+    return isActive
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: `Failed to get is active for conversation ${xmtpConversationId}`,
     })
   }
 }

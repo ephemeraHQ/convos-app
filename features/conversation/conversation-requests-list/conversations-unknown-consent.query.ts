@@ -1,5 +1,5 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
-import { queryOptions, skipToken } from "@tanstack/react-query"
+import { queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { setConversationQueryData } from "@/features/conversation/queries/conversation.query"
 import { convertXmtpConversationToConvosConversation } from "@/features/conversation/utils/convert-xmtp-conversation-to-convos-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
@@ -28,20 +28,29 @@ async function getUnknownConversationsQueryFn(args: { inboxId: IXmtpInboxId }) {
     caller: "getUnknownConversationsQueryFn",
   })
 
-  const convosConversations = await Promise.all(
-    unknownConsentXmtpConversations.map(convertXmtpConversationToConvosConversation),
-  )
+  return unknownConsentXmtpConversations.map((c) => c.id)
 
-  // For now conversations have all the same properties as one conversation
-  for (const conversation of convosConversations) {
-    setConversationQueryData({
-      clientInboxId: inboxId,
-      xmtpConversationId: conversation.xmtpId,
-      conversation,
-    })
-  }
+  // const convosConversations = await Promise.all(
+  //   unknownConsentXmtpConversations.map(convertXmtpConversationToConvosConversation),
+  // )
 
-  return convosConversations.map((c) => c.xmtpId)
+  // // For now conversations have all the same properties as one conversation
+  // for (const conversation of convosConversations) {
+  //   setConversationQueryData({
+  //     clientInboxId: inboxId,
+  //     xmtpConversationId: conversation.xmtpId,
+  //     conversation,
+  //   })
+  // }
+
+  // return convosConversations.map((c) => c.xmtpId)
+}
+
+export function useUnknownConsentConversationsQuery(args: {
+  inboxId: IXmtpInboxId
+  caller: string
+}) {
+  return useQuery(getUnknownConsentConversationsQueryOptions(args))
 }
 
 export const getUnknownConsentConversationsQueryData = (args: { inboxId: IXmtpInboxId }) => {

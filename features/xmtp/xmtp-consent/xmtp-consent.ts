@@ -1,4 +1,5 @@
 import { IXmtpConsentState, IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
+import { consentConversationIdState } from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
@@ -114,6 +115,30 @@ export const updateXmtpConsentForGroupsForInbox = async (args: {
     throw new XMTPError({
       error,
       additionalMessage: "Failed to update consent for groups",
+    })
+  }
+}
+
+export async function getXmtpConsentStateForConversation(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+}) {
+  const { clientInboxId, xmtpConversationId } = args
+
+  try {
+    const client = await getXmtpClientByInboxId({
+      inboxId: clientInboxId,
+    })
+
+    const consentState = await wrapXmtpCallWithDuration("getConsentState", () =>
+      consentConversationIdState(client.installationId, xmtpConversationId),
+    )
+
+    return consentState
+  } catch (error) {
+    throw new XMTPError({
+      error,
+      additionalMessage: "Failed to get XMTP consent state for conversation",
     })
   }
 }

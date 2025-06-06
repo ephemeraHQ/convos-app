@@ -31,7 +31,7 @@ export function BlockedConversationsScreen() {
         <ConversationList
           conversationsIds={blockedConversationsIds}
           renderConversation={({ item }) => {
-            return <ConversationRequestsListItem xmtpConversationId={item} />
+            return <ConversationListItemBlocked xmtpConversationId={item} />
           }}
         />
       ) : (
@@ -44,7 +44,7 @@ export function BlockedConversationsScreen() {
   )
 }
 
-const ConversationRequestsListItem = memo(function ConversationRequestsListItem(props: {
+const ConversationListItemBlocked = memo(function ConversationListItemBlocked(props: {
   xmtpConversationId: IXmtpConversationId
 }) {
   const { xmtpConversationId } = props
@@ -54,7 +54,7 @@ const ConversationRequestsListItem = memo(function ConversationRequestsListItem(
   const { data: conversation } = useConversationQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
-    caller: "ConversationRequestsListItem",
+    caller: "ConversationListItemBlocked",
   })
 
   if (!conversation) {

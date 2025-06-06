@@ -2,7 +2,10 @@ import { useQueries, useQuery } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationSpamQueryOptions } from "@/features/conversation/conversation-requests-list/conversation-spam.query"
-import { getUnknownConsentConversationsQueryOptions } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import {
+  getUnknownConsentConversationsQueryOptions,
+  useUnknownConsentConversationsQuery,
+} from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
 import { captureError } from "@/utils/capture-error"
@@ -16,11 +19,9 @@ export function useConversationRequestsListItem() {
     isLoading: isLoadingUnknownConsentConversationIds,
     isFetching: isFetchingUnknownConsentConversationIds,
     refetch: refetchUnknownConsentConversationIds,
-  } = useQuery({
-    ...getUnknownConsentConversationsQueryOptions({
-      inboxId: currentSender.inboxId,
-      caller: "useConversationRequestsListItem",
-    }),
+  } = useUnknownConsentConversationsQuery({
+    inboxId: currentSender.inboxId,
+    caller: "useConversationRequestsListItem",
   })
 
   const spamQueries = useQueries({
