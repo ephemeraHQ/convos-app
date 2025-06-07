@@ -42,6 +42,6 @@ jobs:
       - name: Create PR preview update
         uses: expo/expo-github-action/preview@v8
         with:
-          command: eas update --channel=preview --branch=pr-${{ github.event.number }}
+          command: eas update --channel=preview --branch=pr-${{ github.event.number }} --message="PR #${{ github.event.number }}: ${{ github.event.pull_request.title }}"
         env:
           EXPO_ENV: preview
