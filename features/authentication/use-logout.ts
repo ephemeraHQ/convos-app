@@ -27,171 +27,167 @@ export const useLogout = () => {
     async (args: { caller: string }) => {
       authLogger.debug(`Logging out called by "${args.caller}"`)
 
-      useAppStore.getState().actions.setIsShowingFullScreenOverlay(true)
-      useAppStore.getState().actions.setIsLoggingOut(true)
+      // Immediately log out the user
+      useAuthenticationStore.getState().actions.setStatus("signedOut")
+      useMultiInboxStore.getState().actions.reset()
+      useNotificationsStore.getState().actions.reset()
+      clearReacyQueryQueriesAndCache()
 
-      try {
-        const senders = getAllSenders()
-        const hasAtLeastOneSender = senders.length > 0
+      authLogger.debug("User logged out immediately")
 
-        if (hasAtLeastOneSender) {
-          const [
-            unsubscribeNotificationsResults,
-            streamingResult,
-            unlinkIdentitiesResults,
-            unregisterPushNotificationsResults,
-            unregisterBackgroundTaskResult,
-          ] = await customPromiseAllSettled([
-            // Unsubscribe from conversations notifications
-            Promise.all(
-              senders.map((sender) =>
-                unsubscribeFromAllConversationsNotifications({
-                  clientInboxId: sender.inboxId,
-                }),
+      // Run cleanup operations in the background
+      const runCleanupInBackground = async (): Promise<void> => {
+        try {
+          const senders = getAllSenders()
+          const hasAtLeastOneSender = senders.length > 0
+
+          if (hasAtLeastOneSender) {
+            const [
+              unsubscribeNotificationsResults,
+              streamingResult,
+              unlinkIdentitiesResults,
+              unregisterPushNotificationsResults,
+              unregisterBackgroundTaskResult,
+            ] = await customPromiseAllSettled([
+              // Unsubscribe from conversations notifications
+              Promise.all(
+                senders.map((sender: { inboxId: string }) =>
+                  unsubscribeFromAllConversationsNotifications({
+                    clientInboxId: sender.inboxId,
+                  }),
+                ),
               ),
-            ),
-            // Stop streaming
-            stopStreaming(senders.map((sender) => sender.inboxId)),
-            // Unlink identities from device
-            new Promise<void>(async (resolve, reject) => {
-              try {
-                const currentUser = getCurrentUserQueryData()
-                if (!currentUser) {
-                  // Ignore the flow if we don't have a current user
-                  return resolve()
+              // Stop streaming
+              stopStreaming(senders.map((sender: { inboxId: string }) => sender.inboxId)),
+              // Unlink identities from device
+              new Promise<void>(async (resolve: () => void, reject: (error: any) => void) => {
+                try {
+                  const currentUser = getCurrentUserQueryData()
+                  if (!currentUser) {
+                    // Ignore the flow if we don't have a current user
+                    return resolve()
+                  }
+                  const currentDevice = await ensureUserDeviceQueryData({
+                    userId: currentUser.id,
+                  })
+                  const currentUserIdentities = await ensureUserIdentitiesQueryData({
+                    userId: currentUser.id,
+                  })
+                  await Promise.all(
+                    currentUserIdentities.map((identity: { id: string }) =>
+                      unlinkIdentityFromDeviceMutation({
+                        identityId: identity.id,
+                        deviceId: currentDevice.id,
+                      }),
+                    ),
+                  )
+                  resolve()
+                } catch (error) {
+                  reject(error)
                 }
-                const currentDevice = await ensureUserDeviceQueryData({
-                  userId: currentUser.id,
-                })
-                const currentUserIdentities = await ensureUserIdentitiesQueryData({
-                  userId: currentUser.id,
-                })
-                await Promise.all(
-                  currentUserIdentities.map((identity) =>
-                    unlinkIdentityFromDeviceMutation({
-                      identityId: identity.id,
-                      deviceId: currentDevice.id,
-                    }),
-                  ),
-                )
-                resolve()
-              } catch (error) {
-                reject(error)
-              }
-            }),
-            // Unregister push notifications
-            Promise.all(
-              senders.map((sender) =>
-                unregisterPushNotifications({ clientInboxId: sender.inboxId }),
+              }),
+              // Unregister push notifications
+              Promise.all(
+                senders.map((sender: { inboxId: string }) =>
+                  unregisterPushNotifications({ clientInboxId: sender.inboxId }),
+                ),
               ),
-            ),
-            // Unregister background sync task
-            unregisterBackgroundSyncTask(),
-          ])
+              // Unregister background sync task
+              unregisterBackgroundSyncTask(),
+            ])
 
-          if (unsubscribeNotificationsResults.status === "rejected") {
-            captureError(
-              new GenericError({
-                error: unsubscribeNotificationsResults.reason,
-                additionalMessage: "Error unsubscribing from conversations notifications",
-              }),
-            )
-          }
+            if (unsubscribeNotificationsResults.status === "rejected") {
+              captureError(
+                new GenericError({
+                  error: unsubscribeNotificationsResults.reason,
+                  additionalMessage: "Error unsubscribing from conversations notifications",
+                }),
+              )
+            }
 
-          if (streamingResult.status === "rejected") {
-            captureError(
-              new GenericError({
-                error: streamingResult.reason,
-                additionalMessage: "Error stopping streaming",
-              }),
-            )
-          }
+            if (streamingResult.status === "rejected") {
+              captureError(
+                new GenericError({
+                  error: streamingResult.reason,
+                  additionalMessage: "Error stopping streaming",
+                }),
+              )
+            }
 
-          if (unlinkIdentitiesResults.status === "rejected") {
-            captureError(
-              new GenericError({
-                error: unlinkIdentitiesResults.reason,
-                additionalMessage: "Error unregistering push notifications",
-              }),
-            )
-          }
+            if (unlinkIdentitiesResults.status === "rejected") {
+              captureError(
+                new GenericError({
+                  error: unlinkIdentitiesResults.reason,
+                  additionalMessage: "Error unregistering push notifications",
+                }),
+              )
+            }
 
-          if (unregisterPushNotificationsResults.status === "rejected") {
-            captureError(
-              new GenericError({
-                error: unregisterPushNotificationsResults.reason,
-                additionalMessage: "Error unregistering push notifications",
-              }),
-            )
-          }
+            if (unregisterPushNotificationsResults.status === "rejected") {
+              captureError(
+                new GenericError({
+                  error: unregisterPushNotificationsResults.reason,
+                  additionalMessage: "Error unregistering push notifications",
+                }),
+              )
+            }
 
-          if (unregisterBackgroundTaskResult.status === "rejected") {
-            captureError(
-              new GenericError({
-                error: unregisterBackgroundTaskResult.reason,
-                additionalMessage: "Error unregistering background sync task",
-              }),
-            )
+            if (unregisterBackgroundTaskResult.status === "rejected") {
+              captureError(
+                new GenericError({
+                  error: unregisterBackgroundTaskResult.reason,
+                  additionalMessage: "Error unregistering background sync task",
+                }),
+              )
+            }
+
+            try {
+              await Promise.all(
+                senders.map((sender) =>
+                  logoutXmtpClient({
+                    inboxId: sender.inboxId,
+                    ethAddress: sender.ethereumAddress,
+                  }),
+                ),
+              )
+            } catch (error) {
+              captureError(new GenericError({ error, additionalMessage: "Error logging out xmtp" }))
+            }
           }
 
           try {
-            await Promise.all(
-              senders.map((sender) =>
-                logoutXmtpClient({
-                  inboxId: sender.inboxId,
-                  ethAddress: sender.ethereumAddress,
-                }),
-              ),
-            )
+            await clearTurnkeySessions()
           } catch (error) {
-            captureError(new GenericError({ error, additionalMessage: "Error logging out xmtp" }))
+            captureError(
+              new GenericError({ error, additionalMessage: "Error clearing turnkey sessions" }),
+            )
           }
-        }
 
-        try {
-          await clearTurnkeySessions()
+          // Clear expo-image cache after logout for privacy and to avoid stale images
+          try {
+            await clearImageCache()
+          } catch (e) {
+            captureError(
+              new GenericError({
+                error: e,
+                additionalMessage: "Error clearing image cache after logout",
+              }),
+            )
+          }
+
+          authLogger.debug("Background cleanup operations completed")
         } catch (error) {
           captureError(
-            new GenericError({ error, additionalMessage: "Error clearing turnkey sessions" }),
-          )
-        }
-
-        // Doing this at the end because we want to make sure that we cleared everything before showing auth screen
-        useAuthenticationStore.getState().actions.setStatus("signedOut")
-
-        // This needs to be at the end because at many places we use useSafeCurrentSender()
-        // and it will throw error if we reset the store too early
-        // Need the setTimeout because for some reason the navigation is not updated immediately when we set auth status to signed out
-        useMultiInboxStore.getState().actions.reset()
-
-        useNotificationsStore.getState().actions.reset()
-
-        // Might want to only clear certain queries later but okay for now
-        // Put this last because otherwise some useQuery hook triggers even tho we're logging out
-        clearReacyQueryQueriesAndCache()
-
-        authLogger.debug("Successfully logged out")
-      } catch (error) {
-        throw new GenericError({
-          error,
-          additionalMessage: "Error logging out",
-        })
-      } finally {
-        // Clear expo-image cache after logout for privacy and to avoid stale images
-        try {
-          await clearImageCache()
-        } catch (e) {
-          captureError(
             new GenericError({
-              error: e,
-              additionalMessage: "Error clearing image cache after logout",
+              error,
+              additionalMessage: "Error during logout cleanup operations",
             }),
           )
         }
-
-        useAppStore.getState().actions.setIsShowingFullScreenOverlay(false)
-        useAppStore.getState().actions.setIsLoggingOut(false)
       }
+
+      // Execute cleanup in background without awaiting
+      runCleanupInBackground()
     },
     [clearTurnkeySessions],
   )
