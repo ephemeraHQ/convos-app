@@ -48,6 +48,7 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   const insets = useSafeAreaInsets()
 
   useConversationListScreenHeader()
+  // usePreloadRecentConversations({ conversationsIds })
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -193,3 +194,35 @@ const ListHeader = React.memo(function ListHeader() {
     </AnimatedVStack>
   )
 })
+
+// function usePreloadRecentConversations(args: { conversationsIds: IXmtpConversationId[] }) {
+//   const { conversationsIds } = args
+//   const router = useRouter()
+//   const currentSender = useSafeCurrentSender()
+//   const preloadedConversationsRef = useRef(new Set<IXmtpConversationId>())
+
+//   useEffectAfterInteractions(() => {
+//     if (conversationsIds) {
+//       conversationsIds.forEach((conversationId) => {
+//         // Skip if already preloaded
+//         if (preloadedConversationsRef.current.has(conversationId)) {
+//           return
+//         }
+
+//         const conversation = getConversationQueryData({
+//           clientInboxId: currentSender.inboxId,
+//           xmtpConversationId: conversationId,
+//         })
+
+//         if (conversation) {
+//           router.preload("Conversation", {
+//             xmtpConversationId: conversation.xmtpId,
+//           })
+
+//           // Mark as preloaded
+//           preloadedConversationsRef.current.add(conversationId)
+//         }
+//       })
+//     }
+//   }, [conversationsIds])
+// }

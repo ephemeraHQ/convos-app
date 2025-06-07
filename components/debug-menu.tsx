@@ -1120,6 +1120,223 @@ function useShowDebugMenu() {
     })
   }, [])
 
+  const showUpdatesMenu = useCallback(() => {
+    const currentEnv = getEnv()
+    const currentChannel = currentEnv // Channel matches environment
+
+    const updatesMethods = {
+      "Current Update Info": () => {
+        Alert.alert(
+          "Current Update Info",
+          [
+            `Environment: ${currentEnv}`,
+            `Channel: ${currentChannel}`,
+            `Update ID: ${currentlyRunning.updateId || "embedded"}`,
+            `Created: ${currentlyRunning.createdAt?.toLocaleString() || "N/A"}`,
+            `Runtime Version: ${currentlyRunning.runtimeVersion}`,
+            `Is Embedded: ${currentlyRunning.isEmbeddedLaunch}`,
+          ].join("\n"),
+          [
+            { text: "OK" },
+            {
+              text: "Copy Info",
+              onPress: () => {
+                const info = [
+                  `Environment: ${currentEnv}`,
+                  `Channel: ${currentChannel}`,
+                  `Update ID: ${currentlyRunning.updateId || "embedded"}`,
+                  `Runtime Version: ${currentlyRunning.runtimeVersion}`,
+                ].join("\n")
+                Clipboard.setString(info)
+              },
+            },
+          ],
+        )
+      },
+      "List Available Branches": async () => {
+        Alert.alert(
+          "Available Branches",
+          `This will show branches available for the "${currentChannel}" channel.\n\nRun this command in your terminal:`,
+          [
+            {
+              text: "Copy Command",
+              onPress: () => {
+                Clipboard.setString("eas branch:list")
+                Alert.alert("Copied", "Command copied to clipboard")
+              },
+            },
+            { text: "OK" },
+          ],
+        )
+      },
+      ...(currentEnv === "preview"
+        ? {
+            "Switch to PR Branch (Runtime Override)": async () => {
+              Alert.prompt(
+                "Switch to PR Branch",
+                "Enter the PR number to temporarily switch to that branch.",
+                [
+                  {
+                    text: "Cancel",
+                    style: "cancel",
+                  },
+                  {
+                    text: "Switch",
+                    onPress: async (prNumber) => {
+                      if (!prNumber || isNaN(Number(prNumber))) {
+                        Alert.alert("Invalid Input", "Please enter a valid PR number")
+                        return
+                      }
+
+                      try {
+                        await Updates.setUpdateURLAndRequestHeadersOverride({
+                          updateUrl: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+                          requestHeaders: {
+                            "expo-channel-name": currentChannel,
+                            "expo-branch-name": `pr-${prNumber}`,
+                          },
+                        })
+
+                        Alert.alert(
+                          "Branch Override Set",
+                          `Temporarily switched to PR #${prNumber} branch while staying on "${currentChannel}" channel.\n\nClose and reopen the app to load the update.`,
+                          [
+                            {
+                              text: "Reload Now",
+                              onPress: () => Updates.reloadAsync(),
+                            },
+                            {
+                              text: "Later",
+                              style: "cancel",
+                            },
+                          ],
+                        )
+                      } catch (error) {
+                        captureErrorWithToast(
+                          new GenericError({
+                            error,
+                            additionalMessage: "Error switching to PR branch",
+                          }),
+                          { message: "Failed to switch to PR branch" },
+                        )
+                      }
+                    },
+                  },
+                ],
+                "plain-text",
+              )
+            },
+            "Reset Branch Override": async () => {
+              try {
+                await Updates.setUpdateURLAndRequestHeadersOverride({
+                  updateUrl: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+                  requestHeaders: {
+                    "expo-channel-name": currentChannel,
+                  },
+                })
+
+                Alert.alert(
+                  "Override Reset",
+                  `Reset to default "${currentChannel}" channel behavior.\n\nClose and reopen the app to apply.`,
+                  [
+                    {
+                      text: "Reload Now",
+                      onPress: () => Updates.reloadAsync(),
+                    },
+                    {
+                      text: "Later",
+                      style: "cancel",
+                    },
+                  ],
+                )
+              } catch (error) {
+                captureErrorWithToast(
+                  new GenericError({
+                    error,
+                    additionalMessage: "Error resetting branch override",
+                  }),
+                  { message: "Failed to reset branch override" },
+                )
+              }
+            },
+          }
+        : {}),
+      "Check for Updates": async () => {
+        try {
+          const update = await Updates.checkForUpdateAsync()
+          if (update.isAvailable) {
+            Alert.alert(
+              "Update Available",
+              `A new update is available on the "${currentChannel}" channel.\n\nWould you like to download and install it?`,
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                },
+                {
+                  text: "Update",
+                  onPress: async () => {
+                    try {
+                      const fetchResult = await Updates.fetchUpdateAsync()
+                      if (fetchResult.isNew) {
+                        await Updates.reloadAsync()
+                      }
+                    } catch (error) {
+                      captureErrorWithToast(
+                        new GenericError({
+                          error,
+                          additionalMessage: "Error fetching update",
+                        }),
+                        { message: "Failed to fetch update" },
+                      )
+                    }
+                  },
+                },
+              ],
+            )
+          } else {
+            Alert.alert(
+              "No Updates",
+              `No new updates available on the "${currentChannel}" channel.`,
+            )
+          }
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error checking for updates",
+            }),
+            { message: "Failed to check for updates" },
+          )
+        }
+      },
+      Cancel: undefined,
+    }
+
+    const options = Object.keys(updatesMethods)
+
+    showActionSheet({
+      options: {
+        title: `Updates Debug (${currentEnv.toUpperCase()})`,
+        options,
+        cancelButtonIndex: options.indexOf("Cancel"),
+      },
+      callback: async (selectedIndex?: number) => {
+        if (selectedIndex === undefined) {
+          return
+        }
+        const method = updatesMethods[options[selectedIndex] as keyof typeof updatesMethods]
+        if (method) {
+          try {
+            await method()
+          } catch (error) {
+            captureError(new GenericError({ error, additionalMessage: "Error in Updates menu" }))
+          }
+        }
+      },
+    })
+  }, [currentlyRunning])
+
   const primaryMethods = useMemo(() => {
     return {
       Logout: async () => {
@@ -1207,9 +1424,18 @@ function useShowDebugMenu() {
       "Notifications Menu": () => showNotificationsMenu(),
       "Logs Menu": () => showLogsMenu(),
       "XMTP Menu": () => showXmtpMenu(),
+      "Updates Menu": () => showUpdatesMenu(),
       Cancel: undefined,
     }
-  }, [logout, currentlyRunning, showLogsMenu, showNotificationsMenu, showXmtpMenu, showCacheMenu])
+  }, [
+    logout,
+    currentlyRunning,
+    showLogsMenu,
+    showNotificationsMenu,
+    showXmtpMenu,
+    showCacheMenu,
+    showUpdatesMenu,
+  ])
 
   const showDebugMenu = useCallback(() => {
     const options = Object.keys(primaryMethods)

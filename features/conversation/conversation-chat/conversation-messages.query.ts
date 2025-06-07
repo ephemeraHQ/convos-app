@@ -74,6 +74,8 @@ const conversationMessagesInfiniteQueryFn = async (
     direction: "next",
   }
 
+  const isFirstPage = !cursorNs
+
   const resolvedLimit = argLimit || DEFAULT_PAGE_SIZE
 
   if (!clientInboxId) {
@@ -84,11 +86,13 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("xmtpConversationId is required")
   }
 
-  await syncOneXmtpConversation({
-    clientInboxId,
-    xmtpConversationId,
-    caller: "conversationMessagesInfiniteQueryFn",
-  })
+  if (isFirstPage) {
+    await syncOneXmtpConversation({
+      clientInboxId,
+      xmtpConversationId,
+      caller: "conversationMessagesInfiniteQueryFn",
+    })
+  }
 
   const disappearingMessagesSettings = await ensureDisappearingMessageSettings({
     clientInboxId,
@@ -117,7 +121,7 @@ const conversationMessagesInfiniteQueryFn = async (
   let combinedMessagesForPage: IConversationMessage[] = [...convosMessagesFromServer]
 
   // Only if we're fetching the first page
-  if (direction === "next" && !cursorNs) {
+  if (isFirstPage) {
     const currentInfiniteData = getConversationMessagesInfiniteQueryData({
       clientInboxId,
       xmtpConversationId,

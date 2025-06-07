@@ -1,0 +1,110 @@
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-compatibility:
+    name: Check Update Compatibility
+    runs-on: ubuntu-latest
+    outputs:
+      can_create_update: ${{ steps.check-runtime.outputs.can_create_update }}
+      current_fingerprint: ${{ steps.check-runtime.outputs.current_fingerprint }}
+      preview_fingerprint: ${{ steps.check-runtime.outputs.preview_fingerprint }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+          cache-dependency-path: yarn.lock
+        env:
+          SKIP_YARN_COREPACK_CHECK: "1"
+
+      - run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: yarn
+
+      - name: Check fingerprint compatibility
+        id: check-runtime
+        run: |
+          # Get current PR's fingerprint
+          CURRENT_FINGERPRINT=$(EXPO_ENV=preview npx expo config --type introspect | jq -r '.runtimeVersion')
+          echo "current_fingerprint=$CURRENT_FINGERPRINT" >> $GITHUB_OUTPUT
+
+          # Get the latest preview build's fingerprint from EAS
+          PREVIEW_FINGERPRINT=$(eas build:list --platform=all --profile=preview --limit=1 --json --non-interactive | jq -r '.[0].runtimeVersion // empty')
+          echo "preview_fingerprint=$PREVIEW_FINGERPRINT" >> $GITHUB_OUTPUT
+
+          # Check if they match
+          if [ "$CURRENT_FINGERPRINT" = "$PREVIEW_FINGERPRINT" ] && [ -n "$PREVIEW_FINGERPRINT" ]; then
+            echo "can_create_update=true" >> $GITHUB_OUTPUT
+            echo "✅ Fingerprints match - can create EAS Update"
+          else
+            echo "can_create_update=false" >> $GITHUB_OUTPUT
+            echo "❌ Fingerprint mismatch - need new build"
+            echo "PR fingerprint: $CURRENT_FINGERPRINT"
+            echo "Preview fingerprint: $PREVIEW_FINGERPRINT"
+          fi
+
+  create-update:
+    name: Create EAS Update
+    runs-on: ubuntu-latest
+    needs: check-compatibility
+    if: needs.check-compatibility.outputs.can_create_update == 'true'
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: "yarn"
+          cache-dependency-path: yarn.lock
+        env:
+          SKIP_YARN_COREPACK_CHECK: "1"
+
+      - run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: yarn
+          eas-cache: true
+          patch-watchers: true
+
+      - name: Create PR preview update
+        uses: expo/expo-github-action/preview@v8
+        with:
+          # Publish to a branch named after the PR
+          command: eas update --branch=pr-${{ github.event.number }} --message="PR #${{ github.event.number }}: ${{ github.event.pull_request.title }}"
+        env:
+          EXPO_ENV: preview
+
+      - name: Link branch to preview channel (for easy testing)
+        run: |
+          # This makes the PR update available to preview builds
+          eas channel:edit preview --branch=pr-${{ github.event.number }}
