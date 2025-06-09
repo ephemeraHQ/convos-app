@@ -1,4 +1,8 @@
-import { conversationMessages, processMessage } from "@xmtp/react-native-sdk"
+import {
+  conversationMessages,
+  conversationMessagesWithReactions,
+  processMessage,
+} from "@xmtp/react-native-sdk"
 import { getXmtpClientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client"
 import { ISupportedXmtpCodecs } from "@/features/xmtp/xmtp-codecs/xmtp-codecs"
 import { isSupportedXmtpMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages-supported"
@@ -55,6 +59,55 @@ export async function getXmtpConversationMessages(args: {
       throw new XMTPError({
         error,
         additionalMessage: `Error fetching messages for xmtpConversationId ${xmtpConversationId}`,
+      })
+    } finally {
+      activeGetMessagesPromises.delete(promiseKey)
+    }
+  })()
+
+  activeGetMessagesPromises.set(promiseKey, promise)
+  return promise
+}
+
+export async function getXmtpConversationMessagesWithReactions(args: {
+  clientInboxId: IXmtpInboxId
+  xmtpConversationId: IXmtpConversationId
+  limit: number
+  afterNs?: number
+  beforeNs?: number
+  direction?: "next" | "prev"
+}) {
+  const { clientInboxId, xmtpConversationId, limit, afterNs, beforeNs, direction = "next" } = args
+  const promiseKey = `${clientInboxId}-${xmtpConversationId}-${limit}-${afterNs ?? "null"}-${beforeNs ?? "null"}-${direction}-reactions`
+  const existingPromise = activeGetMessagesPromises.get(promiseKey)
+  if (existingPromise) {
+    return existingPromise
+  }
+
+  const promise = (async () => {
+    try {
+      const client = await getXmtpClientByInboxId({
+        inboxId: clientInboxId,
+      })
+
+      const messages = (await wrapXmtpCallWithDuration(
+        `conversationMessagesWithReactions ${xmtpConversationId}`,
+        () =>
+          conversationMessagesWithReactions<ISupportedXmtpCodecs>(
+            client.installationId,
+            xmtpConversationId,
+            limit,
+            beforeNs,
+            afterNs,
+            direction === "next" ? "DESCENDING" : "ASCENDING",
+          ),
+      )) as unknown as IXmtpDecodedMessage[]
+
+      return messages.filter(isSupportedXmtpMessage)
+    } catch (error) {
+      throw new XMTPError({
+        error,
+        additionalMessage: `Error fetching messages with reactions for xmtpConversationId ${xmtpConversationId}`,
       })
     } finally {
       activeGetMessagesPromises.delete(promiseKey)

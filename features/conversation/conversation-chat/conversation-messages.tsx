@@ -1,5 +1,4 @@
 import { FlashList, FlashListProps } from "@shopify/flash-list"
-import { InfiniteQueryObserverResult } from "@tanstack/react-query"
 import React, { memo, ReactNode, useCallback, useMemo, useRef } from "react"
 import { Platform } from "react-native"
 import Animated, {
@@ -42,10 +41,13 @@ import {
   messageContentIsText,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import {
+  checkForNewMessages,
+  checkForNewMessagesAndReactions,
   DEFAULT_PAGE_SIZE,
-  refetchConversationMessagesInfiniteQuery,
-  useConversationMessagesInfiniteQueryAllMessageIds,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+  invalidateConversationMessagesQuery,
+  loadOlderMessages,
+  useConversationMessagesQuery,
+} from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
@@ -89,18 +91,28 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const headerHeight = useHeaderHeight()
   const insets = useSafeAreaInsets()
 
-  const {
-    data: messageIds = [],
-    fetchNextPage,
-    hasNextPage,
-  } = useConversationMessagesInfiniteQueryAllMessageIds({
+  const { data: messagesData } = useConversationMessagesQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "Conversation Messages",
   })
 
+  const messageIds = useMemo(() => messagesData?.messageIds || [], [messagesData?.messageIds])
+  const hasMoreOlder = messagesData?.hasMoreOlder || false
+
+  // Simple functions for the new approach
+  const fetchNextPage = useCallback(async () => {
+    loadOlderMessages({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages fetchNextPage",
+    }).catch(captureError)
+  }, [currentSender.inboxId, xmtpConversationId])
+
+  const hasNextPage = hasMoreOlder
+
   useRefetchOnAppFocus()
-  // useRefetchOnMount() // Might be overkill because streams should always work now
+  useRefetchOnMount()
   useScrollToHighlightedMessage({ messageIds, listRef: scrollRef })
   useMarkAsRead({ messageIds })
   useHandleDisappearingMessagesSettings()
@@ -253,37 +265,39 @@ function useRefetchOnAppFocus() {
 
   useAppStateHandler({
     onForeground: () => {
-      logger.debug("Conversation Messages came to foreground, refetching messages...")
-      refetchConversationMessagesInfiniteQuery({
+      logger.debug(
+        "Conversation Messages came to foreground, checking for new messages and reactions...",
+      )
+      checkForNewMessagesAndReactions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId,
-        caller: "Conversation Messages refetch on foreground",
+        caller: "Conversation Messages useRefetchOnAppFocus",
       })
         .then(() => {
-          logger.debug("Done refetching messages because we came to foreground")
+          logger.debug("Done checking for new messages and reactions because we came to foreground")
         })
         .catch(captureError)
     },
   })
 }
 
-// function useRefetchOnMount() {
-//   const currentSender = useSafeCurrentSender()
-//   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+function useRefetchOnMount() {
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
-//   useEffectAfterInteractions(() => {
-//     logger.debug("Conversation Messages mounted, refetching messages...")
-//     refetchConversationMessagesInfiniteQuery({
-//       clientInboxId: currentSender.inboxId,
-//       xmtpConversationId,
-//       caller: "Conversation Messages refetch on mount",
-//     })
-//       .then(() => {
-//         logger.debug("Done refetching messages because we mounted")
-//       })
-//       .catch(captureError)
-//   }, [currentSender.inboxId, xmtpConversationId])
-// }
+  useEffectAfterInteractions(() => {
+    logger.debug("Conversation Messages mounted, refetching messages...")
+    checkForNewMessages({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages useRefetchOnMount",
+    })
+      .then(() => {
+        logger.debug("Done refetching messages because we mounted")
+      })
+      .catch(captureError)
+  }, [currentSender.inboxId, xmtpConversationId])
+}
 
 function useHandleDisappearingMessagesSettings() {
   const currentSender = useSafeCurrentSender()
@@ -302,10 +316,9 @@ function useHandleDisappearingMessagesSettings() {
             clearInterval(interval)
           }
           interval = setInterval(() => {
-            refetchConversationMessagesInfiniteQuery({
+            invalidateConversationMessagesQuery({
               clientInboxId: currentSender.inboxId,
               xmtpConversationId,
-              caller: "useHandleDisappearingMessagesSettings refetch on retention duration change",
             })
           }, convertNanosecondsToMilliseconds(result.data.retentionDurationInNs))
         } else {
@@ -381,10 +394,7 @@ function useScrollToHighlightedMessage(props: {
   }, [conversationStore, listRef, messageIds])
 }
 
-function useHandleSrolling(props: {
-  fetchNextPage: () => Promise<InfiniteQueryObserverResult<IXmtpMessageId[], Error>>
-  hasNextPage: boolean
-}) {
+function useHandleSrolling(props: { fetchNextPage: () => Promise<void>; hasNextPage: boolean }) {
   const { fetchNextPage, hasNextPage } = props
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
@@ -398,14 +408,18 @@ function useHandleSrolling(props: {
 
     isRefreshingRef.current = true
 
-    logger.debug("Refetching newest messages because we're scrolled past the bottom...")
-    refetchConversationMessagesInfiniteQuery({
+    logger.debug(
+      "Checking for new messages and reactions because we're scrolled past the bottom...",
+    )
+    checkForNewMessagesAndReactions({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
-      caller: "Conversation Messages refetch on scroll past bottom",
+      caller: "Conversation Messages handleRefetchBecauseScrolledBottom",
     })
       .then(() => {
-        logger.debug("Done refetching newest messages because we're scrolled past the bottom")
+        logger.debug(
+          "Done checking for new messages and reactions because we're scrolled past the bottom",
+        )
       })
       .catch(captureError)
       .finally(() => {
@@ -478,15 +492,12 @@ const ListFooterComponent = memo(function ListFooterComponent() {
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
-  const {
-    data: messageIds = [],
-    hasNextPage,
-    isLoading: isLoadingMessageIds,
-  } = useConversationMessagesInfiniteQueryAllMessageIds({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-    caller: "Conversation Messages ListFooterComponent",
-  })
+  const { data: { messageIds = [], hasMoreOlder = false } = {}, isLoading: isLoadingMessageIds } =
+    useConversationMessagesQuery({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages ListFooterComponent",
+    })
 
   const { data: conversationType } = useConversationType({
     clientInboxId: currentSender.inboxId,
@@ -500,7 +511,7 @@ const ListFooterComponent = memo(function ListFooterComponent() {
   // because for some reason sometimes hasNextPage was true even tho we didn't have more.
   // It's just since we haven't triggering fetching more once.
   const hasLessThanOnePageOfMessages = messageIds.length < DEFAULT_PAGE_SIZE
-  const hasNoMoreMessages = !hasNextPage
+  const hasNoMoreMessages = !hasMoreOlder
   const isNotLoading = !isLoadingMessageIds
 
   if ((hasLessThanOnePageOfMessages || hasNoMoreMessages) && isGroup && isNotLoading) {

@@ -5,9 +5,9 @@ import { messageContentIsReply } from "@/features/conversation/conversation-chat
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { getMessageTypeBaseOnContent } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-type-based-on-content"
 import {
-  addMessagesToConversationMessagesInfiniteQueryData,
-  invalidateConversationMessagesInfiniteMessagesQuery,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+  addConversationMessage,
+  invalidateConversationMessagesQuery,
+} from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { convertConvosMessageContentToXmtpMessageContent } from "@/features/conversation/utils/convert-convos-message-content-to-xmtp-message-content"
 import {
@@ -165,11 +165,14 @@ export async function handleCreatedOptimisticMessageIdsForConversation(args: {
     })
   }
 
-  addMessagesToConversationMessagesInfiniteQueryData({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-    messageIds: publishedConvosMessages.map((message) => message.xmtpId),
-  })
+  for (const publishedConvosMessage of publishedConvosMessages) {
+    addConversationMessage({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      messageId: publishedConvosMessage.xmtpId,
+      caller: "handleCreatedOptimisticMessageIdsForConversation",
+    })
+  }
 }
 
 type ISendMessageContext = {
@@ -199,7 +202,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
 
       const currentSender = getSafeCurrentSender()
 
-      invalidateConversationMessagesInfiniteMessagesQuery({
+      invalidateConversationMessagesQuery({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: variables.xmtpConversationId,
       }).catch(captureError)

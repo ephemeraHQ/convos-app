@@ -1,6 +1,7 @@
 import { Optional, queryOptions, skipToken, useQuery } from "@tanstack/react-query"
 import { IEthereumAddress, isEthereumAddress } from "@/utils/evm/address"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { reactQueryLongCacheQueryOptions } from "@/utils/react-query/react-query.constants"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
 import { TimeUtils } from "@/utils/time.utils"
 import { fetchSocialProfilesForAddress } from "./social-profiles.api"
@@ -43,8 +44,7 @@ export const getSocialProfilesForEthAddressQueryOptions = (
             })
           }
         : skipToken,
-    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that this should change
-    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that this should change
+    ...reactQueryLongCacheQueryOptions,
   })
 }
 

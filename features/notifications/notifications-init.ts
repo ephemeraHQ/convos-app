@@ -7,7 +7,7 @@ import {
   messageContentIsRemoteAttachment,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
-import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { addConversationMessage } from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import { ensureMessageContentStringValue } from "@/features/conversation/conversation-list/hooks/use-message-content-string-value"
 import { IConversationTopic } from "@/features/conversation/conversation.types"
 import { ensureConversationQueryData } from "@/features/conversation/queries/conversation.query"
@@ -200,10 +200,11 @@ async function handlingNonDecryptedExpoNewMessageNotification(args: {
           xmtpConversationId,
           message: convoMessage,
         })
-        addMessagesToConversationMessagesInfiniteQueryData({
+        addConversationMessage({
           clientInboxId,
           xmtpConversationId,
-          messageIds: [convoMessage.xmtpId],
+          messageId: convoMessage.xmtpId,
+          caller: "handlingNonDecryptedExpoNewMessageNotification",
         })
 
         // Don't show notifications when app is in foreground

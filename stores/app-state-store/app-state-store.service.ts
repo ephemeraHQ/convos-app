@@ -88,6 +88,7 @@ export const waitUntilAppActive = async () => {
 
 let unsubscribedFromAppStateStore: (() => void) | undefined
 let appStateListener: NativeEventSubscription | undefined
+let memoryWarningListener: NativeEventSubscription | undefined
 
 export function startListeningToAppStateStore() {
   if (unsubscribedFromAppStateStore) {
@@ -97,6 +98,11 @@ export function startListeningToAppStateStore() {
   if (appStateListener) {
     appStateListener.remove()
     appStateListener = undefined
+  }
+
+  if (memoryWarningListener) {
+    memoryWarningListener.remove()
+    memoryWarningListener = undefined
   }
 
   unsubscribedFromAppStateStore = useAppStateStore.subscribe(
@@ -213,6 +219,10 @@ export function startListeningToAppStateStore() {
       fireImmediately: true,
     },
   )
+
+  memoryWarningListener = AppState.addEventListener("memoryWarning", () => {
+    appStateLogger.warn("Memory warning received")
+  })
 
   // Update the store when the app state changes
   appStateListener = AppState.addEventListener("change", (nextAppState) => {

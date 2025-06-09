@@ -5,7 +5,7 @@ import { convertXmtpConversationToConvosConversation } from "@/features/conversa
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
 import { syncAllXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
 import { Optional } from "@/types/general"
-import { TimeUtils } from "@/utils/time.utils"
+import { reactQueryLongCacheQueryOptions } from "@/utils/react-query/react-query.constants"
 import { reactQueryClient } from "../../../utils/react-query/react-query.client"
 
 export type IAllowedConsentConversationsQuery = Awaited<
@@ -45,8 +45,7 @@ export const getAllowedConsentConversationsQueryOptions = (
     queryKey: ["allowed-consent-conversations", clientInboxId],
     queryFn: enabled ? () => getAllowedConsentConversationsQueryFn({ clientInboxId }) : skipToken,
     enabled,
-    staleTime: TimeUtils.days(30).toMilliseconds(), // Updated via stream or manually when user give consent so we don't need lots of refresh
-    gcTime: TimeUtils.days(30).toMilliseconds(), // Updated via stream or manually when user give consent so we don't need lots of refresh
+    ...reactQueryLongCacheQueryOptions, // Updated via stream or manually when user give consent so we don't need lots of refresh
   })
 }
 
