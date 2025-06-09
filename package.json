@@ -178,6 +178,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@eslint/compat": "^1.2.2",
+    "@expo/fingerprint": "^0.12.4",
     "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
     "@tanstack/eslint-plugin-query": "^5.62.16",
     "@testing-library/react-native": "^12.6.1",

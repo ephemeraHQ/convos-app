@@ -1120,6 +1120,352 @@ function useShowDebugMenu() {
     })
   }, [])
 
+  const showUpdatesMenu = useCallback(() => {
+    const currentEnv = getEnv()
+    const currentChannel = currentEnv // Channel matches environment
+
+    const updatesMethods = {
+      "Current Update Info": () => {
+        Alert.alert(
+          "Current Update Info",
+          [
+            `Environment: ${currentEnv}`,
+            `Channel: ${currentChannel}`,
+            `Update ID: ${currentlyRunning.updateId || "embedded"}`,
+            `Created: ${currentlyRunning.createdAt?.toLocaleString() || "N/A"}`,
+            `Runtime Version: ${currentlyRunning.runtimeVersion}`,
+            `Is Embedded: ${currentlyRunning.isEmbeddedLaunch}`,
+          ].join("\n"),
+          [
+            { text: "OK" },
+            {
+              text: "Copy Info",
+              onPress: () => {
+                const info = [
+                  `Environment: ${currentEnv}`,
+                  `Channel: ${currentChannel}`,
+                  `Update ID: ${currentlyRunning.updateId || "embedded"}`,
+                  `Runtime Version: ${currentlyRunning.runtimeVersion}`,
+                ].join("\n")
+                Clipboard.setString(info)
+              },
+            },
+          ],
+        )
+      },
+      "List Available Branches": async () => {
+        Alert.alert(
+          "Available Branches",
+          `This will show branches available for the "${currentChannel}" channel.\n\nRun this command in your terminal:`,
+          [
+            {
+              text: "Copy Command",
+              onPress: () => {
+                Clipboard.setString("eas branch:list")
+                Alert.alert("Copied", "Command copied to clipboard")
+              },
+            },
+            { text: "OK" },
+          ],
+        )
+      },
+      ...(currentEnv === "preview"
+        ? {
+            "Switch to PR Branch (Smart)": async () => {
+              Alert.prompt(
+                "Switch to PR Branch",
+                "Enter the PR number to check compatibility and switch if safe.",
+                [
+                  {
+                    text: "Cancel",
+                    style: "cancel",
+                  },
+                  {
+                    text: "Check & Switch",
+                    onPress: async (prNumber) => {
+                      if (!prNumber || isNaN(Number(prNumber))) {
+                        Alert.alert("Invalid Input", "Please enter a valid PR number")
+                        return
+                      }
+
+                      try {
+                        useAppStore.getState().actions.setFullScreenLoaderOptions({
+                          isVisible: true,
+                          texts: ["Checking PR compatibility..."],
+                        })
+
+                        // Check if the PR branch has a compatible runtime version
+                        const currentRuntimeVersion = currentlyRunning.runtimeVersion
+                        const prBranch = `pr-${prNumber}`
+
+                        // Try to fetch update info for the PR branch
+                        const checkUpdate = await Updates.checkForUpdateAsync()
+
+                        // Override the update check to target the specific PR branch
+                        await Updates.setUpdateURLAndRequestHeadersOverride({
+                          updateUrl: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+                          requestHeaders: {
+                            "expo-channel-name": currentChannel,
+                            "expo-branch-name": prBranch,
+                          },
+                        })
+
+                        // Now check for the PR update
+                        const prUpdate = await Updates.checkForUpdateAsync()
+
+                        if (!prUpdate.isAvailable) {
+                          // Reset override before showing error
+                          await Updates.setUpdateURLAndRequestHeadersOverride({
+                            updateUrl: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+                            requestHeaders: {
+                              "expo-channel-name": currentChannel,
+                            },
+                          })
+
+                          Alert.alert(
+                            "PR Not Found",
+                            `No update found for PR #${prNumber}.\n\nThis could mean:\n• PR hasn't been created yet\n• PR doesn't have an EAS Update\n• PR requires a new build (native changes)`,
+                          )
+                          return
+                        }
+
+                        // Check runtime version compatibility
+                        const updateManifest = prUpdate.manifest
+                        const prRuntimeVersion = (updateManifest as any)?.runtimeVersion
+
+                        if (prRuntimeVersion && prRuntimeVersion !== currentRuntimeVersion) {
+                          // Reset override before showing error
+                          await Updates.setUpdateURLAndRequestHeadersOverride({
+                            updateUrl: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+                            requestHeaders: {
+                              "expo-channel-name": currentChannel,
+                            },
+                          })
+
+                          Alert.alert(
+                            "⚠️ Incompatible Update",
+                            `PR #${prNumber} requires a different runtime version and will crash your current build.\n\nYour build: ${currentRuntimeVersion}\nPR requires: ${prRuntimeVersion}\n\n🔨 This PR contains native changes and requires a new build.`,
+                            [
+                              {
+                                text: "OK",
+                                style: "cancel",
+                              },
+                              {
+                                text: "Switch Anyway (Will Crash)",
+                                style: "destructive",
+                                onPress: async () => {
+                                  await performPRSwitch(prNumber, currentChannel)
+                                },
+                              },
+                            ],
+                          )
+                          return
+                        }
+
+                        // Compatible update - safe to switch
+                        Alert.alert(
+                          "✅ Compatible Update",
+                          `PR #${prNumber} is compatible with your current build.\n\nRuntime version: ${prRuntimeVersion || currentRuntimeVersion}`,
+                          [
+                            {
+                              text: "Cancel",
+                              style: "cancel",
+                              onPress: async () => {
+                                // Reset override if user cancels
+                                await Updates.setUpdateURLAndRequestHeadersOverride({
+                                  updateUrl:
+                                    "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+                                  requestHeaders: {
+                                    "expo-channel-name": currentChannel,
+                                  },
+                                })
+                              },
+                            },
+                            {
+                              text: "Switch Now",
+                              onPress: async () => {
+                                // Override is already set, just reload
+                                Alert.alert(
+                                  "Branch Override Set",
+                                  `Switched to PR #${prNumber} branch.\n\nClose and reopen the app to load the update.`,
+                                  [
+                                    {
+                                      text: "Reload Now",
+                                      onPress: () => Updates.reloadAsync(),
+                                    },
+                                    {
+                                      text: "Later",
+                                      style: "cancel",
+                                    },
+                                  ],
+                                )
+                              },
+                            },
+                          ],
+                        )
+                      } catch (error) {
+                        Alert.alert(
+                          "Check Failed",
+                          `Could not check PR #${prNumber} compatibility.\n\nError: ${error instanceof Error ? error.message : String(error)}\n\nThis might mean the PR doesn't exist or has no EAS Update.`,
+                        )
+                      } finally {
+                        useAppStore.getState().actions.setFullScreenLoaderOptions({
+                          isVisible: false,
+                        })
+                      }
+                    },
+                  },
+                ],
+                "plain-text",
+              )
+            },
+            "Reset Branch Override": async () => {
+              try {
+                await Updates.setUpdateURLAndRequestHeadersOverride({
+                  updateUrl: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+                  requestHeaders: {
+                    "expo-channel-name": currentChannel,
+                  },
+                })
+
+                Alert.alert(
+                  "Override Reset",
+                  `Reset to default "${currentChannel}" channel behavior.\n\nClose and reopen the app to apply.`,
+                  [
+                    {
+                      text: "Reload Now",
+                      onPress: () => Updates.reloadAsync(),
+                    },
+                    {
+                      text: "Later",
+                      style: "cancel",
+                    },
+                  ],
+                )
+              } catch (error) {
+                captureErrorWithToast(
+                  new GenericError({
+                    error,
+                    additionalMessage: "Error resetting branch override",
+                  }),
+                  { message: "Failed to reset branch override" },
+                )
+              }
+            },
+          }
+        : {}),
+      "Check for Updates": async () => {
+        try {
+          const update = await Updates.checkForUpdateAsync()
+          if (update.isAvailable) {
+            Alert.alert(
+              "Update Available",
+              `A new update is available on the "${currentChannel}" channel.\n\nWould you like to download and install it?`,
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                },
+                {
+                  text: "Update",
+                  onPress: async () => {
+                    try {
+                      const fetchResult = await Updates.fetchUpdateAsync()
+                      if (fetchResult.isNew) {
+                        await Updates.reloadAsync()
+                      }
+                    } catch (error) {
+                      captureErrorWithToast(
+                        new GenericError({
+                          error,
+                          additionalMessage: "Error fetching update",
+                        }),
+                        { message: "Failed to fetch update" },
+                      )
+                    }
+                  },
+                },
+              ],
+            )
+          } else {
+            Alert.alert(
+              "No Updates",
+              `No new updates available on the "${currentChannel}" channel.`,
+            )
+          }
+        } catch (error) {
+          captureErrorWithToast(
+            new GenericError({
+              error,
+              additionalMessage: "Error checking for updates",
+            }),
+            { message: "Failed to check for updates" },
+          )
+        }
+      },
+      Cancel: undefined,
+    }
+
+    // Helper function to perform the PR switch
+    async function performPRSwitch(prNumber: string, channel: string) {
+      try {
+        await Updates.setUpdateURLAndRequestHeadersOverride({
+          updateUrl: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
+          requestHeaders: {
+            "expo-channel-name": channel,
+            "expo-branch-name": `pr-${prNumber}`,
+          },
+        })
+
+        Alert.alert(
+          "Branch Override Set",
+          `Switched to PR #${prNumber} branch.\n\nClose and reopen the app to load the update.`,
+          [
+            {
+              text: "Reload Now",
+              onPress: () => Updates.reloadAsync(),
+            },
+            {
+              text: "Later",
+              style: "cancel",
+            },
+          ],
+        )
+      } catch (error) {
+        captureErrorWithToast(
+          new GenericError({
+            error,
+            additionalMessage: "Error switching to PR branch",
+          }),
+          { message: "Failed to switch to PR branch" },
+        )
+      }
+    }
+
+    const options = Object.keys(updatesMethods)
+
+    showActionSheet({
+      options: {
+        title: `Updates Debug (${currentEnv.toUpperCase()})`,
+        options,
+        cancelButtonIndex: options.indexOf("Cancel"),
+      },
+      callback: async (selectedIndex?: number) => {
+        if (selectedIndex === undefined) {
+          return
+        }
+        const method = updatesMethods[options[selectedIndex] as keyof typeof updatesMethods]
+        if (method) {
+          try {
+            await method()
+          } catch (error) {
+            captureError(new GenericError({ error, additionalMessage: "Error in Updates menu" }))
+          }
+        }
+      },
+    })
+  }, [currentlyRunning])
+
   const primaryMethods = useMemo(() => {
     return {
       Logout: async () => {
@@ -1207,9 +1553,18 @@ function useShowDebugMenu() {
       "Notifications Menu": () => showNotificationsMenu(),
       "Logs Menu": () => showLogsMenu(),
       "XMTP Menu": () => showXmtpMenu(),
+      "Updates Menu": () => showUpdatesMenu(),
       Cancel: undefined,
     }
-  }, [logout, currentlyRunning, showLogsMenu, showNotificationsMenu, showXmtpMenu, showCacheMenu])
+  }, [
+    logout,
+    currentlyRunning,
+    showLogsMenu,
+    showNotificationsMenu,
+    showXmtpMenu,
+    showCacheMenu,
+    showUpdatesMenu,
+  ])
 
   const showDebugMenu = useCallback(() => {
     const options = Object.keys(primaryMethods)

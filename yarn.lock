@@ -3253,6 +3253,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo/fingerprint@npm:^0.12.4":
+  version: 0.12.4
+  resolution: "@expo/fingerprint@npm:0.12.4"
+  dependencies:
+    "@expo/spawn-async": "npm:^1.7.2"
+    arg: "npm:^5.0.2"
+    chalk: "npm:^4.1.2"
+    debug: "npm:^4.3.4"
+    find-up: "npm:^5.0.0"
+    getenv: "npm:^1.0.0"
+    minimatch: "npm:^9.0.0"
+    p-limit: "npm:^3.1.0"
+    resolve-from: "npm:^5.0.0"
+    semver: "npm:^7.6.0"
+  bin:
+    fingerprint: bin/cli.js
+  checksum: 10c0/3cac838023567cafd2e3d53e681b6c00fad887152f31adb2fdeed0eeffcb0ad59c73b17e012b52884a081043b2bcd3250432c517f6ea52fef98df26b0f13474c
+  languageName: node
+  linkType: hard
+
 "@expo/image-utils@npm:^0.3.22":
   version: 0.3.23
   resolution: "@expo/image-utils@npm:0.3.23"
@@ -11016,6 +11036,7 @@ __metadata:
     "@dev-plugins/react-query": "npm:~0.2.0"
     "@eslint/compat": "npm:^1.2.2"
     "@expo/config-plugins": "npm:~9.0.0"
+    "@expo/fingerprint": "npm:^0.12.4"
     "@expo/metro-config": "npm:~0.19.0"
     "@expo/metro-runtime": "npm:~4.0.0"
     "@expo/react-native-action-sheet": "npm:^4.0.1"
@@ -17971,7 +17992,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^9.0.4":
+"minimatch@npm:^9.0.0, minimatch@npm:^9.0.4":
   version: 9.0.5
   resolution: "minimatch@npm:9.0.5"
   dependencies:

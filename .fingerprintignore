@@ -1,0 +1,72 @@
+# Ignore files that don't affect native compatibility
+
+# Development and build artifacts
+node_modules/**/*
+.expo/**/*
+.git/**/*
+*.log
+.DS_Store
+
+# Documentation and non-native files
+README.md
+CONTRIBUTING.md
+*.md
+docs/**/*
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/__tests__/**/*
+jest.config.ts
+jest.setup.ts
+
+# Linting and formatting
+.eslintrc.*
+.prettierrc.*
+eslint.config.mjs
+
+# Environment and config files that don't affect native
+.env*
+.nvmrc
+yarn.lock
+package-lock.json
+
+# Scripts that don't affect native build
+scripts/**/*
+!scripts/check-runtime-compatibility.js
+
+# GitHub workflows (except our PR preview)
+.github/workflows/**/*
+!.github/workflows/pr-preview.yml
+
+# Patches and temporary files
+patches/**/*
+*.patch
+*.tmp
+
+# IDE and editor files
+.vscode/**/*
+.idea/**/*
+*.swp
+*.swo
+
+# React Native Metro cache
+.metro-health-check*
+
+# Expo development
+.expo-shared/**/*
+
+# TypeScript build artifacts
+*.tsbuildinfo
+
+# Reassure performance tests
+reassure-tests.sh
+
+# Keep important native-affecting files by explicitly not ignoring them:
+# - app.config.ts (affects native config)
+# - eas.json (affects builds)
+# - package.json (affects dependencies)
+# - plugins/ (affects native code)
+# - ios/ and android/ directories
+# - babel.config.js (affects transforms)
+# - metro.config.js (affects bundling) 

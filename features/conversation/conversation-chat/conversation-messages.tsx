@@ -573,7 +573,11 @@ const ConversationMessagesListItem = memo(function ConversationMessagesListItem(
       nextMessage={nextMessage ?? undefined}
     >
       <ConversationNewMessageAnimationWrapper
-        animateEntering={isNewestMessage && message.senderInboxId === currentSender.inboxId}
+        animateEntering={
+          isNewestMessage &&
+          message.senderInboxId === currentSender.inboxId &&
+          message.status === "sending"
+        }
       >
         <ConversationMessageTimestamp />
         <ConversationMessageRepliableWrapper messageType={message.type}>

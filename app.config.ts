@@ -26,6 +26,9 @@ type EnvironmentConfig = {
       backgroundColor: string
     }
   }
+  updates: {
+    disableAntiBrickingMeasures: boolean
+  }
 }
 
 export type IExpoAppConfigExtra = {
@@ -71,6 +74,9 @@ const settings: Record<Environment, EnvironmentConfig> = {
     webDomain: "preview.convos.org",
     appName: "Convos Dev",
     icon: "./assets/icon-light.png",
+    updates: {
+      disableAntiBrickingMeasures: true,
+    },
   },
   preview: {
     scheme: "convos-preview",
@@ -100,6 +106,9 @@ const settings: Record<Environment, EnvironmentConfig> = {
     webDomain: "preview.convos.org",
     appName: "Convos Preview",
     icon: "./assets/icon-light.png",
+    updates: {
+      disableAntiBrickingMeasures: true,
+    },
   },
   production: {
     scheme: "convos",
@@ -129,6 +138,10 @@ const settings: Record<Environment, EnvironmentConfig> = {
     webDomain: "convos.org",
     appName: "Convos",
     icon: "./assets/icon-light.png",
+    updates: {
+      // NEVER in production app for now https://docs.expo.dev/eas-update/override/
+      disableAntiBrickingMeasures: false,
+    },
   },
 }
 
@@ -147,7 +160,7 @@ export default () => {
     version: version,
     assetBundlePatterns: ["**/*"],
     runtimeVersion: {
-      policy: "nativeVersion",
+      policy: "fingerprint",
     },
     updates: {
       url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
