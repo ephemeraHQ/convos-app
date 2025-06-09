@@ -19,7 +19,7 @@ import {
 } from "./iosConstants"
 import { Log } from "./Log"
 
-const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
+const withNseFilesAndPlistMods: ConfigPlugin = function withNseFilesAndPlistMods(config) {
   assert(config.ios?.bundleIdentifier, "Missing 'ios.bundleIdentifier' in app config.")
   const appGroupId = `group.${config.ios.bundleIdentifier}`
   const keychainGroup = `$(AppIdentifierPrefix)${appGroupId}` // Prefix needed for keychain-access-groups
@@ -157,7 +157,7 @@ const withNseFilesAndPlistMods: ConfigPlugin = (config) => {
   ])
 }
 
-const withXcodeProjectSettings: ConfigPlugin = (config) => {
+const withXcodeProjectSettings: ConfigPlugin = function withXcodeProjectSettings(config) {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults
 
@@ -241,7 +241,7 @@ const withXcodeProjectSettings: ConfigPlugin = (config) => {
   })
 }
 
-const withPodfile: ConfigPlugin = (config) => {
+const withPodfile: ConfigPlugin = function withPodfile(config) {
   return withDangerousMod(config, [
     "ios",
     async (config) => {
@@ -279,7 +279,7 @@ end
   ])
 }
 
-const withEasManagedCredentials: ConfigPlugin = (config) => {
+const withEasManagedCredentials: ConfigPlugin = function withEasManagedCredentials(config) {
   const bundleIdentifier = config?.ios?.bundleIdentifier
   config.extra = {
     ...config.extra,
@@ -310,7 +310,7 @@ const withEasManagedCredentials: ConfigPlugin = (config) => {
   return config
 }
 
-export const withMyPluginTwoIos: ConfigPlugin = (config, props) => {
+export const withMyPluginTwoIos: ConfigPlugin = function withMyPluginTwoIos(config, props) {
   // 1. Copy files AND modify copied entitlements/Info.plist
   config = withNseFilesAndPlistMods(config)
   // 2. Set up the Xcode project target, linking files and setting build settings
