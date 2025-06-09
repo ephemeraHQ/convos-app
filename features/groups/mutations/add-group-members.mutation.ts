@@ -45,15 +45,15 @@ export function useAddGroupMembersMutation() {
         ...previousGroup,
         members: {
           ...previousGroup.members,
-          byId: { ...previousGroup.members.byId },
-          ids: [...previousGroup.members.ids],
+          byId: { ...(previousGroup.members?.byId ?? {}) },
+          ids: [...(previousGroup.members?.ids ?? [])],
         },
       }
 
       // Add the new members
       for (const inboxId of inboxIds) {
-        if (!updatedGroup.members.ids.includes(inboxId)) {
-          updatedGroup.members.ids.push(inboxId)
+        if (!updatedGroup.members?.ids.includes(inboxId)) {
+          updatedGroup.members?.ids.push(inboxId)
         }
 
         updatedGroup.members.byId[inboxId] = {

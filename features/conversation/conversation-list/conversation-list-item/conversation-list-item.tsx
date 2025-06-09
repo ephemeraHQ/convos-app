@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from "react"
+import React, { memo, useCallback, useMemo } from "react"
 import { ViewStyle } from "react-native"
 import { AnimatedCenter, Center } from "@/design-system/Center"
 import { Icon } from "@/design-system/Icon/Icon"
@@ -39,6 +39,20 @@ export const ConversationListItem = memo(function ConversationListItem({
   // Temporary fix until we migrate to new architecture.
   const handleLongPress = useCallback(() => {}, [])
 
+  const containerStyle = useMemo(
+    () => [themed($container), { paddingHorizontal: screenHorizontalPadding }],
+    [themed, screenHorizontalPadding],
+  )
+
+  const messagePreviewContainerStyle = useMemo(
+    () => [themed($messagePreviewContainer), previewContainerStyle],
+    [themed, previewContainerStyle],
+  )
+
+  const indicatorContainerStyle = useMemo(() => themed($indicatorContainer), [themed])
+
+  const unreadDotStyle = useMemo(() => themed($unreadDot), [themed])
+
   return (
     <TouchableHighlight
       disabled={!onPress}
@@ -48,14 +62,11 @@ export const ConversationListItem = memo(function ConversationListItem({
       // Temporary fix until we migrate to new architecture.
       delayLongPress={200}
       onLongPress={handleLongPress}
-      style={[themed($container), { paddingHorizontal: screenHorizontalPadding }]}
+      style={containerStyle}
     >
       <>
         <Center style={$avatarWrapper}>{avatarComponent}</Center>
-        <VStack
-          style={[themed($messagePreviewContainer), previewContainerStyle]}
-          {...restPreviewContainerProps}
-        >
+        <VStack style={messagePreviewContainerStyle} {...restPreviewContainerProps}>
           {typeof title === "string" ? (
             <ConversationListItemTitle>{title}</ConversationListItemTitle>
           ) : (
@@ -71,12 +82,12 @@ export const ConversationListItem = memo(function ConversationListItem({
           <AnimatedCenter
             entering={theme.animation.reanimatedFadeInScaleIn()}
             exiting={theme.animation.reanimatedFadeOutScaleOut()}
-            style={themed($indicatorContainer)}
+            style={indicatorContainerStyle}
           >
             {showError ? (
               <Icon icon="exclamationmark.triangle" size={theme.iconSize.sm} />
             ) : isUnread ? (
-              <Center style={themed($unreadDot)} />
+              <Center style={unreadDotStyle} />
             ) : isMuted ? (
               <Icon icon="bell-slash.fill" color={theme.colors.text.tertiary} />
             ) : null}

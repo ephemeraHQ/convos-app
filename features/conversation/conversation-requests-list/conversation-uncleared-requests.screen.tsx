@@ -39,7 +39,7 @@ export const ConversationUnclearedRequestsScreen = memo(
             ListHeaderComponent={<ListHeader />}
             conversationsIds={likelySpamConversationIds}
             renderConversation={({ item }) => {
-              return <ConversationRequestsListItem xmtpConversationId={item} />
+              return <ConversationListItemUncleared xmtpConversationId={item} />
             }}
           />
         </IsReadyWrapper>
@@ -48,7 +48,7 @@ export const ConversationUnclearedRequestsScreen = memo(
   },
 )
 
-const ConversationRequestsListItem = memo(function ConversationRequestsListItem(props: {
+const ConversationListItemUncleared = memo(function ConversationListItemUncleared(props: {
   xmtpConversationId: IXmtpConversationId
 }) {
   const { xmtpConversationId } = props
@@ -58,7 +58,7 @@ const ConversationRequestsListItem = memo(function ConversationRequestsListItem(
   const { data: conversation } = useConversationQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
-    caller: "ConversationRequestsListItem",
+    caller: "ConversationListItemUncleared",
   })
 
   if (!conversation) {

@@ -8,7 +8,9 @@ import { Center } from "@/design-system/Center"
 import { Text } from "@/design-system/Text"
 import { VStack } from "@/design-system/VStack"
 import { useSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { useGroupQuery } from "@/features/groups/queries/group.query"
+import { useGroupImageUrl } from "@/features/groups/hooks/use-group-image-url"
+import { useGroupMembers } from "@/features/groups/hooks/use-group-members"
+import { useGroupName } from "@/features/groups/hooks/use-group-name"
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { $globalStyles } from "@/theme/styles"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
@@ -93,20 +95,31 @@ export const GroupAvatar = memo(function GroupAvatar(props: {
   const { theme } = useAppTheme()
   const currentSender = useSafeCurrentSender()
 
-  // Fetch group data
-  const { data: group } = useGroupQuery({
+  const { members: groupMembers } = useGroupMembers({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
+    caller: "GroupAvatar",
+    useFallback: false,
+  })
+
+  const { groupName } = useGroupName({
+    xmtpConversationId,
+  })
+
+  const { data: groupImageUrl } = useGroupImageUrl({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "GroupAvatar",
   })
 
   // Extract member inbox IDs excluding current sender
   const memberInboxIds = useMemo(() => {
-    if (!group?.members?.ids) {
+    if (!groupMembers?.ids) {
       return []
     }
 
-    return group.members.ids.reduce<IXmtpInboxId[]>((inboxIds, memberId) => {
-      const memberInboxId = group.members.byId[memberId].inboxId
+    return groupMembers.ids.reduce<IXmtpInboxId[]>((inboxIds, memberId) => {
+      const memberInboxId = groupMembers.byId[memberId].inboxId
 
       if (memberInboxId) {
         inboxIds.push(memberInboxId)
@@ -114,7 +127,7 @@ export const GroupAvatar = memo(function GroupAvatar(props: {
 
       return inboxIds
     }, [])
-  }, [group])
+  }, [groupMembers])
 
   // Get display info for all members
   const preferredDisplayData = usePreferredDisplayInfoBatch({
@@ -167,8 +180,8 @@ export const GroupAvatar = memo(function GroupAvatar(props: {
   }, [size, theme, sizeNumberProp])
 
   // If group has an image, use it instead of member avatars
-  if (group?.imageUrl) {
-    return <Avatar uri={group.imageUrl} sizeNumber={sizeNumber} name={group.name} />
+  if (groupImageUrl) {
+    return <Avatar uri={groupImageUrl} sizeNumber={sizeNumber} name={groupName} />
   }
 
   return <GroupAvatarUI members={memberData} size={sizeNumber} />

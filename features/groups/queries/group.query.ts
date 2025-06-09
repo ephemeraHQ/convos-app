@@ -94,15 +94,15 @@ export async function addGroupMemberToGroupQueryData(args: IArgs & { member: IGr
       members: {
         ...group.members,
         byId: {
-          ...group.members.byId,
+          ...(group.members?.byId ?? {}),
           [member.inboxId]: {
-            ...group.members.byId[member.inboxId],
+            ...(group.members?.byId?.[member.inboxId] ?? {}),
             ...member,
           },
         },
-        ids: group.members.ids.includes(member.inboxId)
-          ? group.members.ids
-          : [...group.members.ids, member.inboxId],
+        ids: group.members?.ids.includes(member.inboxId)
+          ? group.members?.ids
+          : [...(group.members?.ids ?? []), member.inboxId],
       },
     },
   })
@@ -120,7 +120,7 @@ export async function removeGroupMemberToGroupQuery(args: IArgs & { memberInboxI
     throw new Error(`Couldn't remove member because the group doesn't exist`)
   }
 
-  const { [memberInboxId]: _, ...remainingMembers } = group.members.byId
+  const { [memberInboxId]: _, ...remainingMembers } = group.members?.byId ?? {}
 
   setGroupQueryData({
     clientInboxId,
@@ -128,9 +128,9 @@ export async function removeGroupMemberToGroupQuery(args: IArgs & { memberInboxI
     group: {
       ...group,
       members: {
-        ...group.members,
+        ...(group.members ?? { byId: {}, ids: [] }),
         byId: remainingMembers,
-        ids: group.members.ids.filter((id) => id !== memberInboxId),
+        ids: (group.members?.ids ?? []).filter((id) => id !== memberInboxId),
       },
     },
   })

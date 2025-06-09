@@ -1,5 +1,6 @@
 import { IXmtpConversationId, IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { useMutation } from "@tanstack/react-query"
+import { IGroup } from "@/features/groups/group.types"
 import {
   getGroupQueryData,
   invalidateGroupQuery,
@@ -43,14 +44,14 @@ export const useRevokeSuperAdminMutation = (args: {
       }
 
       // Create a new group object with the updated member permission
-      const updatedGroup = {
+      const updatedGroup: IGroup = {
         ...previousGroup,
         members: {
-          ...previousGroup.members,
+          ...(previousGroup.members ?? { byId: {}, ids: [] }),
           byId: {
-            ...previousGroup.members.byId,
+            ...previousGroup.members?.byId,
             [inboxId]: {
-              ...previousGroup.members.byId[inboxId],
+              ...(previousGroup.members?.byId?.[inboxId] ?? {}),
               permission: "member",
             },
           },

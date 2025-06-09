@@ -8,47 +8,44 @@ import {
 } from "@/components/banner"
 import { IsReadyWrapper } from "@/components/is-ready-wrapper"
 import { Screen } from "@/components/screen/screen"
-import { Icon } from "@/design-system/Icon/Icon"
-import { IVStackProps, VStack } from "@/design-system/VStack"
 import {
   getSafeCurrentSender,
   useSafeCurrentSender,
 } from "@/features/authentication/multi-inbox.store"
-import {
-  ConversationListItem,
-  ConversationListItemSubtitle,
-  ConversationListItemTitle,
-} from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item"
+import { ConversationListItemSkeleton } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-skeleton"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
 import { ConversationRequestsListItemDm } from "@/features/conversation/conversation-requests-list/conversation-requests-list-item-dm"
 import { ConversationRequestsListItemGroup } from "@/features/conversation/conversation-requests-list/conversation-requests-list-item-group"
 import { useConversationRequestsListScreenHeader } from "@/features/conversation/conversation-requests-list/conversation-requests-list.screen-header"
-import { invalidateUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
-import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
-import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
+import {
+  invalidateUnknownConsentConversationsQuery,
+  useUnknownConsentConversationsQuery,
+} from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
-import { useEffectOnce } from "@/hooks/use-effect-once"
-import { useRouter } from "@/navigation/use-navigation"
+import { useEffectAfterInteractions } from "@/hooks/use-effect-after-interactions"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
-import { useConversationRequestsListItem } from "./use-conversation-requests-list-items"
 
 export const ConversationRequestsListScreen = memo(function () {
+  const currentSender = useSafeCurrentSender()
   useConversationRequestsListScreenHeader()
 
   const {
-    likelyNotSpamConversationIds,
-    likelySpamConversationIds,
-    refetch: refetchConversationRequestsListItem,
-  } = useConversationRequestsListItem()
+    data: unknownConsentConversationIds = [],
+    refetch: refetchUnknownConsentConversationIds,
+  } = useUnknownConsentConversationsQuery({
+    inboxId: currentSender.inboxId,
+    caller: "ConversationRequestsListScreen",
+  })
 
   const insets = useSafeAreaInsets()
 
   const handleRefresh = useCallback(async () => {
     try {
-      await refetchConversationRequestsListItem()
+      await refetchUnknownConsentConversationIds()
     } catch (error) {
       captureError(
         new GenericError({
@@ -57,29 +54,33 @@ export const ConversationRequestsListScreen = memo(function () {
         }),
       )
     }
-  }, [refetchConversationRequestsListItem])
+  }, [refetchUnknownConsentConversationIds])
 
-  useEffectOnce(() => {
+  useEffectAfterInteractions(() => {
     invalidateUnknownConsentConversationsQuery({ inboxId: getSafeCurrentSender().inboxId }).catch(
       captureError,
     )
-  })
+  }, [])
+
+  const conversationListStyle = useMemo(() => {
+    return {
+      paddingBottom: insets.bottom,
+    }
+  }, [insets.bottom])
 
   return (
     <Screen contentContainerStyle={$globalStyles.flex1}>
       <IsReadyWrapper>
         <ConversationList
-          contentContainerStyle={{
-            paddingBottom: insets.bottom,
-          }}
+          contentContainerStyle={conversationListStyle}
           onRefetch={handleRefresh}
           ListHeaderComponent={<ListHeader />}
-          ListFooterComponent={
-            likelySpamConversationIds.length > 0 ? (
-              <ListFooter likelySpamCount={likelySpamConversationIds.length} />
-            ) : undefined
-          }
-          conversationsIds={likelyNotSpamConversationIds}
+          // ListFooterComponent={
+          //   unknownConsentConversationIds.length > 0 ? (
+          //     <ListFooter likelySpamCount={unknownConsentConversationIds.length} />
+          //   ) : undefined
+          // }
+          conversationsIds={unknownConsentConversationIds}
           renderConversation={({ item }) => {
             return <ConversationRequestsListItem xmtpConversationId={item} />
           }}
@@ -96,82 +97,82 @@ const ConversationRequestsListItem = memo(function ConversationRequestsListItem(
 
   const currentSender = useSafeCurrentSender()
 
-  const { data: conversation } = useConversationQuery({
+  const { data: conversationType } = useConversationType({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "ConversationRequestsListItem",
   })
 
-  if (!conversation) {
-    return null
+  if (!conversationType) {
+    return <ConversationListItemSkeleton />
   }
 
-  if (isConversationGroup(conversation)) {
-    return <ConversationRequestsListItemGroup xmtpConversationId={conversation.xmtpId} />
+  if (conversationType === "group") {
+    return <ConversationRequestsListItemGroup xmtpConversationId={xmtpConversationId} />
   }
 
-  return <ConversationRequestsListItemDm xmtpConversationId={conversation.xmtpId} />
+  return <ConversationRequestsListItemDm xmtpConversationId={xmtpConversationId} />
 })
 
-const ListFooter = memo(function ListFooter({ likelySpamCount }: { likelySpamCount: number }) {
-  const { theme } = useAppTheme()
-  const router = useRouter()
+// const ListFooter = memo(function ListFooter({ likelySpamCount }: { likelySpamCount: number }) {
+//   const { theme } = useAppTheme()
+//   const router = useRouter()
 
-  const title = useMemo(() => {
-    return <ConversationListItemTitle>Uncleared</ConversationListItemTitle>
-  }, [])
+//   const title = useMemo(() => {
+//     return <ConversationListItemTitle>Uncleared</ConversationListItemTitle>
+//   }, [])
 
-  const subtitle = useMemo(() => {
-    const text = `${likelySpamCount} chat${likelySpamCount !== 1 ? "s" : ""}`
-    return <ConversationListItemSubtitle>{text}</ConversationListItemSubtitle>
-  }, [likelySpamCount])
+//   const subtitle = useMemo(() => {
+//     const text = `${likelySpamCount} chat${likelySpamCount !== 1 ? "s" : ""}`
+//     return <ConversationListItemSubtitle>{text}</ConversationListItemSubtitle>
+//   }, [likelySpamCount])
 
-  const avatarComponent = useMemo(
-    function avatarComponent() {
-      return (
-        <VStack
-          style={{
-            width: theme.avatarSize.lg,
-            height: theme.avatarSize.lg,
-            backgroundColor: theme.colors.fill.tertiary,
-            borderRadius: 999,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Icon
-            icon="exclamationmark.octagon.fill"
-            size={theme.avatarSize.lg / 2}
-            color={theme.colors.global.white}
-          />
-        </VStack>
-      )
-    },
-    [theme],
-  )
+//   const avatarComponent = useMemo(
+//     function avatarComponent() {
+//       return (
+//         <VStack
+//           style={{
+//             width: theme.avatarSize.lg,
+//             height: theme.avatarSize.lg,
+//             backgroundColor: theme.colors.fill.tertiary,
+//             borderRadius: 999,
+//             alignItems: "center",
+//             justifyContent: "center",
+//           }}
+//         >
+//           <Icon
+//             icon="exclamationmark.octagon.fill"
+//             size={theme.avatarSize.lg / 2}
+//             color={theme.colors.global.white}
+//           />
+//         </VStack>
+//       )
+//     },
+//     [theme],
+//   )
 
-  const previewContainerProps = useMemo(() => {
-    return {
-      style: {
-        justifyContent: "center",
-      },
-    } satisfies IVStackProps
-  }, [])
+//   const previewContainerProps = useMemo(() => {
+//     return {
+//       style: {
+//         justifyContent: "center",
+//       },
+//     } satisfies IVStackProps
+//   }, [])
 
-  const handleOnPress = useCallback(() => {
-    router.navigate("ChatsRequestsUncleared")
-  }, [router])
+//   const handleOnPress = useCallback(() => {
+//     router.navigate("ChatsRequestsUncleared")
+//   }, [router])
 
-  return (
-    <ConversationListItem
-      onPress={handleOnPress}
-      title={title}
-      subtitle={subtitle}
-      avatarComponent={avatarComponent}
-      previewContainerProps={previewContainerProps}
-    />
-  )
-})
+//   return (
+//     <ConversationListItem
+//       onPress={handleOnPress}
+//       title={title}
+//       subtitle={subtitle}
+//       avatarComponent={avatarComponent}
+//       previewContainerProps={previewContainerProps}
+//     />
+//   )
+// })
 
 const ListHeader = memo(function ListHeader() {
   const { theme } = useAppTheme()

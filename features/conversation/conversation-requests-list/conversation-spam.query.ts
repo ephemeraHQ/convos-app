@@ -34,9 +34,12 @@ export function getConversationSpamQueryOptions(args: IArgs) {
 
       // Check consent states based on conversation type
       if (isConversationGroup(conversation)) {
-        const hasAllowedMember = Object.values(conversation.members.byId).some(
-          (member) => member.consentState === "allowed",
-        )
+        const hasAllowedMember = conversation.members?.byId
+          ? Object.values(conversation.members.byId).some(
+              (member) => member.consentState === "allowed",
+            )
+          : false
+
         if (hasAllowedMember) {
           return false
         }

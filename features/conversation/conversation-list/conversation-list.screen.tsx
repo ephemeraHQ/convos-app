@@ -11,6 +11,7 @@ import {
 } from "@/features/authentication/multi-inbox.store"
 import { ConversationListItemDm } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-dm"
 import { ConversationListItemGroup } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-group"
+import { ConversationListItemSkeleton } from "@/features/conversation/conversation-list/conversation-list-item/conversation-list-item-skeleton"
 import { ConversationListLoading } from "@/features/conversation/conversation-list/conversation-list-loading"
 import { ConversationListPinnedConversations } from "@/features/conversation/conversation-list/conversation-list-pinned-conversations/conversation-list-pinned-conversations"
 import { ConversationList } from "@/features/conversation/conversation-list/conversation-list.component"
@@ -20,6 +21,7 @@ import {
 } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
 import { refetchUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
+import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
@@ -97,21 +99,21 @@ const ConversationListItem = memo(function ConversationListItem(props: {
 
   const currentSender = useSafeCurrentSender()
 
-  const { data: conversation } = useConversationQuery({
+  const { data: conversationType } = useConversationType({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "ConversationListItem",
   })
 
-  if (!conversation) {
-    return null
+  if (!conversationType) {
+    return <ConversationListItemSkeleton />
   }
 
-  if (isConversationGroup(conversation)) {
-    return <ConversationListItemGroupWrapper xmtpConversationId={conversation.xmtpId} />
+  if (conversationType === "group") {
+    return <ConversationListItemGroupWrapper xmtpConversationId={xmtpConversationId} />
   }
 
-  return <ConversationListItemDmWrapper xmtpConversationId={conversation.xmtpId} />
+  return <ConversationListItemDmWrapper xmtpConversationId={xmtpConversationId} />
 })
 
 const ConversationListItemDmWrapper = memo(function ConversationListItemDmWrapper(props: {
