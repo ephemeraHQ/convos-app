@@ -30,15 +30,19 @@ export const ConversationMessageTimestamp = memo(function ConversationMessageTim
     caller: "ConversationMessageTimestamp",
   })
 
-  if (!message || !isShowingTime) {
+  if (!message) {
     return null
   }
 
   if (shouldShowDateChange) {
-    return <MessageTimestampVisible timestampMs={message.sentMs} />
+    return <ConversationMessageTimestampVisible timestampMs={message.sentMs} />
   }
 
-  return <MessageTimestampHidden timestampMs={message.sentMs} />
+  if (!isShowingTime) {
+    return null
+  }
+
+  return <ConversationMessageTimestampHidden timestampMs={message.sentMs} />
 })
 
 // Determines if we should show only time (for messages less than 24h old)
@@ -53,7 +57,7 @@ function shouldShowOnlyTime(timestampMs: number): boolean {
 }
 
 // For messages that can be tapped to show time
-const MessageTimestampVisible = memo(function MessageTimestamp({
+const ConversationMessageTimestampVisible = memo(function ConversationMessageTimestampVisible({
   timestampMs,
 }: {
   timestampMs: number
@@ -107,7 +111,7 @@ const MessageTimestampVisible = memo(function MessageTimestamp({
   )
 })
 
-const MessageTimestampHidden = memo(function MessageTimestampHidden({
+const ConversationMessageTimestampHidden = memo(function ConversationMessageTimestampHidden({
   timestampMs,
 }: {
   timestampMs: number

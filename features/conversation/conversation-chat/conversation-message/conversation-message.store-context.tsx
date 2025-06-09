@@ -35,6 +35,9 @@ type IConversationContextStoreState = IConversationMessageContextStoreProps & {
   isLastMessage: boolean
   isGroupUpdateMessage: boolean
   messageType: IConversationMessageContentType
+  nextMessageType: Nullable<IConversationMessageContentType>
+  nextMessageIsFromMe: boolean
+  nextShouldShowDateChange: boolean
 }
 
 // Function to calculate derived state from props
@@ -65,9 +68,17 @@ function getCalculatedState(
       messageOne: props.currentMessage,
       messageTwo: props.previousMessage,
     }),
+    nextShouldShowDateChange: messageShouldShowDateChange({
+      messageOne: props.currentMessage,
+      messageTwo: props.nextMessage,
+    }),
     isLastMessage: !props.nextMessage,
     isGroupUpdateMessage: isGroupUpdatedMessage(props.currentMessage),
     messageType: props.currentMessage.type,
+    nextMessageType: props.nextMessage?.type,
+    nextMessageIsFromMe: Boolean(
+      props.nextMessage && messageIsFromCurrentSenderInboxId({ message: props.nextMessage }),
+    ),
   }
 }
 

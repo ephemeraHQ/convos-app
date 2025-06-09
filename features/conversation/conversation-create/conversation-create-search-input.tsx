@@ -6,9 +6,16 @@ import {
 } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { SearchUsersInput } from "@/features/search-users/search-users-input"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
+import { useRouter } from "@/navigation/use-navigation"
 
 export const ConversationCreateSearchInput = memo(function ConversationCreateSearchInput() {
   const inputRef = useRef<RNTextInput | null>(null)
+
+  useRouter({
+    onTransitionEnd: (e) => {
+      inputRef.current?.focus()
+    },
+  })
 
   const selectedSearchUserInboxIds = useConversationStoreContext(
     (state) => state.searchSelectedUserInboxIds,
@@ -29,7 +36,6 @@ export const ConversationCreateSearchInput = memo(function ConversationCreateSea
     [conversationStore],
   )
 
-  //
   useEffect(() => {
     conversationStore.subscribe(
       (state) => state.searchTextValue,

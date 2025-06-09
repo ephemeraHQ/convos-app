@@ -29,7 +29,10 @@ import {
   useConversationMessageQuery,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
-import { IConversationMessageContentType } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
+import {
+  IConversationMessage,
+  IConversationMessageContentType,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { useMessageHasReactions } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-message-has-reactions"
 import {
   isAnActualMessage,
@@ -97,7 +100,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
   })
 
   useRefetchOnAppFocus()
-  useRefetchOnMount()
+  // useRefetchOnMount() // Might be overkill because streams should always work now
   useScrollToHighlightedMessage({ messageIds, listRef: scrollRef })
   useMarkAsRead({ messageIds })
   useHandleDisappearingMessagesSettings()
@@ -189,6 +192,24 @@ export const ConversationMessages = memo(function ConversationMessages() {
     [currentSender.inboxId, xmtpConversationId],
   )
 
+  const estimatedListSize = useMemo(() => {
+    return {
+      height:
+        theme.layout.screen.height -
+        headerHeight -
+        insets.bottom +
+        // Composer height
+        theme.spacing.xl,
+      width: theme.layout.screen.width,
+    }
+  }, [
+    headerHeight,
+    insets.bottom,
+    theme.layout.screen.height,
+    theme.layout.screen.width,
+    theme.spacing.xl,
+  ])
+
   logger.debug(`Rendering ${messageIds.length} messages`)
 
   return (
@@ -210,15 +231,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       ListHeaderComponent={ConsentPopup}
       ListFooterComponent={ListFooterComponent}
       getItemType={getItemType}
-      estimatedListSize={{
-        height:
-          theme.layout.screen.height -
-          headerHeight -
-          insets.bottom +
-          // Composer height
-          theme.spacing.xl,
-        width: theme.layout.screen.width,
-      }}
+      estimatedListSize={estimatedListSize}
 
       // LEGEND LIST PROPS
       // initialScrollIndex={messageIdsReversed.length - 1}
@@ -254,23 +267,23 @@ function useRefetchOnAppFocus() {
   })
 }
 
-function useRefetchOnMount() {
-  const currentSender = useSafeCurrentSender()
-  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+// function useRefetchOnMount() {
+//   const currentSender = useSafeCurrentSender()
+//   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
-  useEffectAfterInteractions(() => {
-    logger.debug("Conversation Messages mounted, refetching messages...")
-    refetchConversationMessagesInfiniteQuery({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-      caller: "Conversation Messages refetch on mount",
-    })
-      .then(() => {
-        logger.debug("Done refetching messages because we mounted")
-      })
-      .catch(captureError)
-  }, [currentSender.inboxId, xmtpConversationId])
-}
+//   useEffectAfterInteractions(() => {
+//     logger.debug("Conversation Messages mounted, refetching messages...")
+//     refetchConversationMessagesInfiniteQuery({
+//       clientInboxId: currentSender.inboxId,
+//       xmtpConversationId,
+//       caller: "Conversation Messages refetch on mount",
+//     })
+//       .then(() => {
+//         logger.debug("Done refetching messages because we mounted")
+//       })
+//       .catch(captureError)
+//   }, [currentSender.inboxId, xmtpConversationId])
+// }
 
 function useHandleDisappearingMessagesSettings() {
   const currentSender = useSafeCurrentSender()
@@ -573,7 +586,11 @@ const ConversationMessagesListItem = memo(function ConversationMessagesListItem(
       nextMessage={nextMessage ?? undefined}
     >
       <ConversationNewMessageAnimationWrapper
-        animateEntering={isNewestMessage && message.senderInboxId === currentSender.inboxId}
+        animateEntering={
+          isNewestMessage &&
+          message.senderInboxId === currentSender.inboxId &&
+          messageWasJustSent(message)
+        }
       >
         <ConversationMessageTimestamp />
         <ConversationMessageRepliableWrapper messageType={message.type}>
@@ -588,7 +605,7 @@ const ConversationMessagesListItem = memo(function ConversationMessagesListItem(
   )
 })
 
-export const ConversationMessageRepliableWrapper = memo(
+const ConversationMessageRepliableWrapper = memo(
   function ConversationMessageRepliableWrapper(props: {
     children: ReactNode
     messageType: IConversationMessageContentType
@@ -602,6 +619,10 @@ export const ConversationMessageRepliableWrapper = memo(
     return <ConversationMessageRepliable>{children}</ConversationMessageRepliable>
   },
 )
+
+function messageWasJustSent(message: IConversationMessage) {
+  return message.sentMs > Date.now() - 1000
+}
 
 // This function generates the custom entering animation configuration.
 // It's called on the JS thread, and returns a worklet that Reanimated executes on the UI thread.

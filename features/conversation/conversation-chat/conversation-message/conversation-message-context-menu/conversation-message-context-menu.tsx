@@ -37,175 +37,178 @@ export const ConversationMessageContextMenu = memo(function ConversationMessageC
     return null
   }
 
-  return <Content messageContextMenuData={messageContextMenuData} />
+  return <ConversationMessageContextMenuContent messageContextMenuData={messageContextMenuData} />
 })
 
-const Content = memo(function Content(props: {
-  messageContextMenuData: NonNullable<
-    IConversationMessageContextMenuStoreState["messageContextMenuData"]
-  >
-}) {
-  const { messageContextMenuData } = props
+const ConversationMessageContextMenuContent = memo(
+  function ConversationMessageContextMenuContent(props: {
+    messageContextMenuData: NonNullable<
+      IConversationMessageContextMenuStoreState["messageContextMenuData"]
+    >
+  }) {
+    const { messageContextMenuData } = props
 
-  const { messageId, itemRectX, itemRectY, itemRectHeight, itemRectWidth } = messageContextMenuData
+    const { messageId, itemRectX, itemRectY, itemRectHeight, itemRectWidth } =
+      messageContextMenuData
 
-  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
-  const messageContextMenuStore = useConversationMessageContextMenuStore()
-  const currentSender = useSafeCurrentSender()
+    const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+    const messageContextMenuStore = useConversationMessageContextMenuStore()
+    const currentSender = useSafeCurrentSender()
 
-  const { data: reactions } = useConversationMessageReactionsQuery({
-    clientInboxId: currentSender.inboxId,
-    xmtpMessageId: messageId,
-  })
-
-  const { message, previousMessage, nextMessage } = useMemo(() => {
-    const message = getConversationMessageQueryData({
-      xmtpMessageId: messageId,
+    const { data: reactions } = useConversationMessageReactionsQuery({
       clientInboxId: currentSender.inboxId,
+      xmtpMessageId: messageId,
+    })
+
+    const { message, previousMessage, nextMessage } = useMemo(() => {
+      const message = getConversationMessageQueryData({
+        xmtpMessageId: messageId,
+        clientInboxId: currentSender.inboxId,
+        xmtpConversationId,
+      })
+
+      const messageIds =
+        getAllConversationMessageInInfiniteQueryData({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId,
+        }) || []
+
+      const messageIndex = messageIds.findIndex((m) => m === messageId)
+
+      const nextMessageId = messageIndex ? messageIds[messageIndex + 1] : undefined
+      const previousMessageId = messageIndex ? messageIds[messageIndex - 1] : undefined
+
+      const nextMessage = nextMessageId
+        ? getConversationMessageQueryData({
+            xmtpMessageId: nextMessageId,
+            clientInboxId: currentSender.inboxId,
+            xmtpConversationId,
+          })
+        : undefined
+
+      const previousMessage = previousMessageId
+        ? getConversationMessageQueryData({
+            xmtpMessageId: previousMessageId,
+            clientInboxId: currentSender.inboxId,
+            xmtpConversationId,
+          })
+        : undefined
+
+      return {
+        message,
+        previousMessage,
+        nextMessage,
+      }
+    }, [messageId, xmtpConversationId, currentSender])
+
+    const fromMe = Boolean(message && messageIsFromCurrentSenderInboxId({ message }))
+    const menuItems = useMessageContextMenuItems({
+      messageId: messageId,
       xmtpConversationId,
     })
 
-    const messageIds =
-      getAllConversationMessageInInfiniteQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
-      }) || []
+    const { itemHeight } = useDropdownMenuCustomStyles()
+    const menuHeight = itemHeight * menuItems.length
 
-    const messageIndex = messageIds.findIndex((m) => m === messageId)
+    const { reactOnMessage } = useReactOnMessage({
+      xmtpConversationId,
+    })
+    const { removeReactionOnMessage } = useRemoveReactionOnMessage({
+      xmtpConversationId,
+    })
 
-    const nextMessageId = messageIndex ? messageIds[messageIndex + 1] : undefined
-    const previousMessageId = messageIndex ? messageIds[messageIndex - 1] : undefined
+    const handlePressBackdrop = useCallback(() => {
+      messageContextMenuStore.getState().setMessageContextMenuData(null)
+    }, [messageContextMenuStore])
 
-    const nextMessage = nextMessageId
-      ? getConversationMessageQueryData({
-          xmtpMessageId: nextMessageId,
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId,
-        })
-      : undefined
-
-    const previousMessage = previousMessageId
-      ? getConversationMessageQueryData({
-          xmtpMessageId: previousMessageId,
-          clientInboxId: currentSender.inboxId,
-          xmtpConversationId,
-        })
-      : undefined
-
-    return {
-      message,
-      previousMessage,
-      nextMessage,
-    }
-  }, [messageId, xmtpConversationId, currentSender])
-
-  const fromMe = Boolean(message && messageIsFromCurrentSenderInboxId({ message }))
-  const menuItems = useMessageContextMenuItems({
-    messageId: messageId,
-    xmtpConversationId,
-  })
-
-  const { itemHeight } = useDropdownMenuCustomStyles()
-  const menuHeight = itemHeight * menuItems.length
-
-  const { reactOnMessage } = useReactOnMessage({
-    xmtpConversationId,
-  })
-  const { removeReactionOnMessage } = useRemoveReactionOnMessage({
-    xmtpConversationId,
-  })
-
-  const handlePressBackdrop = useCallback(() => {
-    messageContextMenuStore.getState().setMessageContextMenuData(null)
-  }, [messageContextMenuStore])
-
-  const handleSelectReaction = useCallback(
-    (emoji: string) => {
-      const currentUserAlreadyReacted = getCurrentUserAlreadyReactedOnMessage({
-        messageId,
-        emoji,
-      })
-
-      if (currentUserAlreadyReacted) {
-        removeReactionOnMessage({
-          messageId: messageId,
+    const handleSelectReaction = useCallback(
+      (emoji: string) => {
+        const currentUserAlreadyReacted = getCurrentUserAlreadyReactedOnMessage({
+          messageId,
           emoji,
         })
-      } else {
-        reactOnMessage({ messageId: messageId, emoji })
-      }
-      messageContextMenuStore.getState().setMessageContextMenuData(null)
-    },
-    [reactOnMessage, messageId, removeReactionOnMessage, messageContextMenuStore],
-  )
 
-  const handleChooseMoreEmojis = useCallback(() => {
-    openMessageContextMenuEmojiPicker()
-  }, [])
+        if (currentUserAlreadyReacted) {
+          removeReactionOnMessage({
+            messageId: messageId,
+            emoji,
+          })
+        } else {
+          reactOnMessage({ messageId: messageId, emoji })
+        }
+        messageContextMenuStore.getState().setMessageContextMenuData(null)
+      },
+      [reactOnMessage, messageId, removeReactionOnMessage, messageContextMenuStore],
+    )
 
-  const hasReactions = Boolean(reactions && Object.keys(reactions.bySender).length > 0)
+    const handleChooseMoreEmojis = useCallback(() => {
+      openMessageContextMenuEmojiPicker()
+    }, [])
 
-  const { verticalSpaceBetweenSections } = useConversationMessageContextMenuStyles()
+    const hasReactions = Boolean(reactions && Object.keys(reactions.bySender).length > 0)
 
-  return (
-    <>
-      <Modal
-        visible={true}
-        transparent={true}
-        animationType="fade"
-        statusBarTranslucent={Platform.OS === "android"}
-      >
-        <AnimatedVStack style={StyleSheet.absoluteFill}>
-          <MessageContextMenuBackdrop handlePressBackdrop={handlePressBackdrop}>
-            <AnimatedVStack style={StyleSheet.absoluteFill}>
-              {!!reactions && <MessageContextMenuReactors reactors={reactions.bySender} />}
-              <MessageContextMenuContainer
-                itemRectY={itemRectY}
-                itemRectX={itemRectX}
-                itemRectHeight={itemRectHeight}
-                itemRectWidth={itemRectWidth}
-                menuHeight={menuHeight}
-                fromMe={fromMe}
-                hasReactions={hasReactions}
-              >
-                <MessageContextMenuAboveMessageReactions
-                  reactors={reactions?.bySender ?? {}}
-                  messageId={messageId}
-                  onChooseMoreEmojis={handleChooseMoreEmojis}
-                  onSelectReaction={handleSelectReaction}
-                  originX={fromMe ? itemRectX + itemRectWidth : itemRectX}
-                  originY={itemRectHeight}
-                />
+    const { verticalSpaceBetweenSections } = useConversationMessageContextMenuStyles()
 
-                {/* Replace with rowGap when we refactored menu items and not using rn-paper TableView */}
-                <VStack
-                  style={{
-                    height: verticalSpaceBetweenSections,
-                  }}
-                />
+    return (
+      <>
+        <Modal
+          visible={true}
+          transparent={true}
+          animationType="fade"
+          statusBarTranslucent={Platform.OS === "android"}
+        >
+          <AnimatedVStack style={StyleSheet.absoluteFill}>
+            <MessageContextMenuBackdrop handlePressBackdrop={handlePressBackdrop}>
+              <AnimatedVStack style={StyleSheet.absoluteFill}>
+                {!!reactions && <MessageContextMenuReactors reactors={reactions.bySender} />}
+                <MessageContextMenuContainer
+                  itemRectY={itemRectY}
+                  itemRectX={itemRectX}
+                  itemRectHeight={itemRectHeight}
+                  itemRectWidth={itemRectWidth}
+                  menuHeight={menuHeight}
+                  fromMe={fromMe}
+                  hasReactions={hasReactions}
+                >
+                  <MessageContextMenuAboveMessageReactions
+                    reactors={reactions?.bySender ?? {}}
+                    messageId={messageId}
+                    onChooseMoreEmojis={handleChooseMoreEmojis}
+                    onSelectReaction={handleSelectReaction}
+                    originX={fromMe ? itemRectX + itemRectWidth : itemRectX}
+                    originY={itemRectHeight}
+                  />
 
-                {message && (
-                  <ConversationMessageContextStoreProvider
-                    currentMessage={message}
-                    nextMessage={nextMessage}
-                    previousMessage={previousMessage}
-                  >
-                    {/* TODO: maybe make ConversationMessage more dumb to not need any context? */}
-                    <ConversationMessage />
-                  </ConversationMessageContextStoreProvider>
-                )}
+                  {/* Replace with rowGap when we refactored menu items and not using rn-paper TableView */}
+                  <VStack
+                    style={{
+                      height: verticalSpaceBetweenSections,
+                    }}
+                  />
 
-                <MessageContextMenuItems
-                  originX={fromMe ? itemRectX + itemRectWidth : itemRectX}
-                  originY={itemRectHeight}
-                  menuItems={menuItems}
-                />
-              </MessageContextMenuContainer>
-            </AnimatedVStack>
-          </MessageContextMenuBackdrop>
-        </AnimatedVStack>
-      </Modal>
-      <MessageContextMenuEmojiPicker onSelectReaction={handleSelectReaction} />
-    </>
-  )
-})
+                  {message && (
+                    <ConversationMessageContextStoreProvider
+                      currentMessage={message}
+                      nextMessage={nextMessage}
+                      previousMessage={previousMessage}
+                    >
+                      {/* TODO: maybe make ConversationMessage more dumb to not need any context? */}
+                      <ConversationMessage />
+                    </ConversationMessageContextStoreProvider>
+                  )}
+
+                  <MessageContextMenuItems
+                    originX={fromMe ? itemRectX + itemRectWidth : itemRectX}
+                    originY={itemRectHeight}
+                    menuItems={menuItems}
+                  />
+                </MessageContextMenuContainer>
+              </AnimatedVStack>
+            </MessageContextMenuBackdrop>
+          </AnimatedVStack>
+        </Modal>
+        <MessageContextMenuEmojiPicker onSelectReaction={handleSelectReaction} />
+      </>
+    )
+  },
+)

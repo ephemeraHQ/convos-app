@@ -7,12 +7,12 @@ import { useAuthOnboardingStore } from "@/features/auth-onboarding/stores/auth-o
 export const AuthOnboardingScreen = memo(function AuthScreen() {
   return (
     <AuthOnboardingContextProvider>
-      <Content />
+      <AuthOnboardingScreenContent />
     </AuthOnboardingContextProvider>
   )
 })
 
-const Content = memo(function Content() {
+const AuthOnboardingScreenContent = memo(function AuthOnboardingScreenContent() {
   const page = useAuthOnboardingStore((s) => s.page)
 
   if (page === "welcome") {

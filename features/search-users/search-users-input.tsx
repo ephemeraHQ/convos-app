@@ -13,9 +13,9 @@ import { Text } from "@/design-system/Text"
 import { TextInput } from "@/design-system/text-input"
 import { VStack } from "@/design-system/VStack"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
-import { useEffectAfterInteractions } from "@/hooks/use-effect-after-interactions"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { Haptics } from "@/utils/haptics"
+import { updateObjectAndMethods } from "@/utils/update-object-and-methods"
 import { SearchUsersInputChip } from "./search-users-input-chip"
 import { useSearchUsersInputStore } from "./search-users-input.store"
 
@@ -87,22 +87,14 @@ export const SearchUsersInput = memo(function SearchUsersInput(props: ISearchUse
     useSearchUsersInputStore.getState().actions.setSelectedChipInboxId(null)
   }, [])
 
-  useEffectAfterInteractions(() => {
-    setTimeout(() => {
-      localInputRef.current?.focus()
-      // Cleaner to wait for animation to finish until we focus the input
-    }, 450)
-  }, [])
-
   useImperativeHandle(inputRefProp, () => {
-    return {
-      ...(localInputRef.current || {}),
-      // Override the clear method to update our textInputValueRef
+    const inputRef = updateObjectAndMethods(localInputRef.current, {
       clear: () => {
         localInputRef.current?.clear()
         textInputValueRef.current = ""
       },
-    } as RNTextInput
+    })
+    return inputRef as RNTextInput
   })
 
   return (

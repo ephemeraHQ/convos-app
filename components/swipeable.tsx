@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef } from "react"
+import React, { memo, useCallback, useMemo, useRef } from "react"
 import ReanimatedSwipeable, {
   SwipeableMethods,
 } from "react-native-gesture-handler/ReanimatedSwipeable"
@@ -48,7 +48,7 @@ export type ISwipeableProps = {
   children: React.ReactNode
 }
 
-export function Swipeable({
+export const Swipeable = memo(function Swipeable({
   renderLeftActions,
   renderRightActions,
   onLeftSwipe,
@@ -179,4 +179,4 @@ export function Swipeable({
       {children}
     </ReanimatedSwipeable>
   )
-}
+})

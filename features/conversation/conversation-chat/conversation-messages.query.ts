@@ -37,7 +37,6 @@ export const DEFAULT_PAGE_SIZE = 20
 type IMessageIdsPage = {
   messageIds: IXmtpMessageId[]
   nextCursorNs: number | null
-  prevCursorNs: number | null
 }
 
 export type IConversationMessagesInfiniteQueryData = InfiniteData<IMessageIdsPage>
@@ -54,9 +53,6 @@ type IArgsWithCaller = IArgs & {
 
 type IInfiniteMessagesPageParam = {
   cursorNs?: number
-  direction: "next" | "prev"
-  // "next" = load OLDER messages (going back in time)
-  // "prev" = load NEWER messages (going forward in time)
 }
 
 /**
@@ -69,12 +65,10 @@ const conversationMessagesInfiniteQueryFn = async (
 
   const { clientInboxId, xmtpConversationId, pageParam, limit: argLimit } = args
 
-  const { cursorNs, direction } = pageParam || {
-    cursorNs: undefined,
-    direction: "next",
-  }
+  const { cursorNs } = pageParam || { cursorNs: undefined }
 
   const resolvedLimit = argLimit || DEFAULT_PAGE_SIZE
+  const isFirstPage = !cursorNs
 
   if (!clientInboxId) {
     throw new Error("clientInboxId is required")
@@ -84,11 +78,13 @@ const conversationMessagesInfiniteQueryFn = async (
     throw new Error("xmtpConversationId is required")
   }
 
-  await syncOneXmtpConversation({
-    clientInboxId,
-    xmtpConversationId,
-    caller: "conversationMessagesInfiniteQueryFn",
-  })
+  if (isFirstPage) {
+    await syncOneXmtpConversation({
+      clientInboxId,
+      xmtpConversationId,
+      caller: "conversationMessagesInfiniteQueryFn",
+    })
+  }
 
   const disappearingMessagesSettings = await ensureDisappearingMessageSettings({
     clientInboxId,
@@ -108,16 +104,15 @@ const conversationMessagesInfiniteQueryFn = async (
     clientInboxId,
     xmtpConversationId,
     limit: resolvedLimit,
-    ...(direction === "next" && cursorNs ? { beforeNs: cursorNs } : {}),
-    ...(direction === "prev" && cursorNs ? { afterNs: cursorNs } : {}),
-    direction,
+    ...(cursorNs ? { beforeNs: cursorNs } : {}),
+    direction: "next",
   })
 
-  const convosMessagesFromServer = xmtpMessages.map(convertXmtpMessageToConvosMessage)
-  let combinedMessagesForPage: IConversationMessage[] = [...convosMessagesFromServer]
+  const convosMessagesFromDb = xmtpMessages.map(convertXmtpMessageToConvosMessage)
+  let combinedMessagesForPage: IConversationMessage[] = [...convosMessagesFromDb]
 
   // Only if we're fetching the first page
-  if (direction === "next" && !cursorNs) {
+  if (isFirstPage) {
     const currentInfiniteData = getConversationMessagesInfiniteQueryData({
       clientInboxId,
       xmtpConversationId,
@@ -125,7 +120,7 @@ const conversationMessagesInfiniteQueryFn = async (
 
     if (currentInfiniteData && currentInfiniteData.pages.length > 0) {
       const cachedFirstPageMessageIds = currentInfiniteData.pages[0].messageIds
-      const serverMessageIdsSet = new Set(convosMessagesFromServer.map((m) => m.xmtpId))
+      const xmtpMessageIdsSet = new Set(convosMessagesFromDb.map((m) => m.xmtpId))
       const messagesToConsider: IConversationMessage[] = []
 
       /*
@@ -161,7 +156,7 @@ const conversationMessagesInfiniteQueryFn = async (
 
       if (priotorizeServerResponse) {
         const cachedMessagePromises = cachedFirstPageMessageIds
-          .filter((id) => !serverMessageIdsSet.has(id))
+          .filter((id) => !xmtpMessageIdsSet.has(id))
           .map(async (cachedMsgId) => {
             const cachedMsgData = await ensureConversationMessageQueryData({
               clientInboxId,
@@ -199,7 +194,7 @@ const conversationMessagesInfiniteQueryFn = async (
       } else {
         // Consider all cached messages from the first page that are not already in the server response.
         const cachedMessagePromises = cachedFirstPageMessageIds
-          .filter((id) => !serverMessageIdsSet.has(id))
+          .filter((id) => !xmtpMessageIdsSet.has(id))
           .map(async (cachedMsgId) => {
             const cachedMsgData = await ensureConversationMessageQueryData({
               clientInboxId,
@@ -216,7 +211,7 @@ const conversationMessagesInfiniteQueryFn = async (
 
       // Make sure unique and sorted messages
       if (messagesToConsider.length > 0) {
-        const allMessagesForMerge = [...convosMessagesFromServer, ...messagesToConsider]
+        const allMessagesForMerge = [...convosMessagesFromDb, ...messagesToConsider]
 
         const uniqueMessagesMap = new Map<IXmtpMessageId, IConversationMessage>()
         for (const msg of allMessagesForMerge) {
@@ -263,30 +258,14 @@ const conversationMessagesInfiniteQueryFn = async (
   }
 
   let finalNextCursorNs: number | null = null
-  let finalPrevCursorNs: number | null = null
 
-  if (convosMessagesFromServer.length > 0) {
-    if (direction === "next") {
-      // Only set cursor if we have a full page of REGULAR messages (excluding reactions)
-      if (regularMessages.length >= resolvedLimit) {
-        finalNextCursorNs =
-          combinedMessagesForPage[combinedMessagesForPage.length - 1].sentNs - 1000
-      } else {
-        finalNextCursorNs = null
-      }
-    } else if (direction === "prev") {
-      // Cursor is based on the newest item in the *returned* `combinedMessagesForPage`.
-      // This assumes `combinedMessagesForPage` are sorted newest first if `direction` was "prev".
-      if (combinedMessagesForPage.length > 0) {
-        finalPrevCursorNs = combinedMessagesForPage[0].sentNs + 1000
-      }
-    }
+  if (convosMessagesFromDb.length > 0) {
+    finalNextCursorNs = convosMessagesFromDb[convosMessagesFromDb.length - 1].sentNs - 1000
   }
 
   const result = {
     messageIds: regularMessages.map((message) => message.xmtpId),
     nextCursorNs: finalNextCursorNs,
-    prevCursorNs: finalPrevCursorNs,
   }
 
   return result
@@ -315,20 +294,12 @@ export function getConversationMessagesInfiniteQueryOptions(
         pageParam: pageParam,
       })
     },
-    initialPageParam: {
-      direction: "next",
-    } as IInfiniteMessagesPageParam,
-    getPreviousPageParam: (firstPage, allPages) => {
-      if (!firstPage.prevCursorNs) {
-        return undefined
-      }
-      return { cursorNs: firstPage.prevCursorNs, direction: "prev" } as IInfiniteMessagesPageParam
-    },
+    initialPageParam: {} as IInfiniteMessagesPageParam,
     getNextPageParam: (lastPage) => {
       if (!lastPage.nextCursorNs) {
         return undefined
       }
-      return { cursorNs: lastPage.nextCursorNs, direction: "next" } as IInfiniteMessagesPageParam
+      return { cursorNs: lastPage.nextCursorNs } as IInfiniteMessagesPageParam
     },
     enabled: Boolean(clientInboxId) && Boolean(xmtpConversationId),
   })
@@ -448,9 +419,8 @@ export const addMessagesToConversationMessagesInfiniteQueryData = (args: {
 
   // Create the new first page object immutably
   const newFirstPage: IMessageIdsPage = {
-    messageIds: workingListOfFirstPageMessageIds, // The fully updated list of IDs
+    messageIds: workingListOfFirstPageMessageIds,
     nextCursorNs: originalFirstPageObject?.nextCursorNs || null,
-    prevCursorNs: originalFirstPageObject?.prevCursorNs || null,
   }
 
   // Construct the final array of pages
