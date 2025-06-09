@@ -102,11 +102,11 @@ export const ConversationMessages = memo(function ConversationMessages() {
 
   // Simple functions for the new approach
   const fetchNextPage = useCallback(async () => {
-    loadOlderMessages({
+    return loadOlderMessages({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
       caller: "Conversation Messages fetchNextPage",
-    }).catch(captureError)
+    })
   }, [currentSender.inboxId, xmtpConversationId])
 
   const hasNextPage = hasMoreOlder
