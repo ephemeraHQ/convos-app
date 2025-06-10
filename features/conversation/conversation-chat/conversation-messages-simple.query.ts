@@ -25,8 +25,8 @@ import { IConversationMessageReaction } from "./conversation-message/conversatio
 import { convertXmtpMessageToConvosMessage } from "./conversation-message/utils/convert-xmtp-message-to-convos-message"
 
 // Constants
-export const DEFAULT_PAGE_SIZE = 20
-export const MAX_CACHED_MESSAGES = 200
+export const DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE = 20
+export const CONVERSATION_MESSAGES_MAX_CACHED = 200
 
 // Types
 type IArgs = {
@@ -45,7 +45,7 @@ type IConversationMessagesData = {
 }
 
 // Query Options - This is the key function you wanted!
-export function getConversationMessagesQueryOptions(args: IArgsWithCaller) {
+function getConversationMessagesQueryOptions(args: IArgsWithCaller) {
   const { clientInboxId, xmtpConversationId, caller } = args
 
   return queryOptions({
@@ -83,7 +83,7 @@ async function fetchInitialMessages(args: IArgsWithCaller): Promise<IConversatio
   const xmtpMessages = await getXmtpConversationMessagesWithReactions({
     clientInboxId,
     xmtpConversationId,
-    limit: DEFAULT_PAGE_SIZE,
+    limit: DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE,
     direction: "next",
   })
 
@@ -114,12 +114,12 @@ async function fetchInitialMessages(args: IArgsWithCaller): Promise<IConversatio
   return {
     messageIds: sortedMessages.map((message) => message.xmtpId),
     oldestMessageNs: sortedMessages[sortedMessages.length - 1]?.sentNs || null,
-    hasMoreOlder: xmtpMessages.length === DEFAULT_PAGE_SIZE,
+    hasMoreOlder: xmtpMessages.length === DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE,
   }
 }
 
 // Utility functions using the queryOptions pattern
-export function getConversationMessagesData(args: IArgs): IConversationMessagesData | undefined {
+function getConversationMessagesData(args: IArgs): IConversationMessagesData | undefined {
   const queryKey = getConversationMessagesQueryOptions({
     ...args,
     caller: "getConversationMessagesData",
@@ -127,15 +127,7 @@ export function getConversationMessagesData(args: IArgs): IConversationMessagesD
   return reactQueryClient.getQueryData(queryKey)
 }
 
-export function setConversationMessagesData(args: IArgs, data: IConversationMessagesData) {
-  const queryKey = getConversationMessagesQueryOptions({
-    ...args,
-    caller: "setConversationMessagesData",
-  }).queryKey
-  return reactQueryClient.setQueryData(queryKey, data)
-}
-
-export function updateConversationMessagesData(
+function updateConversationMessagesData(
   args: IArgs,
   updater: (current: IConversationMessagesData | undefined) => IConversationMessagesData,
 ) {
@@ -176,7 +168,7 @@ function mergeAndDeduplicateMessageIds(args: {
   // Sort by timestamp (newest first) and limit
   return messagesWithData
     .sort((a, b) => b.sentMs - a.sentMs)
-    .slice(0, MAX_CACHED_MESSAGES)
+    .slice(0, CONVERSATION_MESSAGES_MAX_CACHED)
     .map((item) => item.id)
 }
 
@@ -288,7 +280,7 @@ export async function checkForNewMessages(args: IArgsWithCaller) {
   const xmtpMessages = await getXmtpConversationMessagesWithReactions({
     clientInboxId: args.clientInboxId,
     xmtpConversationId: args.xmtpConversationId,
-    limit: DEFAULT_PAGE_SIZE,
+    limit: DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE,
     ...(newestMessageNs ? { afterNs: newestMessageNs } : {}),
     direction: "next",
   })
@@ -388,7 +380,7 @@ export async function loadOlderMessages(args: IArgsWithCaller) {
   const xmtpMessages = await getXmtpConversationMessagesWithReactions({
     clientInboxId: args.clientInboxId,
     xmtpConversationId: args.xmtpConversationId,
-    limit: DEFAULT_PAGE_SIZE,
+    limit: DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE,
     ...(oldestMessageNs ? { beforeNs: oldestMessageNs } : {}),
     direction: "next",
   })
@@ -424,7 +416,7 @@ export async function loadOlderMessages(args: IArgsWithCaller) {
       messageIds: mergedMessageIds,
       oldestMessageNs:
         olderMessages[olderMessages.length - 1]?.sentNs || current?.oldestMessageNs || null,
-      hasMoreOlder: xmtpMessages.length === DEFAULT_PAGE_SIZE,
+      hasMoreOlder: xmtpMessages.length === DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE,
     }
   })
 

@@ -43,7 +43,7 @@ import {
 import {
   checkForNewMessages,
   checkForNewMessagesAndReactions,
-  DEFAULT_PAGE_SIZE,
+  DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE,
   invalidateConversationMessagesQuery,
   loadOlderMessages,
   useConversationMessagesQuery,
@@ -510,7 +510,7 @@ const ListFooterComponent = memo(function ListFooterComponent() {
   // Want to ignore hasNextPage if we have less than DEFAULT_PAGE_SIZE messages
   // because for some reason sometimes hasNextPage was true even tho we didn't have more.
   // It's just since we haven't triggering fetching more once.
-  const hasLessThanOnePageOfMessages = messageIds.length < DEFAULT_PAGE_SIZE
+  const hasLessThanOnePageOfMessages = messageIds.length < DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE
   const hasNoMoreMessages = !hasMoreOlder
   const isNotLoading = !isLoadingMessageIds
 

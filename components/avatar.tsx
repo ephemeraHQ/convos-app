@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from "react"
+import React, { memo, useCallback, useMemo, useState } from "react"
 import { ImageSourcePropType, Platform, StyleProp, ViewStyle } from "react-native"
 import { Center } from "@/design-system/Center"
 import { Icon } from "@/design-system/Icon/Icon"
@@ -26,21 +26,76 @@ export const Avatar = memo(function Avatar({
   name,
 }: IAvatarProps) {
   const { theme } = useAppTheme()
-  const firstLetter = getCapitalizedLettersForAvatar(name ?? "")
   const [didError, setDidError] = useState(false)
 
-  const avatarSize =
-    sizeNumber ??
-    {
-      sm: theme.avatarSize.sm,
-      md: theme.avatarSize.md,
-      lg: theme.avatarSize.lg,
-      xl: theme.avatarSize.xl,
-      xxl: theme.avatarSize.xxl,
-    }[size]
+  const avatarSize = useMemo(() => {
+    return (
+      sizeNumber ??
+      {
+        sm: theme.avatarSize.sm,
+        md: theme.avatarSize.md,
+        lg: theme.avatarSize.lg,
+        xl: theme.avatarSize.xl,
+        xxl: theme.avatarSize.xxl,
+      }[size]
+    )
+  }, [sizeNumber, size, theme.avatarSize])
 
-  // Use source if provided, otherwise fall back to uri for backward compatibility
-  const imageSource = source ?? uri
+  const firstLetter = useMemo(() => {
+    return getCapitalizedLettersForAvatar(name ?? "")
+  }, [name])
+
+  const imageSource = useMemo(() => {
+    return source ?? uri
+  }, [source, uri])
+
+  const hasImageSource = useMemo(() => {
+    return !!imageSource && !didError
+  }, [imageSource, didError])
+
+  const containerStyle = useMemo(
+    () => [
+      {
+        borderRadius: 9999,
+        width: avatarSize,
+        height: avatarSize,
+        backgroundColor: theme.colors.fill.tertiary,
+      },
+      style,
+    ],
+    [avatarSize, theme.colors.fill.tertiary, style],
+  )
+
+  const imageStyle = useMemo(
+    () => ({
+      position: "absolute" as const,
+      borderRadius: avatarSize / 2,
+      width: avatarSize,
+      height: avatarSize,
+    }),
+    [avatarSize],
+  )
+
+  const textStyle = useMemo(
+    () => ({
+      color: theme.colors.global.white,
+      fontSize: avatarSize / 2.4,
+      lineHeight: avatarSize / 2.4,
+      paddingTop: avatarSize / 15,
+    }),
+    [avatarSize, theme.colors.global.white],
+  )
+
+  const iconSize = useMemo(() => {
+    return Platform.OS === "ios" ? avatarSize / 3 : avatarSize / 2
+  }, [avatarSize])
+
+  const getImageSource = useCallback(() => {
+    if (typeof imageSource === "string") {
+      return { uri: imageSource }
+    }
+    return imageSource
+  }, [imageSource])
 
   const handleImageError = useCallback(() => {
     setDidError(true)
@@ -50,62 +105,23 @@ export const Avatar = memo(function Avatar({
     setDidError(false)
   }, [])
 
-  // Determine if we have a valid image source
-  const hasImageSource = !!imageSource && !didError
-
-  // Prepare the source object for the Image component
-  const getImageSource = () => {
-    if (typeof imageSource === "string") {
-      return { uri: imageSource }
-    }
-    return imageSource
-  }
-
   return (
-    <Center
-      style={[
-        {
-          borderRadius: 9999,
-          width: avatarSize,
-          height: avatarSize,
-          backgroundColor: theme.colors.fill.tertiary,
-        },
-        style,
-      ]}
-      testID="avatar-placeholder"
-    >
+    <Center style={containerStyle} testID="avatar-placeholder">
       {hasImageSource ? (
         <Image
           onLoad={handleImageLoad}
           onError={handleImageError}
           source={getImageSource()}
-          style={{
-            position: "absolute",
-            borderRadius: avatarSize / 2,
-            width: avatarSize,
-            height: avatarSize,
-          }}
+          style={imageStyle}
           cachePolicy="memory-disk"
           testID="avatar-image"
         />
       ) : name ? (
-        <Text
-          weight="medium"
-          style={{
-            color: theme.colors.global.white, // white looks better for both dark/light themes
-            fontSize: avatarSize / 2.4, // 2.4 is the ratio in the Figma design
-            lineHeight: avatarSize / 2.4, // 2.4 is the ratio in the Figma design
-            paddingTop: avatarSize / 15, // 15 is totally random and padding top shouldn't be needed but otherwise the text is not centered
-          }}
-        >
+        <Text weight="medium" style={textStyle}>
           {firstLetter}
         </Text>
       ) : (
-        <Icon
-          icon="photo"
-          size={Platform.OS === "ios" ? avatarSize / 3 : avatarSize / 2}
-          color="white"
-        />
+        <Icon icon="photo" size={iconSize} color="white" />
       )}
     </Center>
   )
