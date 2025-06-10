@@ -88,7 +88,7 @@ async function handleNewMessage(args: {
     addConversationMessage({
       clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
-      messageId: message.xmtpId,
+      messageIds: [message.xmtpId],
       caller: "handleNewMessage",
     })
   } catch (error) {

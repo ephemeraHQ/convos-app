@@ -169,7 +169,7 @@ export async function handleCreatedOptimisticMessageIdsForConversation(args: {
     addConversationMessage({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
-      messageId: publishedConvosMessage.xmtpId,
+      messageIds: [publishedConvosMessage.xmtpId],
       caller: "handleCreatedOptimisticMessageIdsForConversation",
     })
   }

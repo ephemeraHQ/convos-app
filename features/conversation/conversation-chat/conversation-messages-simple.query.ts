@@ -374,11 +374,8 @@ export async function checkForNewMessages(args: IArgsWithCaller) {
 
 // Combined function: Check for new messages AND reaction updates
 export async function checkForNewMessagesAndReactions(args: IArgsWithCaller) {
-  // First check for new messages
-  await checkForNewMessages(args)
-
-  // Then check for reaction updates on existing messages
-  await checkForReactionUpdates(args)
+  // Run both checks in parallel since they operate on different data ranges
+  await Promise.all([checkForNewMessages(args), checkForReactionUpdates(args)])
 }
 
 // Load older messages (called on scroll)
@@ -439,14 +436,15 @@ export async function loadOlderMessages(args: IArgsWithCaller) {
     })
   }
 }
-export function addConversationMessage(args: IArgsWithCaller & { messageId: IXmtpMessageId }) {
-  const { messageId, clientInboxId, xmtpConversationId } = args
+
+export function addConversationMessage(args: IArgsWithCaller & { messageIds: IXmtpMessageId[] }) {
+  const { messageIds, clientInboxId, xmtpConversationId } = args
 
   updateConversationMessagesData(args, (current) => {
     const existingMessageIds = current?.messageIds || []
     const mergedMessageIds = mergeAndDeduplicateMessageIds({
       existingMessageIds,
-      newMessageIds: [messageId],
+      newMessageIds: messageIds,
       clientInboxId,
       xmtpConversationId,
     })
@@ -461,7 +459,7 @@ export function addConversationMessage(args: IArgsWithCaller & { messageId: IXmt
   maybeUpdateConversationQueryLastMessage({
     clientInboxId,
     xmtpConversationId,
-    messageIds: [messageId],
+    messageIds,
   }).catch(captureError)
 }
 

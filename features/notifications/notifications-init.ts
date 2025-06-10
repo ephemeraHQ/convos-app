@@ -203,7 +203,7 @@ async function handlingNonDecryptedExpoNewMessageNotification(args: {
         addConversationMessage({
           clientInboxId,
           xmtpConversationId,
-          messageId: convoMessage.xmtpId,
+          messageIds: [convoMessage.xmtpId],
           caller: "handlingNonDecryptedExpoNewMessageNotification",
         })
 

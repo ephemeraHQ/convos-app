@@ -141,7 +141,7 @@ export async function addConversationNotificationMessageFromStorageInOurCache(ar
         addConversationMessage({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: conversationId,
-          messageId,
+          messageIds: [messageId],
           caller: "addConversationNotificationMessageFromStorageInOurCache",
         })
       }
@@ -192,7 +192,7 @@ export async function addConversationNotificationMessageFromStorageInOurCache(ar
         addConversationMessage({
           clientInboxId: currentSender.inboxId,
           xmtpConversationId: conversationId,
-          messageId: message.id,
+          messageIds: [message.id],
           caller: "addConversationNotificationMessageFromStorageInOurCache-unknown",
         })
       }
