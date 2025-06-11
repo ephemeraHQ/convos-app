@@ -21,7 +21,7 @@ import {
   canAskForNotificationsPermissions,
   userHasGrantedNotificationsPermissions,
 } from "@/features/notifications/notifications.service"
-import { getXmtpDbEncryptionKeyNonFormatted } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key"
+import { getXmtpDbEncryptionKey } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
 import { getSharedAppGroupDirectory } from "@/features/xmtp/xmtp-client/xmtp-client-utils"
 import { getXmtpConversationIdFromXmtpTopic } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversations } from "@/features/xmtp/xmtp-conversations/xmtp-conversations-list"
@@ -701,7 +701,7 @@ function useShowDebugMenu() {
           const currentSender = getSafeCurrentSender()
           const ethAddress = lowercaseEthAddress(currentSender.ethereumAddress)
 
-          const encryptionKey = await getXmtpDbEncryptionKeyNonFormatted({ ethAddress })
+          const encryptionKey = await getXmtpDbEncryptionKey({ ethAddress })
 
           if (!encryptionKey) {
             captureErrorWithToast(

@@ -3,9 +3,10 @@ import { Client as XmtpClient } from "@xmtp/react-native-sdk"
 import { config } from "@/config"
 import { clientByEthAddress, clientByInboxId } from "@/features/xmtp/xmtp-client/xmtp-client-cache"
 import {
-  getBackupXmtpDbEncryptionKey,
-  getOrCreateXmtpDbEncryptionKey,
-} from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key"
+  createXmtpDbEncryptionKey,
+  getXmtpDbEncryptionKey,
+} from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key"
+import { formatDbEncryptionKeyToUint8Array } from "@/features/xmtp/xmtp-client/xmtp-client-db-encryption-key/xmtp-client-db-encryption-key.utils"
 import {
   getSharedAppGroupDirectory,
   getXmtpLocalUrl,
@@ -72,16 +73,28 @@ export async function createXmtpClient(args: {
     }
 
     const ethAddress = lowercaseEthAddress(identity.identifier)
-    const dbEncryptionKey = await getOrCreateXmtpDbEncryptionKey({
+    let dbEncryptionKey = await getXmtpDbEncryptionKey({
       ethAddress,
     })
+
+    if (!dbEncryptionKey) {
+      dbEncryptionKey = await createXmtpDbEncryptionKey({
+        ethAddress,
+      })
+
+      if (!dbEncryptionKey) {
+        throw new XMTPError({
+          error: new Error("Failed to create DB encryption key while creating XMTP client"),
+        })
+      }
+    }
 
     xmtpLogger.debug(`Creating XMTP client instance...`)
 
     try {
       return await _createXmtpClient({
         inboxSigner,
-        dbEncryptionKey,
+        dbEncryptionKey: formatDbEncryptionKeyToUint8Array(dbEncryptionKey),
         operationName: "createXmtpClient",
         ethAddress,
       })
@@ -89,13 +102,20 @@ export async function createXmtpClient(args: {
       if (isXmtpDbEncryptionKeyError(error)) {
         xmtpLogger.warn(`PRAGMA key error detected, trying with backup key...`)
 
-        const backupDbEncryptionKey = await getBackupXmtpDbEncryptionKey({
+        const backupDbEncryptionKey = await getXmtpDbEncryptionKey({
           ethAddress,
+          useBackupNumber: "first",
         })
+
+        if (!backupDbEncryptionKey) {
+          throw new XMTPError({
+            error: new Error("No DB encryption key found while creating XMTP client"),
+          })
+        }
 
         const client = await _createXmtpClient({
           inboxSigner,
-          dbEncryptionKey: backupDbEncryptionKey,
+          dbEncryptionKey: formatDbEncryptionKeyToUint8Array(backupDbEncryptionKey),
           operationName: "createXmtpClientWithBackupKey",
           ethAddress,
         })
