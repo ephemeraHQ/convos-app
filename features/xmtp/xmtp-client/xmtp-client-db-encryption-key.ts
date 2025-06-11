@@ -141,6 +141,24 @@ export async function getOrCreateXmtpDbEncryptionKey(args: {
   }
 }
 
+export async function getXmtpDbEncryptionKeyNonFormatted(args: {
+  ethAddress: ILowercaseEthereumAddress
+}) {
+  const { ethAddress } = args
+  const key = await _getFromSecureStorage(ethAddress)
+  if (!key) {
+    const backupKey = _getFromBackup(ethAddress)
+    if (!backupKey) {
+      throw new XMTPError({
+        error: new Error("No key found"),
+        additionalMessage: `No encryption key found for ${ethAddress} in storage or backup`,
+      })
+    }
+    return backupKey
+  }
+  return key
+}
+
 export async function getBackupXmtpDbEncryptionKey(args: {
   ethAddress: ILowercaseEthereumAddress
 }) {

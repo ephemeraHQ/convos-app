@@ -28,7 +28,7 @@ const initialState: IXmtpLogFilesModalState = {
   visible: false,
 }
 
-const useXmtpLogFilesModalStore = create<IXmtpLogFilesModalStore>((set, get) => ({
+export const useXmtpLogFilesModalStore = create<IXmtpLogFilesModalStore>((set, get) => ({
   ...initialState,
   actions: {
     setVisible: (visible: boolean) => set({ visible }),

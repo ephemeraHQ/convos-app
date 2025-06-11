@@ -213,3 +213,17 @@ export function isXmtpFileLoggingActive() {
 //     await startXmtpLogging()
 //   }
 // }
+
+export function readXmtpLogFile(filePath: string) {
+  return XmtpClient.readXMTPLogFile(filePath) as Promise<string>
+}
+
+export function getXmtpLoggingStatus() {
+  return {
+    isActive: XmtpClient.isLogWriterActive(),
+    filePaths: XmtpClient.getXMTPLogFilePaths() as string[],
+    logLevel: LIBXMTP_LOG_LEVEL,
+    rotationPolicy: LOG_ROTATION_POLICY,
+    maxLogFiles: MAX_LOG_FILES,
+  }
+}

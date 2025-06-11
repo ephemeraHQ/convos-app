@@ -9,37 +9,15 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 jobs:
-  merge-and-build:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main branch
+      - name: Checkout selected branch
         uses: actions/checkout@v4
-        with:
-          ref: "main" # Explicitly checkout main
-          token: ${{ secrets.PAT_GITHUB }}
-          fetch-depth: 0
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge main into production
-        run: |
-          git fetch origin production:production # Ensure local production is up-to-date
-          git checkout production
-          git merge main --no-ff --no-edit -m "Merge branch 'main' into production via workflow_dispatch [skip ci]"
-          git push origin production
-
-      - name: Checkout production branch for build
-        uses: actions/checkout@v4
-        with:
-          ref: "production" # Checkout the production branch
-          token: ${{ secrets.PAT_GITHUB }}
 
       - name: Setup node
         uses: actions/setup-node@v4

@@ -17,11 +17,16 @@ import { usePreferredDisplayInfo } from "@/features/preferred-display-info/use-p
 import { usePreferredDisplayInfoBatch } from "@/features/preferred-display-info/use-preferred-display-info-batch"
 import { IXmtpInboxId } from "@/features/xmtp/xmtp.types"
 import { ThemedStyle, useAppTheme } from "@/theme/use-app-theme"
+import { isSameTrimmedAndNormalizedString } from "@/utils/str"
 import { shortAddress } from "@/utils/strings/shortAddress"
 
-function currentUserIsDebugUser() {
+export function currentUserIsDebugUser() {
   const senders = useMultiInboxStore.getState().senders
-  return senders.some((sender) => config.debugEthAddresses.includes(sender.ethereumAddress))
+  return senders.some((sender) =>
+    config.debugEthAddresses.some((addr) =>
+      isSameTrimmedAndNormalizedString(addr, sender.ethereumAddress),
+    ),
+  )
 }
 
 export function AccountSwitcher(props: { noAvatar?: boolean }) {

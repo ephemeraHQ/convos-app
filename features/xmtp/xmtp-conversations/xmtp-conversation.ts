@@ -16,6 +16,8 @@ import { wrapXmtpCallWithDuration } from "@/features/xmtp/xmtp.helpers"
 import { XMTPError } from "@/utils/error"
 import { getXmtpClientByInboxId } from "../xmtp-client/xmtp-client"
 
+export const CONVERSATION_TOPIC_PREFIX = "/xmtp/mls/1/g-"
+
 export async function getXmtpConversation(args: {
   clientInboxId: IXmtpInboxId
   conversationId: IXmtpConversationId
@@ -91,7 +93,7 @@ export function isXmtpConversationGroup(
 export function isXmtpConversationDm(
   conversation: IXmtpConversationWithCodecs,
 ): conversation is IXmtpDmWithCodecs {
-  return conversation.version === ConversationVersion.GROUP
+  return conversation.version === ConversationVersion.DM
 }
 
 export const getXmtpConversationIdFromXmtpTopic = (xmtpTopic: IXmtpConversationTopic) => {
@@ -100,8 +102,7 @@ export const getXmtpConversationIdFromXmtpTopic = (xmtpTopic: IXmtpConversationT
     .replace("/proto", "") as IXmtpConversationId
 }
 
-export function getXmtpConversationTopicFromXmtpId(xmtpId: IXmtpConversationId) {
-  return `${CONVERSATION_TOPIC_PREFIX}/${xmtpId}/proto` as IXmtpConversationTopic
+// "/xmtp/mls/1/g-<conversationId>/proto"
+export function getXmtpConversationTopicFromXmtpId(xmtpConversationId: IXmtpConversationId) {
+  return `${CONVERSATION_TOPIC_PREFIX}${xmtpConversationId}/proto` as IXmtpConversationTopic
 }
-
-export const CONVERSATION_TOPIC_PREFIX = "/xmtp/mls/1/g-"
