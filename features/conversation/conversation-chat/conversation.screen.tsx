@@ -20,8 +20,14 @@ import { ConversationCreateSearchInput } from "@/features/conversation/conversat
 import { getConversationQueryOptions } from "@/features/conversation/queries/conversation.query"
 import { isConversationAllowed } from "@/features/conversation/utils/is-conversation-allowed"
 import { clearNotificationsForConversation } from "@/features/notifications/notifications-clear"
+import {
+  getXmtpDebugInformationConversation,
+  uploadXmtpDebugInformation,
+} from "@/features/xmtp/xmtp-debug"
 import { NavigationParamList } from "@/navigation/navigation.types"
 import { $globalStyles } from "@/theme/styles"
+import { captureError } from "@/utils/capture-error"
+import { GenericError } from "@/utils/error"
 import { ConversationMessages } from "./conversation-messages"
 import {
   ConversationStoreProvider,
@@ -75,6 +81,7 @@ const Content = memo(function Content() {
   })
 
   useConversationScreenHeader()
+  useCheckIfForked()
 
   useEffect(() => {
     if (xmtpConversationId) {
@@ -117,3 +124,42 @@ const Content = memo(function Content() {
     </>
   )
 })
+
+function useCheckIfForked() {
+  const currentSender = useSafeCurrentSender()
+  const xmtpConversationId = useCurrentXmtpConversationIdSafe()
+
+  useEffect(() => {
+    if (xmtpConversationId) {
+      ;(async () => {
+        try {
+          const debugInfo = await getXmtpDebugInformationConversation({
+            clientInboxId: currentSender.inboxId,
+            xmtpConversationId,
+          })
+
+          if (debugInfo.maybeForked) {
+            const key = await uploadXmtpDebugInformation({
+              clientInboxId: currentSender.inboxId,
+            })
+
+            const message = `Conversation ${xmtpConversationId} might be forked and here's the XMTP debug key: ${key}`
+            captureError(
+              new GenericError({
+                error: new Error(message),
+                additionalMessage: message,
+              }),
+            )
+          }
+        } catch (error) {
+          captureError(
+            new GenericError({
+              error,
+              additionalMessage: `Failed to check if conversation ${xmtpConversationId} is forked`,
+            }),
+          )
+        }
+      })()
+    }
+  }, [xmtpConversationId, currentSender.inboxId])
+}
