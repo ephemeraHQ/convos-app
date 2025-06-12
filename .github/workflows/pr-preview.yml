@@ -89,11 +89,54 @@ jobs:
         env:
           EXPO_ENV: preview
 
+      - name: Comment on PR - EAS Update Ready
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const currentFingerprint = '${{ needs.check-compatibility.outputs.current_fingerprint }}';
+            const previewFingerprint = '${{ needs.check-compatibility.outputs.preview_fingerprint }}';
+
+            const body = `## 📱 PR Preview Ready (EAS Update)
+
+            ✅ **Compatible with current preview builds** - No native changes detected
+
+            ### 🔄 How to Test
+            1. **Open the Convos Preview app** (must be on latest preview build)
+            2. **Long press anywhere** to open debug menu
+            3. **Tap "Updates Menu"** → **"Switch to PR Branch (Smart)"**
+            4. **Enter PR number:** \`${{ github.event.number }}\`
+            5. **Tap "Check & Switch"** - it will verify compatibility first
+
+            ### 📊 Technical Details
+            - **Update Type:** EAS Update (JavaScript-only changes)
+            - **Runtime Version:** \`${currentFingerprint}\`
+            - **Compatible with builds:** \`${previewFingerprint}\`
+            - **Branch:** \`pr-${{ github.event.number }}\`
+            - **Deep Link:** \`convos-preview://expo-development-client/?url=https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2?channel-name=pr-${{ github.event.number }}\`
+
+            ### ⚠️ Important Notes
+            - Only works with **preview builds** that have runtime version \`${previewFingerprint}\`
+            - The debug menu will **automatically check compatibility** before switching
+            - If you're on an older build, you'll see a warning message
+
+            ---
+            *This update was created automatically because no native changes were detected.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
   create-build:
     name: Create EAS Build for Native Changes
     runs-on: ubuntu-latest
     needs: check-compatibility
     if: needs.check-compatibility.outputs.can_create_update == 'false'
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -116,170 +159,12 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Create EAS Build
-        run: |
-          # Create build with PR-specific message
-          eas build --platform ios --profile preview --non-interactive --message "PR #${{ github.event.number }}: ${{ github.event.pull_request.title }}"
-
-      - name: Comment on PR - Build Started
+      - name: Comment on PR - Build Required
         uses: actions/github-script@v7
         with:
           script: |
-            const body = `## 🏗️ New Build Started
-
-            ⏳ **Creating new preview build** for native changes...
-
-            ### 📊 Build Details
-            - **Platform:** iOS
-            - **Profile:** preview
-            - **Reason:** Native changes detected in PR #${{ github.event.number }}
-            - **Message:** "${{ github.event.pull_request.title }}"
-
-            ### ⏱️ Expected Timeline
-            - **Build time:** ~10-15 minutes
-            - **TestFlight processing:** ~5-10 minutes
-            - **Total:** ~15-25 minutes
-
-            ### 🔔 What's Next
-            1. **Build will appear in EAS dashboard** when complete
-            2. **New build will be submitted to TestFlight** automatically
-            3. **You'll get a notification** when ready for testing
-            4. **Update your preview app** before testing this PR
-
-            ---
-            *You can track build progress in the [EAS dashboard](https://expo.dev/accounts/ephemera/projects/convos/builds).*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
-
-      - name: Comment on PR about build
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🔨 **Native Changes Detected - Creating New Build**
-              
-              This PR contains native changes that require a new build. A preview build is being created now.
-              
-              **Runtime Versions:**
-              - PR Fingerprint: \`${{ needs.check-compatibility.outputs.current_fingerprint }}\`
-              - Latest Preview Build: \`${{ needs.check-compatibility.outputs.preview_fingerprint }}\`
-              
-              **What's happening:**
-              - ⏳ Creating new iOS preview build (this takes ~10-15 minutes)
-              - 📱 Build will be available on TestFlight internal testing
-              - 🔄 You'll get a notification when the build is ready
-              
-              **To test this PR:**
-              1. Wait for the build to complete
-              2. Update your TestFlight app to the latest preview build
-              3. The new build will include your changes
-              
-              **Build started at:** ${new Date().toLocaleString()}`
-            })
-
-      - name: Comment on PR when build completes
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `✅ **Preview Build Complete!**
-              
-              The new preview build for this PR is ready.
-              
-              **To test:**
-              1. Open TestFlight on your device
-              2. Update to the latest "Convos Preview" build
-              3. The build includes the changes from this PR
-              
-              **Build completed at:** ${new Date().toLocaleString()}
-              
-              Note: It may take a few minutes for the build to appear in TestFlight.`
-            })
-
-      - name: Comment on PR if build fails
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `❌ **Preview Build Failed**
-              
-              The preview build for this PR failed to create.
-              
-              **To investigate:**
-              1. Check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-              2. Look for build errors in the EAS dashboard
-              
-              **Common causes:**
-              - Build configuration issues
-              - Native dependency conflicts
-              - Code signing problems
-              
-              **Build failed at:** ${new Date().toLocaleString()}`
-            })
-
-      - name: Comment on PR - EAS Update
-        if: steps.check-compatibility.outputs.can_create_update == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const currentFingerprint = '${{ steps.check-compatibility.outputs.current_fingerprint }}';
-            const previewFingerprint = '${{ steps.check-compatibility.outputs.preview_fingerprint }}';
-
-            const body = `## 📱 PR Preview Ready (EAS Update)
-
-            ✅ **Compatible with current preview builds** - No native changes detected
-
-            ### 🔄 How to Test
-            1. **Open the Convos Preview app** (must be on latest preview build)
-            2. **Long press anywhere** to open debug menu
-            3. **Tap "Updates Menu"** → **"Switch to PR Branch (Smart)"**
-            4. **Enter PR number:** \`${context.issue.number}\`
-            5. **Tap "Check & Switch"** - it will verify compatibility first
-
-            ### 📊 Technical Details
-            - **Update Type:** EAS Update (JavaScript-only changes)
-            - **Runtime Version:** \`${currentFingerprint}\`
-            - **Compatible with builds:** \`${previewFingerprint}\`
-            - **Branch:** \`pr-${context.issue.number}\`
-
-            ### ⚠️ Important Notes
-            - Only works with **preview builds** that have runtime version \`${previewFingerprint}\`
-            - The debug menu will **automatically check compatibility** before switching
-            - If you're on an older build, you'll see a warning message
-
-            ---
-            *This update was created automatically because no native changes were detected.*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
-
-      - name: Comment on PR - EAS Build Required
-        if: steps.check-compatibility.outputs.can_create_update == 'false'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const currentFingerprint = '${{ steps.check-compatibility.outputs.current_fingerprint }}';
-            const previewFingerprint = '${{ steps.check-compatibility.outputs.preview_fingerprint }}';
+            const currentFingerprint = '${{ needs.check-compatibility.outputs.current_fingerprint }}';
+            const previewFingerprint = '${{ needs.check-compatibility.outputs.preview_fingerprint }}';
 
             const body = `## 🔨 PR Preview Requires New Build
 
@@ -312,3 +197,55 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
+
+      - name: Create EAS Build
+        run: |
+          eas build --platform ios --profile preview --non-interactive --message "PR #${{ github.event.number }}: ${{ github.event.pull_request.title }}"
+
+      - name: Comment on PR - Build Complete
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ **Preview Build Complete!**
+              
+              The new preview build for this PR is ready.
+              
+              **To test:**
+              1. Open TestFlight on your device
+              2. Update to the latest "Convos Preview" build
+              3. The build includes the changes from this PR
+              
+              **Build completed at:** ${new Date().toLocaleString()}
+              
+              Note: It may take a few minutes for the build to appear in TestFlight.`
+            })
+
+      - name: Comment on PR - Build Failed
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ **Preview Build Failed**
+              
+              The preview build for this PR failed to create.
+              
+              **To investigate:**
+              1. Check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              2. Look for build errors in the EAS dashboard
+              
+              **Common causes:**
+              - Build configuration issues
+              - Native dependency conflicts
+              - Code signing problems
+              
+              **Build failed at:** ${new Date().toLocaleString()}`
+            })
