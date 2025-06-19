@@ -1,14 +1,11 @@
 import * as BackgroundTask from "expo-background-task"
 import * as TaskManager from "expo-task-manager"
 import { getAllSenders } from "@/features/authentication/multi-inbox.store"
-import {
-  syncAllXmtpConversations,
-  syncNewXmtpConversations,
-} from "@/features/xmtp/xmtp-conversations/xmtp-conversations-sync"
+import { getAllowedConsentConversationsQueryData } from "@/features/conversation/conversation-list/conversations-allowed-consent.query"
+import { addConversationNotificationMessageFromStorageInOurCache } from "@/features/notifications/notifications-storage"
 import { captureError } from "@/utils/capture-error"
 import { GenericError } from "@/utils/error"
 import { backgroundTaskLogger } from "@/utils/logger/logger"
-import { customPromiseAllSettled } from "@/utils/promise-all-settled"
 
 const BACKGROUND_SYNC_TASK_NAME = "background-sync-task"
 
@@ -24,35 +21,54 @@ export function defineBackgroundSyncTask() {
         return BackgroundTask.BackgroundTaskResult.Success
       }
 
-      // Sync all conversations and metadata for each sender
-      const senderSyncResults = await customPromiseAllSettled(
-        senders.map(async (sender) => {
-          backgroundTaskLogger.debug(`Starting background sync for sender: ${sender.inboxId}`)
-
-          await syncAllXmtpConversations({
-            clientInboxId: sender.inboxId,
-            caller: "background-sync-task",
-          })
-          await syncNewXmtpConversations({
-            clientInboxId: sender.inboxId,
-            caller: "background-sync-task",
-          })
-
-          backgroundTaskLogger.debug(`Completed background sync for sender: ${sender.inboxId}`)
-        }),
-      )
-
-      // Log any sender sync failures
-      senderSyncResults.forEach((result, index) => {
-        if (result.status === "rejected") {
-          captureError(
-            new GenericError({
-              error: result.reason,
-              additionalMessage: `Failed to sync data for sender ${senders[index].inboxId}`,
-            }),
-          )
+      for (const sender of senders) {
+        // Add notification messages from storage to our cache
+        const allowedConsentConversations = getAllowedConsentConversationsQueryData({
+          clientInboxId: sender.inboxId,
+        })
+        if (!allowedConsentConversations) {
+          continue
         }
-      })
+        for (const conversationId of allowedConsentConversations) {
+          await addConversationNotificationMessageFromStorageInOurCache({
+            conversationId,
+          })
+        }
+      }
+
+      /**
+       * WARNING: XMTP doesn't seem to support background stuff very well... Or at least some people reported some crashes and in
+       * Sentry we can see some sync hanging or building client hanging. So for now we will disable until we can dig.
+       */
+      // Sync all conversations and metadata for each sender
+      // const senderSyncResults = await customPromiseAllSettled(
+      //   senders.map(async (sender) => {
+      //     backgroundTaskLogger.debug(`Starting background sync for sender: ${sender.inboxId}`)
+
+      //     await syncAllXmtpConversations({
+      //       clientInboxId: sender.inboxId,
+      //       caller: "background-sync-task",
+      //     })
+      //     await syncNewXmtpConversations({
+      //       clientInboxId: sender.inboxId,
+      //       caller: "background-sync-task",
+      //     })
+
+      //     backgroundTaskLogger.debug(`Completed background sync for sender: ${sender.inboxId}`)
+      //   }),
+      // )
+
+      // // Log any sender sync failures
+      // senderSyncResults.forEach((result, index) => {
+      //   if (result.status === "rejected") {
+      //     captureError(
+      //       new GenericError({
+      //         error: result.reason,
+      //         additionalMessage: `Failed to sync data for sender ${senders[index].inboxId}`,
+      //       }),
+      //     )
+      //   }
+      // })
 
       backgroundTaskLogger.debug("Background sync task completed successfully")
       return BackgroundTask.BackgroundTaskResult.Success

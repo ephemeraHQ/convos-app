@@ -172,6 +172,7 @@ export function useSendToExistingConversation() {
 
     // Reset composer state before sending to prevent duplicate sends
     composerStore.getState().reset()
+
     // Send the message
     await sendMessageMutation({
       contents: messageContents,

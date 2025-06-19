@@ -14,7 +14,7 @@ import { ConversationMessageLayout } from "@/features/conversation/conversation-
 import { ConversationMessageReactions } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions/conversation-message-reactions"
 import { ConversationMessageTimestamp } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-timestamp"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
-import { useConversationMessagesInfiniteQueryAllMessageIds } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { useConversationMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import { ConversationStoreProvider } from "@/features/conversation/conversation-chat/conversation.store-context"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
@@ -31,12 +31,13 @@ type ConversationPreviewProps = {
 export const ConversationPreview = ({ xmtpConversationId }: ConversationPreviewProps) => {
   const currentSender = getSafeCurrentSender()
 
-  const { data: messageIds = [], isLoading: isLoadingMessages } =
-    useConversationMessagesInfiniteQueryAllMessageIds({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-      caller: "Conversation Preview",
-    })
+  const { data: messagesData, isLoading: isLoadingMessages } = useConversationMessagesQuery({
+    clientInboxId: currentSender.inboxId,
+    xmtpConversationId,
+    caller: "Conversation Preview",
+  })
+
+  const messageIds = messagesData?.messageIds ?? []
 
   const { data: conversation, isLoading: isLoadingConversation } = useConversationQuery({
     clientInboxId: currentSender.inboxId,

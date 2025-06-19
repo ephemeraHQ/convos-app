@@ -25,55 +25,62 @@ export const ConversationMessageStaticAttachment = memo(
       return null
     }
 
-    return <Content messageId={message.xmtpId} staticAttachment={content} />
+    return (
+      <ConversationMessageStaticAttachmentContent
+        messageId={message.xmtpId}
+        staticAttachment={content}
+      />
+    )
   },
 )
 
-const Content = memo(function Content(props: {
-  messageId: IXmtpMessageId
-  staticAttachment: IConversationMessageStaticAttachmentContent
-}) {
-  const { messageId, staticAttachment } = props
+const ConversationMessageStaticAttachmentContent = memo(
+  function ConversationMessageStaticAttachmentContent(props: {
+    messageId: IXmtpMessageId
+    staticAttachment: IConversationMessageStaticAttachmentContent
+  }) {
+    const { messageId, staticAttachment } = props
 
-  const {
-    data: attachment,
-    isLoading: attachmentLoading,
-    error: attachmentError,
-  } = useQuery(getStaticAttachmentQueryOptions({ messageId, staticAttachment }))
+    const {
+      data: attachment,
+      isLoading: attachmentLoading,
+      error: attachmentError,
+    } = useQuery(getStaticAttachmentQueryOptions({ messageId, staticAttachment }))
 
-  if (!attachment && attachmentLoading) {
+    if (!attachment && attachmentLoading) {
+      return (
+        <ConversationMessageAttachmentContainer>
+          <ConversationAttachmentLoading />
+        </ConversationMessageAttachmentContainer>
+      )
+    }
+
+    if (attachmentError || !attachment) {
+      return (
+        <ConversationMessageAttachmentContainer>
+          <Text>{translate("attachment_not_found")}</Text>
+        </ConversationMessageAttachmentContainer>
+      )
+    }
+
+    const aspectRatio = attachment.imageSize
+      ? attachment.imageSize.width / attachment.imageSize.height
+      : undefined
+
     return (
-      <ConversationMessageAttachmentContainer>
-        <ConversationAttachmentLoading />
+      <ConversationMessageAttachmentContainer style={{ aspectRatio }}>
+        <Image
+          source={{ uri: attachment.mediaURL }}
+          contentFit="cover"
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+        />
       </ConversationMessageAttachmentContainer>
     )
-  }
-
-  if (attachmentError || !attachment) {
-    return (
-      <ConversationMessageAttachmentContainer>
-        <Text>{translate("attachment_not_found")}</Text>
-      </ConversationMessageAttachmentContainer>
-    )
-  }
-
-  const aspectRatio = attachment.imageSize
-    ? attachment.imageSize.width / attachment.imageSize.height
-    : undefined
-
-  return (
-    <ConversationMessageAttachmentContainer style={{ aspectRatio }}>
-      <Image
-        source={{ uri: attachment.mediaURL }}
-        contentFit="cover"
-        style={{
-          width: "100%",
-          height: "100%",
-        }}
-      />
-    </ConversationMessageAttachmentContainer>
-  )
-})
+  },
+)
 
 function getStaticAttachmentQueryOptions(args: {
   messageId: IXmtpMessageId

@@ -1,6 +1,7 @@
 import { Image as ExpoImage, type ImageProps as ExpoImageProps, type ImageSource } from "expo-image"
 import { memo, useMemo } from "react"
 import { StyleSheet } from "react-native"
+import { useAppTheme } from "@/theme/use-app-theme"
 
 export type IImageProps = ExpoImageProps
 
@@ -82,6 +83,8 @@ function useImageSource({
 export const Image = memo(function Image(props: IImageProps) {
   const { style, source, ...rest } = props
 
+  const { theme } = useAppTheme()
+
   const flatStyle = StyleSheet.flatten(style)
   const styledWidth = flatStyle?.width
   const styledHeight = flatStyle?.height
@@ -91,5 +94,13 @@ export const Image = memo(function Image(props: IImageProps) {
 
   const sourceWithCacheKey = useImageSource({ source, numericWidth, numericHeight })
 
-  return <ExpoImage cachePolicy="memory-disk" style={style} source={sourceWithCacheKey} {...rest} />
+  return (
+    <ExpoImage
+      transition={theme.timing.fast}
+      cachePolicy="memory-disk"
+      style={style}
+      source={sourceWithCacheKey}
+      {...rest}
+    />
+  )
 })

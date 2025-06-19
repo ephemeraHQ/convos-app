@@ -15,10 +15,20 @@ export function getReactQueryKey<T extends Record<string, string | undefined>>(
 }
 
 export function clearReacyQueryQueriesAndCache() {
-  queryLogger.debug("Clearing react query queries and cache...")
-  reactQueryClient.getQueryCache().clear()
-  reactQueryClient.clear()
-  reactQueryClient.removeQueries()
-  reactQueryPersistingStorage.clearAll()
-  queryLogger.debug("Cleared react query queries and cache")
+  const { measureTime } = require("@/utils/perf/perf-timer")
+
+  queryLogger.debug("Clearing all caches...")
+  const { durationMs: clearAllMs } = measureTime(() => {
+    reactQueryClient.clear()
+  })
+  queryLogger.debug(`All caches cleared in ${clearAllMs}ms`)
+
+  queryLogger.debug("Clearing persisted storage...")
+  const { durationMs: clearStorageMs } = measureTime(() => {
+    reactQueryPersistingStorage.clearAll()
+  })
+  queryLogger.debug(`Persisted storage cleared in ${clearStorageMs}ms`)
+
+  const totalMs = clearAllMs + clearStorageMs
+  queryLogger.debug(`Total cache clearing completed in ${totalMs}ms`)
 }

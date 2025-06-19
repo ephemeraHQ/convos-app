@@ -11,7 +11,7 @@ import { captureError } from "@/utils/capture-error"
 import { ReactQueryError } from "@/utils/error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import {
-  handleOptimisticMessagesSent,
+  handleCreatedOptimisticMessageIdsForConversation,
   ISendMessageOptimisticallyParams,
   sendMessageOptimistically,
 } from "../../hooks/use-send-message.mutation"
@@ -64,14 +64,14 @@ export async function createConversationAndSendFirstMessage(
 
   // Send message
   try {
-    const sentMessages = await sendMessageOptimistically({
+    const createdOptimisticMessageIds = await sendMessageOptimistically({
       xmtpConversationId: conversation.xmtpId,
       contents,
     })
 
     return {
       conversation,
-      sentMessages,
+      createdOptimisticMessageIds,
       errorSendingMessage: undefined,
     }
   } catch (error) {
@@ -85,7 +85,7 @@ export async function createConversationAndSendFirstMessage(
     // We still want to return the conversation so that the UI can still be updated
     return {
       conversation,
-      sentMessages: undefined,
+      createdOptimisticMessageIds: undefined,
       errorSendingMessage: error,
     }
   }
@@ -105,9 +105,9 @@ export const getCreateConversationAndSendFirstMessageMutationOptions =
         const currentSender = getSafeCurrentSender()
 
         // Handle the optimistic messages
-        if (result.sentMessages) {
-          handleOptimisticMessagesSent({
-            optimisticMessages: result.sentMessages,
+        if (result.createdOptimisticMessageIds) {
+          handleCreatedOptimisticMessageIdsForConversation({
+            optimisticMessageIds: result.createdOptimisticMessageIds,
             xmtpConversationId: result.conversation.xmtpId,
           }).catch(captureError)
         }

@@ -4,7 +4,7 @@ import {
   isGroupUpdatedMessage,
   isReactionMessage,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
-import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { addConversationMessage } from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import {
   getConversationQueryData,
   invalidateConversationQuery,
@@ -85,10 +85,11 @@ async function handleNewMessage(args: {
       return
     }
 
-    addMessagesToConversationMessagesInfiniteQueryData({
+    addConversationMessage({
       clientInboxId,
       xmtpConversationId: message.xmtpConversationId,
       messageIds: [message.xmtpId],
+      caller: "handleNewMessage",
     })
   } catch (error) {
     captureError(new StreamError({ error, additionalMessage: "Error handling new message" }))

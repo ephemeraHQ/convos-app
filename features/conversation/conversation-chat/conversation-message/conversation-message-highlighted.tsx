@@ -1,4 +1,5 @@
-import { memo, useEffect } from "react"
+import { memo, useEffect, useMemo } from "react"
+import { StyleProp, ViewStyle } from "react-native"
 import {
   cancelAnimation,
   interpolate,
@@ -21,18 +22,16 @@ export const ConversationMessageHighlighted = memo(function ConversationMessageH
   const xmtpMessageId = useConversationMessageContextSelector((state) => state.currentMessageId)
   const { animatedStyle } = useHighlightAnimation({ xmtpMessageId })
 
-  return (
-    <AnimatedVStack
-      style={[
-        animatedStyle,
-        {
-          width: "100%",
-        },
-      ]}
-    >
-      {children}
-    </AnimatedVStack>
-  )
+  const styles = useMemo<StyleProp<ViewStyle>>(() => {
+    return [
+      animatedStyle,
+      {
+        width: "100%",
+      },
+    ]
+  }, [animatedStyle])
+
+  return <AnimatedVStack style={styles}>{children}</AnimatedVStack>
 })
 
 type IUseHighlightAnimationArgs = {

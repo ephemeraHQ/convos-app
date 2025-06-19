@@ -5,7 +5,7 @@ import {
   setConversationMessageQueryData,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
-import { addMessagesToConversationMessagesInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { addConversationMessage } from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import {
   isSupportedXmtpContentType,
   isXmtpMessage,
@@ -137,11 +137,14 @@ export async function addConversationNotificationMessageFromStorageInOurCache(ar
 
     // Add recognized messages to infinite query immediately for fast display
     if (recognizedMessages.length > 0) {
-      addMessagesToConversationMessagesInfiniteQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-        messageIds: recognizedMessages,
-      })
+      for (const messageId of recognizedMessages) {
+        addConversationMessage({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId: conversationId,
+          messageIds: [messageId],
+          caller: "addConversationNotificationMessageFromStorageInOurCache",
+        })
+      }
 
       notificationsLogger.debug(
         `Immediately added ${recognizedMessages.length} recognized messages to cache`,
@@ -185,11 +188,14 @@ export async function addConversationNotificationMessageFromStorageInOurCache(ar
       })
 
       // Add unknown messages to cache after fetching
-      addMessagesToConversationMessagesInfiniteQueryData({
-        clientInboxId: currentSender.inboxId,
-        xmtpConversationId: conversationId,
-        messageIds: unknownMessages.map((message) => message.id),
-      })
+      for (const message of unknownMessages) {
+        addConversationMessage({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId: conversationId,
+          messageIds: [message.id],
+          caller: "addConversationNotificationMessageFromStorageInOurCache-unknown",
+        })
+      }
     }
   } catch (error) {
     captureError(

@@ -54,7 +54,7 @@ export async function cleanXmtpDbEncryptionKey(args: { ethAddress: ILowercaseEth
 
 export async function getXmtpDbEncryptionKey(args: {
   ethAddress: ILowercaseEthereumAddress
-  useBackupNumber?: "first" | "second" | "third" | "fourth"
+  useBackupNumber?: "first" | "second" | "third"
 }) {
   const { ethAddress, useBackupNumber } = args
 
@@ -86,7 +86,7 @@ export async function getXmtpDbEncryptionKey(args: {
     }
 
     // Second backup (Shared Defaults)
-    if (!useBackupNumber || useBackupNumber === "second" || useBackupNumber === "first") {
+    if (!useBackupNumber || useBackupNumber === "second") {
       let existingKey = _getFromSecondBackup(ethAddress)
       if (existingKey) {
         xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in second backup`)
@@ -98,12 +98,7 @@ export async function getXmtpDbEncryptionKey(args: {
     }
 
     // Third backup (File System)
-    if (
-      !useBackupNumber ||
-      useBackupNumber === "third" ||
-      useBackupNumber === "second" ||
-      useBackupNumber === "first"
-    ) {
+    if (!useBackupNumber || useBackupNumber === "third") {
       let existingKey = await _getFromFileBackup(ethAddress)
       if (existingKey) {
         xmtpLogger.debug(`Found existing DB encryption key for ${ethAddress} in file backup`)

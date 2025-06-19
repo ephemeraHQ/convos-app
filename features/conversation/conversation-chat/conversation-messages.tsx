@@ -1,5 +1,4 @@
 import { FlashList, FlashListProps } from "@shopify/flash-list"
-import { InfiniteQueryObserverResult } from "@tanstack/react-query"
 import React, { memo, ReactNode, useCallback, useMemo, useRef } from "react"
 import { Platform } from "react-native"
 import Animated, {
@@ -29,7 +28,10 @@ import {
   useConversationMessageQuery,
 } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { ConversationMessageContextStoreProvider } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
-import { IConversationMessageContentType } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
+import {
+  IConversationMessage,
+  IConversationMessageContentType,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.types"
 import { useMessageHasReactions } from "@/features/conversation/conversation-chat/conversation-message/hooks/use-message-has-reactions"
 import {
   isAnActualMessage,
@@ -39,10 +41,13 @@ import {
   messageContentIsText,
 } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import {
-  DEFAULT_PAGE_SIZE,
-  refetchConversationMessagesInfiniteQuery,
-  useConversationMessagesInfiniteQueryAllMessageIds,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+  checkForNewMessages,
+  checkForNewMessagesAndReactions,
+  DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE,
+  invalidateConversationMessagesQuery,
+  loadOlderMessages,
+  useConversationMessagesQuery,
+} from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import { useConversationType } from "@/features/conversation/hooks/use-conversation-type"
 import { useMarkConversationAsReadMutation } from "@/features/conversation/hooks/use-mark-conversation-as-read"
 import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
@@ -86,15 +91,25 @@ export const ConversationMessages = memo(function ConversationMessages() {
   const headerHeight = useHeaderHeight()
   const insets = useSafeAreaInsets()
 
-  const {
-    data: messageIds = [],
-    fetchNextPage,
-    hasNextPage,
-  } = useConversationMessagesInfiniteQueryAllMessageIds({
+  const { data: messagesData } = useConversationMessagesQuery({
     clientInboxId: currentSender.inboxId,
     xmtpConversationId,
     caller: "Conversation Messages",
   })
+
+  const messageIds = useMemo(() => messagesData?.messageIds || [], [messagesData?.messageIds])
+  const hasMoreOlder = messagesData?.hasMoreOlder || false
+
+  // Simple functions for the new approach
+  const fetchNextPage = useCallback(async () => {
+    return loadOlderMessages({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages fetchNextPage",
+    })
+  }, [currentSender.inboxId, xmtpConversationId])
+
+  const hasNextPage = hasMoreOlder
 
   useRefetchOnAppFocus()
   useRefetchOnMount()
@@ -189,6 +204,24 @@ export const ConversationMessages = memo(function ConversationMessages() {
     [currentSender.inboxId, xmtpConversationId],
   )
 
+  const estimatedListSize = useMemo(() => {
+    return {
+      height:
+        theme.layout.screen.height -
+        headerHeight -
+        insets.bottom +
+        // Composer height
+        theme.spacing.xl,
+      width: theme.layout.screen.width,
+    }
+  }, [
+    headerHeight,
+    insets.bottom,
+    theme.layout.screen.height,
+    theme.layout.screen.width,
+    theme.spacing.xl,
+  ])
+
   logger.debug(`Rendering ${messageIds.length} messages`)
 
   return (
@@ -210,15 +243,7 @@ export const ConversationMessages = memo(function ConversationMessages() {
       ListHeaderComponent={ConsentPopup}
       ListFooterComponent={ListFooterComponent}
       getItemType={getItemType}
-      estimatedListSize={{
-        height:
-          theme.layout.screen.height -
-          headerHeight -
-          insets.bottom +
-          // Composer height
-          theme.spacing.xl,
-        width: theme.layout.screen.width,
-      }}
+      estimatedListSize={estimatedListSize}
 
       // LEGEND LIST PROPS
       // initialScrollIndex={messageIdsReversed.length - 1}
@@ -240,14 +265,16 @@ function useRefetchOnAppFocus() {
 
   useAppStateHandler({
     onForeground: () => {
-      logger.debug("Conversation Messages came to foreground, refetching messages...")
-      refetchConversationMessagesInfiniteQuery({
+      logger.debug(
+        "Conversation Messages came to foreground, checking for new messages and reactions...",
+      )
+      checkForNewMessagesAndReactions({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId,
-        caller: "Conversation Messages refetch on foreground",
+        caller: "Conversation Messages useRefetchOnAppFocus",
       })
         .then(() => {
-          logger.debug("Done refetching messages because we came to foreground")
+          logger.debug("Done checking for new messages and reactions because we came to foreground")
         })
         .catch(captureError)
     },
@@ -260,10 +287,10 @@ function useRefetchOnMount() {
 
   useEffectAfterInteractions(() => {
     logger.debug("Conversation Messages mounted, refetching messages...")
-    refetchConversationMessagesInfiniteQuery({
+    checkForNewMessages({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
-      caller: "Conversation Messages refetch on mount",
+      caller: "Conversation Messages useRefetchOnMount",
     })
       .then(() => {
         logger.debug("Done refetching messages because we mounted")
@@ -289,10 +316,9 @@ function useHandleDisappearingMessagesSettings() {
             clearInterval(interval)
           }
           interval = setInterval(() => {
-            refetchConversationMessagesInfiniteQuery({
+            invalidateConversationMessagesQuery({
               clientInboxId: currentSender.inboxId,
               xmtpConversationId,
-              caller: "useHandleDisappearingMessagesSettings refetch on retention duration change",
             })
           }, convertNanosecondsToMilliseconds(result.data.retentionDurationInNs))
         } else {
@@ -368,10 +394,7 @@ function useScrollToHighlightedMessage(props: {
   }, [conversationStore, listRef, messageIds])
 }
 
-function useHandleSrolling(props: {
-  fetchNextPage: () => Promise<InfiniteQueryObserverResult<IXmtpMessageId[], Error>>
-  hasNextPage: boolean
-}) {
+function useHandleSrolling(props: { fetchNextPage: () => Promise<void>; hasNextPage: boolean }) {
   const { fetchNextPage, hasNextPage } = props
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
@@ -385,14 +408,18 @@ function useHandleSrolling(props: {
 
     isRefreshingRef.current = true
 
-    logger.debug("Refetching newest messages because we're scrolled past the bottom...")
-    refetchConversationMessagesInfiniteQuery({
+    logger.debug(
+      "Checking for new messages and reactions because we're scrolled past the bottom...",
+    )
+    checkForNewMessagesAndReactions({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
-      caller: "Conversation Messages refetch on scroll past bottom",
+      caller: "Conversation Messages handleRefetchBecauseScrolledBottom",
     })
       .then(() => {
-        logger.debug("Done refetching newest messages because we're scrolled past the bottom")
+        logger.debug(
+          "Done checking for new messages and reactions because we're scrolled past the bottom",
+        )
       })
       .catch(captureError)
       .finally(() => {
@@ -465,15 +492,12 @@ const ListFooterComponent = memo(function ListFooterComponent() {
   const currentSender = useSafeCurrentSender()
   const xmtpConversationId = useCurrentXmtpConversationIdSafe()
 
-  const {
-    data: messageIds = [],
-    hasNextPage,
-    isLoading: isLoadingMessageIds,
-  } = useConversationMessagesInfiniteQueryAllMessageIds({
-    clientInboxId: currentSender.inboxId,
-    xmtpConversationId,
-    caller: "Conversation Messages ListFooterComponent",
-  })
+  const { data: { messageIds = [], hasMoreOlder = false } = {}, isLoading: isLoadingMessageIds } =
+    useConversationMessagesQuery({
+      clientInboxId: currentSender.inboxId,
+      xmtpConversationId,
+      caller: "Conversation Messages ListFooterComponent",
+    })
 
   const { data: conversationType } = useConversationType({
     clientInboxId: currentSender.inboxId,
@@ -486,8 +510,8 @@ const ListFooterComponent = memo(function ListFooterComponent() {
   // Want to ignore hasNextPage if we have less than DEFAULT_PAGE_SIZE messages
   // because for some reason sometimes hasNextPage was true even tho we didn't have more.
   // It's just since we haven't triggering fetching more once.
-  const hasLessThanOnePageOfMessages = messageIds.length < DEFAULT_PAGE_SIZE
-  const hasNoMoreMessages = !hasNextPage
+  const hasLessThanOnePageOfMessages = messageIds.length < DEFAULT_CONVERSATION_MESSAGES_PAGE_SIZE
+  const hasNoMoreMessages = !hasMoreOlder
   const isNotLoading = !isLoadingMessageIds
 
   if ((hasLessThanOnePageOfMessages || hasNoMoreMessages) && isGroup && isNotLoading) {
@@ -573,7 +597,11 @@ const ConversationMessagesListItem = memo(function ConversationMessagesListItem(
       nextMessage={nextMessage ?? undefined}
     >
       <ConversationNewMessageAnimationWrapper
-        animateEntering={isNewestMessage && message.senderInboxId === currentSender.inboxId}
+        animateEntering={
+          isNewestMessage &&
+          message.senderInboxId === currentSender.inboxId &&
+          messageWasJustSent(message)
+        }
       >
         <ConversationMessageTimestamp />
         <ConversationMessageRepliableWrapper messageType={message.type}>
@@ -588,7 +616,7 @@ const ConversationMessagesListItem = memo(function ConversationMessagesListItem(
   )
 })
 
-export const ConversationMessageRepliableWrapper = memo(
+const ConversationMessageRepliableWrapper = memo(
   function ConversationMessageRepliableWrapper(props: {
     children: ReactNode
     messageType: IConversationMessageContentType
@@ -602,6 +630,10 @@ export const ConversationMessageRepliableWrapper = memo(
     return <ConversationMessageRepliable>{children}</ConversationMessageRepliable>
   },
 )
+
+function messageWasJustSent(message: IConversationMessage) {
+  return message.sentMs > Date.now() - 1000
+}
 
 // This function generates the custom entering animation configuration.
 // It's called on the JS thread, and returns a worklet that Reanimated executes on the UI thread.

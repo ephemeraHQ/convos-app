@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
-import React, { memo, useCallback } from "react"
+import React, { memo, useCallback, useRef } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Screen } from "@/components/screen/screen"
 import { ContextMenuView } from "@/design-system/context-menu/context-menu"
@@ -20,10 +20,16 @@ import {
 } from "@/features/conversation/conversation-list/hooks/use-conversation-list-item-context-menu-props"
 import { usePinnedConversations } from "@/features/conversation/conversation-list/hooks/use-pinned-conversations"
 import { refetchUnknownConsentConversationsQuery } from "@/features/conversation/conversation-requests-list/conversations-unknown-consent.query"
-import { useConversationQuery } from "@/features/conversation/queries/conversation.query"
+import {
+  getConversationQueryData,
+  useConversationQuery,
+} from "@/features/conversation/queries/conversation.query"
+import { conversationHasRecentActivities } from "@/features/conversation/utils/conversation-has-recent-activities"
 import { isConversationGroup } from "@/features/conversation/utils/is-conversation-group"
 import { IXmtpConversationId } from "@/features/xmtp/xmtp.types"
+import { useEffectAfterInteractions } from "@/hooks/use-effect-after-interactions"
 import { NavigationParamList } from "@/navigation/navigation.types"
+import { useRouter } from "@/navigation/use-navigation"
 import { $globalStyles } from "@/theme/styles"
 import { useAppTheme } from "@/theme/use-app-theme"
 import { captureError } from "@/utils/capture-error"
@@ -48,6 +54,7 @@ export const ConversationListScreen = memo(function ConversationListScreen(
   const insets = useSafeAreaInsets()
 
   useConversationListScreenHeader()
+  usePreloadRecentConversations({ conversationsIds })
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -193,3 +200,43 @@ const ListHeader = React.memo(function ListHeader() {
     </AnimatedVStack>
   )
 })
+
+function usePreloadRecentConversations(args: { conversationsIds: IXmtpConversationId[] }) {
+  const { conversationsIds } = args
+  const router = useRouter()
+  const currentSender = useSafeCurrentSender()
+  const preloadedConversationsRef = useRef(new Set<IXmtpConversationId>())
+
+  useEffectAfterInteractions(() => {
+    if (conversationsIds) {
+      conversationsIds.forEach((conversationId) => {
+        // Skip if already preloaded
+        if (preloadedConversationsRef.current.has(conversationId)) {
+          return
+        }
+
+        const conversation = getConversationQueryData({
+          clientInboxId: currentSender.inboxId,
+          xmtpConversationId: conversationId,
+        })
+
+        if (
+          conversation &&
+          conversationHasRecentActivities({
+            xmtpConversationId: conversationId,
+            clientInboxId: currentSender.inboxId,
+          })
+        ) {
+          router.preload("Conversation", {
+            xmtpConversationId: conversation.xmtpId,
+          })
+
+          console.log("preloaded")
+
+          // Mark as preloaded
+          preloadedConversationsRef.current.add(conversationId)
+        }
+      })
+    }
+  }, [conversationsIds])
+}

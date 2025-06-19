@@ -1,13 +1,11 @@
 import { Fragment, memo, ReactNode, useMemo } from "react"
 import { StyleProp, ViewStyle } from "react-native"
 import { HStack } from "@/design-system/HStack"
-import { AnimatedVStack, VStack } from "@/design-system/VStack"
+import { VStack } from "@/design-system/VStack"
 import { ConversationSenderAvatar } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender-avatar"
 import { ConversationMessageSenderName } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-sender-name"
 import { useConversationMessageContextSelector } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.store-context"
 import { useConversationMessageStyles } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.styles"
-import { useAppTheme } from "@/theme/use-app-theme"
-import { debugBorder } from "@/utils/debug-style"
 
 export const ConversationMessageLayout = memo(function ConversationMessageLayout(args: {
   reactionsComp?: ReactNode
@@ -98,8 +96,6 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
 }) {
   const { children, hasReactions } = args
 
-  const { theme } = useAppTheme()
-
   const messageStyles = useConversationMessageLayoutStyles()
 
   const hasNextMessageInSeries = useConversationMessageContextSelector(
@@ -108,6 +104,9 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
   const isLastMessage = useConversationMessageContextSelector((s) => s.isLastMessage)
   const fromMe = useConversationMessageContextSelector((s) => s.fromMe)
   const isGroupUpdate = useConversationMessageContextSelector((s) => s.isGroupUpdateMessage)
+  const nextShouldShowDateChange = useConversationMessageContextSelector(
+    (s) => s.nextShouldShowDateChange,
+  )
 
   const containerStyle = useMemo(() => {
     const marginBottom = (() => {
@@ -116,29 +115,47 @@ const ConversationMessageLayoutContainer = memo(function ConversationMessageLayo
         return messageStyles.spaceBetweenMessageFromDifferentUserOrType / 2
       }
 
+      // Group updates already have vertical spacing
       if (isGroupUpdate) {
         return 0
       }
 
-      if (!hasNextMessageInSeries && !fromMe) {
-        return messageStyles.spaceBetweenMessageFromDifferentUserOrType
-      }
-
-      if (!hasNextMessageInSeries) {
+      // Since we show the send status for the last message for the current user, we don't need to add any spacing
+      if (isLastMessage && fromMe) {
         return 0
       }
 
+      // No spacing if we already show date change between current and next message because the timestamp already have spacing
+      if (nextShouldShowDateChange) {
+        return 0
+      }
+
+      // Spacing between messages from different users
+      if (!hasNextMessageInSeries) {
+        return messageStyles.spaceBetweenMessageFromDifferentUserOrType
+      }
+
+      // Spacing between messages with reactions
       if (hasReactions) {
         return messageStyles.spaceBetweenSeriesWithReactions
       }
 
+      // Spacing between messages in a series
       return messageStyles.spaceBetweenMessagesInSeries
     })()
 
     return {
       marginBottom,
     } satisfies StyleProp<ViewStyle>
-  }, [messageStyles, hasNextMessageInSeries, hasReactions, isLastMessage, fromMe, isGroupUpdate])
+  }, [
+    messageStyles,
+    hasNextMessageInSeries,
+    hasReactions,
+    isLastMessage,
+    fromMe,
+    isGroupUpdate,
+    nextShouldShowDateChange,
+  ])
 
   return <VStack style={containerStyle}>{children}</VStack>
 })

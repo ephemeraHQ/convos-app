@@ -101,28 +101,47 @@ export async function createXmtpClient(args: {
       })
     } catch (error) {
       if (isXmtpDbEncryptionKeyError(error)) {
-        xmtpLogger.warn(`PRAGMA key error detected, trying with backup key...`)
+        xmtpLogger.warn(`PRAGMA key error detected, trying with backup keys...`)
 
-        const backupDbEncryptionKey = await getXmtpDbEncryptionKey({
-          ethAddress,
-          useBackupNumber: "first",
-        })
+        const backupMethods: Array<"first" | "second" | "third"> = ["first", "second", "third"]
 
-        if (!backupDbEncryptionKey) {
-          throw new XMTPError({
-            error: new Error("No backup DB encryption key found while creating XMTP client"),
-          })
+        for (const backupMethod of backupMethods) {
+          try {
+            const backupDbEncryptionKey = await getXmtpDbEncryptionKey({
+              ethAddress,
+              useBackupNumber: backupMethod,
+            })
+
+            if (!backupDbEncryptionKey) {
+              xmtpLogger.debug(`No ${backupMethod} backup DB encryption key found`)
+              continue
+            }
+
+            const client = await _createXmtpClient({
+              inboxSigner,
+              dbEncryptionKey: formatDbEncryptionKeyToUint8Array(backupDbEncryptionKey),
+              operationName: `createXmtpClientWith${backupMethod}BackupKey`,
+              ethAddress,
+            })
+
+            xmtpLogger.debug(`Successfully created XMTP client using ${backupMethod} backup key`)
+            return client
+          } catch (backupError) {
+            if (isXmtpDbEncryptionKeyError(backupError)) {
+              xmtpLogger.warn(
+                `${backupMethod} backup key also failed with PRAGMA error, trying next backup...`,
+              )
+              continue
+            }
+
+            throw backupError
+          }
         }
 
-        const client = await _createXmtpClient({
-          inboxSigner,
-          dbEncryptionKey: formatDbEncryptionKeyToUint8Array(backupDbEncryptionKey),
-          operationName: "createXmtpClientWithBackupKey",
-          ethAddress,
+        throw new XMTPError({
+          error: new Error("All backup DB encryption keys failed"),
+          additionalMessage: "No working backup DB encryption key found while creating XMTP client",
         })
-
-        xmtpLogger.debug(`Successfully created XMTP client using backup key`)
-        return client
       }
 
       throw error

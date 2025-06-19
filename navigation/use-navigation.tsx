@@ -36,9 +36,11 @@ export function useRouter(args?: {
   onBlur?: () => void
   onFocus?: () => void
   onTransitionStart?: (e: EventArg<"transitionStart", false, { closing: boolean }>) => void
+  onTransitionEnd?: (e: EventArg<"transitionEnd", false, { closing: boolean }>) => void
   onGestureCancel?: (e: EventArg<"gestureCancel", false, undefined>) => void
 }) {
-  const { onFocus, onBeforeRemove, onBlur, onTransitionStart, onGestureCancel } = args || {}
+  const { onFocus, onBeforeRemove, onBlur, onTransitionStart, onTransitionEnd, onGestureCancel } =
+    args || {}
 
   const navigation = useNavigation<NativeStackNavigationProp<NavigationParamList>>()
 
@@ -90,6 +92,18 @@ export function useRouter(args?: {
       transitionStartListener()
     }
   }, [onTransitionStart, navigation])
+
+  useEffect(() => {
+    const transitionEndListener = navigation.addListener("transitionEnd", (e) => {
+      if (onTransitionEnd) {
+        onTransitionEnd(e)
+      }
+    })
+
+    return () => {
+      transitionEndListener()
+    }
+  }, [onTransitionEnd, navigation])
 
   useEffect(() => {
     // @ts-ignore - "gestureCancel" actually exists

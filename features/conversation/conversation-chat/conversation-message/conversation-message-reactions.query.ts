@@ -171,3 +171,9 @@ export function processReactionConversationMessages(args: {
     )
   })
 }
+
+export function invalidateConversationMessageReactionsQuery(args: IArgs) {
+  return reactQueryClient.invalidateQueries({
+    queryKey: getConversationMessageReactionsQueryOptions(args).queryKey,
+  })
+}

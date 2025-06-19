@@ -53,7 +53,7 @@ export const ConversationScreen = memo(function ConversationScreen(
       >
         <ConversationMessageContextMenuStoreProvider>
           <ConversationComposerStoreProvider inputValue={composerTextPrefill}>
-            <Content />
+            <ConversationContent />
           </ConversationComposerStoreProvider>
         </ConversationMessageContextMenuStoreProvider>
       </ConversationStoreProvider>
@@ -62,7 +62,7 @@ export const ConversationScreen = memo(function ConversationScreen(
   )
 })
 
-const Content = memo(function Content() {
+const ConversationContent = memo(function ConversationContent() {
   useConversationScreenHeader()
   useClearNotificationsForConversationOnMount()
 

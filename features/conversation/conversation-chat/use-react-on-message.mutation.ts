@@ -1,8 +1,10 @@
 import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import { processReactionConversationMessages } from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
-import { invalidateConversationMessagesInfiniteMessagesQuery } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import {
+  invalidateConversationMessageReactionsQuery,
+  processReactionConversationMessages,
+} from "@/features/conversation/conversation-chat/conversation-message/conversation-message-reactions.query"
 import {
   getConversationQueryData,
   maybeUpdateConversationQueryLastMessage,
@@ -79,11 +81,11 @@ export function useReactOnMessage(props: { xmtpConversationId: IXmtpConversation
         messageIds: [xmtpMessageId],
       }).catch(captureError)
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       const currentSender = getSafeCurrentSender()
-      invalidateConversationMessagesInfiniteMessagesQuery({
+      invalidateConversationMessageReactionsQuery({
         clientInboxId: currentSender.inboxId,
-        xmtpConversationId,
+        xmtpMessageId: variables.reaction.reference,
       }).catch(captureErrorWithToast)
     },
   })

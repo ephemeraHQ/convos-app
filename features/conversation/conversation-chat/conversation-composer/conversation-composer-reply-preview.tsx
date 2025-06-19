@@ -44,133 +44,137 @@ export const ConversationComposerReplyPreview = memo(function ReplyPreview() {
     return null
   }
 
-  return <Content xmtpConversationId={xmtpConversationId} />
+  return <ConversationComposerReplyPreviewContent xmtpConversationId={xmtpConversationId} />
 })
 
-const Content = memo(function Content(props: { xmtpConversationId: IXmtpConversationId }) {
-  const { xmtpConversationId } = props
+const ConversationComposerReplyPreviewContent = memo(
+  function ConversationComposerReplyPreviewContent(props: {
+    xmtpConversationId: IXmtpConversationId
+  }) {
+    const { xmtpConversationId } = props
 
-  const { theme } = useAppTheme()
+    const { theme } = useAppTheme()
 
-  const composerStore = useConversationComposerStore()
+    const composerStore = useConversationComposerStore()
 
-  const [replyMessage, setReplyMessage] = useState<IConversationMessage | null>(null)
+    const [replyMessage, setReplyMessage] = useState<IConversationMessage | null>(null)
 
-  // Listen for when we have a replyMessageId in the composer store
-  useEffect(() => {
-    const sub = composerStore.subscribe(
-      (state) => state.replyingToMessageId,
-      async (replyingToMessageId) => {
-        if (!replyingToMessageId) {
-          setReplyMessage(null)
-          return
-        }
+    // Listen for when we have a replyMessageId in the composer store
+    useEffect(() => {
+      const sub = composerStore.subscribe(
+        (state) => state.replyingToMessageId,
+        async (replyingToMessageId) => {
+          if (!replyingToMessageId) {
+            setReplyMessage(null)
+            return
+          }
 
-        try {
-          const currentSender = getSafeCurrentSender()
-          const message = await ensureConversationMessageQueryData({
-            xmtpConversationId,
-            xmtpMessageId: replyingToMessageId,
-            clientInboxId: currentSender.inboxId,
-            caller: "ConversationComposerReplyPreview",
-          })
-          Haptics.softImpactAsync()
-          setReplyMessage(message)
-        } catch (error) {
-          captureErrorWithToast(
-            new GenericError({
-              error,
-              additionalMessage: "Failed to load reply message",
-            }),
-            {
-              message: "Failed to load reply message",
-            },
-          )
-        }
-      },
-    )
+          try {
+            const currentSender = getSafeCurrentSender()
+            const message = await ensureConversationMessageQueryData({
+              xmtpConversationId,
+              xmtpMessageId: replyingToMessageId,
+              clientInboxId: currentSender.inboxId,
+              caller: "ConversationComposerReplyPreview",
+            })
+            Haptics.softImpactAsync()
+            setReplyMessage(message)
+          } catch (error) {
+            captureErrorWithToast(
+              new GenericError({
+                error,
+                additionalMessage: "Failed to load reply message",
+              }),
+              {
+                message: "Failed to load reply message",
+              },
+            )
+          }
+        },
+      )
 
-    return sub
-  }, [composerStore, xmtpConversationId])
+      return sub
+    }, [composerStore, xmtpConversationId])
 
-  const { displayName } = usePreferredDisplayInfo({
-    inboxId: replyMessage?.senderInboxId,
-    caller: "ConversationComposerReplyPreview",
-  })
+    const { displayName } = usePreferredDisplayInfo({
+      inboxId: replyMessage?.senderInboxId,
+      caller: "ConversationComposerReplyPreview",
+    })
 
-  const replyingTo = replyMessage
-    ? messageIsFromCurrentSenderInboxId({ message: replyMessage })
-      ? `Replying to you`
-      : displayName
-        ? `Replying to ${displayName}`
-        : "Replying"
-    : ""
+    const replyingTo = replyMessage
+      ? messageIsFromCurrentSenderInboxId({ message: replyMessage })
+        ? `Replying to you`
+        : displayName
+          ? `Replying to ${displayName}`
+          : "Replying"
+      : ""
 
-  const handleDismiss = useCallback(() => {
-    composerStore.getState().setReplyToMessageId(null)
-  }, [composerStore])
+    const handleDismiss = useCallback(() => {
+      composerStore.getState().setReplyToMessageId(null)
+    }, [composerStore])
 
-  return (
-    <AnimatedVStack
-      style={{
-        overflow: "hidden",
-      }}
-    >
-      {!!replyMessage && (
-        <AnimatedVStack
-          entering={theme.animation.reanimatedFadeInSpring}
-          exiting={theme.animation.reanimatedFadeOutSpring}
-          style={{
-            borderTopWidth: theme.borderWidth.xs,
-            borderTopColor: theme.colors.border.subtle,
-            paddingLeft: theme.spacing.sm,
-            paddingRight: theme.spacing.sm,
-            paddingTop: theme.spacing.sm,
-            paddingBottom: theme.spacing.xxxs,
-            backgroundColor: theme.colors.background.surfaceless,
-            minHeight: replyMessage
-              ? 56 // Value from Figma. Not the best but we need minHeight for this to work. If the content end up being bigger it will adjust automatically
-              : 0,
-          }}
-        >
-          <HStack
+    return (
+      <AnimatedVStack
+        style={{
+          overflow: "hidden",
+        }}
+      >
+        {!!replyMessage && (
+          <AnimatedVStack
+            entering={theme.animation.reanimatedFadeInSpring}
+            exiting={theme.animation.reanimatedFadeOutSpring}
             style={{
-              // ...debugBorder("blue"),
-              alignItems: "center",
-              columnGap: theme.spacing.xs,
+              borderTopWidth: theme.borderWidth.xs,
+              borderTopColor: theme.colors.border.subtle,
+              paddingLeft: theme.spacing.sm,
+              paddingRight: theme.spacing.sm,
+              paddingTop: theme.spacing.sm,
+              paddingBottom: theme.spacing.xxxs,
+              backgroundColor: theme.colors.background.surfaceless,
+              minHeight: replyMessage
+                ? 56 // Value from Figma. Not the best but we need minHeight for this to work. If the content end up being bigger it will adjust automatically
+                : 0,
             }}
           >
-            <VStack
+            <HStack
               style={{
-                rowGap: theme.spacing.xxxs,
-                flex: 1,
+                // ...debugBorder("blue"),
+                alignItems: "center",
+                columnGap: theme.spacing.xs,
               }}
             >
-              <HStack
+              <VStack
                 style={{
-                  alignItems: "center",
-                  columnGap: theme.spacing.xxxs,
+                  rowGap: theme.spacing.xxxs,
+                  flex: 1,
                 }}
               >
-                <Icon
-                  size={theme.iconSize.xxs}
-                  icon="arrowshape.turn.up.left.fill"
-                  color={theme.colors.text.secondary}
-                />
-                <Text preset="smaller" color="secondary">
-                  {replyingTo}
-                </Text>
-              </HStack>
-              {!!replyMessage && <ReplyPreviewMessageContent replyMessage={replyMessage} />}
-            </VStack>
-            <ReplyPreviewEndContent replyMessage={replyMessage} />
-            <IconButton iconName="xmark" onPress={handleDismiss} hitSlop={8} size="sm" />
-          </HStack>
-        </AnimatedVStack>
-      )}
-    </AnimatedVStack>
-  )
-})
+                <HStack
+                  style={{
+                    alignItems: "center",
+                    columnGap: theme.spacing.xxxs,
+                  }}
+                >
+                  <Icon
+                    size={theme.iconSize.xxs}
+                    icon="arrowshape.turn.up.left.fill"
+                    color={theme.colors.text.secondary}
+                  />
+                  <Text preset="smaller" color="secondary">
+                    {replyingTo}
+                  </Text>
+                </HStack>
+                {!!replyMessage && <ReplyPreviewMessageContent replyMessage={replyMessage} />}
+              </VStack>
+              <ReplyPreviewEndContent replyMessage={replyMessage} />
+              <IconButton iconName="xmark" onPress={handleDismiss} hitSlop={8} size="sm" />
+            </HStack>
+          </AnimatedVStack>
+        )}
+      </AnimatedVStack>
+    )
+  },
+)
 
 const ReplyPreviewEndContent = memo(function ReplyPreviewEndContent(props: {
   replyMessage: IConversationMessage

@@ -6,7 +6,7 @@ import {
   isValidUnstoppableDomainName,
 } from "@/features/social-profiles/name-validation.utils"
 import { IEthereumAddress } from "@/utils/evm/address"
-import { TimeUtils } from "@/utils/time.utils"
+import { reactQueryLongCacheQueryOptions } from "@/utils/react-query/react-query.constants"
 
 export function useEnsNameResolution(name: string | undefined) {
   const trimmedName = name?.trim()
@@ -17,8 +17,7 @@ export function useEnsNameResolution(name: string | undefined) {
     queryFn: async () =>
       (await identityResolutionApi.resolveEnsName({ name: trimmedName! })) as IEthereumAddress,
     enabled: Boolean(trimmedName) && isValid,
-    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
-    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    ...reactQueryLongCacheQueryOptions,
   })
 }
 
@@ -31,8 +30,7 @@ export function useBaseNameResolution(name: string | undefined) {
     queryFn: async () =>
       (await identityResolutionApi.resolveBaseName({ name: trimmedName! })) as IEthereumAddress,
     enabled: Boolean(trimmedName) && isValid,
-    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
-    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    ...reactQueryLongCacheQueryOptions,
   })
 }
 
@@ -49,7 +47,6 @@ export function useUnstoppableDomainNameResolution(name: string | undefined) {
           })) as IEthereumAddress
       : skipToken,
     enabled: Boolean(trimmedName) && isValid,
-    staleTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
-    gcTime: TimeUtils.days(30).toMilliseconds(), // 30 days, it's very rare that we need to refetch this
+    ...reactQueryLongCacheQueryOptions,
   })
 }

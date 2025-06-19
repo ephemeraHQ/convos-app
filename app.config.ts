@@ -146,7 +146,9 @@ export default () => {
     userInterfaceStyle: "automatic",
     version: version,
     assetBundlePatterns: ["**/*"],
-    runtimeVersion: version,
+    runtimeVersion: {
+      policy: "fingerprint",
+    },
     updates: {
       url: "https://u.expo.dev/f9089dfa-8871-4aff-93ea-da08af0370d2",
     },

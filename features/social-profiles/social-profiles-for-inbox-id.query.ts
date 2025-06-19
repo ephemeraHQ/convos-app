@@ -3,8 +3,8 @@ import { IXmtpInboxId } from "@features/xmtp/xmtp.types"
 import { queryOptions, useQuery } from "@tanstack/react-query"
 import { ensureSocialProfilesForAddressesQuery } from "@/features/social-profiles/social-profiles.query"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
+import { reactQueryLongCacheQueryOptions } from "@/utils/react-query/react-query.constants"
 import { getReactQueryKey } from "@/utils/react-query/react-query.utils"
-import { TimeUtils } from "@/utils/time.utils"
 
 type IArgs = {
   inboxId: IXmtpInboxId | undefined
@@ -25,8 +25,7 @@ export function getSocialProfilesForInboxIdQueryOptions(args: IArgs) {
     meta: {
       caller,
     },
-    gcTime: TimeUtils.days(30).toMilliseconds(),
-    staleTime: TimeUtils.days(30).toMilliseconds(),
+    ...reactQueryLongCacheQueryOptions,
     queryFn: async () => {
       if (!inboxId || !clientInboxId) {
         return []

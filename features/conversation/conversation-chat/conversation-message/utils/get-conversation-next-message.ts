@@ -1,6 +1,6 @@
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
 import { getConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
-import { getAllConversationMessageInInfiniteQueryData } from "@/features/conversation/conversation-chat/conversation-messages.query"
+import { getAllConversationMessageIds } from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
 
 export function getConversationNextMessage(args: {
@@ -12,7 +12,7 @@ export function getConversationNextMessage(args: {
   const currentSender = getSafeCurrentSender()
 
   const messageIds =
-    getAllConversationMessageInInfiniteQueryData({
+    getAllConversationMessageIds({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
     }) || []

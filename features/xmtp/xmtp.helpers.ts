@@ -69,6 +69,14 @@ export async function wrapXmtpCallWithDuration<T>(
       delay: 1000,
       maxDelay: 10000,
       context: `XMTP ${xmtpFunctionName}`,
+      onError: async (error) => {
+        captureError(
+          new XMTPError({
+            error,
+            additionalMessage: `XMTP ${xmtpFunctionName} failed`,
+          }),
+        )
+      },
     })
 
     // Add duration of the last active segment if app is currently active

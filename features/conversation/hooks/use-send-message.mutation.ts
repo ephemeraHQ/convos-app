@@ -1,17 +1,13 @@
 import { MutationOptions, useMutation } from "@tanstack/react-query"
 import { getSafeCurrentSender } from "@/features/authentication/multi-inbox.store"
-import {
-  getConversationMessageQueryData,
-  refetchConversationMessageQuery,
-  setConversationMessageQueryData,
-} from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
+import { setConversationMessageQueryData } from "@/features/conversation/conversation-chat/conversation-message/conversation-message.query"
 import { messageContentIsReply } from "@/features/conversation/conversation-chat/conversation-message/utils/conversation-message-assertions"
 import { convertXmtpMessageToConvosMessage } from "@/features/conversation/conversation-chat/conversation-message/utils/convert-xmtp-message-to-convos-message"
 import { getMessageTypeBaseOnContent } from "@/features/conversation/conversation-chat/conversation-message/utils/get-message-type-based-on-content"
 import {
-  addMessagesToConversationMessagesInfiniteQueryData,
-  invalidateConversationMessagesInfiniteMessagesQuery,
-} from "@/features/conversation/conversation-chat/conversation-messages.query"
+  addConversationMessage,
+  invalidateConversationMessagesQuery,
+} from "@/features/conversation/conversation-chat/conversation-messages-simple.query"
 import { invalidateConversationQuery } from "@/features/conversation/queries/conversation.query"
 import { convertConvosMessageContentToXmtpMessageContent } from "@/features/conversation/utils/convert-convos-message-content-to-xmtp-message-content"
 import {
@@ -20,8 +16,8 @@ import {
 } from "@/features/xmtp/xmtp-conversations/xmtp-conversation"
 import { getXmtpConversationMessage } from "@/features/xmtp/xmtp-messages/xmtp-messages"
 import { IXmtpConversationId, IXmtpMessageId } from "@/features/xmtp/xmtp.types"
-import { captureError } from "@/utils/capture-error"
-import { GenericError, ReactQueryError } from "@/utils/error"
+import { captureError, captureErrorWithToast } from "@/utils/capture-error"
+import { ensureOurError, GenericError } from "@/utils/error"
 import { reactQueryClient } from "@/utils/react-query/react-query.client"
 import {
   IConversationMessage,
@@ -35,9 +31,9 @@ export type ISendMessageOptimisticallyParams = {
   contents: IConversationMessageContent[] // Array because we can send text at same time as attachments for example
 }
 
-type ISentOptimisticMessage = IConversationMessage & {
-  status: "sending"
-}
+// type ISentOptimisticMessage = IConversationMessage & {
+//   status: "sending"
+// }
 
 export type ISendMessageReturnType = Awaited<ReturnType<typeof sendMessageOptimistically>>
 
@@ -54,7 +50,7 @@ export async function sendMessageOptimistically(args: ISendMessageOptimistically
 
   const currentSender = getSafeCurrentSender()
 
-  const sentMessages: ISentOptimisticMessage[] = []
+  const sendOptimisticMessageIds: IXmtpMessageId[] = []
 
   // Sort contents based on their type
   const sortedContents = [...contents].sort((a, b) => {
@@ -63,143 +59,118 @@ export async function sendMessageOptimistically(args: ISendMessageOptimistically
     return messageTypeOrder.indexOf(typeA) - messageTypeOrder.indexOf(typeB)
   })
 
-  // Send each content as a separate message
+  const errors: Error[] = []
+
+  // Send each content as a separate message and do in sync to keep the order
   for (const content of sortedContents) {
-    let sentXmtpMessageId: IXmtpMessageId | null = null
+    try {
+      let sentXmtpMessageId: IXmtpMessageId
 
-    const payload = convertConvosMessageContentToXmtpMessageContent(content)
+      const payload = convertConvosMessageContentToXmtpMessageContent(content)
 
-    if (messageContentIsReply(content)) {
-      // Content is already a reply, send it with the inner content properly converted
-      const innerPayload = convertConvosMessageContentToXmtpMessageContent(content.content)
+      if (messageContentIsReply(content)) {
+        const innerPayload = convertConvosMessageContentToXmtpMessageContent(content.content)
 
-      sentXmtpMessageId = await sendXmtpConversationMessageOptimistic({
-        clientInboxId: currentSender.inboxId,
-        conversationId: xmtpConversationId,
-        content: {
-          reply: {
-            reference: content.reference,
-            content: innerPayload,
+        sentXmtpMessageId = await sendXmtpConversationMessageOptimistic({
+          clientInboxId: currentSender.inboxId,
+          conversationId: xmtpConversationId,
+          content: {
+            reply: {
+              reference: content.reference,
+              content: innerPayload,
+            },
           },
-        },
-      })
-    } else {
-      // Send as a regular message
-      sentXmtpMessageId = await sendXmtpConversationMessageOptimistic({
-        clientInboxId: currentSender.inboxId,
-        conversationId: xmtpConversationId,
-        content: payload,
-      })
-    }
+        })
+      } else {
+        sentXmtpMessageId = await sendXmtpConversationMessageOptimistic({
+          clientInboxId: currentSender.inboxId,
+          conversationId: xmtpConversationId,
+          content: payload,
+        })
+      }
 
-    if (!sentXmtpMessageId) {
-      captureError(
-        new GenericError({
-          error: new Error(`Couldn't send message?`),
-        }),
-      )
-      continue // Skip if we couldn't send this message
+      sendOptimisticMessageIds.push(sentXmtpMessageId)
+    } catch (error) {
+      errors.push(ensureOurError(error))
     }
+  }
 
-    const sentXmtpMessage = await getXmtpConversationMessage({
-      messageId: sentXmtpMessageId,
-      clientInboxId: currentSender.inboxId,
+  if (sendOptimisticMessageIds.length === 0) {
+    throw new GenericError({
+      error: errors[0],
+      additionalMessage: "Failed to send all messages",
     })
+  }
 
-    // Not supposed to happen but just in case
-    if (!sentXmtpMessage) {
+  if (errors.length > 0) {
+    errors.forEach((error) =>
       captureError(
         new GenericError({
-          error: new Error(`Couldn't get the full xmtp message after sending`),
+          error,
+          additionalMessage: "Failed to send some messages",
         }),
-      )
-      continue
-    }
-
-    sentMessages.push(convertXmtpMessageToConvosMessage(sentXmtpMessage) as ISentOptimisticMessage)
+      ),
+    )
   }
 
-  if (sentMessages.length === 0) {
-    throw new Error("Couldn't send any messages")
-  }
-
-  return sentMessages
+  return sendOptimisticMessageIds
 }
 
-export async function handleOptimisticMessagesSent(args: {
-  optimisticMessages: IConversationMessage[]
+export async function handleCreatedOptimisticMessageIdsForConversation(args: {
+  optimisticMessageIds: IXmtpMessageId[]
   xmtpConversationId: IXmtpConversationId
 }) {
-  const { optimisticMessages, xmtpConversationId } = args
+  const { optimisticMessageIds, xmtpConversationId } = args
 
   const currentSender = getSafeCurrentSender()
 
-  // Add messages to the query cache
-  for (const optimisticMessage of optimisticMessages) {
-    setConversationMessageQueryData({
-      clientInboxId: currentSender.inboxId,
-      xmtpMessageId: optimisticMessage.xmtpId,
-      xmtpConversationId,
-      message: optimisticMessage,
-    })
-
-    addMessagesToConversationMessagesInfiniteQueryData({
-      clientInboxId: currentSender.inboxId,
-      xmtpConversationId,
-      messageIds: [optimisticMessage.xmtpId],
-    })
-  }
-
-  // Message were well prepared, now send them to the network!
+  // Publish messages to the network
   try {
     await publishXmtpConversationMessages({
       clientInboxId: currentSender.inboxId,
       conversationId: xmtpConversationId,
     })
-
-    // In case stream didn't update the query cache, get the message from the network and update the query cache
-    for (const optimisticMessage of optimisticMessages) {
-      try {
-        const messageInCache = getConversationMessageQueryData({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: optimisticMessage.xmtpId,
-          xmtpConversationId,
-        })
-
-        if (!messageInCache) {
-          throw new Error("Message not found in query cache")
-        }
-
-        if (messageInCache.status === "sent") {
-          // It was already updated by the stream
-          continue
-        }
-
-        // Message should be sent by now, refetch it from the network
-        await refetchConversationMessageQuery({
-          clientInboxId: currentSender.inboxId,
-          xmtpMessageId: optimisticMessage.xmtpId,
-          xmtpConversationId,
-        })
-      } catch (error) {
-        captureError(
-          new ReactQueryError({
-            error,
-            additionalMessage: `Error while verifying optimistic message sent ${optimisticMessage.xmtpId}`,
-          }),
-        )
-      }
-    }
   } catch (error) {
-    // Invalidate the conversation messages just to be sure
-    invalidateConversationMessagesInfiniteMessagesQuery({
+    captureErrorWithToast(
+      new GenericError({
+        error,
+        additionalMessage: "Failed to publish messages",
+      }),
+      {
+        message: "Message will send when reconnected",
+      },
+    )
+  }
+
+  const fullSentMessages = (
+    await Promise.all(
+      optimisticMessageIds.map(async (optimisticMessageId) => {
+        return getXmtpConversationMessage({
+          messageId: optimisticMessageId,
+          clientInboxId: currentSender.inboxId,
+        })
+      }),
+    )
+  ).filter(Boolean)
+
+  const publishedConvosMessages = fullSentMessages.map(convertXmtpMessageToConvosMessage)
+
+  // Add messages to the query cache
+  for (const publishedConvosMessage of publishedConvosMessages) {
+    setConversationMessageQueryData({
+      clientInboxId: currentSender.inboxId,
+      xmtpMessageId: publishedConvosMessage.xmtpId,
+      xmtpConversationId,
+      message: publishedConvosMessage,
+    })
+  }
+
+  for (const publishedConvosMessage of publishedConvosMessages) {
+    addConversationMessage({
       clientInboxId: currentSender.inboxId,
       xmtpConversationId,
-    }).catch(captureError)
-
-    throw new ReactQueryError({
-      error,
-      additionalMessage: `Error while verifying optimistic messages sent ${optimisticMessages.map((m) => m.xmtpId).join(", ")}`,
+      messageIds: [publishedConvosMessage.xmtpId],
+      caller: "handleCreatedOptimisticMessageIdsForConversation",
     })
   }
 }
@@ -218,9 +189,9 @@ export const getSendMessageMutationOptions = (): MutationOptions<
 > => {
   return {
     mutationFn: sendMessageOptimistically,
-    onSuccess: (optimisticMessages, variables) => {
-      handleOptimisticMessagesSent({
-        optimisticMessages,
+    onSuccess: (optimisticMessageIds, variables) => {
+      handleCreatedOptimisticMessageIdsForConversation({
+        optimisticMessageIds: optimisticMessageIds,
         xmtpConversationId: variables.xmtpConversationId,
       }).catch(captureError)
     },
@@ -231,7 +202,7 @@ export const getSendMessageMutationOptions = (): MutationOptions<
 
       const currentSender = getSafeCurrentSender()
 
-      invalidateConversationMessagesInfiniteMessagesQuery({
+      invalidateConversationMessagesQuery({
         clientInboxId: currentSender.inboxId,
         xmtpConversationId: variables.xmtpConversationId,
       }).catch(captureError)
