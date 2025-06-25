@@ -1,6 +1,6 @@
 {
   "name": "convos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "scripts": {
     "android": "expo run:android",
@@ -84,7 +84,7 @@
     "@turnkey/viem": "^0.9.0",
     "@walletconnect/react-native-compat": "^2.19.0",
     "@xmtp/content-type-primitives": "^2.0.0",
-    "@xmtp/react-native-sdk": "^4.2.2",
+    "@xmtp/react-native-sdk": "^4.2.4",
     "@xstate/react": "^5.0.0",
     "@yornaath/batshit": "^0.10.1",
     "alchemy-sdk": "^3.4.4",
