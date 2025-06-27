@@ -8934,9 +8934,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@xmtp/react-native-sdk@npm:^4.2.3":
-  version: 4.2.3
-  resolution: "@xmtp/react-native-sdk@npm:4.2.3"
+"@xmtp/react-native-sdk@npm:^4.2.5":
+  version: 4.2.5
+  resolution: "@xmtp/react-native-sdk@npm:4.2.5"
   dependencies:
     "@changesets/changelog-git": "npm:^0.2.0"
     "@changesets/cli": "npm:^2.27.10"
@@ -8950,7 +8950,7 @@ __metadata:
     expo: "*"
     react: "*"
     react-native: "*"
-  checksum: 10c0/ae6d4d83606898d8b5b109da68c1cb77c041040e80ee1ee4915d386672b03a2d8958cb36ae5de29499517f7659ba2120383a7afa008bcdbef83621bd5f0545be
+  checksum: 10c0/c7941bf473e114c3153095444b80c22da6485ff6d7c4222604af0c04b01c5629076eb72757d6f60e82e7c4c11209ba304f2cbf6cabe1082123870943ead41a01
   languageName: node
   linkType: hard
 
@@ -10861,7 +10861,7 @@ __metadata:
     "@walletconnect/react-native-compat": "npm:^2.19.0"
     "@welldone-software/why-did-you-render": "npm:^8.0.3"
     "@xmtp/content-type-primitives": "npm:^2.0.0"
-    "@xmtp/react-native-sdk": "npm:^4.2.3"
+    "@xmtp/react-native-sdk": "npm:^4.2.5"
     "@yornaath/batshit": "npm:^0.10.1"
     alchemy-sdk: "npm:^3.4.4"
     amazon-cognito-identity-js: "npm:6.3.12"
