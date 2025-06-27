@@ -3,7 +3,7 @@ import { useAppTheme } from "@/theme/use-app-theme"
 import { logger } from "@/utils/logger/logger"
 import { IIconName, IIconProps } from "./Icon.types"
 
-// For now we don't have tpying for SFSymbols but we use a 1-1 with the key name
+// For now we don't have typing for SFSymbols but we use a 1-1 with the key name
 export const iconRegistry: Record<IIconName, SFSymbol> = {
   xmark: "xmark",
   "xmark.circle.fill": "xmark.circle.fill",
