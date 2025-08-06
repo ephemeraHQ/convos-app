@@ -86,7 +86,7 @@
     "@turnkey/viem": "^0.9.0",
     "@walletconnect/react-native-compat": "^2.19.0",
     "@xmtp/content-type-primitives": "^2.0.0",
-    "@xmtp/react-native-sdk": "^4.4.0-dev.7f5d8e0",
+    "@xmtp/react-native-sdk": "4.3.4",
     "@yornaath/batshit": "^0.10.1",
     "alchemy-sdk": "^3.4.4",
     "amazon-cognito-identity-js": "6.3.12",
